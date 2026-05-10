@@ -277,17 +277,18 @@ export function NetworkFiltersSection() {
                       // così la lista a sinistra mostra il record selezionato
                       // (altrimenti se il country filter precedente non
                       // contiene il partner, la lista resta vuota).
+                      const updates: Parameters<typeof g.batchUpdate>[0] = {
+                        networkSearch: p.company_name,
+                      };
                       if (p.country_code) {
-                        g.batchUpdate({
-                          networkSelectedCountries: new Set([p.country_code]),
-                        });
+                        updates.networkSelectedCountries = new Set([p.country_code]);
                       }
+                      g.batchUpdate(updates);
                       window.dispatchEvent(
                         new CustomEvent("network-select-partner", {
                           detail: { partnerId: p.id },
                         })
                       );
-                      g.setNetworkSearch(p.company_name);
                       window.dispatchEvent(
                         new CustomEvent("filters-drawer-close")
                       );

@@ -90,6 +90,7 @@ export function AutoPageTitle(): React.ReactElement | null {
 
   if (slotHasChild) return null;
   if (pathname === "/v2" || pathname === "/v2/") return null;
+  if (pathname.startsWith("/v2/explore")) return null;
 
   const crumbs = buildCrumbs(pathname);
   const last = crumbs[crumbs.length - 1];
