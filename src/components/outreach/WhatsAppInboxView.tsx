@@ -70,7 +70,7 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
     : activeTab
       ? ({
           contact: activeTab,
-          lastMessage: {
+          lastMessage: ({
             id: `synthetic-${activeTab}`,
             channel: "whatsapp",
             direction: "outbound",
