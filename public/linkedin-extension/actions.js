@@ -496,6 +496,24 @@ var Actions = globalThis.Actions || (function () {
         composerAlreadyOpen = true;
       } else {
         var gateDiag = finalGate && finalGate.diagnostic ? " gate=" + JSON.stringify(finalGate.diagnostic) : "";
+        // 3.9.62 — Ripristino fallback stabile: se il gate diagnostico non
+        // trova il composer, deleghiamo a HybridOps.sendMessage che ha la
+        // pipeline robusta (poll lungo, more-menu, paste/insertText cascade)
+        // della 3.9.60. Solo per metodi DOM (non CDP): per i CDP preserviamo
+        // il fail-fast diagnostico così l'operatore vede subito il problema.
+        var isCdpMethod = (method === "cdp_physical_click" || method === "cdp_ctrl_enter");
+        if (!isCdpMethod) {
+          console.warn("[LI Send] composer gate timeout → fallback HybridOps.sendMessage", finalGate);
+          var fallbackResult = await HybridOps.sendMessage(tab.id, message);
+          if (fallbackResult && fallbackResult.success) {
+            return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_gate", attempted_method: method });
+          }
+          var fbErr = (fallbackResult && fallbackResult.error) || (finalGate && finalGate.error) || "unknown";
+          return Config.errorResponse(
+            Config.ERROR.MESSAGE_FAILED,
+            "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
+          );
+        }
         return Config.errorResponse(
           Config.ERROR.MESSAGE_FAILED,
           "composer_gate_failed_diagnostic: " + ((finalGate && finalGate.error) || "unknown") + " (status=" + lastTabStatus + ")" + gateDiag
