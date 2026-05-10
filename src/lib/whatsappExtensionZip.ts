@@ -6,8 +6,8 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// Rollback a 3.9.56 (build più affidabile per l'invio). Il manifest.json
-// dell'estensione riporta version="3.9.56" + version_name="3.9.56-restore".
+// 3.9.56-autoclose: auto-close overlay composer dopo invio + 2 sleep ridotti.
+// Il manifest.json riporta version="3.9.56" + version_name="3.9.56-autoclose".
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.56";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
@@ -148,13 +148,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.56-restore",
+    latestVersion: "3.9.56-autoclose",
     items: [
+      {
+        version: "3.9.56-autoclose",
+        filename: "linkedin-extension-3.9.56-autoclose.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56-autoclose.zip",
+        current: true,
+        note: "Auto-close overlay composer dopo invio confermato (no concatenazione testo) + 2 sleep ridotti (-3.3s per invio).",
+      },
       {
         version: "3.9.56-restore",
         filename: "linkedin-extension-3.9.56-restore.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip",
-        current: true,
+        current: false,
         note: "Rollback alla 3.9.56 (build più affidabile per l'invio). Rimossi pre-warm worker tab (3.9.57/58) e bounded readInbox (3.9.59). Strategie alternative anti-duplicazione/timeout sono ora gestite client-side dal pannello LinkedInTest (no reinstallazione).",
       },
       {
