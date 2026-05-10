@@ -119,14 +119,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.65",
+    "latestVersion": "3.9.66",
     "items": [
+      {
+        "version": "3.9.66",
+        "filename": "linkedin-extension-3.9.66.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.66.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Ripristino baseline 3.9.56 per l'invio: profili /in/ e /pub/ NON usano più la worker tab (riservata a /messaging/ per la lettura). Fallback HybridOps.sendMessage abilitato anche per metodi CDP quando il composer gate scade. Risolve composer_gate_failed_diagnostic su /messaging/thread/new vuoto."
+      },
       {
         "version": "3.9.65",
         "filename": "linkedin-extension-3.9.65.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.65.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Wait dinamico LinkedIn SPA: su /messaging/thread/new aspetta il mount reale del composer fino a 25s, salta doppi click Messaggia se la tab è già in messaging e allarga gate/writer agli scope msg-thread/msg-convo/compose-form. Risolve race readyState=complete ma DOM vuoto."
       },
       {
