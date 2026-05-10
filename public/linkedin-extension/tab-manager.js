@@ -7,16 +7,24 @@ var TabManager = globalThis.TabManager || (function () {
   let _liTabId = null;
   let _automationWindowId = null;
   let _ownedTabIds = new Set();
+  // 3.9.57 — Persistent Worker Tab parcheggiata su /messaging/.
+  // Tutte le operazioni read/send messaging usano questa tab di servizio.
+  // Non viene MAI attivata, non ruba il focus, vive in background.
+  const WORKER_HOME_URL = "https://www.linkedin.com/messaging/";
+  let _workerTabId = null;
+  let _workerReady = false;
+  let _ensureWorkerPromise = null;
 
   // ── Persistence (service worker may restart) ──
   async function loadOwnership() {
     try {
       const data = await chrome.storage.session.get([
-        "li_automation_window", "li_owned_tabs", "li_main_tab",
+        "li_automation_window", "li_owned_tabs", "li_main_tab", "li_worker_tab",
       ]);
       if (data.li_automation_window) _automationWindowId = data.li_automation_window;
       if (Array.isArray(data.li_owned_tabs)) _ownedTabIds = new Set(data.li_owned_tabs);
       if (data.li_main_tab) _liTabId = data.li_main_tab;
+      if (data.li_worker_tab) _workerTabId = data.li_worker_tab;
       // Defensive cleanup: drop owned tabs that aren't LinkedIn anymore
       try {
         const ids = Array.from(_ownedTabIds);
@@ -34,6 +42,13 @@ var TabManager = globalThis.TabManager || (function () {
             if (!/linkedin\.com/i.test(u)) _liTabId = null;
           } catch { _liTabId = null; }
         }
+        if (_workerTabId !== null) {
+          try {
+            const t = await chrome.tabs.get(_workerTabId);
+            const u = t && (t.pendingUrl || t.url) || "";
+            if (!/linkedin\.com/i.test(u)) { _workerTabId = null; _workerReady = false; }
+          } catch { _workerTabId = null; _workerReady = false; }
+        }
       } catch { /* ignore */ }
     } catch (e) { /* ignore */ }
   }
@@ -44,6 +59,7 @@ var TabManager = globalThis.TabManager || (function () {
         li_automation_window: _automationWindowId,
         li_owned_tabs: Array.from(_ownedTabIds),
         li_main_tab: _liTabId,
+        li_worker_tab: _workerTabId,
       });
     } catch (e) { /* ignore */ }
   }
