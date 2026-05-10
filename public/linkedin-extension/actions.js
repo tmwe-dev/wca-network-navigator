@@ -21,32 +21,6 @@ var Actions = globalThis.Actions || (function () {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     const target = profileUrl.replace(/\/$/, "");
-    // 3.9.57-human-sim — RATE LIMIT GATE
-    // Hardcoded: 25-30 invii/giorno, pausa 3-7 min ogni 5-8 invii, jitter 25-65s tra invii.
-    // Se cap giornaliero raggiunto → blocca con errore esplicito.
-    // Se cooldown attivo → attende internamente (fino a tot ms) prima di procedere.
-    let humanSimMeta = { enabled: true };
-    try {
-      if (typeof HumanSimulator !== "undefined") {
-        const gate = await HumanSimulator.checkRateLimit();
-        humanSimMeta.gate = gate;
-        if (!gate.allowed) {
-          return Config.errorResponse(Config.ERROR.MESSAGE_FAILED,
-            "human_sim_rate_limit: " + gate.reason + " (sentToday=" + gate.sentToday + "/" + gate.dailyCap + ")");
-        }
-        if (gate.waitMs && gate.waitMs > 0) {
-          // Cap massimo attesa interna: 8s. Se serve più → segnaliamo cooldown.
-          if (gate.waitMs > 8000) {
-            return Config.errorResponse(Config.ERROR.MESSAGE_FAILED,
-              "human_sim_cooldown: attendi " + Math.ceil(gate.waitMs / 1000) + "s prima del prossimo invio");
-          }
-          await HumanSimulator.sleep(gate.waitMs);
-          humanSimMeta.gate.waitedMs = gate.waitMs;
-        }
-      }
-    } catch (e) {
-      humanSimMeta = { enabled: false, error: String(e && e.message || e) };
-    }
     // P1 — Thread URL detection: se l'URL è un thread di messaggistica, il
     // bottone "Messaggia" non esiste. Saltiamo clickMessage e andiamo dritti
     // a sendMessage, che cerca direttamente la textbox del composer.
@@ -126,57 +100,18 @@ var Actions = globalThis.Actions || (function () {
         }
       } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
       if (!isThreadUrl && !composerAlreadyOpen) {
-        // 3.9.57-human-sim — PROFILE CHOREOGRAPHY (scroll + dwell umano)
-        // Eseguita PRIMA di cliccare "Messaggia". Solo su profilo, non su thread URL.
-        try {
-          if (typeof HumanSimulator !== "undefined") {
-            const choreo = await HumanSimulator.profileChoreography(tab.id);
-            humanSimMeta.profile_choreography = choreo;
-          }
-        } catch (e) { /* best-effort, non bloccante */ }
         const clickResult = await HybridOps.clickMessage(tab.id);
         if (!clickResult || !clickResult.success) {
           return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
         }
         // 3.9.56-autoclose: ridotta da 3000 a 1200ms — il successivo
         // sendMessage ha già un poll interno per attendere il composer.
-        // 3.9.59: ulteriore riduzione 1200 → 500ms (poll interno hybrid-ops già 6×100ms).
-        await TabManager.sleep(500);
+        await TabManager.sleep(1200);
       } else {
         // Thread/composer già aperto: diamo solo il tempo al composer di montarsi.
-        // 3.9.59: 500/1500 → 300/600ms.
-        await TabManager.sleep(composerAlreadyOpen ? 300 : 600);
-      }
-      // 3.9.57-human-sim — TYPING DECISION (1 su 3 char-by-char)
-      // Pre-fill del composer con digitazione umana. Il writer di hybrid-ops
-      // ha early-exit se vede il testo già presente → niente conflitti.
-      try {
-        if (typeof HumanSimulator !== "undefined" && HumanSimulator.shouldTypeChars()) {
-          await HumanSimulator.preWriteDwell();
-          const typeRes = await HumanSimulator.typeIntoComposer(tab.id, message);
-          humanSimMeta.typing = { method: typeRes.ok && typeRes.match ? "char_by_char" : "fallback_paste", detail: typeRes };
-          if (typeRes.ok && typeRes.match) {
-            await HumanSimulator.preSendReadDwell();
-          }
-        } else {
-          humanSimMeta.typing = { method: "paste" };
-        }
-      } catch (e) {
-        humanSimMeta.typing = { method: "paste", error: String(e && e.message || e) };
+        await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
       }
       const sendResult = await HybridOps.sendMessage(tab.id, message);
-      // 3.9.57-human-sim — POST-SEND + RECORD
-      try {
-        if (sendResult && sendResult.success && typeof HumanSimulator !== "undefined") {
-          const post = await HumanSimulator.postSendChoreography(tab.id);
-          humanSimMeta.post_send = post;
-          await HumanSimulator.recordSend();
-          humanSimMeta.stats = await HumanSimulator.getStats();
-        }
-      } catch (e) { /* best-effort */ }
-      if (sendResult && typeof sendResult === "object") {
-        try { sendResult.human_sim = humanSimMeta; } catch (e) {}
-      }
       return { tabId: tab.id, result: sendResult };
     }
     let { tabId, result } = await attempt();
@@ -186,8 +121,7 @@ var Actions = globalThis.Actions || (function () {
       try { await chrome.tabs.update(tabId, { url: target }); } catch (e) { /* ignore */ }
       // 3.9.56-autoclose: ridotta da 2500 a 1000ms — composerCleared interno
       // (≤600ms) ha già verificato l'invio reale, niente serve attendere oltre.
-      // 3.9.59: 1000 → 400ms.
-      await TabManager.sleep(400);
+      await TabManager.sleep(1000);
       const retry = await attempt();
       result = retry.result;
     }
@@ -264,14 +198,12 @@ var Actions = globalThis.Actions || (function () {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test non apre nuove tab");
     }
     // 2) Focus-safe ready (non porta la tab in foreground).
-    // 3.9.59: ridotto da 1200 a 600ms — il poll "complete" sotto copre i casi lenti.
-    await TabManager.ensureTabVisibleAndWait(tab.id, 600);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     // 2.ter) Aspetta che la tab sia "complete" (max 4s, poll 250ms). In
     // background il renderer monta più lento; senza questa attesa il probe
     // del bottone Messaggia parte troppo presto.
     let lastTabStatus = "unknown";
     let lastTabUrl = "";
-    // 3.9.59: poll 16×150ms (=2.4s max) invece di 16×250ms (=4s).
     for (let i = 0; i < 16; i++) {
       try {
         const ti = await chrome.tabs.get(tab.id);
@@ -279,7 +211,7 @@ var Actions = globalThis.Actions || (function () {
         lastTabUrl = (ti && (ti.url || ti.pendingUrl)) || "";
         if (lastTabStatus === "complete") break;
       } catch (e) { /* ignore */ }
-      await TabManager.sleep(150);
+      await TabManager.sleep(250);
     }
     // 2.bis) HARD GUARD destinatario: dopo navigate la tab DEVE essere sul
     // profilo richiesto (`/in/<slug>`) o su un thread URL esplicito passato
@@ -521,27 +453,24 @@ var Actions = globalThis.Actions || (function () {
     if (!composerAlreadyOpen && !isThreadUrl) {
       let clickResult = await HybridOps.clickMessage(tab.id);
       if (!clickResult || !clickResult.success) {
-        // 3.9.59: 1500 → 600ms tra retry clickMessage.
-        await TabManager.sleep(600);
+        await TabManager.sleep(1500);
         clickResult = await HybridOps.clickMessage(tab.id);
       }
       if (!clickResult || !clickResult.success) {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
       }
-      // 3.9.59: 30000 → 8000ms. Il composer LinkedIn appare in 1-3s; oltre 8s
-      // significa che è bloccato e il timeout 45s lato pannello scattava comunque.
-      const gateAfterClick = await waitForComposerReady(8000);
+      const gateAfterClick = await waitForComposerReady(30000);
       composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
     } else if (isThreadUrl && !composerAlreadyOpen) {
       // Thread URL: aspetta il campo reale come WhatsApp, non un timer fisso.
-      const threadGate = await waitForComposerReady(8000);
+      const threadGate = await waitForComposerReady(30000);
       composerAlreadyOpen = !!(threadGate && threadGate.success);
     }
     if (!composerAlreadyOpen) {
       // Ultimo gate stile WhatsApp: apri/attendi il campo disponibile prima di
       // qualsiasi copia. Se fallisce, solo allora deleghiamo al writer produzione,
       // che comunque scrive esclusivamente dopo aver trovato la textbox.
-      const finalGate = await waitForComposerReady(8000);
+      const finalGate = await waitForComposerReady(30000);
       if (finalGate && finalGate.success) {
         composerAlreadyOpen = true;
       } else {
@@ -558,7 +487,6 @@ var Actions = globalThis.Actions || (function () {
       );
       }
     }
-    // 3.9.59: il pre-send dwell 150ms restava utile, lo lasciamo.
     await TabManager.sleep(150);
     return await HybridOps.sendMessageWithMethod(tab.id, message, method);
   }

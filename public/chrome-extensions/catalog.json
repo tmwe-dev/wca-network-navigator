@@ -119,22 +119,14 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.59-fast-cdp",
+    "latestVersion": "3.9.56-autoclose",
     "items": [
-      {
-        "version": "3.9.59-fast-cdp",
-        "filename": "linkedin-extension-3.9.59.zip",
-        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip",
-        "releaseDate": "2026-05-10",
-        "current": true,
-        "notes": "Human Simulator hardcoded: scroll/dwell sul profilo PRIMA del bottone Messaggia, digitazione char-by-char 1 invio su 3 (con typo+correzione 5%), rate limit 25-30/giorno per account + pausa 3-7 min ogni 5-8 invii + cooldown 25-65s tra invii. Layer additivo: writer hybrid-ops fa early-exit se vede testo già pre-typed (zero conflitti). Mantiene autoclose overlay e sleep ridotti della 3.9.56."
-      },
       {
         "version": "3.9.56-autoclose",
         "filename": "linkedin-extension-3.9.56-autoclose.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.56-autoclose.zip",
         "releaseDate": "2026-05-10",
-        "current": false,
+        "current": true,
         "notes": "Auto-close overlay composer dopo invio confermato (no rischio concatenazione testo nel prossimo invio). Tab LinkedIn resta riusata, si chiude SOLO l'overlay messaggi. Inoltre ridotti 2 sleep ridondanti (-3.3s per invio, total ~5s vs ~8s)."
       },
       {
@@ -143,7 +135,7 @@
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip",
         "releaseDate": "2026-05-10",
         "current": false,
-        "notes": "Rollback alla 3.9.56 (la build più affidabile per l'invio). Rimossi pre-warm worker tab (3.9.59/58) e bounded readInbox (3.9.59). Strategie alternative anti-duplicazione/timeout sono ora gestite client-side dal pannello LinkedInTest (no reinstallazione)."
+        "notes": "Rollback alla 3.9.56 (la build più affidabile per l'invio). Rimossi pre-warm worker tab (3.9.57/58) e bounded readInbox (3.9.59). Strategie alternative anti-duplicazione/timeout sono ora gestite client-side dal pannello LinkedInTest (no reinstallazione)."
       },
       {
         "version": "3.9.59",
@@ -154,17 +146,17 @@
         "notes": "Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Send invariato."
       },
       {
-        "version": "3.9.59",
-        "filename": "linkedin-extension-3.9.59.zip",
-        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip",
+        "version": "3.9.58",
+        "filename": "linkedin-extension-3.9.58.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.58.zip",
         "releaseDate": "2026-05-10",
         "current": false,
         "notes": "Fix: aggiunto 'ensureWorkerTab' alla whitelist ALLOWED_ACTIONS in content.js (era rifiutato come Unknown action dal Pre-warm)."
       },
       {
-        "version": "3.9.59",
-        "filename": "linkedin-extension-3.9.59.zip",
-        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip",
+        "version": "3.9.57",
+        "filename": "linkedin-extension-3.9.57.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.57.zip",
         "releaseDate": "2026-05-10",
         "current": false,
         "notes": "Persistent Worker Tab: tab di servizio in background parcheggiata su /messaging/, mai attivata. read/send usano worker tab pre-warmed. Pre-warm onInstalled/onStartup + invalidazione su tabs.onRemoved."

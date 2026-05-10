@@ -14,7 +14,6 @@ try {
     "ai-bridge.js",
     "ai-learn.js",
     "auth.js",
-    "human-simulator.js",
     "hybrid-ops.js",
     "optimus-client.js",
     "actions.js"
@@ -28,23 +27,6 @@ const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({ success: true, version: chrome.runtime.getManifest().version });
     return false; // sync
-  },
-
-  getHumanSimStats: function (_msg, sendResponse) {
-    (async function () {
-      try {
-        if (typeof HumanSimulator === "undefined") {
-          sendResponse({ success: false, error: "human_simulator_not_loaded" });
-          return;
-        }
-        const stats = await HumanSimulator.getStats();
-        const gate = await HumanSimulator.checkRateLimit();
-        sendResponse({ success: true, stats: stats, gate: gate, rules: HumanSimulator.RULES });
-      } catch (e) {
-        sendResponse({ success: false, error: String(e && e.message || e) });
-      }
-    })();
-    return true;
   },
 
   setConfig: function (msg, sendResponse) {

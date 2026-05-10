@@ -459,19 +459,6 @@ var HybridOps = globalThis.HybridOps || (function () {
             (function modernClearAndType(input, text) {
               try { input.focus(); } catch (e) {}
               try { if (typeof input.click === "function") input.click(); } catch (e) {}
-              // 3.9.57-human-sim — Early-exit: se il composer contiene già il
-              // testo target (pre-typed da HumanSimulator.typeIntoComposer),
-              // NON cancelliamo né riscriviamo nulla. Preserva la digitazione
-              // umana e fa partire solo il click Send. Compatibile 100% con
-              // il flusso paste classico (text non presente → si esegue come prima).
-              try {
-                var preTc = (input.textContent || "");
-                if (preTc.trim() === text.trim() || preTc.indexOf(text) !== -1) {
-                  // Già presente: skippa clear+writers, lascia che il click Send segua.
-                  try { input.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) {}
-                  return;
-                }
-              } catch (e) { /* fallback al flusso normale */ }
               // Clear current contents via selectAll + delete
               try {
                 var r = document.createRange();
@@ -1238,8 +1225,7 @@ var HybridOps = globalThis.HybridOps || (function () {
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
         const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
-        // 3.9.59: composerCleared 1500 → 800ms (textbox si svuota in <500ms).
-        if (cdpClick && cdpClick.success && await composerCleared(tabId, 800)) {
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 1500)) {
           const closed = await closeMessagingComposer(tabId);
           return { success: true, method: "cdp_physical_click", composer_closed: !!closed };
         }
@@ -1247,7 +1233,7 @@ var HybridOps = globalThis.HybridOps || (function () {
       }
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_ctrl_enter") {
         const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
-        if (cdpKey && cdpKey.success && await composerCleared(tabId, 800)) {
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 1500)) {
           const closed = await closeMessagingComposer(tabId);
           return { success: true, method: cdpKey.method || "cdp_ctrl_enter", composer_closed: !!closed };
         }

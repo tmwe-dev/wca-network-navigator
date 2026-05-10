@@ -70,56 +70,10 @@ export function LinkedInTest() {
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
   const [strategy, setStrategy] = useState<LinkedInSendStrategy>(loadStrategy);
   const actionTimesRef = useRef<number[]>([]);
-  const [humanSim, setHumanSim] = useState<{
-    sentToday: number; dailyCap: number | null; sinceBurst: number; burstSize: number | null;
-    lastSendAt: number; cooldownMs: number; allowed: boolean; reason?: string; loaded: boolean; error?: string;
-  }>({ sentToday: 0, dailyCap: null, sinceBurst: 0, burstSize: null, lastSendAt: 0, cooldownMs: 0, allowed: true, loaded: false });
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
-
-  // 3.9.59-fast-cdp — Polling stato Human Simulator (silenzioso ogni 5s,
-  // dopo ogni invio e on-demand). Non scrive nei logs: pannello dedicato.
-  const refreshHumanSim = useCallback(async (verbose = false) => {
-    try {
-      const r = await liMsg("getHumanSimStats", {}, 4000) as Record<string, unknown>;
-      if (r?.success) {
-        const stats = (r.stats as Record<string, unknown>) || {};
-        const gate = (r.gate as Record<string, unknown>) || {};
-        setHumanSim({
-          sentToday: Number(stats.sentToday ?? 0),
-          dailyCap: stats.dailyCap == null ? null : Number(stats.dailyCap),
-          sinceBurst: Number(stats.sinceBurst ?? 0),
-          burstSize: stats.burstSize == null ? null : Number(stats.burstSize),
-          lastSendAt: Number(stats.lastSendAt ?? 0),
-          cooldownMs: Number(gate.waitMs ?? 0),
-          allowed: Boolean(gate.allowed),
-          reason: gate.reason as string | undefined,
-          loaded: true,
-        });
-        if (verbose) log(`🧑 Human Sim: ${stats.sentToday}/${stats.dailyCap} oggi · burst ${stats.sinceBurst}/${stats.burstSize} · cooldown ${gate.waitMs ?? 0}ms · ${gate.allowed ? "ok" : "BLOCK:" + (gate.reason || "?")}`, gate.allowed ? "info" : "warn");
-      } else if (verbose) {
-        const err = String(r?.error ?? "?");
-        log(`⚠️ Human Sim non disponibile: ${err}`, "warn");
-        if (/Unknown action: getHumanSimStats|human_simulator_not_loaded/i.test(err)) {
-          log("💡 Reinstalla l'estensione 3.9.59-fast-cdp per abilitare la diagnostica live.", "warn");
-        }
-        setHumanSim((s) => ({ ...s, loaded: false, error: err }));
-      }
-    } catch (e) {
-      if (verbose) log(`⚠️ Human Sim refresh failed: ${String(e)}`, "warn");
-    }
-  }, [log]);
-
-  // Auto-refresh ogni 5s (silenzioso). Si ferma se la pagina è hidden.
-  useEffect(() => {
-    refreshHumanSim(false);
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") refreshHumanSim(false);
-    }, 5000);
-    return () => clearInterval(id);
-  }, [refreshHumanSim]);
 
   useEffect(() => {
     try {
@@ -198,7 +152,7 @@ export function LinkedInTest() {
     } else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
   });
 
-  // 3.9.59 — Pre-warm esplicito della worker tab. Una volta sola si paga il
+  // 3.9.57 — Pre-warm esplicito della worker tab. Una volta sola si paga il
   // costo di apertura tab + caricamento /messaging/. Da quel momento read e
   // send sono "hot" (3-6s invece di 25-50s).
   const testPreWarm = () => runWithCooldown(async () => {
@@ -389,23 +343,6 @@ export function LinkedInTest() {
       log(`  • clickMethod: ${String(diag.clickMethod ?? diag.method ?? "?")} | verified: ${String(diag.verified ?? "?")}`, "info");
       log(`  • selectorUsed: ${String(diag.selectorUsed ?? "(regex)")}`, "info");
       log(`  • schemaSource: ${String(diag.schemaSource ?? "?")} | schemaAgeMs: ${String(diag.schemaAgeMs ?? "?")} | relearned: ${String(diag.relearned ?? false)}`, "info");
-      // 3.9.59-fast-cdp — Diagnostica Human Simulator
-      const hs = diag.human_sim as Record<string, unknown> | undefined;
-      if (hs) {
-        log(`🧑 Human Simulator:`, "info");
-        const typing = hs.typing as Record<string, unknown> | undefined;
-        const stats = hs.stats as Record<string, unknown> | undefined;
-        const choreo = hs.profile_choreography as Record<string, unknown> | undefined;
-        const post = hs.post_send as Record<string, unknown> | undefined;
-        const gate = hs.gate as Record<string, unknown> | undefined;
-        log(`  • typing: ${String(typing?.method ?? "?")}${typing?.detail ? ` (typed=${String((typing.detail as Record<string, unknown>).typed ?? "?")} typos=${String((typing.detail as Record<string, unknown>).typos ?? 0)})` : ""}`, "info");
-        log(`  • profile choreography: ${choreo?.scrolled ? `scrolled (${(choreo.steps as unknown[])?.length ?? 0} steps)` : "no scroll"}`, "info");
-        log(`  • post-send dwell: ${String(post?.dwellMs ?? "?")}ms`, "info");
-        log(`  • stats: ${String(stats?.sentToday ?? "?")}/${String(stats?.dailyCap ?? "?")} oggi · burst ${String(stats?.sinceBurst ?? 0)}/${String(stats?.burstSize ?? "?")}`, "info");
-        if (gate?.waitedMs) log(`  • cooldown atteso: ${String(gate.waitedMs)}ms`, "info");
-      }
-      // Aggiorna pannello status dopo invio
-      void refreshHumanSim(false);
       if (diag.warning) log(`  ⚠️ warning: ${String(diag.warning)}`, "warn");
       if (diag.suggestion) log(`  💡 ${String(diag.suggestion)}`, "warn");
       if (diag.cacheInvalidated) log(`  🧹 cache invalidata: ${String(diag.cacheInvalidated)}`, "warn");
@@ -635,7 +572,6 @@ export function LinkedInTest() {
           <Button onClick={testRemapSendDom} disabled={running} size="sm" variant="outline" title="L'AI rilegge il DOM e salva schemi freschi per l'invio. Usalo se l'invio fallisce dopo un aggiornamento di LinkedIn.">🔧 Rimappa DOM invio</Button>
           <Button onClick={testGuardSequence} disabled={running} size="sm" variant="secondary">🛡️ Verifica Controllo</Button>
           <Button onClick={testGuardConcurrent} disabled={running} size="sm" variant="secondary">🚦 Test Concorrenza</Button>
-          <Button onClick={() => refreshHumanSim(true)} disabled={running} size="sm" variant="secondary" title="Aggiorna stato Human Simulator (rate limit, cooldown, invii oggi)">🧑 Human Sim</Button>
           <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
         </div>
         <div className="flex items-center gap-2 ml-auto">
@@ -778,58 +714,6 @@ export function LinkedInTest() {
         </div>
       </div>
       <Terminal logs={logs} />
-      {/* 3.9.59-fast-cdp — Pannello stato Human Simulator */}
-      <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2 text-xs">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <p className="font-medium text-muted-foreground">🧑 Stato Human Simulator</p>
-          <div className="flex items-center gap-2">
-            {humanSim.loaded ? (
-              <span className={`px-2 py-0.5 rounded font-mono ${humanSim.allowed ? "bg-green-500/15 text-green-500" : "bg-red-500/20 text-red-500"}`}>
-                {humanSim.allowed ? "✓ ok" : `⛔ ${humanSim.reason || "blocked"}`}
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 rounded font-mono bg-yellow-500/15 text-yellow-500">
-                {humanSim.error ? "⚠ non disponibile" : "…caricamento"}
-              </span>
-            )}
-            <Button onClick={() => refreshHumanSim(true)} size="sm" variant="ghost" className="h-6 px-2 text-xs">↻</Button>
-          </div>
-        </div>
-        {humanSim.loaded && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div>
-                <span className="text-muted-foreground">Invii oggi:</span>{" "}
-                <b className={humanSim.dailyCap && humanSim.sentToday >= humanSim.dailyCap ? "text-red-500" : humanSim.dailyCap && humanSim.sentToday >= humanSim.dailyCap * 0.8 ? "text-yellow-500" : ""}>
-                  {humanSim.sentToday}/{humanSim.dailyCap ?? "?"}
-                </b>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Burst:</span>{" "}
-                <b>{humanSim.sinceBurst}/{humanSim.burstSize ?? "?"}</b>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Cooldown:</span>{" "}
-                <b className={humanSim.cooldownMs > 0 ? "text-yellow-500" : ""}>
-                  {humanSim.cooldownMs > 0 ? `${Math.ceil(humanSim.cooldownMs / 1000)}s` : "—"}
-                </b>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Ultimo invio:</span>{" "}
-                <b>{humanSim.lastSendAt ? `${Math.round((Date.now() - humanSim.lastSendAt) / 1000)}s fa` : "—"}</b>
-              </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground italic">
-              Regole hardcoded 3.9.59: 25-30 invii/giorno · pausa 3-7 min ogni 5-8 invii · cooldown 25-65s tra invii · scroll/dwell profilo · digitazione char-by-char 1/3 invii.
-            </p>
-          </>
-        )}
-        {!humanSim.loaded && humanSim.error && (
-          <p className="text-[11px] text-muted-foreground">
-            Reinstalla l'estensione <b>3.9.59-fast-cdp</b> per abilitare la diagnostica live.
-          </p>
-        )}
-      </div>
       {quality && (
         <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2 text-xs">
           <div className="flex items-center justify-between">
