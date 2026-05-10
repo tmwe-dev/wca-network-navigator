@@ -59,10 +59,29 @@ export function AiTestHubPage() {
 
   return (
     <div className="text-foreground space-y-4">
-      {/* Toolbar — riga 1: filtri categoria. Riga 2: azioni (nuovo + esegui). */}
-      <Card>
-        <CardContent className="p-3 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
+      {/* Toolbar — riga 1: azioni principali. Riga 2: filtri categoria. */}
+      <Card className="border-primary/20">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold tracking-normal">Scenari da eseguire</h2>
+              <p className="text-sm text-muted-foreground">I pulsanti qui sotto lanciano davvero i test sugli scenari attivi.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[560px]">
+              <Button size="lg" variant="outline" className="h-12 justify-center gap-2" onClick={() => h.setEditing({ category: "general", target_function: "ai-assistant", ai_scope: "lab", payload: {}, assertions: [{ type: "status_ok" }], tags: [], is_shared: true, is_active: true, priority: 100 })}>
+                <Plus className="h-4 w-4" /> Nuovo scenario
+              </Button>
+              <Button size="lg" variant="secondary" className="h-12 justify-center gap-2" onClick={() => h.runSelected()} disabled={h.running}>
+                {h.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                Esegui selezionati ({h.selectedIds.size})
+              </Button>
+              <Button size="lg" className="h-12 justify-center gap-2" onClick={() => h.runAll()} disabled={h.running || h.scenarios.length === 0}>
+                {h.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                Esegui tutti ({h.scenarios.length})
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 border-t pt-3">
             <Button variant={filterCat === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterCat("all")}>
               Tutte ({h.scenarios.length})
             </Button>
@@ -71,19 +90,6 @@ export function AiTestHubPage() {
                 {CATEGORY_LABELS[c] ?? c}
               </Button>
             ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2 justify-end border-t pt-2">
-            <Button size="sm" variant="outline" onClick={() => h.setEditing({ category: "general", target_function: "ai-assistant", ai_scope: "lab", payload: {}, assertions: [{ type: "status_ok" }], tags: [], is_shared: true, is_active: true, priority: 100 })}>
-              <Plus className="h-4 w-4 mr-1" /> Nuovo scenario
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => h.runSelected()} disabled={h.running}>
-              {h.running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-              Esegui selezionati ({h.selectedIds.size})
-            </Button>
-            <Button size="sm" onClick={() => h.runAll()} disabled={h.running || h.scenarios.length === 0}>
-              {h.running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-              Esegui tutti ({h.scenarios.length})
-            </Button>
           </div>
         </CardContent>
       </Card>
