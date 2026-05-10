@@ -97,6 +97,7 @@ const AgentAtlasPage = lazy(() => import("./ui/pages/prompt-lab/atlas/AgentAtlas
 const SuggestionsReviewPage = lazy(() => import("./ui/pages/prompt-lab/SuggestionsReviewPage"));
 const ProposalsReviewPage = lazy(() => import("./ui/pages/prompt-lab/ProposalsReviewPage"));
 const PromptCatalogPage = lazy(() => import("./ui/pages/PromptCatalogPage"));
+const PromptTestsPage = lazy(() => import("./ui/pages/PromptTestsPage"));
 const PromptReaderPage = lazy(() => import("./ui/pages/prompt-lab/PromptReaderPage"));
 const AiInteractionLogPage = lazy(() => import("./ui/pages/AiInteractionLogPage"));
 const RubricaWhatsAppPage = lazy(() => import("./ui/pages/RubricaWhatsAppPage").then((m) => ({ default: m.RubricaWhatsAppPage })));
@@ -320,6 +321,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="prompt-lab/suggestions" element={guardedPage(SuggestionsReviewPage, "SuggestionsReview")} />
           <Route path="prompt-lab/proposals" element={guardedPage(ProposalsReviewPage, "ProposalsReview")} />
           <Route path="prompt-lab/catalog" element={guardedPage(PromptCatalogPage, "PromptCatalog")} />
+          <Route path="prompt-lab/tests" element={guardedPage(PromptTestsPage, "PromptTests")} />
           {/* Fase 5: Prompt Reader demoted da menu principale a deep-link sotto Prompt Lab.
               Redirect del path top-level verso il Prompt Lab; reader resta accessibile sotto settings. */}
           <Route path="prompt-reader" element={<Navigate to="/v2/settings/prompt-reader" replace />} />
