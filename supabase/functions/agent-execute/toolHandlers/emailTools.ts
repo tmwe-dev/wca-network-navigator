@@ -181,28 +181,37 @@ export async function handleSendWhatsApp(
     console.error("[send_whatsapp] journalistReview failed:", jerr);
   }
 
-  // Bridge invio: registra come pending da bridge estensione
-  await supabase.from("activities").insert({
-    user_id: userId,
-    partner_id: partnerId,
-    source_id: partnerId || crypto.randomUUID(),
-    source_type: partnerId ? "partner" : "imported_contact",
-    activity_type: "whatsapp_message",
-    title: `WA → ${args.phone || args.to || "?"}`,
-    description: String(args.message || "").substring(0, 500),
-    status: "pending",
-  });
-  const pipeWa = await runPostSendPipeline(supabase, {
-    userId, partnerId,
-    contactId: args.contact_id ? String(args.contact_id) : null,
-    channel: "whatsapp",
-    to: String(args.phone || args.to || ""),
-    subject: String(args.message || "").substring(0, 80),
-    body: String(args.message || ""),
-    source: "agent",
-    agentId: ctx?.agentId,
-  });
-  return { success: true, queued_to_bridge: true, post_send: pipeWa };
+  // ── AGENT NON INVIA: crea solo proposta in ai_pending_actions ──
+  // L'invio reale WhatsApp avviene SOLO dal cockpit con utente attivo (postMessage
+  // → estensione `from-webapp-wa`). L'agent non ha un canale di invio autonomo.
+  const phone = String(args.phone || args.to || "").replace(/[\s\-().+]/g, "");
+  if (!phone) return { error: "phone mancante", blocked_by: "missing_recipient" };
+  const { data: pending, error: pendErr } = await supabase
+    .from("ai_pending_actions")
+    .insert({
+      user_id: userId,
+      partner_id: partnerId,
+      action_type: "send_whatsapp",
+      action_payload: {
+        recipient: phone,
+        message_text: String(args.message || ""),
+        contact_id: args.contact_id ? String(args.contact_id) : null,
+        partner_id: partnerId,
+        scheduled_for: new Date().toISOString(),
+      },
+      reasoning: `WhatsApp predisposto da agent (${ctx?.agentId || "unknown"}). Richiede approvazione e invio manuale dal cockpit.`,
+      confidence: 0.8,
+      source: `agent:${ctx?.agentId || "unknown"}`,
+      status: "pending",
+    })
+    .select("id").maybeSingle();
+  if (pendErr) return { error: `queue_failed: ${pendErr.message}`, blocked_by: "queue_insert" };
+  return {
+    success: true,
+    queued_for_approval: true,
+    pending_action_id: pending?.id ?? null,
+    message: "WhatsApp NON inviato. Proposta accodata in ai_pending_actions: l'operatore deve approvarlo e inviarlo manualmente dal cockpit.",
+  };
 }
 
 export async function handleSendLinkedIn(
@@ -243,29 +252,39 @@ export async function handleSendLinkedIn(
     console.error("[send_linkedin] journalistReview failed:", jerr);
   }
 
-  await supabase.from("activities").insert({
-    user_id: userId,
-    partner_id: partnerId,
-    source_id: partnerId || crypto.randomUUID(),
-    source_type: partnerId ? "partner" : "imported_contact",
-    activity_type: "linkedin_message",
-    title: `LinkedIn → ${args.profile_url || args.to || "?"}`,
-    description: String(args.message || "").substring(0, 500),
-    status: "pending",
-  });
-  const seqDay = typeof args.sequence_day === "number" ? args.sequence_day : 0;
-  const pipeLi = await runPostSendPipeline(supabase, {
-    userId, partnerId,
-    contactId: args.contact_id ? String(args.contact_id) : null,
-    channel: "linkedin",
-    to: String(args.profile_url || args.to || ""),
-    subject: String(args.message || "").substring(0, 80),
-    body: String(args.message || ""),
-    sequenceDay: seqDay,
-    source: "agent",
-    agentId: ctx?.agentId,
-  });
-  return { success: true, queued_to_bridge: true, post_send: pipeLi };
+  // ── AGENT NON INVIA: crea solo proposta in ai_pending_actions ──
+  // LinkedIn passa SOLO dal cockpit con utente attivo (postMessage `from-webapp-li`).
+  const profileUrl = String(args.profile_url || args.to || "");
+  if (!/^https?:\/\/([\w-]+\.)?linkedin\.com\/(in|pub)\//i.test(profileUrl)) {
+    return { error: "profile_url LinkedIn non valido", blocked_by: "invalid_url" };
+  }
+  const messageText = String(args.message || "").substring(0, 300);
+  const { data: pending, error: pendErr } = await supabase
+    .from("ai_pending_actions")
+    .insert({
+      user_id: userId,
+      partner_id: partnerId,
+      action_type: "send_linkedin",
+      action_payload: {
+        recipient: profileUrl,
+        message_text: messageText,
+        contact_id: args.contact_id ? String(args.contact_id) : null,
+        partner_id: partnerId,
+        scheduled_for: new Date().toISOString(),
+      },
+      reasoning: `LinkedIn predisposto da agent (${ctx?.agentId || "unknown"}). Richiede approvazione e invio manuale dal cockpit.`,
+      confidence: 0.8,
+      source: `agent:${ctx?.agentId || "unknown"}`,
+      status: "pending",
+    })
+    .select("id").maybeSingle();
+  if (pendErr) return { error: `queue_failed: ${pendErr.message}`, blocked_by: "queue_insert" };
+  return {
+    success: true,
+    queued_for_approval: true,
+    pending_action_id: pending?.id ?? null,
+    message: "LinkedIn NON inviato. Proposta accodata in ai_pending_actions: l'operatore deve approvarlo e inviarlo manualmente dal cockpit.",
+  };
 }
 
 export async function handleQueueOutreach(

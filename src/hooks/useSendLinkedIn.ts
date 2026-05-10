@@ -8,6 +8,7 @@ import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useLogAction } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
+import { reviewMessage } from "@/lib/messaging/reviewMessage";
 import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendLinkedIn");
@@ -91,7 +92,37 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
           if (profileUrl) window.open(profileUrl, "_blank");
           return;
         }
-        const res = await liBridge.sendDirectMessage(profileUrl, plainText);
+
+        // ── EDITORIAL GATE HARD (memoria editorial-review-layer-mandatory) ──
+        let finalText = plainText;
+        try {
+          const review = await reviewMessage({
+            channel: "linkedin",
+            draft: plainText,
+            partnerId: null,
+            contactId: draft.contactId ?? null,
+          });
+          if (review.verdict === "block") {
+            toast({
+              title: "🛑 LinkedIn bloccato dalla review editoriale",
+              description: review.reasoning_summary || "Messaggio non conforme.",
+              variant: "destructive",
+            });
+            setSending(false);
+            return;
+          }
+          if (review.verdict === "pass_with_edits" && review.edited_text) {
+            finalText = review.edited_text;
+            toast({ title: "✏️ LinkedIn corretto dalla review", description: "Inviata la versione editata." });
+          }
+        } catch (revErr) {
+          log.error("LI review failed → fail-closed", { error: revErr instanceof Error ? revErr.message : String(revErr) });
+          toast({ title: "Review LinkedIn non disponibile", description: "Invio annullato per sicurezza.", variant: "destructive" });
+          setSending(false);
+          return;
+        }
+
+        const res = await liBridge.sendDirectMessage(profileUrl, finalText);
         if (res.success) {
           toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
           logAction.mutate({
@@ -101,7 +132,7 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
             to: profileUrl,
             title: `${draft.companyName || "—"} — ${draft.contactName || "contatto"}`,
             subject: `LinkedIn DM a ${draft.contactName || "contatto"}`,
-            body: plainText,
+            body: finalText,
             source: "manual",
           });
         } else {

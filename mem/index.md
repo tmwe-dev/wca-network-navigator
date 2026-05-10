@@ -13,3 +13,4 @@
 - [Funnemail Sprint 4 2026-05-08](mem://reference/funnemail-sprint4-2026-05-08) — Scout cache per-utente (funnemail_scout_cache) + routing rules composite (funnemail_routing_rules) con valutazione AND in funnemail-auto-route prima del fallback AI; tab UI Routing Rules + Scout Cache
 - [Funnemail Sprint 5 2026-05-08](mem://reference/funnemail-sprint5-2026-05-08) — Eval set (cases+runs+run-funnemail-eval edge dry-run), view cognitiva funnemail_brain_v, pagina /v2/email-intelligence/operations + tab Eval Set
 - [Messaging SSOT v3.9.56](mem://architecture/messaging-ssot-v3956) — src/lib/messaging/ SSOT invio/download LI+WA; bulk/AI passa SEMPRE da queue*ForApproval; contratto bridge congelato
+- [Agent No Direct LI/WA Send](mem://architecture/agent-no-direct-li-wa-send) — agent-execute non invia mai LI/WA: solo proposte in ai_pending_actions. Invio reale solo manuale dal cockpit con edge `review-message` (journalistReview hard, fail-closed).

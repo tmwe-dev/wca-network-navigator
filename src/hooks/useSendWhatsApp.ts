@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLogAction } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
+import { reviewMessage } from "@/lib/messaging/reviewMessage";
 import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendWhatsApp");
@@ -37,9 +38,40 @@ export function useSendWhatsApp(draft: DraftState) {
     }
 
     const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
+
+    // ── EDITORIAL GATE HARD (memoria editorial-review-layer-mandatory) ──
+    let finalText = plainText;
+    try {
+      const review = await reviewMessage({
+        channel: "whatsapp",
+        draft: plainText,
+        partnerId: null,
+        contactId: draft.contactId ?? null,
+      });
+      if (review.verdict === "block") {
+        toast({
+          title: "🛑 Invio bloccato dalla review editoriale",
+          description: review.reasoning_summary || "Messaggio non conforme alla doctrine.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (review.verdict === "pass_with_edits" && review.edited_text) {
+        finalText = review.edited_text;
+        toast({
+          title: "✏️ Messaggio corretto dalla review",
+          description: "Inviata la versione editata dal giornalista AI.",
+        });
+      }
+    } catch (err) {
+      log.error("WA review failed → fail-closed", { error: err instanceof Error ? err.message : String(err) });
+      toast({ title: "Review WA non disponibile", description: "Invio annullato per sicurezza.", variant: "destructive" });
+      return;
+    }
+
     setSending(true);
     try {
-      const res = await waBridge.sendWhatsApp(phone, plainText);
+      const res = await waBridge.sendWhatsApp(phone, finalText);
       if (res.success) {
         toast({ title: "✅ WhatsApp inviato!", description: `A: ${phone}` });
         logAction.mutate({
@@ -49,7 +81,7 @@ export function useSendWhatsApp(draft: DraftState) {
           to: phone,
           title: `${draft.companyName || "—"} — ${draft.contactName || phone}`,
           subject: `WhatsApp a ${draft.contactName || phone}`,
-          body: plainText,
+          body: finalText,
           source: "manual",
         });
       } else {
