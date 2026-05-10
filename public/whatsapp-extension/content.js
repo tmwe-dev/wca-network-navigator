@@ -27,6 +27,7 @@
     "ping", "setConfig", "verifySession", "sendWhatsApp",
     "readUnread", "learnDom", "diagnosticDom", "readThread",
     "backfillChat",
+    "ensureWorkerTab",
   ];
 
   var MAX_STRING_LENGTH = 5000;
