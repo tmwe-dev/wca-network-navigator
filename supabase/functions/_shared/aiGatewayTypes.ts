@@ -32,6 +32,14 @@ export interface AiChatOptions {
   tools?: AiTool[];
   temperature?: number;
   max_tokens?: number;
+  /** Sampling penalty for repeated tokens (OpenAI-compatible). */
+  presence_penalty?: number;
+  /** Sampling penalty for frequent tokens (OpenAI-compatible). */
+  frequency_penalty?: number;
+  /** Deterministic seed (when provider supports it). */
+  seed?: number;
+  /** Nucleus sampling (when provider supports it). */
+  top_p?: number;
   /** Timeout totale per ogni singolo tentativo (ms). Default 30000. */
   timeoutMs?: number;
   /** Numero massimo retry per modello su errori transient. Default 2. */
