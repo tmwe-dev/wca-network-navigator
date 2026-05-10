@@ -682,14 +682,14 @@ var HybridOps = globalThis.HybridOps || (function () {
                       var b = nodes[i];
                       if (!(b.offsetParent !== null || b.getClientRects().length > 0)) continue;
                       if (b.disabled || b.getAttribute("aria-disabled") === "true") continue;
-                      if (!b.closest(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble")) continue;
+                      if (!b.closest(".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, .msg-thread, [class*='msg-thread'], [class*='msg-convo']")) continue;
                       return b;
                     }
                   } catch (e) {}
                   return null;
                 }
                 function findBox() {
-                  var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble");
+                  var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, .msg-thread, [class*='msg-thread'], [class*='msg-convo']");
                   for (var s = 0; s < scopes.length; s++) {
                     var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
                     for (var i = 0; i < boxes.length; i++) {
