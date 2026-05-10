@@ -119,14 +119,30 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.63",
+    "latestVersion": "3.9.65",
     "items": [
+      {
+        "version": "3.9.65",
+        "filename": "linkedin-extension-3.9.65.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.65.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Wait dinamico LinkedIn SPA: su /messaging/thread/new aspetta il mount reale del composer fino a 25s, salta doppi click Messaggia se la tab è già in messaging e allarga gate/writer agli scope msg-thread/msg-convo/compose-form. Risolve race readyState=complete ma DOM vuoto."
+      },
+      {
+        "version": "3.9.64",
+        "filename": "linkedin-extension-3.9.64.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.64.zip",
+        "releaseDate": "2026-05-10",
+        "current": false,
+        "notes": "Fast path /messaging/: salta caccia bottoni Messaggia/Altro e aspetta direttamente il composer scansionando l'intero documento."
+      },
       {
         "version": "3.9.63",
         "filename": "linkedin-extension-3.9.63.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.63.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Selettori Messaggia/Altro allargati (CSS-first + shadow DOM): message-anywhere-button, data-control-name*='message', /messaging/thread/, aria-label*='essag'/'criv'. Retry fino a 3 click su candidati multipli, fallback Altro anticipato a 1.5s dopo 2 tentativi. Diagnostica arricchita (profileLoaded, messageBtnSelectorsHit, firstButtonLabels, url) per intercettare cambi DOM LinkedIn. Fallback HybridOps.sendMessage e keep-alive invariati."
       },
       {
