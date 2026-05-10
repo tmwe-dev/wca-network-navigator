@@ -10,6 +10,19 @@ import { LINKEDIN_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip"
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
+import {
+  type LinkedInSendStrategy,
+  STRATEGY_LABELS,
+  STRATEGY_DESCRIPTIONS,
+  loadStrategy,
+  saveStrategy,
+  strategyHasTimeout,
+  strategyHasDedup,
+  withClientTimeout,
+  buildIdempotencyKey,
+  isDuplicateKey,
+  rememberKey,
+} from "./linkedinSendStrategies";
 
 // Area di TEST manuale: l'operatore guida il ritmo, non serve gating anti-throttle
 // di produzione. Cooldown ridotti al minimo per "parti e vai" come WhatsApp test.
@@ -55,6 +68,7 @@ export function LinkedInTest() {
   const [lastKnownText, setLastKnownText] = useState("");
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
+  const [strategy, setStrategy] = useState<LinkedInSendStrategy>(loadStrategy);
   const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
