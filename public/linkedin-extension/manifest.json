@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.61",
-  "description": "3.9.61 — Diagnostic fast-path: sendMessageWithMethod usa gate composer brevi (max ~8s) e CDP wrapped con timeout 5s, così i test isolati non restano appesi 45s. Keep-alive worker invariato.",
+  "version": "3.9.62",
+  "description": "3.9.62 — Ripristina fallback stabile HybridOps.sendMessage quando il gate diagnostico fallisce sui metodi DOM (physical_click/form_submit/keyboard). I metodi CDP restano fail-fast diagnostici. Keep-alive e worker tab invariati.",
   "permissions": [
     "cookies",
     "tabs",
