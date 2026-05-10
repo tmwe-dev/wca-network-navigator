@@ -534,8 +534,191 @@ export function LinkedInTest() {
     log(`📌 URL LinkedIn FISSO per i test: ${fixedUrl}. Non verrà cambiato dagli invii.`, "ok");
   };
 
+  // ── Diagnostica completa: un solo click, niente strategie da scegliere ──
+  const runFullDiagnostic = useCallback(async () => {
+    setDiagRunning(true);
+    const steps: DiagStep[] = [
+      { name: "Config app", status: "pending" },
+      { name: "Ping estensione", status: "pending" },
+      { name: "Worker tab (pre-warm)", status: "pending" },
+      { name: "Sessione LinkedIn", status: "pending" },
+      { name: "Lettura inbox", status: "pending" },
+      { name: "Lettura primo thread", status: "pending" },
+    ];
+    setDiagnostics([...steps]);
+    const update = (i: number, patch: Partial<DiagStep>) => {
+      steps[i] = { ...steps[i], ...patch };
+      setDiagnostics([...steps]);
+    };
+    const time = async <T,>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> => {
+      const t0 = Date.now();
+      const result = await fn();
+      return { result, ms: Date.now() - t0 };
+    };
+    log("🧪 Avvio diagnostica LinkedIn completa…", "info");
+
+    // 1. Config
+    update(0, { status: "ok", detail: `richiesta v${LINKEDIN_EXTENSION_REQUIRED_VERSION}` });
+
+    // 2. Ping
+    let installedVersion = "";
+    try {
+      const { result: r, ms } = await time(() => liMsg("ping", {}, 5000) as Promise<Record<string, unknown>>);
+      if (r?.success) {
+        installedVersion = String(r.version || "?");
+        const match = installedVersion === LINKEDIN_EXTENSION_REQUIRED_VERSION;
+        update(1, {
+          status: match ? "ok" : "warn",
+          ms,
+          detail: match ? `v${installedVersion}` : `installata v${installedVersion} ≠ richiesta v${LINKEDIN_EXTENSION_REQUIRED_VERSION}`,
+        });
+      } else {
+        update(1, { status: "ko", ms, detail: String(r?.error || "estensione non risponde") });
+        update(2, { status: "skip", detail: "estensione assente" });
+        update(3, { status: "skip", detail: "estensione assente" });
+        update(4, { status: "skip", detail: "estensione assente" });
+        update(5, { status: "skip", detail: "estensione assente" });
+        log("❌ Diagnostica interrotta: estensione non raggiungibile", "error");
+        setDiagRunning(false);
+        return;
+      }
+    } catch (e) {
+      update(1, { status: "ko", detail: e instanceof Error ? e.message : String(e) });
+      setDiagRunning(false);
+      return;
+    }
+
+    // 3. Worker tab
+    try {
+      const { result: r, ms } = await time(() => liMsg("ensureWorkerTab", {}, 35000) as Promise<Record<string, unknown>>);
+      const errStr = String(r?.error || "");
+      if (r?.success) {
+        update(2, { status: "ok", ms, detail: `tab #${r.workerTabId} ready=${r.ready ? "yes" : "no"}` });
+      } else if (/Unknown action: ensureWorkerTab/i.test(errStr)) {
+        update(2, { status: "warn", ms, detail: "estensione non supporta pre-warm (versione vecchia)" });
+      } else {
+        update(2, { status: "ko", ms, detail: errStr || "fallito" });
+      }
+    } catch (e) {
+      update(2, { status: "ko", detail: e instanceof Error ? e.message : String(e) });
+    }
+
+    // 4. Sessione
+    try {
+      const { result: r, ms } = await time(() => liMsg("verifySession", {}, 60000) as Promise<Record<string, unknown>>);
+      const reason = String(r?.reason || "");
+      if (r?.authenticated) {
+        update(3, { status: "ok", ms, detail: reason || "session_active" });
+      } else if (reason === "auth_required" || reason === "no_cookie") {
+        update(3, { status: "ko", ms, detail: "login LinkedIn richiesto" });
+      } else if (reason === "checkpoint") {
+        update(3, { status: "ko", ms, detail: "checkpoint/captcha LinkedIn" });
+      } else if (reason === "loading") {
+        update(3, { status: "warn", ms, detail: "LinkedIn ancora in caricamento" });
+      } else {
+        update(3, { status: "warn", ms, detail: reason || "non confermata" });
+      }
+    } catch (e) {
+      update(3, { status: "ko", detail: e instanceof Error ? e.message : String(e) });
+    }
+
+    // 5. Inbox (no client timeout: usa il bounded interno della 3.9.59)
+    let inboxThreads: Array<Record<string, unknown>> = [];
+    try {
+      const { result: r, ms } = await time(() => liMsg("readLinkedInInbox", {}, 90000) as Promise<Record<string, unknown>>);
+      const threads = (r?.threads as Array<Record<string, unknown>>) || [];
+      inboxThreads = threads;
+      if (r?.success && threads.length) {
+        update(4, { status: "ok", ms, detail: `${threads.length} thread · method=${String(r.method ?? "?")}` });
+      } else if (r?.success) {
+        update(4, { status: "warn", ms, detail: `0 thread restituiti · method=${String(r.method ?? "?")}` });
+      } else {
+        update(4, { status: "ko", ms, detail: String(r?.error || "errore sconosciuto") });
+      }
+    } catch (e) {
+      update(4, { status: "ko", detail: e instanceof Error ? e.message : String(e) });
+    }
+
+    // 6. Thread singolo
+    const targetThread =
+      inboxThreads.find((t) => typeof t.threadUrl === "string")?.threadUrl as string | undefined ||
+      (sendUrl && isValidLinkedInTestUrl(sendUrl) ? sendUrl : "");
+    if (!targetThread) {
+      update(5, { status: "skip", detail: "nessun thread disponibile e nessun destinatario fisso" });
+    } else {
+      try {
+        const { result: r, ms } = await time(() => liMsg("readLinkedInThread", { threadUrl: targetThread }, 60000) as Promise<Record<string, unknown>>);
+        const messages = (r?.messages as Array<Record<string, unknown>>) || [];
+        if (r?.success && messages.length) {
+          update(5, { status: "ok", ms, detail: `${messages.length} messaggi · method=${String(r.method ?? "?")}` });
+        } else if (r?.success) {
+          update(5, { status: "warn", ms, detail: "thread vuoto" });
+        } else {
+          update(5, { status: "ko", ms, detail: String(r?.error || "errore sconosciuto") });
+        }
+      } catch (e) {
+        update(5, { status: "ko", detail: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    log("🧪 Diagnostica completata.", "ok");
+    setDiagRunning(false);
+  }, [log, sendUrl]);
+
   return (
     <div className="space-y-4">
+      <div className="p-3 rounded-lg border border-primary/40 bg-primary/5 space-y-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <p className="text-sm font-semibold">🧪 Diagnostica LinkedIn (un click)</p>
+            <p className="text-xs text-muted-foreground">
+              Esegue in sequenza: config app, ping, worker tab, sessione, inbox, lettura thread.
+              Niente strategie da scegliere.
+            </p>
+          </div>
+          <Button
+            onClick={runFullDiagnostic}
+            disabled={diagRunning || running}
+            size="sm"
+            variant="default"
+          >
+            {diagRunning ? "⏳ In corso…" : "▶️ Esegui diagnostica"}
+          </Button>
+        </div>
+        {diagnostics.length > 0 && (
+          <div className="overflow-x-auto rounded border border-border/60 bg-background/60">
+            <table className="w-full text-xs font-mono">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th className="text-left px-2 py-1">Funzione</th>
+                  <th className="text-left px-2 py-1 w-20">Stato</th>
+                  <th className="text-right px-2 py-1 w-20">Tempo</th>
+                  <th className="text-left px-2 py-1">Dettaglio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {diagnostics.map((s, i) => (
+                  <tr key={i} className="border-t border-border/40">
+                    <td className="px-2 py-1">{s.name}</td>
+                    <td className={`px-2 py-1 font-bold ${
+                      s.status === "ok" ? "text-green-500"
+                      : s.status === "ko" ? "text-red-500"
+                      : s.status === "warn" ? "text-yellow-500"
+                      : s.status === "skip" ? "text-muted-foreground"
+                      : "text-muted-foreground"
+                    }`}>
+                      {s.status === "pending" ? "…" : s.status.toUpperCase()}
+                    </td>
+                    <td className="px-2 py-1 text-right text-muted-foreground">{s.ms ? `${s.ms}ms` : "—"}</td>
+                    <td className="px-2 py-1 text-muted-foreground">{s.detail || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex flex-wrap gap-2">
           <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
