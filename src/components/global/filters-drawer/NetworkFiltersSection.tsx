@@ -283,9 +283,7 @@ export function NetworkFiltersSection() {
                       // sessione, altrimenti il default "exclude" lo
                       // nasconderebbe.
                       if (p.country_code) {
-                        g.batchUpdate({
-                          networkSelectedCountries: new Set([p.country_code]),
-                        });
+                        g.setNetworkSelectedCountries(new Set([p.country_code]));
                       }
                       window.dispatchEvent(
                         new CustomEvent("network-list-show-holding")
