@@ -150,13 +150,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.65",
+    latestVersion: "3.9.66",
     items: [
+      {
+        version: "3.9.66",
+        filename: "linkedin-extension-3.9.66.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.66.zip",
+        current: true,
+        note: "Ripristino baseline 3.9.56 per l'invio: profili /in/ e /pub/ NON usano più la worker tab (riservata a /messaging/ per la lettura). Fallback HybridOps.sendMessage abilitato anche per metodi CDP quando il composer gate scade.",
+      },
       {
         version: "3.9.65",
         filename: "linkedin-extension-3.9.65.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.65.zip",
-        current: true,
+        current: false,
         note: "Wait dinamico LinkedIn SPA: su /messaging/thread/new aspetta il mount reale del composer fino a 25s, salta doppi click Messaggia se la tab è già in messaging e allarga gate/writer agli scope moderni.",
       },
       {
