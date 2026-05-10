@@ -165,6 +165,25 @@ var TabManager = globalThis.TabManager || (function () {
     await loadOwnership();
     const canCreate = allowCreate !== false;
 
+    // 3.9.54 — Preferenza esatta: se url target valorizzato, cerchiamo
+    // PRIMA una tab LinkedIn con path identico, prima di adottare una
+    // tab generica. Evita di dirottare l'utente su un profilo diverso.
+    if (url) {
+      try {
+        const allLi = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+        const exact = (allLi || []).find(function (t) {
+          return t.windowId !== _automationWindowId && urlMatchesTarget(t.url, url);
+        });
+        if (exact) {
+          _liTabId = exact.id;
+          markOwned(_liTabId);
+          console.log("[LI Tab] Reusing exact-match LinkedIn tab #" + _liTabId);
+          if (exact.status !== "complete") await waitForLoad(_liTabId, 15000);
+          return { id: _liTabId, reused: true, exactMatch: true };
+        }
+      } catch (e) { /* ignore */ }
+    }
+
     // Always prefer a LinkedIn tab already open outside the automation window.
     // P14: if the caller says same-domain reuse is allowed, keep the user on
     // the current LinkedIn page instead of navigating away.
