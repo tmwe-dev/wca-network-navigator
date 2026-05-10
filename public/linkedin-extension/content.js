@@ -30,7 +30,6 @@
     "searchProfile", "readLinkedInInbox", "readLinkedInThread",
     "backfillLinkedInThread",
     "diagnosticLinkedInDom", "learnDom", "remapSendDom", "getSendPlan", "setConfig",
-    "ensureWorkerTab",
   ];
 
   // Max payload sizes
