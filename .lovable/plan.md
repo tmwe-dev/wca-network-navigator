@@ -13,7 +13,7 @@ Causa: LinkedIn ha cambiato labels/markup dei bottoni del profilo. I regex attua
 
 ## Cosa cambia (solo `actions.js`, file unico, fallback `HybridOps.sendMessage` resta intatto)
 
-### 1. Selettori "Messaggia" allargati (`findMessageBtn`)
+### 1. Wait dinamico LinkedIn SPA + selettori "Messaggia" allargati (`findMessageBtn`)
 Aggiungere selettori CSS espliciti prima del fallback testuale:
 - `button[aria-label*="essag" i]` (Messaggia / Message / Messaggio)
 - `button[data-control-name*="message" i]`
@@ -67,9 +67,9 @@ Da `Math.max(12000, timeoutMs || 30000)` (di fatto 30s perché `timeoutMs=30000`
 - CDP fail-fast diagnostico (resta)
 
 ## Packaging
-- Bump manifest a `3.9.63`
-- Catalog: 3.9.63 latest, 3.9.62 current=false
-- `whatsappExtensionZip.ts` LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.63"
+- Bump manifest a `3.9.65`
+- Catalog: 3.9.65 latest, 3.9.64/3.9.63 current=false
+- `whatsappExtensionZip.ts` LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.65"
 - Repackage zip + fallback `linkedin-extension.zip`
 
 ## Risultato atteso

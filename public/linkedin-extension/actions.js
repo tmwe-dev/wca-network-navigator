@@ -329,6 +329,36 @@ var Actions = globalThis.Actions || (function () {
               for (var i = 0; i < scopes.length; i++) if (visible(scopes[i])) return true;
               return false;
             }
+            function findComposerBoxAnywhere() {
+              var scoped = deepQueryAll(
+                ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
+              );
+              for (var s = 0; s < scoped.length; s++) {
+                if (!visible(scoped[s])) continue;
+                var boxes = scoped[s].querySelectorAll(
+                  "[contenteditable='true'], div[role='textbox'], [role='textbox'], [aria-label*='message' i], [aria-label*='messaggio' i], [aria-label*='scrivi' i], [data-placeholder*='message' i], [data-placeholder*='messaggio' i]"
+                );
+                for (var b = 0; b < boxes.length; b++) if (visible(boxes[b])) return boxes[b];
+                if (scoped[s].getAttribute && scoped[s].getAttribute("contenteditable") === "true") return scoped[s];
+              }
+              var allBoxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+              for (var a = 0; a < allBoxes.length; a++) if (visible(allBoxes[a]) && !isInGlobalNav(allBoxes[a])) return allBoxes[a];
+              return null;
+            }
+            function linkedinSpaReadySnapshot() {
+              var visibleButtons = [];
+              try {
+                visibleButtons = Array.from(document.body.querySelectorAll("button, a, [role='button']")).filter(visible);
+              } catch (e) { visibleButtons = []; }
+              return {
+                readyState: document.readyState,
+                hasMain: !!document.querySelector("main, [role='main']"),
+                hasMessagingShell: !!document.querySelector(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo'], [class*='msg-s-message-list'], [class*='msg-conversations']"),
+                loading: !!document.querySelector("[class*='loading'], [aria-busy='true'], .artdeco-loader"),
+                bodyTextLength: ((document.body && document.body.innerText) || "").length,
+                visibleButtonsCount: visibleButtons.length
+              };
+            }
             function resolveLabel(el) {
               var lbl = (el.getAttribute("aria-label") || "");
               var lblBy = el.getAttribute("aria-labelledby");
@@ -459,26 +489,13 @@ var Actions = globalThis.Actions || (function () {
                 last.composerScope = "document";
                 while (Date.now() - started < limit) {
                   last.readyState = document.readyState;
-                  // Su /messaging/ la textbox può essere ovunque nel DOM.
-                  var msgForms = deepQueryAll(".msg-form, .msg-form__contenteditable, .msg-form__msg-content-container");
-                  last.msgFormPresent = msgForms.some(visible);
-                  var anyBox = null;
-                  // 1) Preferito: contenteditable dentro .msg-form
-                  for (var f = 0; f < msgForms.length; f++) {
-                    if (!visible(msgForms[f])) continue;
-                    var inner = msgForms[f].querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-                    if (inner && visible(inner)) { anyBox = inner; break; }
-                    if (msgForms[f].getAttribute && msgForms[f].getAttribute("contenteditable") === "true") { anyBox = msgForms[f]; break; }
-                  }
-                  // 2) Fallback: qualsiasi contenteditable visibile nel doc
-                  if (!anyBox) {
-                    var allEditables = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-                    for (var e2 = 0; e2 < allEditables.length; e2++) {
-                      if (visible(allEditables[e2])) { anyBox = allEditables[e2]; break; }
-                    }
-                  }
+                  var spa = linkedinSpaReadySnapshot();
+                  last.hasMain = spa.hasMain;
+                  last.msgFormPresent = spa.hasMessagingShell;
+                  last.visibleButtonsCount = spa.visibleButtonsCount;
+                  var anyBox = findComposerBoxAnywhere();
                   last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
-                  last.shells = msgForms.filter(visible).length;
+                  last.shells = deepQueryAll(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo'], [class*='msg-s-message-list']").filter(visible).length;
                   if (anyBox) return { success: true, method: "messaging_fast_path", waitedMs: Date.now() - started, diagnostic: last };
                   await sleep(250);
                 }
@@ -599,6 +616,13 @@ var Actions = globalThis.Actions || (function () {
         return !!(r[0] && r[0].result);
       } catch (e) { return false; }
     }
+    async function currentTabIsMessaging() {
+      try {
+        const ti = await chrome.tabs.get(tab.id);
+        const u = (ti && (ti.url || ti.pendingUrl)) || "";
+        return /linkedin\.com\/messaging\//i.test(u);
+      } catch (e) { return false; }
+    }
     if (!composerAlreadyOpen && !isThreadUrl) {
       let profileReady = await probeMessageButton();
       // 3.9.61 — Diagnostic: 8 × 500ms = 4s (era 15s). I test devono
@@ -634,26 +658,30 @@ var Actions = globalThis.Actions || (function () {
     // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia"
     //    con un retry in caso di fallimento transitorio.
     if (!composerAlreadyOpen && !isThreadUrl) {
-      let clickResult = await HybridOps.clickMessage(tab.id);
-      if (!clickResult || !clickResult.success) {
-        await TabManager.sleep(1500);
-        clickResult = await HybridOps.clickMessage(tab.id);
+      const alreadyInMessaging = await currentTabIsMessaging();
+      if (!alreadyInMessaging) {
+        let clickResult = await HybridOps.clickMessage(tab.id);
+        if (!clickResult || !clickResult.success) {
+          await TabManager.sleep(1500);
+          clickResult = await HybridOps.clickMessage(tab.id);
+        }
+        if (!clickResult || !clickResult.success) {
+          return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
+        }
       }
-      if (!clickResult || !clickResult.success) {
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
-      }
-      // 3.9.61 — Gate diagnostico ridotto a 8s (era 30s).
-      const gateAfterClick = await waitForComposerReady(8000);
+      // 3.9.65 — Gate dinamico per LinkedIn SPA: dopo click può atterrare su
+      // /messaging/thread/new e montare il composer lentamente in background.
+      const gateAfterClick = await waitForComposerReady(25000);
       composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
     } else if (isThreadUrl && !composerAlreadyOpen) {
-      // 3.9.61 — Thread URL: gate diagnostico 8s (era 30s).
-      const threadGate = await waitForComposerReady(8000);
+      // 3.9.65 — Thread URL: aspetta la SPA reale, non solo readyState=complete.
+      const threadGate = await waitForComposerReady(25000);
       composerAlreadyOpen = !!(threadGate && threadGate.success);
     }
     if (!composerAlreadyOpen) {
-      // 3.9.61 — Ultimo gate diagnostico: 8s (era 30s). Niente fallback
-      // pesante: il test deve riportare composer_gate_failed in tempi utili.
-      const finalGate = await waitForComposerReady(8000);
+      // 3.9.65 — Ultimo gate adattivo: LinkedIn può avere status=complete ma
+      // DOM messaging ancora non montato. Polliamo la SPA prima di dichiarare fail.
+      const finalGate = await waitForComposerReady(25000);
       if (finalGate && finalGate.success) {
         composerAlreadyOpen = true;
       } else {
