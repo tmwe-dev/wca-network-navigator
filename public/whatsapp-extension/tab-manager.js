@@ -12,6 +12,10 @@ var TabManager = globalThis.TabManager || (function () {
   let _automationWindowId = null;
   let _ownedWaTabIds = new Set();
   let _creatingWaTabPromise = null;
+  // 5.10.18 — Worker tab persistente (alias di getOrCreateWaTab) con
+  // tracciamento dell'id corrente e flag ready, per UI/ping.
+  let _workerTabId = null;
+  let _workerReady = false;
 
   function enqueueSession(fn) {
     _sessionQueue = _sessionQueue.then(fn).catch(function (e) {
@@ -54,6 +58,17 @@ var TabManager = globalThis.TabManager || (function () {
 
   function isOwned(tabId) {
     return _ownedWaTabIds.has(tabId);
+  }
+
+  function getWorkerInfo() {
+    return { id: _workerTabId, ready: _workerReady };
+  }
+
+  function invalidateWorker(closedTabId) {
+    if (closedTabId === undefined || closedTabId === _workerTabId) {
+      _workerTabId = null;
+      _workerReady = false;
+    }
   }
 
   // ── Legacy automation window shim ──
@@ -239,6 +254,8 @@ var TabManager = globalThis.TabManager || (function () {
       if (existing) {
         if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
         await ensureTabInAutomationWindow(existing.id);
+        _workerTabId = existing.id;
+        _workerReady = true;
         return { tab: existing, reused: true };
       }
     } catch (err) { console.debug("[WA Tab]", err?.message); }
@@ -249,10 +266,17 @@ var TabManager = globalThis.TabManager || (function () {
         const loaded = await waitForLoad(tab.id, 30000);
         if (!loaded) throw new Error("WhatsApp Web non caricato");
         await sleep(4000);
+        _workerTabId = tab.id;
+        _workerReady = true;
         return { tab: tab, reused: false };
       })().finally(function () { _creatingWaTabPromise = null; });
     }
     return await _creatingWaTabPromise;
+  }
+
+  // 5.10.18 — Alias semantico per la nomenclatura "worker tab" condivisa con LI.
+  async function ensureWorkerTab() {
+    return await getOrCreateWaTab();
   }
 
   // ── Bridge injection ──
@@ -302,6 +326,9 @@ var TabManager = globalThis.TabManager || (function () {
     waitForLoad: waitForLoad,
     getBestExistingWaTab: getBestExistingWaTab,
     getOrCreateWaTab: getOrCreateWaTab,
+    ensureWorkerTab: ensureWorkerTab,
+    getWorkerInfo: getWorkerInfo,
+    invalidateWorker: invalidateWorker,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
     isOwned: isOwned,
