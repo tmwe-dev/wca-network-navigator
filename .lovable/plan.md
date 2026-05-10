@@ -1,59 +1,58 @@
-## Piano interventi (regressioni + richieste UI)
+# Ripristino selezione partner in Network (allineata a CRM)
 
-### 1. WCA Partner — filtro "Cerca partner" non applica selezione
-**Problema**: cliccando un partner nei risultati del search filter (es. *Transport Management srl*) appare il chip "Ricerca: ..." in alto ma `selectedPartnerId` non viene impostato → niente dettaglio sulla destra. Il filtro nazione invece funziona.
-**Fix**: nel pannello sidebar `CERCA PARTNER` (componente filtro WCA in `NetworkPage`), il click sul risultato deve:
-- chiamare `setSelectedPartnerId(partner.id)`
-- propagare anche il filtro paese/città del partner (così la lista a destra lo mostra)
-- chiudere il drawer filtri su mobile
+## Cosa è rotto oggi
 
-### 2. Bottone "Esplora" bianco non richiesto
-**Problema**: in alto compare un pulsante `Esplora` bianco fuori palette.
-**Fix**: identificare il render (probabilmente `ExploreContextHeader.tsx` o `LayoutHeader.tsx`) e:
-- rimuoverlo se duplicato del titolo `PageTitleHeader`
-- oppure restilizzarlo con token semantici (`bg-secondary`/`bg-muted` + `text-foreground`) coerente col tema dark
+Quando in `/v2/explore/network` apri "Cerca partner" nella sidebar e clicchi un risultato (es. **Transport Management srl**, Italy):
 
-### 3. Layout master-detail mancante in Network/CRM/Biglietti da Visita
-**Problema**: solo la tab WCA Partner mostra lista + dettaglio del primo elemento. Le altre tab (Network, CRM, Biglietti da Visita) mostrano solo lista.
-**Fix**: replicare lo stesso pattern `selectedId ?? firstItemId` di `NetworkPage` su:
-- tab CRM (`CRMPage` / sotto-vista in NetworkPage)
-- tab Biglietti da Visita (`BusinessCardsViewV2`)
-- tab Network
-Auto-selezione del primo elemento al mount + sync selezione → pannello dettaglio a destra.
+- A destra si apre correttamente il dettaglio.
+- Nella sidebar viene impostato il paese del partner (Italy 229 ✓).
+- Ma **la riga al centro non compare**: l'elenco resta vuoto con "Seleziona un paese dalla sidebar per vedere i partner".
 
-### 4. Spostare "Finder API Catalog" dentro Config
-**Problema**: voce di primo livello non desiderata.
-**Fix**:
-- rimuovere `finder-api` dal menu principale in `src/v2/ui/templates/navConfig.tsx`
-- aggiungerlo come sotto-voce nella sezione Config/Settings
-- mantenere route esistente `/v2/finder-api` (no breaking)
+## Causa identificata
 
-### 5. Audit "Gestione Mail" vs "Setting" — separazione + identità mailbox
-**Problemi**:
-- a UI viene mostrato "Luca Arcanà" loggato → ridondante, va tolto
-- la mailbox mostrata nelle pagine email NON corrisponde all'utente loggato (mismatch sessione ↔ account IMAP/SMTP attivo)
-- gestione mail e setting mailbox sono mescolati
+Confrontando con la maschera CRM (che funziona):
 
-**Fix**:
-1. **UI header email**: sostituire "loggato come Luca Arcanà" con la **mailbox attiva** (es. `booking@tmwe.it`) + badge stato connessione IMAP.
-2. **Audit binding mailbox ↔ user**: verificare in `useEmailAccounts` / `useActiveMailbox` (o equivalente) che la mailbox di default sia filtrata per `user_id = auth.uid()` e non globale. Identificare dove viene letta la mailbox sbagliata (probabile fallback su prima riga di `email_accounts` senza filtro utente).
-3. **Separare** la pagina **Gestione Mail** (operativa: inbox, invio, regole) dalla pagina **Setting Mail** (config IMAP/SMTP, firme, alias). Spostare i pannelli di config fuori dall'inbox.
-4. Aggiungere selettore mailbox esplicito quando l'utente ha più account, con persistenza in `localStorage` per-user.
+- **CRM** (`CRMFiltersSection.tsx`, click su risultato di ricerca): si limita a fare `dispatchEvent("crm-select-contact", { contactId })` e a chiudere il drawer. **Non tocca i filtri**. La lista resta sincronizzata con quello che l'utente ha già scelto.
+- **Network** (`NetworkFiltersSection.tsx`, attuale): oltre al `dispatchEvent("network-select-partner", ...)` esegue anche `batchUpdate({ networkSearch: p.company_name, networkSelectedCountries: new Set([p.country_code]) })`.
 
-### Ordine di esecuzione consigliato
-1. Fix #1 (regressione bloccante WCA Partner)
-2. Fix #2 (rapido, UI)
-3. Fix #4 (rapido, navConfig)
-4. Fix #3 (master-detail su 3 tab)
-5. Fix #5 (audit mailbox + separazione gestione/setting — il più ampio)
+Il problema è che `EntityListWithDetail` applica un **filtro locale "Holding pattern" con default `exclude`**. Transport Management ha `lead_status = "holding"` (badge "In attesa" visibile nello screenshot), quindi anche se la query DAL la restituisce, il filtro locale la nasconde → lista vuota → la riga non appare.
 
-### Nodi critici toccati
-- `NetworkPage.tsx`, sidebar filtri WCA → solo selezione/propagazione, niente refactor logica filtri
-- `navConfig.tsx` → spostamento voce, niente rimozione route
-- Hook mailbox → audit read-only prima, poi fix mirato sul filtro `user_id`
-- Nessun cambiamento DB / RLS / edge function in questo round
+Stesso pattern romperà ogni partner in holding pattern aperto via ricerca.
 
-### Cosa NON tocco
-- Pipeline approvazione WA/LI/email appena consolidata
-- Edge functions, RLS, schemi DB
-- Logica filtri esistente in NetworkPage (solo wiring click → selectedPartnerId)
+## Cosa ripristinare
+
+Riportare il flusso allo stesso modello del CRM, garantendo i tre punti che l'utente chiede ("riga in elenco · dettaglio a destra · filtro in sidebar"):
+
+1. **Click su risultato Cerca partner** in `NetworkFiltersSection.tsx`:
+   - Mantiene il `dispatchEvent("network-select-partner", { partnerId })` (apre dettaglio).
+   - Mantiene `dispatchEvent("filters-drawer-close")`.
+   - Imposta il **paese** del partner come filtro attivo (così la lista mostra quel paese, in linea col comportamento storico).
+   - **Rimuove** l'override di `networkSearch` (era la cosa che restringeva la lista al solo nome). Questo evita di "intrappolare" l'utente in una ricerca testuale che non ha digitato.
+   - Se il partner è in `holding`, sblocca temporaneamente la lista impostando il filtro holding locale a `include` per quella sessione, così la riga appare. Questo si fa con un piccolo evento `network-list-show-holding` ascoltato da `EntityListWithDetail`.
+
+2. **`EntityListWithDetail.tsx`**:
+   - Aggiunge un listener `network-list-show-holding` che, quando ricevuto, forza `holdingFilter = "include"` (senza persisterlo, così la prossima sessione torna al default `exclude`).
+   - Nessun'altra modifica di logica.
+
+3. **Nessuna modifica** a:
+   - `useWcaPartnersAsCompanies.ts` (DAL e mapping restano invariati).
+   - `src/data/partners.ts` (la query `.or(company_name | company_alias | email)` resta).
+   - `OperationalContextSelector.tsx`, `AutoPageTitle.tsx`, `BCAUnifiedHub.tsx`, `navConfig.tsx`, `registry.ts` (le modifiche già applicate non sono in causa per questa regressione).
+
+## Risultato atteso
+
+- Cliccando un partner dalla ricerca sidebar:
+  - Il **dettaglio** a destra si apre.
+  - Il **paese** del partner viene selezionato nei filtri (sidebar mostra il chip Italy ✓).
+  - La **riga del partner appare nell'elenco** anche se è in holding pattern.
+- Il comportamento è identico a quello che la pagina aveva prima del fix di stamattina.
+- Nessuna modifica al backend, agli hook AI, all'auth o ad altri nodi critici (CLASSE: STANDARD).
+
+## File toccati
+
+- `src/components/global/filters-drawer/NetworkFiltersSection.tsx` (rimuovo `networkSearch` dall'override + emetto `network-list-show-holding` se il partner è in holding).
+- `src/v2/ui/organisms/EntityListWithDetail.tsx` (aggiungo listener globale che setta `holdingFilter = "include"` senza persistenza).
+
+## Rollback
+
+Reverso entrambi i file via History/revert: due hunk localizzati, nessun effetto irreversibile, nessuna migrazione DB.
