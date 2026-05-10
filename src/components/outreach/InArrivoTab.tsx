@@ -1,4 +1,5 @@
 import { useState, useEffect, Suspense, startTransition } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Mail, MessageCircle, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
@@ -40,6 +41,32 @@ export function InArrivoTab() {
     startTransition(() => g.setFilter("inreachChannel", c));
   };
   const [pulsingChannel, setPulsingChannel] = useState<Channel | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Quando si arriva qui con state.openWhatsAppPhone (es. click icona WA da rubriche),
+  // forza il tab WhatsApp e notifica WhatsAppInboxView per aprire la chat.
+  useEffect(() => {
+    const st = (location.state ?? {}) as {
+      openWhatsAppPhone?: string;
+      openWhatsAppContactName?: string | null;
+      openWhatsAppCompany?: string | null;
+      openWhatsAppPartnerId?: string | null;
+      openWhatsAppContactId?: string | null;
+    };
+    if (!st.openWhatsAppPhone) return;
+    startTransition(() => g.setFilter("inreachChannel", "whatsapp"));
+    const phone = st.openWhatsAppPhone;
+    const name = st.openWhatsAppContactName ?? null;
+    // Disp. dopo un tick per assicurare che WhatsAppInboxView sia montato.
+    const t = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("wa-open-chat", { detail: { phone, name } }));
+    }, 50);
+    // Pulisci lo state per evitare ri-trigger su back/forward.
+    navigate(location.pathname, { replace: true, state: null });
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   useEffect(() => {
     const handler = (e: Event) => {

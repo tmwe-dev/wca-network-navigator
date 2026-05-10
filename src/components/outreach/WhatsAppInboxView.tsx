@@ -1,7 +1,7 @@
 /**
  * WhatsAppInboxView — orchestratore sottile per la vista inbox WhatsApp.
  */
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead } from "@/hooks/useChannelMessages";
@@ -62,7 +62,31 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
     return result.sort((a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime());
   }, [messages]);
 
-  const activeThread = activeTab ? threads.find(t => t.contact === activeTab) : null;
+  const existingActive = activeTab ? threads.find(t => t.contact === activeTab) : null;
+  // Se la chat è aperta dall'esterno (icona WA da rubrica) e non ha ancora messaggi,
+  // creiamo un thread sintetico vuoto per mostrare subito il composer.
+  const activeThread: ChatThread | null = existingActive
+    ? existingActive
+    : activeTab
+      ? ({
+          contact: activeTab,
+          lastMessage: ({
+            id: `synthetic-${activeTab}`,
+            channel: "whatsapp",
+            direction: "outbound",
+            from_address: null,
+            to_address: activeTab,
+            subject: null,
+            body_text: "",
+            body_html: null,
+            created_at: new Date().toISOString(),
+            read_at: null,
+            user_id: null,
+          } as unknown) as ChatThread["lastMessage"],
+          unreadCount: 0,
+          messages: [],
+        } as ChatThread)
+      : null;
 
   const openChat = useCallback((contact: string) => {
     if (!openTabs.includes(contact)) setOpenTabs(prev => [...prev, contact]);
@@ -73,6 +97,18 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
       if (msg.direction === "inbound" && !msg.read_at) markAsRead.mutate(msg.id);
     });
   }, [openTabs, threads, focusOn, markAsRead]);
+
+  // Apertura chat dall'esterno (es. click icona WhatsApp da rubrica/partner card).
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const detail = (e as CustomEvent).detail as { phone?: string } | undefined;
+      const phone = detail?.phone;
+      if (!phone) return;
+      openChat(phone);
+    }
+    window.addEventListener("wa-open-chat", onOpen as EventListener);
+    return () => window.removeEventListener("wa-open-chat", onOpen as EventListener);
+  }, [openChat]);
 
   const closeTab = useCallback((contact: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
