@@ -129,4 +129,31 @@ export default tseslint.config(
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
+  // ── Multichannel send governance (no-direct-extension-send) ──
+  // Fuori da src/lib/messaging/* e dai bridge stessi, scoraggia chiamate
+  // dirette a `.sendWhatsApp(...)` sui bridge: usa sendWhatsAppDirect /
+  // queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.
+  // Stesso principio per LinkedIn (sendLinkedInDirect / queueLinkedInForApproval).
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "src/lib/messaging/**",
+      "src/lib/inbox/sendMessage.ts",
+      "src/hooks/useLinkedInMessagingBridge.ts",
+      "src/hooks/useWhatsAppExtensionBridge.ts",
+      "src/components/test-extensions/**",
+      "src/test/**",
+      "src/**/*.test.{ts,tsx}",
+      "src/hooks/__tests__/**",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "CallExpression[callee.property.name='sendWhatsApp']",
+          message: "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
+        },
+      ],
+    },
+  },
 );
