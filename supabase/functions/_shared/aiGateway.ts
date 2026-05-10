@@ -104,6 +104,10 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
           if (opts.tools) body.tools = opts.tools;
           if (opts.temperature !== undefined) body.temperature = opts.temperature;
           if (opts.max_tokens !== undefined) body.max_tokens = opts.max_tokens;
+          if (opts.presence_penalty !== undefined) body.presence_penalty = opts.presence_penalty;
+          if (opts.frequency_penalty !== undefined) body.frequency_penalty = opts.frequency_penalty;
+          if (opts.seed !== undefined) body.seed = opts.seed;
+          if (opts.top_p !== undefined) body.top_p = opts.top_p;
           bodyStr = JSON.stringify(body);
         }
 
