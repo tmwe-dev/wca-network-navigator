@@ -131,7 +131,7 @@ export async function findPartners(filters?: PartnerFilters): Promise<PartnerWit
 
     if (filters?.search) {
       const s = sanitizeSearchTerm(filters.search);
-      if (s) query = query.ilike("company_name", `%${s}%`);
+      if (s) query = query.or(`company_name.ilike.%${s}%,company_alias.ilike.%${s}%,email.ilike.%${s}%`);
     }
     if (filters?.countries?.length) query = query.in("country_code", filters.countries);
     if (filters?.cities?.length) query = query.in("city", filters.cities);
