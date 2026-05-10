@@ -49,7 +49,7 @@ export function useTodayActivities() {
         };
       });
     },
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 60_000,
+    refetchInterval: 90_000,
   });
 }
