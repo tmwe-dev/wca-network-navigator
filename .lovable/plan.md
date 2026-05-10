@@ -1,75 +1,75 @@
+# LinkedIn extension: auto-close composer + trim attese
+
 ## Obiettivo
 
-Ripristinare la build LinkedIn 3.9.56 (la "migliore" per affidabilità d'invio) come versione attiva, e mettere a disposizione nell'area di test del pannello LinkedIn tre strategie alternative — così possiamo provarle in parallelo e scegliere quella che elimina la duplicazione messaggi senza reintrodurre gli hang risolti in 3.9.59.
+Eliminare il rischio di concatenazione messaggi e ridurre di 3-4s la latenza per invio, senza toccare deduplica, verifica consegna, edge functions o WhatsApp.
 
-## 1. Rollback effettivo a 3.9.56
+## Scope
 
-File toccati (solo questi 5 cambiavano tra 3.9.56 e 3.9.59):
-- `public/linkedin-extension/actions.js` ← versione 3.9.56
-- `public/linkedin-extension/background.js` ← versione 3.9.56
-- `public/linkedin-extension/content.js` ← versione 3.9.56
-- `public/linkedin-extension/tab-manager.js` ← versione 3.9.56
-- `public/linkedin-extension/manifest.json` ← `version: "3.9.56-restore"`
+Solo `public/linkedin-extension/` + catalogo + zip. Zero modifiche a edge functions, DAL, AuthProvider, RLS, query keys, WhatsApp.
 
-Ripacchettizzo:
-- `public/linkedin-extension.zip` (zip "live" servito dal pannello)
-- `public/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip` (archivio versionato)
+## Modifiche
 
-Aggiorno:
-- `public/chrome-extensions/catalog.json` → entry `3.9.56-restore` come `latest`
-- `src/lib/whatsappExtensionZip.ts` → riferimento versione corrente
+### 1. Auto-close composer dopo invio confermato (Opzione C)
 
-Effetto: l'estensione installata sarà quella che inviava bene (con la diagnostica AI-Verified Click già presente). Il pre-warm worker tab sparisce: il messaggio "Unknown action: ensureWorkerTab" che vedevi all'inizio era proprio causato dalla 3.9.56 che riceveva chiamate non supportate dal client più recente — gestito al punto 2.
+File: `public/linkedin-extension/hybrid-ops.js` — `sendMessageWithMethod` (≈ riga 977) e branch CDP (riga 1226-1234).
 
-## 2. Adattamento client al rollback
+Punto di intervento: **dopo** la verifica `composerCleared = true` (cioè dopo che il messaggio è confermato partito), prima di tornare `{ success: true, ... }`:
 
-`src/components/test-extensions/LinkedInTest.tsx` (e altri eventuali punti che invocano `ensureWorkerTab` / pre-warm) devono diventare tolleranti:
+- Iniettare uno script che cerca, dentro lo scope `.msg-overlay-conversation-bubble, [class*='msg-overlay-conversation-bubble']`, il bottone di chiusura (`button[aria-label*="Chiudi" i], button[aria-label*="Close" i], .msg-overlay-bubble-header__controls button:last-child`) e fa `.click()`.
+- Wrap in try/catch: se la chiusura fallisce, **non** alterare il risultato del send (è già success). Loggare warning.
+- Aggiungere campo `composer_closed: true|false` nel response per diagnostica.
 
-- Se l'estensione risponde `Unknown action: ensureWorkerTab` → il client procede senza pre-warm (non blocca, non logga errore rosso, log informativo "estensione 3.9.56 senza pre-warm: ok").
-- `readInbox` resta invocato come prima; se va in hang il timeout lo gestisce a livello UI (vedi punto 3 per le strategie alternative).
+La tab LinkedIn resta aperta (riusata, niente reload). Solo l'overlay del composer viene chiuso. Prossimo invio ricomincerà con composer fresco e vuoto → impossibile concatenare.
 
-Nessuna logica AI/edge function viene toccata.
+### 2. Trim attese sovradimensionate
 
-## 3. Area test: 3 strategie selezionabili
+File: `public/linkedin-extension/actions.js`
 
-Nel pannello esistente `LinkedInTest.tsx` aggiungo un blocco "Strategia di invio (sperimentale)" con 3 radio-button. La scelta viene salvata in `localStorage` e passata come parametro all'azione di invio. Le tre opzioni:
+- Riga 107: `await TabManager.sleep(3000)` → `await TabManager.sleep(reused ? 800 : 2000)`. La variabile `reused` viene già da `getLinkedInTab` e indica se la tab era già caricata.
+- Riga 120: `await TabManager.sleep(2500)` post-send → `await TabManager.sleep(1000)`. Il `composerCleared` interno (max 600ms) ha già verificato l'invio reale; questo sleep extra serviva solo come margine di sicurezza, riducibile.
 
-### Strategia A — "Pure 3.9.56" (default dopo rollback)
-Comportamento identico a 3.9.56 originale. Nota in UI: "⚠️ può duplicare messaggi nella stessa chat se l'AI re-learn riparte". Serve come baseline di confronto.
+Tutte le altre attese restano invariate (montaggio composer, gate React, polling DOM): sono effettivamente necessarie.
 
-### Strategia B — "3.9.56 + readInbox timeout"
-Wrap client-side: la chiamata `readInbox` viene avvolta in un `Promise.race` con timeout 12s; se scade, l'UI mostra "lettura inbox saltata, riprovo al prossimo ciclo" senza appendere alla chat. Risolve gli hang a 90s visti stamattina senza modificare l'extension.
+### 3. Versionamento e packaging
 
-### Strategia C — "3.9.56 + anti-duplicazione hard-guard"
-Prima dell'invio, calcolo idempotency key client-side: `sha1(recipientUrl + normalizedText + floor(Date.now()/30000))`. La key viene salvata in `localStorage` con TTL 5 min. Se esiste già → invio bloccato con toast "messaggio identico inviato negli ultimi 30s, salto". Nessuna chiamata all'extension. Risolve la duplicazione anche se il flusso AI-relearn ritenta.
+- `manifest.json`: `version` resta `3.9.56`, `version_name` → `3.9.56-autoclose`.
+- Rebuild di `public/linkedin-extension.zip`.
+- Nuovo zip versionato: `public/chrome-extensions/linkedin/linkedin-extension-3.9.56-autoclose.zip`.
+- Aggiornare `public/chrome-extensions/catalog.json` (entry attiva).
+- Aggiornare `src/lib/whatsappExtensionZip.ts` (riferimento URL/versione).
 
-### Strategia D — "B + C combinate"
-Entrambi i guard attivi insieme. Probabilmente la configurazione "definitiva" se A da sola duplica.
+### 4. Log nel test panel
 
-UI: 4 radio + un piccolo pannello "Diff vs 3.9.56" che mostra cosa fa ciascuna strategia, così durante i test si capisce subito quale è attiva. Tutto il codice delle strategie vive in un nuovo file `src/components/test-extensions/linkedinSendStrategies.ts` (puro frontend, nessun side-effect su edge function o DB).
+File: `src/components/test-extensions/LinkedInTest.tsx`
 
-## 4. Verifica
+- Mostrare nel log testuale `composer_closed: yes/no` dal response di send, così verifichi visivamente che l'auto-close funzioni.
 
-- Riavvio dev server, verifico che `LinkedInTest.tsx` compili.
-- Confermo manifest version `3.9.56-restore` nello zip rigenerato (script Python: `unzip -p .../linkedin-extension.zip manifest.json`).
-- Confermo che `catalog.json` punta al nuovo zip e che `whatsappExtensionZip.ts` referenzia la versione corretta.
+## File toccati
 
-## 5. Cosa NON tocco
+- `public/linkedin-extension/hybrid-ops.js` (auto-close + log campo)
+- `public/linkedin-extension/actions.js` (2 sleep ridotti)
+- `public/linkedin-extension/manifest.json` (version_name)
+- `public/linkedin-extension.zip` (rebuild)
+- `public/chrome-extensions/linkedin/linkedin-extension-3.9.56-autoclose.zip` (nuovo)
+- `public/chrome-extensions/catalog.json`
+- `src/lib/whatsappExtensionZip.ts`
+- `src/components/test-extensions/LinkedInTest.tsx` (solo log)
 
-- Edge functions LinkedIn (`from-webapp-li`).
-- DAL, query keys, hook auth, AuthProvider (lasciati come da fix precedente).
-- Memoria `LinkedIn Single Channel Rule` rispettata: continua a passare solo da `from-webapp-li`.
-- Editorial review intatto.
-- WhatsApp extension: non viene toccata.
+## NON toccato
 
-## Dettagli tecnici
+- `actions.js` send-flow logic, `background.js`, `content.js`, `tab-manager.js` (la tab persistente resta com'è)
+- Le 4 strategie A/B/C/D nel test panel (restano disponibili)
+- Edge functions, DAL, query keys, AuthProvider, RLS
+- Estensione WhatsApp
+- Editorial review, prompt, AI gateway
 
-- Versione manifest: stringa `"3.9.56-restore"` (Chrome accetta segmenti alfanumerici nelle versioni dev unpacked).
-- Zip: rigenerato con `nix run nixpkgs#zip` da `public/linkedin-extension/` come da workflow standard.
-- Idempotency key in Strategia C: usa `crypto.subtle.digest('SHA-1', ...)`, fallback a hash deterministico semplice se non disponibile.
-- Le strategie B/C/D sono client-only: zero modifiche all'extension oltre al rollback. Questo permette di switchare tra strategie senza reinstallare l'extension ogni volta.
+## Verifica post-implementazione
 
-## Output finale per l'utente
+1. Reinstallare la zip `3.9.56-autoclose` dal catalogo.
+2. Test panel → invio singolo con `cdp_ctrl_enter`: il bubble messaggi deve chiudersi automaticamente dopo l'invio. Tempo totale atteso ~5s (era ~8s).
+3. Inviare un secondo messaggio dopo 5s: il composer deve riaprirsi vuoto (no concatenazione).
+4. Stesso test con `physical_click`.
+5. Verificare nel log che compaia `composer_closed: yes`.
 
-1. Reinstallare l'extension (zip 3.9.56-restore) — istruzioni a video nel pannello.
-2. Aprire `/v2/settings` (o dovunque viva `LinkedInTest.tsx`), selezionare la strategia, fare un invio di prova al destinatario fisso, leggere i log diagnostici già presenti.
+Se l'auto-close fallisce su qualche layout LinkedIn, il send è comunque success: si comporta come oggi.
