@@ -459,6 +459,19 @@ var HybridOps = globalThis.HybridOps || (function () {
             (function modernClearAndType(input, text) {
               try { input.focus(); } catch (e) {}
               try { if (typeof input.click === "function") input.click(); } catch (e) {}
+              // 3.9.57-human-sim — Early-exit: se il composer contiene già il
+              // testo target (pre-typed da HumanSimulator.typeIntoComposer),
+              // NON cancelliamo né riscriviamo nulla. Preserva la digitazione
+              // umana e fa partire solo il click Send. Compatibile 100% con
+              // il flusso paste classico (text non presente → si esegue come prima).
+              try {
+                var preTc = (input.textContent || "");
+                if (preTc.trim() === text.trim() || preTc.indexOf(text) !== -1) {
+                  // Già presente: skippa clear+writers, lascia che il click Send segua.
+                  try { input.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) {}
+                  return;
+                }
+              } catch (e) { /* fallback al flusso normale */ }
               // Clear current contents via selectAll + delete
               try {
                 var r = document.createRange();
