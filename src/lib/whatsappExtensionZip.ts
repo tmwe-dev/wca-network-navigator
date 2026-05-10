@@ -7,7 +7,8 @@ import {
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
 // Versione canonica LinkedIn: 3.9.60 (keep-alive service worker MV3 via
-// chrome.alarms ~24s, oltre a bounded readInbox + worker tab persistente).
+// 3.9.61: diagnostic fast-path su sendMessageWithMethod (gate composer 8s,
+// CDP wrapped con timeout 5s) — i pulsanti diagnostici non restano più 45s.
 // Allineata con catalog.json e con lo zip servito dal pulsante download.
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.60";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
