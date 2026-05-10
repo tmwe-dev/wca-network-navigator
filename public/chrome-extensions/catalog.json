@@ -1,13 +1,20 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.18",
+    "latestVersion": "5.10.19",
     "items": [
+      {
+        "version": "5.10.19",
+        "filename": "whatsapp-extension-5.10.19.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.19.zip",
+        "current": true,
+        "note": "Fix: aggiunto 'ensureWorkerTab' alla whitelist ALLOWED_ACTIONS in content.js (era rifiutato come Unknown action)."
+      },
       {
         "version": "5.10.18",
         "filename": "whatsapp-extension-5.10.18.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.18.zip",
-        "current": true,
+        "current": false,
         "note": "Persistent Worker Tab: pre-warm onInstalled/onStartup di una sola tab di servizio web.whatsapp.com in background. Read/send usano la worker tab hot. Handler ensureWorkerTab esposto alla UI."
       },
       {
