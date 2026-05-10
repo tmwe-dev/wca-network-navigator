@@ -290,6 +290,39 @@ var TabManager = globalThis.TabManager || (function () {
     return _liTabId;
   }
 
+  // ── 3.9.55 — Separate read-only tab resolver ──
+  // Used by readInbox / peek flows. NEVER navigates the user's currently
+  // open LinkedIn tab to a different page (which would "kick them out" of
+  // a profile they're viewing). Behavior:
+  //   1. If a LinkedIn tab whose URL exactly matches `url` exists, reuse it.
+  //   2. Otherwise open a NEW inactive background tab on `url`.
+  // This keeps the send-message tab acquisition logic and the inbox-read
+  // logic on independent code paths so a fix to one cannot break the other.
+  async function getLinkedInTabForRead(url) {
+    await loadOwnership();
+    if (url) {
+      try {
+        const allLi = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+        const exact = (allLi || []).find(function (t) {
+          return t.windowId !== _automationWindowId && urlMatchesTarget(t.url, url);
+        });
+        if (exact) {
+          markOwned(exact.id);
+          console.log("[LI Tab][READ] Reusing exact-match tab #" + exact.id);
+          if (exact.status !== "complete") await waitForLoad(exact.id, 15000);
+          return { id: exact.id, reused: true, exactMatch: true };
+        }
+      } catch (e) { /* ignore */ }
+    }
+    // No exact match → open a new inactive background tab.
+    // Do NOT adopt and re-navigate the user's existing LinkedIn tab.
+    const tab = await chrome.tabs.create({ url: url, active: false });
+    markOwned(tab.id);
+    console.log("[LI Tab][READ] Opened new background tab #" + tab.id + " for " + url);
+    await waitForLoad(tab.id, 20000);
+    return { id: tab.id, reused: false };
+  }
+
   // ── OPTIMUS V2.1 (FOCUS-SAFE): activateAndStabilize ──
   // Same contract as WA: NEVER activate a tab in the user's window.
   async function activateAndStabilize(tabId, maxWaitMs) {
