@@ -273,6 +273,15 @@ export function NetworkFiltersSection() {
                   <button
                     key={p.id}
                     onClick={() => {
+                      // Imposta il paese del partner come unico filtro attivo
+                      // così la lista a sinistra mostra il record selezionato
+                      // (altrimenti se il country filter precedente non
+                      // contiene il partner, la lista resta vuota).
+                      if (p.country_code) {
+                        g.batchUpdate({
+                          networkSelectedCountries: new Set([p.country_code]),
+                        });
+                      }
                       window.dispatchEvent(
                         new CustomEvent("network-select-partner", {
                           detail: { partnerId: p.id },
