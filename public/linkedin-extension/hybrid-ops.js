@@ -552,8 +552,17 @@ var HybridOps = globalThis.HybridOps || (function () {
               if (sendBtn) break;
               await sleep(100);
             }
-            // P13 — Verifica post-click: la textbox deve svuotarsi entro 1.5s,
-            // altrimenti l'invio NON è andato a buon fine (no falso success).
+            // 3.9.54 — Click ottimistico: se Send è trovato + abilitato,
+            // un solo physical click. Verifica soft di textboxCleared (1.5s),
+            // ma NON blocca il successo: ritorniamo verified=true|false.
+            // Niente submitComposer / Ctrl+Enter / CDP fallback dopo il click,
+            // per non generare doppi invii.
+            if (!sendBtn) {
+              return { success: false, error: "send_button_not_found" };
+            }
+            if (sendBtn.disabled || sendBtn.getAttribute("aria-disabled") === "true") {
+              return { success: false, error: "send_button_disabled" };
+            }
             async function textboxCleared() {
               for (let i = 0; i < 15; i++) {
                 await sleep(100);
@@ -562,63 +571,28 @@ var HybridOps = globalThis.HybridOps || (function () {
               }
               return false;
             }
-            var clickMethod = null;
-            if (sendBtn) {
-              if (firePhysicalClick(sendBtn)) clickMethod = "physical_click";
+            if (!firePhysicalClick(sendBtn)) {
+              return { success: false, error: "send_button_click_dispatch_failed" };
             }
-            if (!sendBtn || !(await textboxCleared())) {
-              if (submitComposer()) clickMethod = clickMethod || "form_submit_fallback";
+            const cleared = await textboxCleared();
+            if (cleared) {
+              return { success: true, method: "physical_click", verified: true };
             }
-            if (!(await textboxCleared())) {
-              // P13 — Fallback finale: Ctrl/Cmd+Enter (shortcut nativo LinkedIn).
-              try {
-                msgBox.focus();
-                var isMac = /Mac|iPhone|iPad/i.test(navigator.platform || "");
-                var ctrlEnterDown = new KeyboardEvent("keydown", {
-                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
-                });
-                var ctrlEnterPress = new KeyboardEvent("keypress", {
-                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
-                });
-                var ctrlEnterUp = new KeyboardEvent("keyup", {
-                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
-                });
-                msgBox.dispatchEvent(ctrlEnterDown);
-                msgBox.dispatchEvent(ctrlEnterPress);
-                msgBox.dispatchEvent(ctrlEnterUp);
-                clickMethod = clickMethod || "ctrl_enter_fallback";
-              } catch (e) { /* best-effort */ }
-              if (!(await textboxCleared())) {
-                return {
-                  success: false,
-                  error: sendBtn
-                    ? "send_clicked_but_textbox_not_cleared"
-                    : "Fallback: send button not found",
-                };
-              }
-            }
-            return { success: true, method: clickMethod || "structural_fallback" };
+            return {
+              success: true,
+              method: "physical_click",
+              verified: false,
+              warning: "textbox_not_cleared_after_click_unverified",
+            };
           })();
         },
         args: [message],
       });
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.success) return fbResult;
-      try {
-        const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
-        if (cdpClick && cdpClick.success && await composerCleared(tabId, 3500)) {
-          return { success: true, method: "cdp_physical_click_after_dom", previousError: fbResult && fbResult.error };
-        }
-      } catch (e) { console.warn("[LI-Hybrid] CDP physical click failed:", e.message); }
-      try {
-        const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
-        if (cdpKey && cdpKey.success && await composerCleared(tabId, 3500)) {
-          return { success: true, method: cdpKey.method + "_after_dom", previousError: fbResult && fbResult.error };
-        }
-      } catch (e) { console.warn("[LI-Hybrid] CDP Ctrl/Cmd+Enter failed:", e.message); }
+      // 3.9.54 — Niente fallback CDP/keyboard: il click ottimistico DOM
+      // è autoritativo. Se il bottone non era trovato/abilitato il caller
+      // riceve send_button_not_found / send_button_disabled e decide il retry.
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "All message strategies failed");
     } catch (e) { return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message); }
   }
