@@ -639,6 +639,26 @@ export function LinkedInTest() {
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
+        <div className="rounded-md border border-border/60 bg-background/50 p-2 space-y-1">
+          <p className="text-[11px] font-semibold text-muted-foreground">🎛️ Strategia di invio (sperimentale, lato client)</p>
+          <div className="flex flex-wrap gap-3">
+            {(Object.keys(STRATEGY_LABELS) as LinkedInSendStrategy[]).map((s) => (
+              <label key={s} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input
+                  type="radio"
+                  name="li-send-strategy"
+                  value={s}
+                  checked={strategy === s}
+                  onChange={() => { setStrategy(s); saveStrategy(s); log(`🎛️ Strategia attiva: ${STRATEGY_LABELS[s]}`, "info"); }}
+                />
+                <span>{STRATEGY_LABELS[s]}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground italic leading-snug">
+            {STRATEGY_DESCRIPTIONS[strategy]}
+          </p>
+        </div>
         {foundThreads.length > 0 && (
           <select value={sendUrl} onChange={(e) => setSendUrl(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
             <option value="">— Seleziona contatto dalla rubrica (o incolla URL sotto) —</option>
