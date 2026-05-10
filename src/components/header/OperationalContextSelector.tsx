@@ -71,13 +71,20 @@ export function OperationalContextSelector(): React.ReactElement | null {
           title="Contesto operativo: visibilità operatori e casella di posta attiva"
           aria-label="Contesto operativo"
         >
-          {showOperatorSection ? (
+          {/*
+            UX: l'utente loggato è implicito (path /v2/* protetto).
+            Mostriamo SOLO la casella di posta attiva, così è subito chiaro
+            su quale account email si sta operando. L'eventuale impersonation
+            admin resta segnalata dal bordo primario sul bottone e dall'icona
+            scudo a sinistra.
+          */}
+          {isImpersonating || viewingAll ? (
             <Shield className="h-3.5 w-3.5 shrink-0 text-primary" />
           ) : (
             <ActiveMailboxIcon className="h-3.5 w-3.5 shrink-0" />
           )}
-          <span className="hidden md:inline truncate max-w-[180px]">
-            {showOperatorSection ? `${operatorLabel} · ${mailboxLabel}` : mailboxLabel}
+          <span className="hidden md:inline truncate max-w-[220px]">
+            {activeMailbox?.email ?? mailboxLabel}
           </span>
           <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
         </Button>
