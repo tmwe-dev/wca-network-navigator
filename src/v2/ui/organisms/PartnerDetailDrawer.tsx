@@ -6,6 +6,7 @@ import { usePartnerDetail } from "@/v2/hooks/usePartnersV2";
 import { partnerCompletenessScore, isEligibleForEnrichment } from "@/v2/core/domain/rules/partner-rules";
 import { StatusBadge } from "../atoms/StatusBadge";
 import { Button } from "../atoms/Button";
+import { PartnerTmweSection } from "./PartnerTmweSection";
 import type { PartnerV2 } from "@/v2/core/domain/partner-entity";
 import {
   X, Globe, Mail, Phone, MapPin, Building2, Calendar,
@@ -124,6 +125,9 @@ export function PartnerContent({ partner, onToggleFavorite }: {
           <p className="text-sm text-foreground whitespace-pre-wrap">{partner.profileDescription}</p>
         </div>
       )}
+
+      {/* TMWE / Findair integration */}
+      <PartnerTmweSection partnerId={partner.id} />
     </>
   );
 }
