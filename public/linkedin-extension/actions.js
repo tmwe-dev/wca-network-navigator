@@ -104,7 +104,9 @@ var Actions = globalThis.Actions || (function () {
         if (!clickResult || !clickResult.success) {
           return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
         }
-        await TabManager.sleep(3000);
+        // 3.9.56-autoclose: ridotta da 3000 a 1200ms — il successivo
+        // sendMessage ha già un poll interno per attendere il composer.
+        await TabManager.sleep(1200);
       } else {
         // Thread/composer già aperto: diamo solo il tempo al composer di montarsi.
         await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
@@ -117,7 +119,9 @@ var Actions = globalThis.Actions || (function () {
     // forziamo la ri-navigazione al profilo e ritentiamo UNA sola volta.
     if (result && !result.success && /navigation_drifted/i.test(result.error || "")) {
       try { await chrome.tabs.update(tabId, { url: target }); } catch (e) { /* ignore */ }
-      await TabManager.sleep(2500);
+      // 3.9.56-autoclose: ridotta da 2500 a 1000ms — composerCleared interno
+      // (≤600ms) ha già verificato l'invio reale, niente serve attendere oltre.
+      await TabManager.sleep(1000);
       const retry = await attempt();
       result = retry.result;
     }
