@@ -48,10 +48,13 @@ if (!_modulesLoaded) {
 // ── Action registry ──
 var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
+    var w = (typeof TabManager !== "undefined" && TabManager.getWorkerInfo) ? TabManager.getWorkerInfo() : { id: null, ready: false };
     sendResponse({
       success: true,
       version: chrome.runtime.getManifest().version,
       modulesLoaded: _modulesLoaded,
+      workerTabId: w.id,
+      workerReady: !!w.ready,
     });
     return false;
   },
@@ -151,6 +154,30 @@ var ACTION_HANDLERS = {
     });
     return true;
   },
+
+  // 5.10.18 — Pre-warm worker tab esplicito (chiamato dalla UI).
+  ensureWorkerTab: function (msg, sendResponse) {
+    if (typeof TabManager === "undefined" || !TabManager.ensureWorkerTab) {
+      sendResponse({ success: false, error: "TabManager not loaded" });
+      return false;
+    }
+    TabManager.enqueueSession(async function () {
+      try {
+        var t0 = Date.now();
+        var res = await TabManager.ensureWorkerTab();
+        sendResponse({
+          success: !!(res && res.tab && res.tab.id),
+          workerTabId: res && res.tab && res.tab.id,
+          ready: true,
+          reused: !!(res && res.reused),
+          warmupMs: Date.now() - t0,
+        });
+      } catch (err) {
+        sendResponse({ success: false, error: err && err.message });
+      }
+    });
+    return true;
+  },
 };
 
 // ── Single message listener ──
@@ -196,6 +223,12 @@ chrome.runtime.onInstalled.addListener(async function () {
     await Config.load();
     if (typeof AiExtract !== "undefined") AiExtract.loadSchema().catch(function () {});
     if (typeof TabManager !== "undefined") TabManager.syncBridgeAcrossOpenTabs().catch(function () {});
+    // 5.10.18 — Pre-warm worker tab (best-effort, non blocca).
+    if (typeof TabManager !== "undefined" && TabManager.ensureWorkerTab) {
+      TabManager.ensureWorkerTab().catch(function (e) {
+        console.warn("[WA] worker pre-warm onInstalled failed:", e && e.message);
+      });
+    }
   }
 });
 
@@ -204,6 +237,11 @@ chrome.runtime.onStartup.addListener(async function () {
     await Config.load();
     if (typeof AiExtract !== "undefined") AiExtract.loadSchema().catch(function () {});
     if (typeof TabManager !== "undefined") TabManager.syncBridgeAcrossOpenTabs().catch(function () {});
+    if (typeof TabManager !== "undefined" && TabManager.ensureWorkerTab) {
+      TabManager.ensureWorkerTab().catch(function (e) {
+        console.warn("[WA] worker pre-warm onStartup failed:", e && e.message);
+      });
+    }
   }
 });
 
@@ -212,5 +250,12 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
     if (changeInfo.status === "complete" && tab.url && Config.isAppUrl(tab.url)) {
       TabManager.injectBridgeIntoTab(tabId).catch(function () {});
     }
+  }
+});
+
+// 5.10.18 — Invalida cache worker quando la tab viene chiusa.
+chrome.tabs.onRemoved.addListener(function (tabId) {
+  if (typeof TabManager !== "undefined" && TabManager.invalidateWorker) {
+    TabManager.invalidateWorker(tabId);
   }
 });
