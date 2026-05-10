@@ -165,7 +165,14 @@ export function LinkedInTest() {
       log(`✅ Worker tab pronta in ${elapsed}ms (#${r.workerTabId}, ${created})`, "ok");
       log(`  warmupMs=${r.warmupMs ?? "?"} · ready=${r.ready ? "yes" : "no"}`, "info");
     } else {
-      log(`❌ Pre-warm fallito: ${r?.error || JSON.stringify(r)}`, "error");
+      const errStr = String(r?.error || JSON.stringify(r));
+      // 3.9.56-restore: la build NON espone ensureWorkerTab. Non è un errore,
+      // l'extension funziona lo stesso (le azioni aprono la tab on-demand).
+      if (/Unknown action: ensureWorkerTab/i.test(errStr)) {
+        log("ℹ️ Estensione 3.9.56-restore senza pre-warm: ok, le azioni gestiscono la tab on-demand.", "info");
+      } else {
+        log(`❌ Pre-warm fallito: ${errStr}`, "error");
+      }
     }
   });
 
