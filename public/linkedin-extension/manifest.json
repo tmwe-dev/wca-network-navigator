@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.56",
-  "description": "3.9.56-autoclose \u2014 Auto-close overlay composer dopo invio confermato (no concatenazione testo) + 2 sleep ridotti (-3.3s per invio). Tab LinkedIn resta riusata, solo l'overlay messaggi viene chiuso.",
+  "version": "3.9.57",
+  "description": "3.9.57-human-sim \u2014 Human Simulator hardcoded: scroll/dwell sul profilo prima del Messaggia, digitazione char-by-char 1 invio su 3 (typo+correzione 5%), rate limit 25-30/giorno + pausa 3-7 min ogni 5-8 invii + cooldown 25-65s. Mantiene autoclose 3.9.56.",
   "permissions": [
     "cookies",
     "tabs",
@@ -46,5 +46,5 @@
     "48": "icon.png",
     "128": "icon.png"
   },
-  "version_name": "3.9.56-autoclose"
+  "version_name": "3.9.57-human-sim"
 }

@@ -119,14 +119,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.56-autoclose",
+    "latestVersion": "3.9.57-human-sim",
     "items": [
+      {
+        "version": "3.9.57-human-sim",
+        "filename": "linkedin-extension-3.9.57.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.57.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Human Simulator hardcoded: scroll/dwell sul profilo PRIMA del bottone Messaggia, digitazione char-by-char 1 invio su 3 (con typo+correzione 5%), rate limit 25-30/giorno per account + pausa 3-7 min ogni 5-8 invii + cooldown 25-65s tra invii. Layer additivo: writer hybrid-ops fa early-exit se vede testo già pre-typed (zero conflitti). Mantiene autoclose overlay e sleep ridotti della 3.9.56."
+      },
       {
         "version": "3.9.56-autoclose",
         "filename": "linkedin-extension-3.9.56-autoclose.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.56-autoclose.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Auto-close overlay composer dopo invio confermato (no rischio concatenazione testo nel prossimo invio). Tab LinkedIn resta riusata, si chiude SOLO l'overlay messaggi. Inoltre ridotti 2 sleep ridondanti (-3.3s per invio, total ~5s vs ~8s)."
       },
       {
