@@ -660,17 +660,11 @@ var HybridOps = globalThis.HybridOps || (function () {
           await AILearn.clearCache();
           const fresh = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
           if (fresh && fresh.sendButtonSelector) {
-            const retryRes = await chrome.scripting.executeScript({
-              target: { tabId: tabId },
-              func: fbRes._fn || (function(){}),  // placeholder, vedi sotto
-              args: [message, fresh.sendButtonSelector],
-            }).catch(function () { return null; });
-            // Se il placeholder non funziona (executeScript richiede func literal),
-            // delegheremo al caller il retry. Per ora marchiamo lo schema fresco.
             schemaSource = "fresh_after_cache_miss";
             aiSendSelector = fresh.sendButtonSelector;
-            // Replay completo dell'invocazione tramite scope-up: usiamo una
-            // chiamata identica a quella sopra, ma con il nuovo selector.
+            // Retry minimale: il textbox è già scritto dal primo run, quindi
+            // qui ricerchiamo SOLO il bottone con il nuovo selector AI e clicchiamo.
+            // Guardia anti-doppio: se il composer è vuoto = primo invio andato.
             const retryRes2 = await chrome.scripting.executeScript({
               target: { tabId: tabId },
               func: function (msg, sel) {
