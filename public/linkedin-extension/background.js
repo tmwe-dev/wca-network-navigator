@@ -14,6 +14,7 @@ try {
     "ai-bridge.js",
     "ai-learn.js",
     "auth.js",
+    "human-simulator.js",
     "hybrid-ops.js",
     "optimus-client.js",
     "actions.js"
