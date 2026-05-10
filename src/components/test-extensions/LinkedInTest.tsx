@@ -193,9 +193,22 @@ export function LinkedInTest() {
   });
 
   const testReadInbox = () => runWithCooldown(async () => {
-    log("📨 Lettura inbox LinkedIn (30s timeout)...");
-    const r = await liMsg("readLinkedInInbox", {}, 35000);
-    const threads = (r?.threads || []) as Array<Record<string, unknown>>;
+    log("📨 Lettura inbox LinkedIn (90s timeout — la prima lettura su tab nuova può richiedere 40-60s)...");
+    // Countdown ogni 15s: l'operatore vede che il sistema sta lavorando, non impallato.
+    const t0 = Date.now();
+    const ticker = setInterval(() => {
+      const sec = Math.round((Date.now() - t0) / 1000);
+      log(`  ⏳ ancora in attesa… (${sec}s)`, "info");
+    }, 15000);
+    let r: Record<string, unknown> | undefined;
+    try {
+      r = await liMsg("readLinkedInInbox", {}, 90000);
+    } finally {
+      clearInterval(ticker);
+    }
+    const elapsedMs = Date.now() - t0;
+    const threads = ((r?.threads as unknown) || []) as Array<Record<string, unknown>>;
+    log(`  ⏱️ completato in ${elapsedMs}ms · method=${String(r?.method ?? "?")}`, "info");
 
     // Inline Optimus summary
     const opt = r?.optimus as { cached?: boolean; planVersion?: number; confidence?: number; latencyMs?: number; dropped?: number } | undefined;
@@ -215,6 +228,9 @@ export function LinkedInTest() {
       setFoundThreads(threads.map((t) => ({ name: t.name as string, threadUrl: t.threadUrl as string | undefined })));
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
+      if (String(r?.error || "").includes("Timeout")) {
+        log("💡 Probabile causa: la tab LinkedIn non era su /messaging/ e l'estensione ha dovuto aprirne una nuova in background. Riprova: la seconda lettura sarà rapida.", "warn");
+      }
     }
   });
 
@@ -314,8 +330,8 @@ export function LinkedInTest() {
   }, LI_DIAGNOSTIC_COOLDOWN_MS);
 
   const testDiagnosticDom = () => runWithCooldown(async () => {
-    log("🔬 Diagnostica DOM LinkedIn Messaging...");
-    const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
+    log("🔬 Diagnostica DOM LinkedIn Messaging (90s timeout)...");
+    const r = await liMsg("diagnosticLinkedInDom", {}, 90000);
     if (r?.success) {
       log(`📍 URL: ${r.url}`, "info");
       log(`📄 Title: ${r.title}`, "info");
