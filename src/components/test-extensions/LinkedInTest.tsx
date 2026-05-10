@@ -391,9 +391,7 @@ export function LinkedInTest() {
     log(`  Destinatario: ${sendUrl}`, "info");
     const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 45000);
     if (r?.success) {
-      const closed = (r as Record<string, unknown>)?.composer_closed;
-      const closedMark = closed === true ? "yes" : closed === false ? "no" : "?";
-      log(`✅ ${label}: messaggio inviato! (method=${r.method || method} · composer_closed=${closedMark})`, "ok");
+      log(`✅ ${label}: messaggio inviato! (method=${r.method || method})`, "ok");
     } else {
       const errStr = String(r?.error || JSON.stringify(r));
       const attempted = (r as Record<string, unknown>)?.attempted_method as string | undefined;

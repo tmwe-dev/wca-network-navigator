@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
   "version": "3.9.56",
-  "description": "3.9.56-autoclose \u2014 Auto-close overlay composer dopo invio confermato (no concatenazione testo) + 2 sleep ridotti (-3.3s per invio). Tab LinkedIn resta riusata, solo l'overlay messaggi viene chiuso.",
+  "description": "3.9.56-restore \u2014 Build di rollback alla 3.9.56 (la pi\u00f9 affidabile per l'invio). AI-Verified Click + single writer. Pre-warm worker tab e bounded readInbox rimossi.",
   "permissions": [
     "cookies",
     "tabs",
@@ -46,5 +46,5 @@
     "48": "icon.png",
     "128": "icon.png"
   },
-  "version_name": "3.9.56-autoclose"
+  "version_name": "3.9.56-restore"
 }
