@@ -329,62 +329,173 @@ var Actions = globalThis.Actions || (function () {
               for (var i = 0; i < scopes.length; i++) if (visible(scopes[i])) return true;
               return false;
             }
-            function findMessageBtn() {
+            function resolveLabel(el) {
+              var lbl = (el.getAttribute("aria-label") || "");
+              var lblBy = el.getAttribute("aria-labelledby");
+              if (lblBy) {
+                try {
+                  lblBy.split(/\s+/).forEach(function (id) {
+                    var ref = document.getElementById(id);
+                    if (ref) lbl += " " + (ref.textContent || "");
+                  });
+                } catch (e) {}
+              }
+              return (lbl + " " + (el.textContent || "")).trim().toLowerCase();
+            }
+            // Selettori CSS espliciti tentati PRIMA della scansione testuale.
+            // Tracciati per diagnostica (`messageBtnSelectorsHit`).
+            var MESSAGE_CSS_SELECTORS = [
+              "button.message-anywhere-button",
+              "button[data-control-name*='message' i]",
+              "a[data-control-name*='message' i]",
+              "button[aria-label*='essag' i]",
+              "button[aria-label*='criv' i]",
+              "a[href*='/messaging/thread/']",
+              "a[href*='/messaging/compose']",
+              "a[href*='/messaging/']",
+              "[data-test-app-aware-link][href*='messaging']"
+            ];
+            function findMessageBtn(hits) {
               var root = document.querySelector("main") || document.body;
+              // 1) Tentativo via selettori CSS espliciti (anche shadow DOM).
+              for (var s = 0; s < MESSAGE_CSS_SELECTORS.length; s++) {
+                var sel = MESSAGE_CSS_SELECTORS[s];
+                var nodes = deepQueryAll(sel, root).concat(deepQueryAll(sel));
+                for (var n = 0; n < nodes.length; n++) {
+                  var el = nodes[n];
+                  if (!visible(el) || isInGlobalNav(el)) continue;
+                  if (hits && hits.indexOf(sel) === -1) hits.push(sel);
+                  return el;
+                }
+              }
+              // 2) Fallback testuale (label / aria-labelledby / text).
               var btns = Array.from(root.querySelectorAll("button, a, [role='button'], [role='menuitem']"));
               for (var i = 0; i < btns.length; i++) {
                 var b = btns[i];
                 if (!visible(b) || isInGlobalNav(b)) continue;
-                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
-                if (/^(message|messaggia|messaggio|scrivi|invia messaggio|send message)$/i.test(label)) return b;
-                if (/messaggia|messaggio|message|send message|nachricht|mensaje|mensagem|wiadomo|envoyer/i.test(label)) return b;
+                var label = resolveLabel(b);
+                if (/^(message|messaggia|messaggio|scrivi|invia messaggio|send message|chat|dm|direct message)$/i.test(label)) {
+                  if (hits && hits.indexOf("text:exact") === -1) hits.push("text:exact");
+                  return b;
+                }
+                if (/messaggia|messaggio|message|send message|nachricht|mensaje|mensagem|wiadomo|envoyer|inviare|chat|direct message|^dm$/i.test(label)) {
+                  if (hits && hits.indexOf("text:partial") === -1) hits.push("text:partial");
+                  return b;
+                }
               }
               return null;
             }
+            function findMessageBtnsAll() {
+              var root = document.querySelector("main") || document.body;
+              var out = [];
+              for (var s = 0; s < MESSAGE_CSS_SELECTORS.length; s++) {
+                var nodes = deepQueryAll(MESSAGE_CSS_SELECTORS[s], root);
+                for (var n = 0; n < nodes.length; n++) {
+                  var el = nodes[n];
+                  if (visible(el) && !isInGlobalNav(el) && out.indexOf(el) === -1) out.push(el);
+                }
+              }
+              return out;
+            }
             function findMoreBtn() {
               var root = document.querySelector("main") || document.body;
+              // CSS-first
+              var cssSelectors = [
+                "button.artdeco-dropdown__trigger[aria-label*='ltro' i]",
+                "button.artdeco-dropdown__trigger[aria-label*='ore' i]",
+                "button[aria-label*='ore actions' i]",
+                "button[aria-label*='ù azioni' i]",
+                "button[aria-label*='ltro' i]"
+              ];
+              for (var s = 0; s < cssSelectors.length; s++) {
+                var nodes = deepQueryAll(cssSelectors[s], root);
+                for (var n = 0; n < nodes.length; n++) {
+                  if (visible(nodes[n]) && !isInGlobalNav(nodes[n])) return nodes[n];
+                }
+              }
               var btns = Array.from(root.querySelectorAll("button, [role='button']"));
               for (var i = 0; i < btns.length; i++) {
                 var b = btns[i];
                 if (!visible(b) || isInGlobalNav(b)) continue;
-                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
+                var label = resolveLabel(b);
                 if (/^(more|altro|più|more actions|più azioni)$/i.test(label)) return b;
+                if (/dropdown|menu azioni|action menu/i.test(label)) return b;
               }
               return null;
             }
             return (async function () {
               var started = Date.now();
               var limit = Math.max(12000, timeoutMs || 30000);
-              var clickedMessage = false;
+              var messageClickAttempts = 0;
               var clickedMore = false;
-              var last = { readyState: document.readyState, hasMain: !!document.querySelector("main"), clickedMessage: false, clickedMore: false, shells: 0, boxes: 0 };
+              var msgSelectorsHit = [];
+              var clickedNodes = [];
+              var last = {
+                readyState: document.readyState,
+                hasMain: !!document.querySelector("main"),
+                clickedMessage: false,
+                clickedMore: false,
+                shells: 0,
+                boxes: 0,
+                profileLoaded: false,
+                messageClickAttempts: 0,
+                messageBtnSelectorsHit: msgSelectorsHit,
+                visibleButtonsCount: 0,
+                firstButtonLabels: [],
+                url: location.href
+              };
               while (Date.now() - started < limit) {
                 last.readyState = document.readyState;
                 last.hasMain = !!document.querySelector("main");
+                last.profileLoaded = !!(document.querySelector(".pv-top-card") || document.querySelector("[data-test-id*='top-card']") || document.querySelector("section.artdeco-card"));
                 var box = findBox();
                 if (box) return { success: true, method: "wa_style_composer_gate", waitedMs: Date.now() - started };
                 var shells = deepQueryAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
                 last.shells = shells.filter(visible).length;
                 last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
-                if (!clickedMessage && !hasOpenComposerShell()) {
-                  var mb = findMessageBtn();
-                  if (mb) {
-                    try { mb.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
+                if (messageClickAttempts < 3 && !hasOpenComposerShell()) {
+                  // Prova anche un secondo bottone se il primo non ha aperto nulla.
+                  var candidates = findMessageBtnsAll();
+                  if (candidates.length === 0) {
+                    var single = findMessageBtn(msgSelectorsHit);
+                    if (single) candidates = [single];
+                  }
+                  for (var c = 0; c < candidates.length; c++) {
+                    var mb = candidates[c];
+                    if (clickedNodes.indexOf(mb) !== -1) continue;
+                    try {
+                      mb.click();
+                      clickedNodes.push(mb);
+                      messageClickAttempts++;
+                      last.clickedMessage = true;
+                      last.messageClickAttempts = messageClickAttempts;
+                      break;
+                    } catch (e) {}
                   }
                 }
-                if (!clickedMessage && !clickedMore && !hasOpenComposerShell() && Date.now() - started > 2500) {
+                var moreThreshold = messageClickAttempts >= 2 ? 1500 : 2500;
+                if (!clickedMore && !hasOpenComposerShell() && Date.now() - started > moreThreshold) {
                   var more = findMoreBtn();
                   if (more) {
                     try { more.click(); clickedMore = true; last.clickedMore = true; } catch (e) {}
                     await sleep(700);
-                    var mb2 = findMessageBtn();
+                    var mb2 = findMessageBtn(msgSelectorsHit);
                     if (mb2) {
-                      try { mb2.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
+                      try { mb2.click(); messageClickAttempts++; last.clickedMessage = true; last.messageClickAttempts = messageClickAttempts; } catch (e) {}
                     }
                   }
                 }
-                await sleep(100);
+                await sleep(250);
               }
+              try {
+                var allBtns = Array.from((document.querySelector("main") || document.body).querySelectorAll("button, a, [role='button']")).filter(visible).filter(function (el) { return !isInGlobalNav(el); });
+                last.visibleButtonsCount = allBtns.length;
+                last.firstButtonLabels = allBtns.slice(0, 8).map(function (el) {
+                  var l = resolveLabel(el);
+                  return l.length > 40 ? l.slice(0, 40) + "…" : l;
+                });
+              } catch (e) {}
+              last.url = location.href;
               return { success: false, error: "composer_gate_timeout", waitedMs: Date.now() - started, diagnostic: last };
             })();
           },
