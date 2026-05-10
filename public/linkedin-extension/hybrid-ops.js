@@ -536,14 +536,14 @@ var HybridOps = globalThis.HybridOps || (function () {
                     if (!(bb.offsetParent !== null || bb.getClientRects().length > 0)) continue;
                     if (bb.disabled || bb.getAttribute("aria-disabled") === "true") continue;
                     // Deve essere dentro un composer scope (no global nav).
-                    if (!bb.closest(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble")) continue;
+                    if (!bb.closest(".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, .msg-thread, [class*='msg-thread'], [class*='msg-convo']")) continue;
                     bb.__matchedBy = "ai_schema";
                     return bb;
                   }
                 } catch (e) { /* selector invalido → fallback regex */ }
               }
               var scopes = document.querySelectorAll(
-                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble"
+                ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
               );
               for (var s = 0; s < scopes.length; s++) {
                 var scope = scopes[s];
@@ -587,7 +587,7 @@ var HybridOps = globalThis.HybridOps || (function () {
             }
             function submitComposer() {
               try {
-                var form = msgBox.closest("form") || document.querySelector("form.msg-form, .msg-form form, [class*='msg-form'] form");
+                var form = msgBox.closest("form") || document.querySelector("form.msg-form, .msg-form form, [class*='msg-form'] form, form[class*='msg'], .msg-compose-form form, [class*='compose-form'] form");
                 if (!form) return false;
                 // Do NOT call requestSubmit(): on LinkedIn it can trigger a real
                 // navigation/unload, leaving chrome.scripting.executeScript hung.
