@@ -60,7 +60,8 @@ export function LinkedInTest() {
   const [lastKnownText, setLastKnownText] = useState("");
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
-  const [strategy, setStrategy] = useState<LinkedInSendStrategy>(loadStrategy);
+  const [diagnostics, setDiagnostics] = useState<DiagStep[]>([]);
+  const [diagRunning, setDiagRunning] = useState(false);
   const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
