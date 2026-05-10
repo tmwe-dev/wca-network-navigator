@@ -1008,7 +1008,7 @@ var HybridOps = globalThis.HybridOps || (function () {
           }
           function findBox() {
             var scopes = deepQueryAll(
-              ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+              ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
             );
             for (var s = 0; s < scopes.length; s++) {
               var scope = scopes[s];
@@ -1025,7 +1025,7 @@ var HybridOps = globalThis.HybridOps || (function () {
           }
           function findSendBtn() {
             var scopes = document.querySelectorAll(
-              ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble"
+              ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
             );
             for (var s = 0; s < scopes.length; s++) {
               var scope = scopes[s];
@@ -1176,7 +1176,7 @@ var HybridOps = globalThis.HybridOps || (function () {
                 return { success: false, error: "physical_click_threw: " + e.message, attempted_method: methodName };
               }
             } else if (methodName === "form_submit") {
-              var form = msgBox.closest("form") || document.querySelector(".msg-form, [class*='msg-form'] form, form.msg-form");
+              var form = msgBox.closest("form") || document.querySelector(".msg-form form, [class*='msg-form'] form, form.msg-form, form[class*='msg'], .msg-compose-form form, [class*='compose-form'] form");
               if (!form) return { success: false, error: "msg_form_not_found", attempted_method: methodName };
               try {
                 // requestSubmit() is intentionally avoided here: it can navigate
