@@ -105,8 +105,16 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.48",
+    "latestVersion": "3.9.54",
     "items": [
+      {
+        "version": "3.9.54",
+        "filename": "linkedin-extension-3.9.54.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.54.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Click ottimistico post-Send: physical click su bottone enabled, verifica soft (verified=true|false) senza submit/Ctrl+Enter/CDP fallback per evitare doppi invii. Anti-double-send 2s su tab+path+msg. Cleanup overlay stale (X su bubble non-target). Tab targeting URL esatto."
+      },
       {
         "version": "3.9.53",
         "filename": "linkedin-extension-3.9.53.zip",
@@ -152,7 +160,7 @@
         "filename": "linkedin-extension-3.9.48.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.48.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Backup ripristinato esatto, nessuna modifica. Pipeline originale che produce i due messaggi nelle due finestre."
       },
       {
