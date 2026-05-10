@@ -60,9 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialised = useRef(false);
 
   const setUnauthenticated = useCallback(() => {
-    setSession(null);
-    setUser(null);
-    setStatus("unauthenticated");
+    setSession((prev) => (prev === null ? prev : null));
+    setUser((prev) => (prev === null ? prev : null));
+    setStatus((prev) => (prev === "unauthenticated" ? prev : "unauthenticated"));
   }, []);
 
   const applyValidatedSession = useCallback(async (currentSession: Session | null) => {
@@ -81,9 +81,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Session JWT is valid — authenticate immediately without network call.
     // getUser() was causing sign-outs when the DB returned 503.
-    setSession(currentSession);
-    setUser(currentSession.user);
-    setStatus("authenticated");
+    // Stable-reference emit: skip setState if access_token is unchanged so that
+    // TOKEN_REFRESHED / cross-tab visibility events don't cascade re-renders
+    // through every consumer of useAuth() (which would re-trigger refetchInterval
+    // on dependent React Query hooks).
+    setSession((prev) =>
+      prev?.access_token === currentSession.access_token ? prev : currentSession,
+    );
+    setUser((prev) =>
+      prev?.id === currentSession.user.id ? prev : currentSession.user,
+    );
+    setStatus((prev) => (prev === "authenticated" ? prev : "authenticated"));
   }, [setUnauthenticated]);
 
   useEffect(() => {

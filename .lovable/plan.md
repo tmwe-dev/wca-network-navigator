@@ -1,134 +1,59 @@
+# Fix Polling Loop & Auth Re-render
 
-## Obiettivo
+## Cosa ho trovato (verificato sul codice)
 
-Rendere LinkedIn **e WhatsApp** istantanei (read + send) tenendo SEMPRE pronta una tab dedicata di servizio (`linkedin.com/messaging/` e `web.whatsapp.com/`), e — su LinkedIn — aprire automaticamente un nuovo thread quando il contatto non ne ha ancora uno.
+1. **`src/providers/AuthProvider.tsx:84`** — `setSession(currentSession)` viene chiamato a OGNI evento `onAuthStateChange` (incluso `TOKEN_REFRESHED` ogni ~50min e visibility change). Il riferimento cambia anche quando l'access_token è identico → tutti i consumer del context si ri-renderizzano → React Query rimonta i `refetchInterval`.
 
-Niente più cold-tab da 40-60s, niente più "Timeout 35s", niente più dipendenza dalla pagina che l'utente sta guardando.
+2. **`src/hooks/useOperationsCenter.ts:82,98,118`** — 3 query polling ogni **15s** su `agent_tasks`, `email_campaign_queue`, `activities`. **MA** alle righe 122-128 è già attivo `postgres_changes` Realtime sulle stesse 3 tabelle. Polling ridondante puro.
 
----
+3. **`src/hooks/useUnreadCounts.ts:61`** — 5 HEAD count su `channel_messages` + `partners` + `activities` ogni **60s** + `refetchOnWindowFocus: true`. Accettabile come fallback ma duplica il lavoro che farebbe Realtime.
 
-## I problemi tecnici di oggi
+4. **`src/hooks/useTodayActivities.ts:53`** — polling 30s su `activities`. Sovrapposto a useOperationsCenter.
 
-### LinkedIn
-1. **Nessuna tab persistente di lavoro.** `getLinkedInTabForRead` cerca match esatto del path. Se l'utente è su `/in/...`, nessun match → `chrome.tabs.create` cold. SPA load 8-20s + Optimus AI cold 3-8s + relearn 5-10s = 25-50s. Il client tagliava a 35s → "Nessun thread trovato".
-2. **`getLinkedInTab` (send)** rischia di adottare la tab utente e navigarla via, oppure trovarla su un profilo invece che `/messaging/` → stesso cold path.
-3. **Nessuna logica "apri thread da profilo"**. Se il contatto non ha mai scambiato messaggi, non esiste un thread `/messaging/thread/<id>/`. Oggi il sender prova a digitare nel box di una thread-list senza creare la nuova conversazione.
-4. **Tab non viene mai pre-aperta.** Anche con LinkedIn chiuso, nessuno apre proattivamente `/messaging/`. La prima azione paga sempre il cold start.
+5. **`src/hooks/useActiveProcesses.ts:90`** — polling 10s.
 
-### WhatsApp
-1. **Stesso pattern**: `tab-manager.js` cerca/crea on-demand una tab `web.whatsapp.com`. Cold load WA Web include sync iniziale dei chat (5-15s), download history, init Service Worker WA → totale 10-25s.
-2. **Se la tab non esiste** quando arriva una send/read, l'utente vede l'azione bloccata mentre WA fa boot.
-3. **Nessuna pre-warm**: ogni "ciclo a freddo" della giornata paga il prezzo pieno.
-4. **Differenza chiave vs LI**: WA non ha un equivalente di "apri thread da profilo URL" semplice — i thread si aprono per numero E.164 con `https://web.whatsapp.com/send?phone=<E164>`. Questo flow è già supportato; il problema è solo il cold start della tab base.
+## Modifiche proposte
 
----
-
-## La soluzione: Persistent Worker Tab (LI + WA)
-
-Una tab di servizio per canale, in background, di proprietà dell'estensione, parcheggiata sulla rispettiva home messaging. L'utente non la vede, non gli "ruba" la tab, mai attivata.
-
-### LinkedIn worker
-- URL parcheggio: `https://www.linkedin.com/messaging/`
-- Usata per read inbox e send (sia thread esistente sia nuovo).
-
-### WhatsApp worker
-- URL parcheggio: `https://web.whatsapp.com/`
-- Usata per read chats, send a numero esistente, send a nuovo numero via deep link `?phone=<E164>`.
-
-### Comportamento comune
-```text
-ping/init estensione
-   └─> ensureWorkerTab(channel)
-         ├─ Esiste owned tab su home messaging? → usa quella
-         ├─ Esiste tab utente su quel dominio? → adottala (markOwned)
-         └─ Altrimenti → chrome.tabs.create({ url, active:false })
-                          └─ waitForLoad + warmup (1 volta)
-
-readInbox / sendMessage
-   └─ usa worker tab (già hot) → 2-6s invece di 25-50s
+### A. AuthProvider — emit stabile (1 file, 5 righe)
+`src/providers/AuthProvider.tsx`: in `applyValidatedSession`, prima di `setSession` confronta per `access_token`:
+```ts
+setSession(prev =>
+  prev?.access_token === currentSession.access_token ? prev : currentSession
+);
+setUser(prev =>
+  prev?.id === currentSession.user.id ? prev : currentSession.user
+);
 ```
+Stesso trattamento per `setUnauthenticated` (no-op se già `null`). Elimina i re-render a cascata da `TOKEN_REFRESHED`.
 
-### LinkedIn — flusso send con composer
-```text
-sendMessage(profileUrl, body)
-   ├─ worker tab già pronta su /messaging/
-   ├─ cerca thread per profileUrl (URN o slug) nella lista
-   ├─ TROVATO  → click thread → digita → send (verify 3.9.56)
-   └─ NON TROVATO → openComposerForProfile(profileUrl):
-         ├─ a) /messaging/?compose=true overlay → search recipient → select
-         └─ b) Fallback: navigate worker → profile → click "Messaggia" → torna
-```
+### B. useOperationsCenter — togliere polling (Realtime già attivo)
+`src/hooks/useOperationsCenter.ts`: sostituire `refetchInterval: 15_000` → `refetchInterval: false` sulle 3 query. La sottoscrizione Realtime esistente (righe 122-128) gestisce gli aggiornamenti. Mantengo `staleTime: 10_000` come safety net.
 
-### WhatsApp — flusso send
-```text
-sendMessage(phoneE164, body)
-   ├─ worker tab già pronta su web.whatsapp.com
-   ├─ Se chat per phoneE164 in sidebar → click → digita → send
-   └─ Altrimenti → naviga worker tab a /send?phone=<E164>
-                   → wait composer → digita → send → torna a "/"
-```
+### C. useUnreadCounts — alzare intervallo + Realtime invalidation
+`src/hooks/useUnreadCounts.ts`:
+- `refetchInterval: 120_000` (era 60s)
+- `refetchOnWindowFocus: false`
+- Aggiungere `useEffect` con `supabase.channel().on('postgres_changes', { table: 'channel_messages', event: 'INSERT' }, () => queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unreadCounts }))`. Stesso per `activities`.
 
-### Self-healing
-- Se l'utente chiude la worker tab → al prossimo ping ricreata.
-- Heartbeat ogni 5 min: verifica esistenza e dominio corretto. Se navigata altrove (raro, è inactive), reindirizza alla home.
-- Mai `tabs.update({ active: true })` sulla worker tab.
-- Se rilevato `qr-code` su WA o `login` su LI → ping risponde con `requires_login:true`, niente tentativo di send.
+### D. useTodayActivities — alzare intervallo
+`src/hooks/useTodayActivities.ts`: `refetchInterval: 90_000` (era 30s). Realtime opzionale (già coperto da useOperationsCenter quando montata).
 
----
+### E. useActiveProcesses — alzare intervallo
+`refetchInterval: 30_000` (era 10s). Da verificare uso (se è una pagina di monitoring live, può restare 10s — ne discutiamo prima di toccare).
 
-## Modifiche puntuali
+### F. Iframe `allow="vr ambient-light-sensor battery"` — fuori scope
+Cosmetico. Se vuoi lo cerco e lo pulisco in un follow-up separato (atomicità: fix polling ≠ fix policy iframe).
 
-### LinkedIn (`public/linkedin-extension/`)
-- **`tab-manager.js`** (nodo critico): aggiungo `ensureWorkerTab()` idempotente. `getLinkedInTabForRead` e `getLinkedInTab` per messaging → ritornano la worker tab. Comportamento esistente preservato per altri url. Storage: `li_worker_tab_id`.
-- **`background.js`**: `ensureWorkerTab()` su `onInstalled`/startup (best-effort). Listener `tabs.onRemoved` invalida cache.
-- **`actions.js`** (nodo critico): nuova funzione `openComposerForProfile(profileUrl)`. `sendMessage` invariato; chiama il composer SOLO se thread non trovato.
-- Bump → `3.9.57`.
+## Cosa NON tocco
+- Logica DAL, query keys, schema, RLS.
+- `useCampaignJobs` / `useEmailCampaignQueue` (già `false` o condizionale).
+- Le query effettive (solo metadata di useQuery).
+- Il file `src/integrations/supabase/client.ts`.
 
-### WhatsApp (`public/whatsapp-extension/`)
-- **`tab-manager.js`**: stesso pattern → `ensureWorkerTab()`. Storage: `wa_worker_tab_id`.
-- **`background.js`**: pre-warm su startup, listener `tabs.onRemoved`.
-- **`actions.js`**: in `sendMessage`, prima del flow attuale → assicura worker tab pronta. Logica deep-link `?phone=` resta com'è.
-- Bump versione WA equivalente.
+## Verifica post-fix
+1. Aprire DevTools → Network → filter `channel_messages`. Idle 2 min → attese: ≤1 burst iniziale + invalidazioni Realtime su INSERT reale.
+2. Verificare che il badge unread continui ad aggiornarsi quando arriva una mail (test manuale o INSERT manuale).
+3. `useOperationsCenter` continua a refreshare alla creazione di nuove `agent_tasks` (Realtime).
 
-### UI test (`src/components/test-extensions/LinkedInTest.tsx` + `WhatsAppTest.tsx`)
-- Log nuovi: `workerTabId`, `workerReady`, `threadFound|composerOpened`, `readMs`/`sendMs`.
-- Pulsante "Pre-warm" esplicito per ciascun canale.
-
-### Cosa NON tocco
-AI verify, AI writer, schema selectors, `readInbox` parser, `check-inbox`, OCR, smart polling, edge functions, RLS, Email. Nessun refactor opportunistico.
-
----
-
-## Edge case e rischi
-
-| Caso | Comportamento |
-|------|---------------|
-| LI sessione scaduta | Ping → `requires_login:true`, nessun tentativo |
-| WA QR scaduto | Ping → `requires_login:true`, mostra istruzione |
-| Utente chiude worker tab | Ricreata al prossimo uso (1 cold start, poi hot) |
-| Profilo LI blocca DM | `openComposerForProfile` ritorna `composerUnavailable`, warning |
-| WA numero invalido / no account | Deep link mostra "Phone number shared via url is invalid" → catturato → `phoneInvalid` |
-| LinkedIn cambia route compose | Fallback su click profilo → "Messaggia" |
-| Browser riavviato | `onStartup` ricrea entrambe le worker tab |
-
----
-
-## Risultati attesi
-
-| Operazione | Oggi (cold) | Con worker tab |
-|---|---|---|
-| LI readInbox prima volta | 25-50s (timeout) | 8-15s (warmup unico) |
-| LI readInbox successive | 5-10s | 2-5s |
-| LI sendMessage thread esistente | 8-12s | 3-6s |
-| LI sendMessage NUOVO contatto | inaffidabile | 6-10s |
-| WA readInbox prima volta | 10-25s | 5-10s |
-| WA readInbox successive | 4-8s | 1-3s |
-| WA sendMessage numero nuovo | 8-15s | 4-7s |
-
----
-
-## Domande aperte
-
-1. **Pre-warm aggressivo all'install** di entrambe le estensioni (apre subito le 2 tab) o **lazy** (apre alla prima azione del canale)?
-2. **LinkedIn composer**: preferisci `/messaging/?compose=true` (più veloce, URL non documentata ufficialmente) o sempre il path "vai su profilo → click Messaggia" (più lento ma più stabile)?
-3. **WA worker su browser shutdown**: vuoi che a riavvio Chrome venga ricreata automaticamente (più reattivo) o solo on-demand (più discreto)?
+## Domanda aperta
+Su **E** (`useActiveProcesses`), prima di toccare voglio sapere se la pagina che lo usa è un monitor "live" dove 10s è una scelta UX deliberata. Se sì, lo lascio.

@@ -79,7 +79,8 @@ export function useOperationsCenter() {
       })) as AgentTaskLive[];
     },
     staleTime: 10_000,
-    refetchInterval: 15_000,
+    // Realtime subscription on agent_tasks (below) handles updates; polling removed.
+    refetchInterval: false,
   });
 
   // Email queue (last 100)
@@ -95,7 +96,8 @@ export function useOperationsCenter() {
       return (data || []) as EmailQueueItem[];
     },
     staleTime: 10_000,
-    refetchInterval: 15_000,
+    // Realtime subscription on email_campaign_queue (below) handles updates.
+    refetchInterval: false,
   });
 
   // Activities (recent 50, not cancelled)
@@ -115,7 +117,8 @@ export function useOperationsCenter() {
       })) as ActivityLive[];
     },
     staleTime: 10_000,
-    refetchInterval: 15_000,
+    // Realtime subscription on activities (below) handles updates.
+    refetchInterval: false,
   });
 
   // Realtime subscriptions
