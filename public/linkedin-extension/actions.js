@@ -917,8 +917,11 @@ var Actions = globalThis.Actions || (function () {
   }
 
   async function readInbox() {
-    // Force navigation to inbox list (not a specific thread)
-    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false, false);
+    // 3.9.55 — usa il resolver READ-ONLY: non dirotta MAI la tab LinkedIn
+    // dell'utente verso /messaging/. Se l'utente è su un profilo, apre una
+    // nuova tab in background per leggere l'inbox e lascia la pagina attiva
+    // intatta. Path completamente separato da sendMessage.
+    const tab = await TabManager.getLinkedInTabForRead("https://www.linkedin.com/messaging/");
     if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.INBOX_FAILED, "Leggi Inbox");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
