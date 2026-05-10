@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.58";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -146,13 +146,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.58",
+    latestVersion: "3.9.59",
     items: [
+      {
+        version: "3.9.59",
+        filename: "linkedin-extension-3.9.59.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip",
+        current: true,
+        note: "Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Send invariato.",
+      },
       {
         version: "3.9.58",
         filename: "linkedin-extension-3.9.58.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.58.zip",
-        current: true,
+        current: false,
         note: "Persistent Worker Tab: una sola tab di servizio in background parcheggiata su /messaging/, mai attivata. read/send messaging usano la worker tab pre-warmed (cold start una volta sola). Pre-warm onInstalled/onStartup, invalidazione su tabs.onRemoved.",
       },
       {

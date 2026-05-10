@@ -119,14 +119,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.58",
+    "latestVersion": "3.9.59",
     "items": [
+      {
+        "version": "3.9.59",
+        "filename": "linkedin-extension-3.9.59.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Send invariato."
+      },
       {
         "version": "3.9.58",
         "filename": "linkedin-extension-3.9.58.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.58.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Fix: aggiunto 'ensureWorkerTab' alla whitelist ALLOWED_ACTIONS in content.js (era rifiutato come Unknown action dal Pre-warm)."
       },
       {
