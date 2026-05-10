@@ -1,89 +1,63 @@
-## Diagnosi
+## Esito audit
 
-Log attuale (3.9.62):
-```
-gate={"boxes":0,"clickedMessage":false,"clickedMore":false,"hasMain":true,"shells":0}
-```
-Significa: pagina profilo caricata (`hasMain=true`), ma:
-- `findMessageBtn()` non trova il bottone "Messaggia" → `clickedMessage=false`
-- `findMoreBtn()` non trova "Altro" → `clickedMore=false`
-- nessun composer aperto (`shells=0`, `boxes=0`)
+Ho confrontato gli ZIP reali registrati, non solo i sorgenti:
 
-Causa: LinkedIn ha cambiato labels/markup dei bottoni del profilo. I regex attuali in `actions.js` (righe 339-340 e 351) non matchano più il DOM reale.
+- `linkedin-extension-3.9.56.zip` e `linkedin-extension-3.9.56-restore.zip` sono la baseline funzionante: stesso `actions.js`, `hybrid-ops.js`, `tab-manager.js`, `background.js`, `content.js`.
+- `public/linkedin-extension.zip` contiene davvero la `3.9.65`, quindi il problema attuale non è più “ZIP vecchio”.
+- La regressione principale parte dalla `3.9.57`: `TabManager.getLinkedInTab()` intercetta anche URL profilo `/in/...` e li manda sulla worker tab persistente.
+- Questo spiega il comportamento: lettura inbox/thread veloce perché la worker tab su `/messaging/` va bene per leggere; scrittura/click si rompe perché il flusso non lavora più sul profilo come nella baseline, ma finisce su `/messaging/thread/new/?recipient=...`, dove non esistono i bottoni profilo “Messaggia/Altro”.
+- Il log conferma: `url="https://www.linkedin.com/messaging/thread/new/?recipient=..."`, `visibleButtonsCount=0`, `clickedMessage=false`, `messageClickAttempts=0`. Quindi non sta fallendo il writer: sta fallendo prima, nel gate che aspetta un composer su una pagina messaging nuova non montata.
+- Seconda regressione: nei metodi diagnostici CDP (`cdp_ctrl_enter`, `cdp_physical_click`) la `3.9.65` fa fail-fast e non usa il fallback stabile `HybridOps.sendMessage`. Per questo il test resta inchiodato su `composer_gate_failed_diagnostic` invece di provare la pipeline che in passato scriveva.
 
-## Cosa cambia (solo `actions.js`, file unico, fallback `HybridOps.sendMessage` resta intatto)
+## Nodo critico toccato
 
-### 1. Wait dinamico LinkedIn SPA + selettori "Messaggia" allargati (`findMessageBtn`)
-Aggiungere selettori CSS espliciti prima del fallback testuale:
-- `button[aria-label*="essag" i]` (Messaggia / Message / Messaggio)
-- `button[data-control-name*="message" i]`
-- `a[href*="/messaging/thread/"]`
-- `a[href*="/messaging/compose"]`
-- `button.message-anywhere-button`
-- `button[aria-label*="criv" i]` (Scrivi)
-- `[data-test-app-aware-link][href*="messaging"]`
+Invio LinkedIn = nodo critico: click, writer, dedup, fallback e destinatario. La correzione deve essere minima, locale e reversibile.
 
-Estendere regex testuale per includere: `chat`, `direct message`, `dm`, `inviare`, e accettare anche match parziali su `aria-labelledby`.
+## Piano di implementazione
 
-Cercare anche dentro Shadow DOM (la funzione `deepQueryAll` esiste già — usarla anche per i bottoni, non solo per shells/boxes).
+1. **Ripristinare il routing della baseline solo per la scrittura**
+   - Lasciare la worker tab per `readInbox`, `readThread`, `ensureWorkerTab`, ping e pre-warm.
+   - Escludere i profili `/in/...` e `/pub/...` dal routing automatico verso worker tab quando l’azione è invio/click.
+   - Per `sendLinkedInMessage()` e `sendLinkedInMessageWithMethod()` tornare al comportamento `3.9.56`: usare/navigare una tab LinkedIn reale sul profilo target, poi cliccare “Messaggia”.
 
-### 2. Selettori "Altro/More" allargati (`findMoreBtn`)
-- `button[aria-label*="ltro" i]` (Altro)
-- `button[aria-label*="ore actions" i]`
-- `button[aria-label*="ù azioni" i]`
-- `button.artdeco-dropdown__trigger[aria-label]` filtrato per label
-- Regex aggiuntiva: `dropdown|menu azioni|action menu`
+2. **Non toccare il writer stabile**
+   - Mantenere `HybridOps.sendMessage` e `HybridOps.sendMessageWithMethod` come single writer.
+   - Nessun nuovo writer parallelo.
+   - Nessuna duplicazione di invio, paste, submit o CDP.
 
-### 3. Retry con backoff su click "Messaggia"
-Invece di un singolo `mb.click()` per iterazione, dopo il primo click:
-- aspetta 1.2s
-- ricontrolla composer
-- se ancora chiuso, prova **secondo bottone** "Messaggia" trovato (lista, non singolo)
-- max 3 tentativi totali, poi passa al ramo "Altro"
+3. **Ripristinare fallback diagnostico per test click+messaggio**
+   - Anche se il metodo selezionato è CDP, se il gate non trova il composer deve poter degradare a `HybridOps.sendMessage` solo dopo aver verificato destinatario/profilo.
+   - Il test deve essere “click profilo → composer → scrittura → invio”, non “apri `/messaging/thread/new` e spera che monti”.
 
-Il flag `clickedMessage` diventa contatore `messageClickAttempts` (max 3).
+4. **Aggiungere un micro-test diagnostico mirato**
+   - Un’azione dedicata o output diagnostico nel test esistente che verifica solo:
+     - tab URL finale;
+     - presenza profilo target;
+     - click bottone Messaggia;
+     - composer trovato;
+     - textbox scrivibile;
+     - send button trovato.
+   - Deve fermarsi con errore chiaro prima dell’invio se manca uno step, così non facciamo altri tentativi ciechi.
 
-### 4. Anticipare apertura "Altro"
-Ridurre la soglia `Date.now() - started > 2500` a `> 1500` quando `messageClickAttempts >= 2`. Così il fallback "Altro → Messaggia" parte prima.
+5. **Versionare e impacchettare correttamente**
+   - Bump a `3.9.66`.
+   - Aggiornare `manifest.json`, `catalog.json`, `LINKEDIN_EXTENSION_REQUIRED_VERSION`.
+   - Rigenerare sia `/chrome-extensions/linkedin/linkedin-extension-3.9.66.zip` sia `/linkedin-extension.zip`.
+   - Verificare con script che manifest e hash dentro gli ZIP coincidano con i sorgenti.
 
-### 5. Diagnostica arricchita
-Nel diagnostic finale aggiungere:
-- `profileLoaded`: presenza di `.pv-top-card` o `[data-test-id*="top-card"]` o `section.artdeco-card`
-- `messageBtnSelectorsHit`: array dei selettori CSS che hanno matchato (per capire QUALE selettore funziona o se nessuno)
-- `visibleButtonsCount`: numero totale bottoni visibili nel main
-- `firstButtonLabels`: prime 8 label dei bottoni visibili (truncate 40 char)
-- `url`: `location.href` reale al momento del timeout
+## Cosa non cambio
 
-Questo permette, al prossimo fallimento, di vedere subito se LinkedIn ha cambiato di nuovo i label/markup.
-
-### 6. Aumentare timeout interno gate
-Da `Math.max(12000, timeoutMs || 30000)` (di fatto 30s perché `timeoutMs=30000` arriva da chiamante) → lasciato a 30s ma il polling interno passa da 100ms a 250ms (meno CPU, più tempo per LinkedIn di caricare lazy).
-
-## Cosa NON tocco
-- `background.js` keep-alive (funziona)
-- `tab-manager.js` worker tab (funziona)
-- `hybrid-ops.js` scrittura `sendMessage` (è la pipeline stabile)
-- Fallback `HybridOps.sendMessage` per metodi non-CDP (3.9.62 ripristinato)
-- CDP fail-fast diagnostico (resta)
-
-## Packaging
-- Bump manifest a `3.9.65`
-- Catalog: 3.9.65 latest, 3.9.64/3.9.63 current=false
-- `whatsappExtensionZip.ts` LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.65"
-- Repackage zip + fallback `linkedin-extension.zip`
+- Nessuna modifica a backend, DB, RLS, edge functions, AI, prompt o email.
+- Nessuna modifica a lettura inbox/thread, che oggi funziona.
+- Nessuna riscrittura dell’architettura dell’estensione.
+- Nessun refactor opportunistico.
 
 ## Risultato atteso
 
-Caso A (LinkedIn ha solo cambiato label):
-- Nuovi selettori CSS matchano → composer si apre → invio OK
+Il sistema torna al flusso funzionante:
 
-Caso B (cambiamento più profondo):
-- Composer non si apre lo stesso, MA il diagnostic ora mostra `firstButtonLabels`, `url`, `visibleButtonsCount` → in 1 iterazione capiamo cosa cercare e patchiamo i selettori esatti.
+```text
+profilo /in/... → click Messaggia sul top-card → composer visibile → scrittura messaggio → invio
+```
 
-In entrambi i casi il fallback `HybridOps.sendMessage` (3.9.62) continua a coprire i metodi DOM non-CDP.
-
-## Tecnica (per riferimento)
-
-File toccato: solo `public/linkedin-extension/actions.js` (sezione `probeComposer`/`waitForComposerReady`, righe ~325-395) + `manifest.json` + `catalog.json` + `src/lib/whatsappExtensionZip.ts`.
-
-Nessuna modifica a edge function, DAL, RLS, prompt, AI, journalistReview.
+La worker tab resta utile per la lettura, ma non deve più sostituire il profilo nel percorso di scrittura.
