@@ -10,6 +10,19 @@ import { LINKEDIN_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip"
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
+import {
+  type LinkedInSendStrategy,
+  STRATEGY_LABELS,
+  STRATEGY_DESCRIPTIONS,
+  loadStrategy,
+  saveStrategy,
+  strategyHasTimeout,
+  strategyHasDedup,
+  withClientTimeout,
+  buildIdempotencyKey,
+  isDuplicateKey,
+  rememberKey,
+} from "./linkedinSendStrategies";
 
 // Area di TEST manuale: l'operatore guida il ritmo, non serve gating anti-throttle
 // di produzione. Cooldown ridotti al minimo per "parti e vai" come WhatsApp test.
@@ -55,6 +68,7 @@ export function LinkedInTest() {
   const [lastKnownText, setLastKnownText] = useState("");
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
+  const [strategy, setStrategy] = useState<LinkedInSendStrategy>(loadStrategy);
   const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
@@ -151,7 +165,14 @@ export function LinkedInTest() {
       log(`✅ Worker tab pronta in ${elapsed}ms (#${r.workerTabId}, ${created})`, "ok");
       log(`  warmupMs=${r.warmupMs ?? "?"} · ready=${r.ready ? "yes" : "no"}`, "info");
     } else {
-      log(`❌ Pre-warm fallito: ${r?.error || JSON.stringify(r)}`, "error");
+      const errStr = String(r?.error || JSON.stringify(r));
+      // 3.9.56-restore: la build NON espone ensureWorkerTab. Non è un errore,
+      // l'extension funziona lo stesso (le azioni aprono la tab on-demand).
+      if (/Unknown action: ensureWorkerTab/i.test(errStr)) {
+        log("ℹ️ Estensione 3.9.56-restore senza pre-warm: ok, le azioni gestiscono la tab on-demand.", "info");
+      } else {
+        log(`❌ Pre-warm fallito: ${errStr}`, "error");
+      }
     }
   });
 
@@ -215,7 +236,7 @@ export function LinkedInTest() {
   });
 
   const testReadInbox = () => runWithCooldown(async () => {
-    log("📨 Lettura inbox LinkedIn (worker tab pre-warmed → tipicamente 3-8s)...");
+    log(`📨 Lettura inbox LinkedIn · strategia [${STRATEGY_LABELS[strategy]}]`);
     // Stato worker pre-azione, per capire se l'azione paga un cold start.
     try {
       const pre = await liMsg("ping", {}, 4000) as Record<string, unknown>;
@@ -232,7 +253,17 @@ export function LinkedInTest() {
     }, 15000);
     let r: Record<string, unknown> | undefined;
     try {
-      r = await liMsg("readLinkedInInbox", {}, 90000);
+      if (strategyHasTimeout(strategy)) {
+        const racePromise = liMsg("readLinkedInInbox", {}, 90000) as Promise<Record<string, unknown>>;
+        const out = await withClientTimeout(racePromise, 12_000);
+        if (out === null) {
+          log("⏱️ readInbox: timeout client 12s, lettura saltata. Riprovo al prossimo ciclo.", "warn");
+          return;
+        }
+        r = out;
+      } else {
+        r = await liMsg("readLinkedInInbox", {}, 90000);
+      }
     } finally {
       clearInterval(ticker);
     }
@@ -267,6 +298,18 @@ export function LinkedInTest() {
   const testSendMessage = () => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
+    // Strategia anti-duplicazione (C/D): blocca un secondo invio identico
+    // dello stesso testo allo stesso destinatario entro 30s.
+    if (strategyHasDedup(strategy)) {
+      const key = await buildIdempotencyKey(sendUrl, sendText);
+      if (isDuplicateKey(key)) {
+        log(`🛡️ Anti-duplicazione: invio identico già fatto negli ultimi 30s (key=${key.slice(0, 8)}…). Skip.`, "warn");
+        return;
+      }
+      rememberKey(key);
+      log(`🛡️ Anti-duplicazione attiva · key=${key.slice(0, 8)}…`, "info");
+    }
+    log(`🎛️ Strategia di invio: ${STRATEGY_LABELS[strategy]}`, "info");
     // Pre-flight: verifica versione estensione installata
     try {
       const pong = await liMsg("ping", {}, 4000) as { success?: boolean; version?: string };
@@ -596,6 +639,26 @@ export function LinkedInTest() {
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
+        <div className="rounded-md border border-border/60 bg-background/50 p-2 space-y-1">
+          <p className="text-[11px] font-semibold text-muted-foreground">🎛️ Strategia di invio (sperimentale, lato client)</p>
+          <div className="flex flex-wrap gap-3">
+            {(Object.keys(STRATEGY_LABELS) as LinkedInSendStrategy[]).map((s) => (
+              <label key={s} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input
+                  type="radio"
+                  name="li-send-strategy"
+                  value={s}
+                  checked={strategy === s}
+                  onChange={() => { setStrategy(s); saveStrategy(s); log(`🎛️ Strategia attiva: ${STRATEGY_LABELS[s]}`, "info"); }}
+                />
+                <span>{STRATEGY_LABELS[s]}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground italic leading-snug">
+            {STRATEGY_DESCRIPTIONS[strategy]}
+          </p>
+        </div>
         {foundThreads.length > 0 && (
           <select value={sendUrl} onChange={(e) => setSendUrl(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
             <option value="">— Seleziona contatto dalla rubrica (o incolla URL sotto) —</option>

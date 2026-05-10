@@ -25,13 +25,7 @@ try {
 // ── Action registry: maps action names to handler functions ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    var w = (typeof TabManager !== "undefined" && TabManager.getWorkerInfo) ? TabManager.getWorkerInfo() : { id: null, ready: false };
-    sendResponse({
-      success: true,
-      version: chrome.runtime.getManifest().version,
-      workerTabId: w.id,
-      workerReady: !!w.ready,
-    });
+    sendResponse({ success: true, version: chrome.runtime.getManifest().version });
     return false; // sync
   },
 
@@ -173,33 +167,6 @@ const ACTION_HANDLERS = {
     });
     return true;
   },
-
-  // 3.9.57 — Pre-warm esplicito della worker tab (chiamato dalla UI).
-  ensureWorkerTab: function (msg, sendResponse) {
-    if (typeof TabManager === "undefined" || !TabManager.ensureWorkerTab) {
-      sendResponse({ success: false, error: "TabManager not loaded" });
-      return false;
-    }
-    TabManager.enqueueSession(async function () {
-      try {
-        var t0 = Date.now();
-        var res = await TabManager.ensureWorkerTab();
-        sendResponse({
-          success: !!(res && res.id),
-          workerTabId: res && res.id,
-          ready: !!(res && res.ready),
-          created: !!(res && res.created),
-          adopted: !!(res && res.adopted),
-          reused: !!(res && res.reused),
-          warmupMs: Date.now() - t0,
-          error: res && res.error,
-        });
-      } catch (err) {
-        sendResponse({ success: false, error: err && err.message });
-      }
-    });
-    return true;
-  },
 };
 
 // ── Single message listener ──
@@ -223,28 +190,8 @@ chrome.runtime.onInstalled.addListener(async function () {
   Auth.syncCookieToServer().catch(function (err) {
     console.warn("[LI] Cookie sync failed on startup:", (err && err.message) || err);
   });
-  // 3.9.57 — Lazy worker pre-warm: tentiamo, ma senza bloccare e senza
-  // imporre una tab se l'utente non ha ancora effettuato il login.
-  if (typeof TabManager !== "undefined" && TabManager.ensureWorkerTab) {
-    TabManager.ensureWorkerTab().catch(function (e) {
-      console.warn("[LI] worker pre-warm onInstalled failed:", e && e.message);
-    });
-  }
 });
 
 chrome.runtime.onStartup.addListener(async function () {
   await Config.load();
-  if (typeof TabManager !== "undefined" && TabManager.ensureWorkerTab) {
-    TabManager.ensureWorkerTab().catch(function (e) {
-      console.warn("[LI] worker pre-warm onStartup failed:", e && e.message);
-    });
-  }
-});
-
-// 3.9.57 — Invalida la worker tab cache quando viene chiusa.
-// La prossima azione la ricrea (lazy, no riapertura a sorpresa).
-chrome.tabs.onRemoved.addListener(function (tabId) {
-  if (typeof TabManager !== "undefined" && TabManager.invalidateWorker) {
-    TabManager.invalidateWorker(tabId);
-  }
 });
