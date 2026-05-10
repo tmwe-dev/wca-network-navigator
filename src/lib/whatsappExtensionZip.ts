@@ -6,7 +6,9 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59";
+// Rollback a 3.9.56 (build più affidabile per l'invio). Il manifest.json
+// dell'estensione riporta version="3.9.56" + version_name="3.9.56-restore".
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.56";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -146,13 +148,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.59",
+    latestVersion: "3.9.56-restore",
     items: [
+      {
+        version: "3.9.56-restore",
+        filename: "linkedin-extension-3.9.56-restore.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip",
+        current: true,
+        note: "Rollback alla 3.9.56 (build più affidabile per l'invio). Rimossi pre-warm worker tab (3.9.57/58) e bounded readInbox (3.9.59). Strategie alternative anti-duplicazione/timeout sono ora gestite client-side dal pannello LinkedInTest (no reinstallazione).",
+      },
       {
         version: "3.9.59",
         filename: "linkedin-extension-3.9.59.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip",
-        current: true,
+        current: false,
         note: "Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Send invariato.",
       },
       {
