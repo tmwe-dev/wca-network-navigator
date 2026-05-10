@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.59",
-  "description": "3.9.59 — Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Persistent Worker Tab invariata.",
+  "version": "3.9.60",
+  "description": "3.9.60 — Service worker keep-alive (chrome.alarms ~24s) per evitare il sleep MV3 che ritardava il primo messaggio dopo idle.",
   "permissions": [
     "cookies",
     "tabs",
@@ -10,7 +10,8 @@
     "scripting",
     "debugger",
     "storage",
-    "webNavigation"
+    "webNavigation",
+    "alarms"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",

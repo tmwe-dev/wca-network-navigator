@@ -6,10 +6,10 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// Versione canonica LinkedIn: 3.9.59 (bounded readInbox, ensureWorkerTab,
-// pre-warm tab persistente). Allineata con catalog.json e con lo zip
-// servito dal pulsante download della top-bar.
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59";
+// Versione canonica LinkedIn: 3.9.60 (keep-alive service worker MV3 via
+// chrome.alarms ~24s, oltre a bounded readInbox + worker tab persistente).
+// Allineata con catalog.json e con lo zip servito dal pulsante download.
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.60";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -149,13 +149,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.56-restore",
+    latestVersion: "3.9.60",
     items: [
+      {
+        version: "3.9.60",
+        filename: "linkedin-extension-3.9.60.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.60.zip",
+        current: true,
+        note: "Keep-alive service worker MV3 via chrome.alarms (~24s): elimina il sleep che ritardava il primo messaggio dopo idle. Bounded readInbox e worker tab persistente invariati.",
+      },
       {
         version: "3.9.56-restore",
         filename: "linkedin-extension-3.9.56-restore.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip",
-        current: true,
+        current: false,
         note: "Rollback alla 3.9.56 (build più affidabile per l'invio). Rimossi pre-warm worker tab (3.9.57/58) e bounded readInbox (3.9.59). Strategie alternative anti-duplicazione/timeout sono ora gestite client-side dal pannello LinkedInTest (no reinstallazione).",
       },
       {
