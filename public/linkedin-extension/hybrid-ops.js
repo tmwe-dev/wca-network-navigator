@@ -269,11 +269,34 @@ var HybridOps = globalThis.HybridOps || (function () {
     // AX/AILearn restano definiti SOLO come read-only/diagnostica.
     // NESSUN writer parallelo: una sola fonte di scrittura, fallimento esplicito.
 
+    // 3.9.56 — AI VERIFY (read-only): chiediamo ad AILearn lo schema
+    // "messaging" per ottenere il sendButtonSelector. NON è un writer:
+    // il selector viene passato all'injected fn che lo prova PRIMA della
+    // regex storica. Cache-first; relearn solo su cache miss / button not
+    // found. Fallback completo alla regex se AI non disponibile.
+    let aiSendSelector = null;
+    let schemaSource = "none";
+    try {
+      if (typeof AILearn !== "undefined") {
+        const cached = await AILearn.getCached("messaging");
+        if (cached && cached.sendButtonSelector) {
+          aiSendSelector = cached.sendButtonSelector;
+          schemaSource = "cache";
+        } else if (Config.isReady()) {
+          const fresh = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
+          if (fresh && fresh.sendButtonSelector) {
+            aiSendSelector = fresh.sendButtonSelector;
+            schemaSource = "fresh";
+          }
+        }
+      }
+    } catch (e) { /* fail-open: regex fallback */ }
+
     // Level 3: Structural fallback with native input
     try {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        func: function (msg) {
+        func: function (msg, aiSendSelector) {
           // Poll up to 8s for the message textbox to appear after the dialog opens.
           // If still missing, try clicking the profile-scoped "Messaggia"/"Message"
           // button (including the "Altro/More" menu), then poll again.
