@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.18",
+  "version": "5.10.19",
   "description": "5.10.18 — Persistent Worker Tab: pre-warm su onInstalled/onStartup di una sola tab di servizio web.whatsapp.com in background. Read/send usano la worker tab già hot (cold start una volta sola). Invalidazione su tabs.onRemoved + handler ensureWorkerTab esposto alla UI. Send via deep link ?phone=/?text= invariato.",
   "permissions": [
     "tabs",
