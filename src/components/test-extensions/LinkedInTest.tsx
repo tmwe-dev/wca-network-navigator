@@ -79,7 +79,7 @@ export function LinkedInTest() {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
 
-  // 3.9.57-human-sim — Polling stato Human Simulator (silenzioso ogni 5s,
+  // 3.9.58-human-sim — Polling stato Human Simulator (silenzioso ogni 5s,
   // dopo ogni invio e on-demand). Non scrive nei logs: pannello dedicato.
   const refreshHumanSim = useCallback(async (verbose = false) => {
     try {
@@ -103,7 +103,7 @@ export function LinkedInTest() {
         const err = String(r?.error ?? "?");
         log(`⚠️ Human Sim non disponibile: ${err}`, "warn");
         if (/Unknown action: getHumanSimStats|human_simulator_not_loaded/i.test(err)) {
-          log("💡 Reinstalla l'estensione 3.9.57-human-sim per abilitare la diagnostica live.", "warn");
+          log("💡 Reinstalla l'estensione 3.9.58-human-sim per abilitare la diagnostica live.", "warn");
         }
         setHumanSim((s) => ({ ...s, loaded: false, error: err }));
       }
@@ -198,7 +198,7 @@ export function LinkedInTest() {
     } else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
   });
 
-  // 3.9.57 — Pre-warm esplicito della worker tab. Una volta sola si paga il
+  // 3.9.58 — Pre-warm esplicito della worker tab. Una volta sola si paga il
   // costo di apertura tab + caricamento /messaging/. Da quel momento read e
   // send sono "hot" (3-6s invece di 25-50s).
   const testPreWarm = () => runWithCooldown(async () => {
@@ -389,7 +389,7 @@ export function LinkedInTest() {
       log(`  • clickMethod: ${String(diag.clickMethod ?? diag.method ?? "?")} | verified: ${String(diag.verified ?? "?")}`, "info");
       log(`  • selectorUsed: ${String(diag.selectorUsed ?? "(regex)")}`, "info");
       log(`  • schemaSource: ${String(diag.schemaSource ?? "?")} | schemaAgeMs: ${String(diag.schemaAgeMs ?? "?")} | relearned: ${String(diag.relearned ?? false)}`, "info");
-      // 3.9.57-human-sim — Diagnostica Human Simulator
+      // 3.9.58-human-sim — Diagnostica Human Simulator
       const hs = diag.human_sim as Record<string, unknown> | undefined;
       if (hs) {
         log(`🧑 Human Simulator:`, "info");
@@ -778,7 +778,7 @@ export function LinkedInTest() {
         </div>
       </div>
       <Terminal logs={logs} />
-      {/* 3.9.57-human-sim — Pannello stato Human Simulator */}
+      {/* 3.9.58-human-sim — Pannello stato Human Simulator */}
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2 text-xs">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <p className="font-medium text-muted-foreground">🧑 Stato Human Simulator</p>
@@ -820,13 +820,13 @@ export function LinkedInTest() {
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground italic">
-              Regole hardcoded 3.9.57: 25-30 invii/giorno · pausa 3-7 min ogni 5-8 invii · cooldown 25-65s tra invii · scroll/dwell profilo · digitazione char-by-char 1/3 invii.
+              Regole hardcoded 3.9.58: 25-30 invii/giorno · pausa 3-7 min ogni 5-8 invii · cooldown 25-65s tra invii · scroll/dwell profilo · digitazione char-by-char 1/3 invii.
             </p>
           </>
         )}
         {!humanSim.loaded && humanSim.error && (
           <p className="text-[11px] text-muted-foreground">
-            Reinstalla l'estensione <b>3.9.57-human-sim</b> per abilitare la diagnostica live.
+            Reinstalla l'estensione <b>3.9.58-human-sim</b> per abilitare la diagnostica live.
           </p>
         )}
       </div>

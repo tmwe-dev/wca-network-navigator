@@ -6,9 +6,9 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// 3.9.57-human-sim: scroll/dwell profilo + typing 1/3 char-by-char + rate limit hardcoded.
-// Il manifest.json riporta version="3.9.57" + version_name="3.9.57-human-sim".
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.57";
+// 3.9.58-human-sim: scroll/dwell profilo + typing 1/3 char-by-char + rate limit hardcoded.
+// Il manifest.json riporta version="3.9.58" + version_name="3.9.58-human-sim".
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.58";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -148,12 +148,12 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.57-human-sim",
+    latestVersion: "3.9.58-human-sim",
     items: [
       {
-        version: "3.9.57-human-sim",
-        filename: "linkedin-extension-3.9.57.zip",
-        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.57.zip",
+        version: "3.9.58-human-sim",
+        filename: "linkedin-extension-3.9.58.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.58.zip",
         current: true,
         note: "Human Simulator hardcoded: scroll/dwell profilo, digitazione char-by-char 1 invio su 3 (typo+correzione 5%), rate limit 25-30/giorno + pausa 3-7 min ogni 5-8 invii + cooldown 25-65s tra invii. Mantiene autoclose 3.9.56.",
       },
@@ -169,7 +169,7 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
         filename: "linkedin-extension-3.9.56-restore.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip",
         current: false,
-        note: "Rollback alla 3.9.56 (build più affidabile per l'invio). Rimossi pre-warm worker tab (3.9.57/58) e bounded readInbox (3.9.59). Strategie alternative anti-duplicazione/timeout sono ora gestite client-side dal pannello LinkedInTest (no reinstallazione).",
+        note: "Rollback alla 3.9.56 (build più affidabile per l'invio). Rimossi pre-warm worker tab (3.9.58/58) e bounded readInbox (3.9.59). Strategie alternative anti-duplicazione/timeout sono ora gestite client-side dal pannello LinkedInTest (no reinstallazione).",
       },
       {
         version: "3.9.59",
