@@ -88,7 +88,14 @@ export function NetworkPage(): React.ReactElement {
       if (id) setSelectedPartnerId(String(id));
     };
     window.addEventListener("v2-open-partner", handler);
-    return () => window.removeEventListener("v2-open-partner", handler);
+    // La sidebar filtri WCA (`NetworkFiltersSection`) emette
+    // `network-select-partner` quando si clicca un risultato del search.
+    // Lo trattiamo come alias di `v2-open-partner` per aprire il dettaglio.
+    window.addEventListener("network-select-partner", handler);
+    return () => {
+      window.removeEventListener("v2-open-partner", handler);
+      window.removeEventListener("network-select-partner", handler);
+    };
   }, []);
 
   // Sherlock launch è gestito dal singleton globale GlobalSherlockLauncher (App.tsx).
