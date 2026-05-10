@@ -489,26 +489,13 @@ var Actions = globalThis.Actions || (function () {
                 last.composerScope = "document";
                 while (Date.now() - started < limit) {
                   last.readyState = document.readyState;
-                  // Su /messaging/ la textbox può essere ovunque nel DOM.
-                  var msgForms = deepQueryAll(".msg-form, .msg-form__contenteditable, .msg-form__msg-content-container");
-                  last.msgFormPresent = msgForms.some(visible);
-                  var anyBox = null;
-                  // 1) Preferito: contenteditable dentro .msg-form
-                  for (var f = 0; f < msgForms.length; f++) {
-                    if (!visible(msgForms[f])) continue;
-                    var inner = msgForms[f].querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-                    if (inner && visible(inner)) { anyBox = inner; break; }
-                    if (msgForms[f].getAttribute && msgForms[f].getAttribute("contenteditable") === "true") { anyBox = msgForms[f]; break; }
-                  }
-                  // 2) Fallback: qualsiasi contenteditable visibile nel doc
-                  if (!anyBox) {
-                    var allEditables = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-                    for (var e2 = 0; e2 < allEditables.length; e2++) {
-                      if (visible(allEditables[e2])) { anyBox = allEditables[e2]; break; }
-                    }
-                  }
+                  var spa = linkedinSpaReadySnapshot();
+                  last.hasMain = spa.hasMain;
+                  last.msgFormPresent = spa.hasMessagingShell;
+                  last.visibleButtonsCount = spa.visibleButtonsCount;
+                  var anyBox = findComposerBoxAnywhere();
                   last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
-                  last.shells = msgForms.filter(visible).length;
+                  last.shells = deepQueryAll(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo'], [class*='msg-s-message-list']").filter(visible).length;
                   if (anyBox) return { success: true, method: "messaging_fast_path", waitedMs: Date.now() - started, diagnostic: last };
                   await sleep(250);
                 }
