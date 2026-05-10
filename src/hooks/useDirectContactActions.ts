@@ -64,7 +64,12 @@ export function useDirectContactActions() {
       setWaSending(key);
       try {
         const cleanPhone = opts.phone.replace(/[\s\-\(\)\.]/g, "").replace(/^\+/, "");
-        const result = await sendWhatsApp(cleanPhone, "");
+        // Nessun testo da inviare → apri direttamente la chat (wa.me).
+        // L'estensione richiede phone+text; usarla con text="" produce "phone e text richiesti".
+        if (typeof window !== "undefined") {
+          window.open(`https://wa.me/${cleanPhone}`, "_blank", "noopener,noreferrer");
+        }
+        const result: { success: boolean; error?: string } = { success: true };
         if (result?.success) {
           toast.success(`Chat WhatsApp aperta con ${opts.contactName || cleanPhone}`);
           // LOVABLE-93: logAction chiama log-action edge → postSendPipeline server-side
