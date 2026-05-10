@@ -110,6 +110,7 @@ const AgentTasksPage = lazy(() => import("./ui/pages/AgentTasksPage").then((m) =
 const CalendarPage = lazy(() => import("./ui/pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const NotificationsPage = lazy(() => import("./ui/pages/NotificationsPage"));
 const TokenCockpitPage = lazy(() => import("./ui/pages/TokenCockpitPage").then((m) => ({ default: m.TokenCockpitPage })));
+const TmweClientsPage = lazy(() => import("./ui/pages/TmweClientsPage").then((m) => ({ default: m.TmweClientsPage })));
 const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 // ── New Section pages (UX Redesign Phase 1) ──────────────────────────
@@ -380,6 +381,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           <Route path="token-cockpit" element={guardedPage(TokenCockpitPage, "TokenCockpit")} />
+          <Route path="tmwe/clients" element={guardedPage(TmweClientsPage, "TmweClients")} />
           <Route path="notifications" element={guardedPage(NotificationsPage, "Notifications")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
 
