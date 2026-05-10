@@ -62,7 +62,7 @@ var HybridOps = globalThis.HybridOps || (function () {
         func: function (maxWait) {
           function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
           function findBox() {
-            var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
+            var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']");
             for (var s = 0; s < scopes.length; s++) {
               var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
               for (var i = 0; i < boxes.length; i++) {
@@ -321,7 +321,7 @@ var HybridOps = globalThis.HybridOps || (function () {
             // (msg-form / dialog / overlay-conversation-bubble), mai globale.
             // Senza questo scope vince la search-bar o un campo filtri.
             var composerScopes = deepQueryAll(
-              ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+              ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
             );
             for (var s = 0; s < composerScopes.length; s++) {
               var scope = composerScopes[s];
@@ -371,7 +371,7 @@ var HybridOps = globalThis.HybridOps || (function () {
           function hasOpenComposer() {
             try {
               var scopes = deepQueryAll(
-                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+                ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
               );
               for (var i = 0; i < scopes.length; i++) {
                 var s = scopes[i];
