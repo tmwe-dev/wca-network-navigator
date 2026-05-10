@@ -248,3 +248,21 @@ chrome.tabs.onRemoved.addListener(function (tabId) {
     TabManager.invalidateWorker(tabId);
   }
 });
+
+// 3.9.60 — Keep-alive del service worker MV3.
+// Senza questo, dopo ~30s di idle Chrome sospende il worker e il primo
+// messaggio dalla webapp deve "risvegliarlo" causando latenze 5-15s o timeout.
+// chrome.alarms con periodo ≤30s mantiene il worker caldo legalmente.
+try {
+  chrome.alarms.create("li-keepalive", { periodInMinutes: 0.4 }); // ~24s
+  chrome.alarms.onAlarm.addListener(function (alarm) {
+    if (alarm && alarm.name === "li-keepalive") {
+      // Touch storage per forzare un'attività e resettare il timer di idle.
+      chrome.storage.local.get("li_keepalive_ts", function () {
+        chrome.storage.local.set({ li_keepalive_ts: Date.now() });
+      });
+    }
+  });
+} catch (e) {
+  console.warn("[LI] keep-alive alarm setup failed:", e && e.message);
+}
