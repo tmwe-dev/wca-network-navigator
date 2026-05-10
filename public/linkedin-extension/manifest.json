@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.54",
-  "description": "3.9.54 — Click ottimistico post-Send (no submit/Ctrl+Enter/CDP fallback), anti-double-send 2s, cleanup overlay stale, tab targeting esatto.",
+  "version": "3.9.55",
+  "description": "3.9.55 — Path tab READ-ONLY separato (getLinkedInTabForRead): readInbox non dirotta più la tab attiva su /messaging/. Click ottimistico post-Send invariato.",
   "permissions": [
     "cookies",
     "tabs",
