@@ -45,7 +45,7 @@ export function useSendWhatsApp(draft: DraftState) {
       const review = await reviewMessage({
         channel: "whatsapp",
         draft: plainText,
-        partnerId: draft.partnerId ?? null,
+        partnerId: null,
         contactId: draft.contactId ?? null,
       });
       if (review.verdict === "block") {
