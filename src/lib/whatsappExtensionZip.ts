@@ -6,9 +6,10 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// 3.9.56-autoclose: auto-close overlay composer dopo invio + 2 sleep ridotti.
-// Il manifest.json riporta version="3.9.56" + version_name="3.9.56-autoclose".
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.56";
+// 3.9.56-restore: rollback alla 3.9.56 AI-Verified Click pura, senza
+// auto-close overlay e senza sleep ridotti. manifest.json: version="3.9.56"
+// + version_name="3.9.56-restore".
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.56-restore";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";

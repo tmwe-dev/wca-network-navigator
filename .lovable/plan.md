@@ -1,75 +1,43 @@
-# LinkedIn extension: auto-close composer + trim attese
+## Risultato audit
 
-## Obiettivo
+Hai ragione: la build scaricata dal sistema è determinata dai file statici dell’app, non dal nome che Chrome mostra.
 
-Eliminare il rischio di concatenazione messaggi e ridurre di 3-4s la latenza per invio, senza toccare deduplica, verifica consegna, edge functions o WhatsApp.
+Stato attuale trovato:
 
-## Scope
+- `public/chrome-extensions/catalog.json` punta come corrente a `3.9.56-autoclose`.
+- `public/linkedin-extension.zip` è `3.9.56-autoclose`.
+- Il pulsante top-bar scarica `/chrome-extensions/linkedin/linkedin-extension-3.9.56.zip`, perché `LINKEDIN_EXTENSION_REQUIRED_VERSION` è rimasto `3.9.56`.
+- La pagina catalogo `ExtensionDownloadCatalog` può usare `/linkedin-extension.zip` come fallback per tutte le versioni LinkedIn: oggi quel fallback è `autoclose`.
+- Le zip `3.9.56.zip` e `3.9.56-restore.zip` sono identiche nei JS (`actions.js`, `hybrid-ops.js`, `background.js`, `tab-manager.js`, `content.js`) e contengono la build AI-Verified Click.
+- `3.9.56-autoclose` differisce davvero in `actions.js` e `hybrid-ops.js`: contiene i 2 sleep ridotti + `closeMessagingComposer`.
 
-Solo `public/linkedin-extension/` + catalogo + zip. Zero modifiche a edge functions, DAL, AuthProvider, RLS, query keys, WhatsApp.
+Nel database ho trovato solo `extension_dispatch_queue`, senza record LinkedIn recenti. Non c’è una tabella catalogo estensioni: la fonte reale del download è il catalogo statico + zip in `public/`.
 
-## Modifiche
+## Piano di correzione minimo
 
-### 1. Auto-close composer dopo invio confermato (Opzione C)
+1. **Rendere `3.9.56-restore` la build corrente nel catalogo statico**
+   - In `public/chrome-extensions/catalog.json`: `latestVersion` → `3.9.56-restore`.
+   - `current: true` su `3.9.56-restore`.
+   - `current: false` su `3.9.56-autoclose`.
 
-File: `public/linkedin-extension/hybrid-ops.js` — `sendMessageWithMethod` (≈ riga 977) e branch CDP (riga 1226-1234).
+2. **Allineare il fallback principale**
+   - Sostituire `public/linkedin-extension.zip` con la zip `linkedin-extension-3.9.56-restore.zip`.
+   - Così qualunque download fallback LinkedIn non installerà più autoclose.
 
-Punto di intervento: **dopo** la verifica `composerCleared = true` (cioè dopo che il messaggio è confermato partito), prima di tornare `{ success: true, ... }`:
+3. **Allineare il pulsante top-bar**
+   - In `src/lib/whatsappExtensionZip.ts`, portare `LINKEDIN_EXTENSION_REQUIRED_VERSION` a `3.9.56-restore`.
+   - Così il pulsante scarica esplicitamente `linkedin-extension-3.9.56-restore.zip`, non `3.9.56.zip` e non `autoclose`.
 
-- Iniettare uno script che cerca, dentro lo scope `.msg-overlay-conversation-bubble, [class*='msg-overlay-conversation-bubble']`, il bottone di chiusura (`button[aria-label*="Chiudi" i], button[aria-label*="Close" i], .msg-overlay-bubble-header__controls button:last-child`) e fa `.click()`.
-- Wrap in try/catch: se la chiusura fallisce, **non** alterare il risultato del send (è già success). Loggare warning.
-- Aggiungere campo `composer_closed: true|false` nel response per diagnostica.
+4. **Non toccare la logica di invio**
+   - Nessuna modifica a `hybrid-ops.js`.
+   - Nessuna modifica a `actions.js`.
+   - Nessuna modifica a `tab-manager.js`, readInbox, writer, CDP, deduplica, WA, Email o backend.
 
-La tab LinkedIn resta aperta (riusata, niente reload). Solo l'overlay del composer viene chiuso. Prossimo invio ricomincerà con composer fresco e vuoto → impossibile concatenare.
+5. **Verifica post-correzione**
+   - Controllare manifest dentro `public/linkedin-extension.zip`: `version=3.9.56`, `version_name=3.9.56-restore`.
+   - Controllare che `autoclose` non sia più `current`.
+   - Controllare che il bottone di download punti a `linkedin-extension-3.9.56-restore.zip`.
 
-### 2. Trim attese sovradimensionate
+## Effetto atteso
 
-File: `public/linkedin-extension/actions.js`
-
-- Riga 107: `await TabManager.sleep(3000)` → `await TabManager.sleep(reused ? 800 : 2000)`. La variabile `reused` viene già da `getLinkedInTab` e indica se la tab era già caricata.
-- Riga 120: `await TabManager.sleep(2500)` post-send → `await TabManager.sleep(1000)`. Il `composerCleared` interno (max 600ms) ha già verificato l'invio reale; questo sleep extra serviva solo come margine di sicurezza, riducibile.
-
-Tutte le altre attese restano invariate (montaggio composer, gate React, polling DOM): sono effettivamente necessarie.
-
-### 3. Versionamento e packaging
-
-- `manifest.json`: `version` resta `3.9.56`, `version_name` → `3.9.56-autoclose`.
-- Rebuild di `public/linkedin-extension.zip`.
-- Nuovo zip versionato: `public/chrome-extensions/linkedin/linkedin-extension-3.9.56-autoclose.zip`.
-- Aggiornare `public/chrome-extensions/catalog.json` (entry attiva).
-- Aggiornare `src/lib/whatsappExtensionZip.ts` (riferimento URL/versione).
-
-### 4. Log nel test panel
-
-File: `src/components/test-extensions/LinkedInTest.tsx`
-
-- Mostrare nel log testuale `composer_closed: yes/no` dal response di send, così verifichi visivamente che l'auto-close funzioni.
-
-## File toccati
-
-- `public/linkedin-extension/hybrid-ops.js` (auto-close + log campo)
-- `public/linkedin-extension/actions.js` (2 sleep ridotti)
-- `public/linkedin-extension/manifest.json` (version_name)
-- `public/linkedin-extension.zip` (rebuild)
-- `public/chrome-extensions/linkedin/linkedin-extension-3.9.56-autoclose.zip` (nuovo)
-- `public/chrome-extensions/catalog.json`
-- `src/lib/whatsappExtensionZip.ts`
-- `src/components/test-extensions/LinkedInTest.tsx` (solo log)
-
-## NON toccato
-
-- `actions.js` send-flow logic, `background.js`, `content.js`, `tab-manager.js` (la tab persistente resta com'è)
-- Le 4 strategie A/B/C/D nel test panel (restano disponibili)
-- Edge functions, DAL, query keys, AuthProvider, RLS
-- Estensione WhatsApp
-- Editorial review, prompt, AI gateway
-
-## Verifica post-implementazione
-
-1. Reinstallare la zip `3.9.56-autoclose` dal catalogo.
-2. Test panel → invio singolo con `cdp_ctrl_enter`: il bubble messaggi deve chiudersi automaticamente dopo l'invio. Tempo totale atteso ~5s (era ~8s).
-3. Inviare un secondo messaggio dopo 5s: il composer deve riaprirsi vuoto (no concatenazione).
-4. Stesso test con `physical_click`.
-5. Verificare nel log che compaia `composer_closed: yes`.
-
-Se l'auto-close fallisce su qualche layout LinkedIn, il send è comunque success: si comporta come oggi.
+Da quel momento “scaricata dal sistema” significherà davvero `3.9.56-restore`, cioè la build AI-Verified Click originale senza auto-close e senza sleep ridotti.
