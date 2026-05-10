@@ -121,7 +121,28 @@ export function WhatsAppTest() {
           log(`AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → estrai il nuovo ZIP in una CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`, "warn");
         }
       }
+      const wid = (r as Record<string, unknown>).workerTabId;
+      const wready = (r as Record<string, unknown>).workerReady;
+      if (wid) log(`  🧷 worker tab #${wid} · ready=${wready ? "yes" : "no"}`, wready ? "ok" : "warn");
+      else log("  🧷 worker tab non ancora pronta — usa 🚀 Pre-warm o esegui un'azione (verrà creata lazy)", "warn");
     } else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    setRunning(false);
+  };
+
+  // 5.10.18 — Pre-warm esplicito della worker tab WhatsApp.
+  const testPreWarm = async () => {
+    setRunning(true);
+    log("🚀 Pre-warm worker tab WhatsApp (apre web.whatsapp.com in background)...");
+    const t0 = Date.now();
+    const r = await waMsg("ensureWorkerTab", {}, 60000) as Record<string, unknown>;
+    const elapsed = Date.now() - t0;
+    if (r?.success) {
+      const created = r.reused ? "riusata" : "creata";
+      log(`✅ Worker tab WA pronta in ${elapsed}ms (#${r.workerTabId}, ${created})`, "ok");
+      log(`  warmupMs=${r.warmupMs ?? "?"} · ready=${r.ready ? "yes" : "no"}`, "info");
+    } else {
+      log(`❌ Pre-warm fallito: ${r?.error || JSON.stringify(r)}`, "error");
+    }
     setRunning(false);
   };
 
@@ -386,6 +407,7 @@ export function WhatsAppTest() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
+        <Button onClick={testPreWarm} disabled={running} size="sm" variant="outline" title="Apre la worker tab persistente su web.whatsapp.com. Una volta sola, poi tutte le azioni sono istantanee.">🚀 Pre-warm</Button>
         <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
         <Button onClick={testReadUnread} disabled={running} size="sm">📨 Leggi Messaggi</Button>
         <Button onClick={testRawDom} disabled={running} size="sm" variant="outline">🔍 Diagnostica DOM</Button>
