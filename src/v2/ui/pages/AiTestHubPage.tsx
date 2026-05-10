@@ -13,10 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Play, CheckCircle2, XCircle, AlertTriangle, Plus, Trash2, FlaskConical } from "lucide-react";
 import { useAiTestHub } from "@/v2/hooks/useAiTestHub";
-import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import type { AiTestScenario } from "@/data/aiTestScenarios";
+import { Loader2, Play, CheckCircle2, XCircle, AlertTriangle, Plus, Trash2 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
   "finder-api": "Finder API",
@@ -59,32 +58,33 @@ export function AiTestHubPage() {
   }, [h.results]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 max-w-[1400px] mx-auto space-y-4">
-      <PageTitleHeader icon={FlaskConical} title="AI Test Hub" subtitle="Verifica routing, interpretazione e tool delle AI" />
-
-      {/* Toolbar */}
+    <div className="text-foreground space-y-4">
+      {/* Toolbar — riga 1: filtri categoria. Riga 2: azioni (nuovo + esegui). */}
       <Card>
-        <CardContent className="p-3 flex flex-wrap items-center gap-2">
-          <Button variant={filterCat === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterCat("all")}>
-            Tutte ({h.scenarios.length})
-          </Button>
-          {categories.map((c) => (
-            <Button key={c} variant={filterCat === c ? "default" : "outline"} size="sm" onClick={() => setFilterCat(c)}>
-              {CATEGORY_LABELS[c] ?? c}
+        <CardContent className="p-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant={filterCat === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterCat("all")}>
+              Tutte ({h.scenarios.length})
             </Button>
-          ))}
-          <div className="flex-1" />
-          <Button size="sm" variant="outline" onClick={() => h.setEditing({ category: "general", target_function: "ai-assistant", ai_scope: "lab", payload: {}, assertions: [{ type: "status_ok" }], tags: [], is_shared: true, is_active: true, priority: 100 })}>
-            <Plus className="h-4 w-4 mr-1" /> Nuovo scenario
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => h.runSelected()} disabled={h.running || h.selectedIds.size === 0}>
-            {h.running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-            Esegui selezionati ({h.selectedIds.size})
-          </Button>
-          <Button size="sm" onClick={() => h.runAll()} disabled={h.running}>
-            {h.running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-            Esegui tutti
-          </Button>
+            {categories.map((c) => (
+              <Button key={c} variant={filterCat === c ? "default" : "outline"} size="sm" onClick={() => setFilterCat(c)}>
+                {CATEGORY_LABELS[c] ?? c}
+              </Button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 justify-end border-t pt-2">
+            <Button size="sm" variant="outline" onClick={() => h.setEditing({ category: "general", target_function: "ai-assistant", ai_scope: "lab", payload: {}, assertions: [{ type: "status_ok" }], tags: [], is_shared: true, is_active: true, priority: 100 })}>
+              <Plus className="h-4 w-4 mr-1" /> Nuovo scenario
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => h.runSelected()} disabled={h.running}>
+              {h.running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
+              Esegui selezionati ({h.selectedIds.size})
+            </Button>
+            <Button size="sm" onClick={() => h.runAll()} disabled={h.running || h.scenarios.length === 0}>
+              {h.running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
+              Esegui tutti ({h.scenarios.length})
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
