@@ -64,11 +64,17 @@ export function useDirectContactActions() {
       setWaSending(key);
       try {
         const cleanPhone = opts.phone.replace(/[\s\-\(\)\.]/g, "").replace(/^\+/, "");
-        // Nessun testo da inviare → apri direttamente la chat (wa.me).
-        // L'estensione richiede phone+text; usarla con text="" produce "phone e text richiesti".
-        if (typeof window !== "undefined") {
-          window.open(`https://wa.me/${cleanPhone}`, "_blank", "noopener,noreferrer");
-        }
+        // Apriamo la chat WhatsApp DENTRO l'app (Inbox V2 → tab WhatsApp), non su wa.me.
+        // Il messaggio verrà scritto nel composer interno e tracciato come inviato.
+        navigate("/v2/inbox", {
+          state: {
+            openWhatsAppPhone: cleanPhone,
+            openWhatsAppContactName: opts.contactName ?? null,
+            openWhatsAppCompany: opts.companyName ?? null,
+            openWhatsAppPartnerId: opts.partnerId ?? null,
+            openWhatsAppContactId: opts.contactId ?? null,
+          },
+        });
         const result: { success: boolean; error?: string } = { success: true };
         if (result?.success) {
           toast.success(`Chat WhatsApp aperta con ${opts.contactName || cleanPhone}`);
@@ -99,7 +105,7 @@ export function useDirectContactActions() {
         setWaSending(null);
       }
     },
-    [waAvailable, waAuthenticated, sendWhatsApp, logAction]
+    [waAvailable, waAuthenticated, navigate, logAction]
   );
 
   return { handleSendEmail, handleSendWhatsApp, waSending, waAvailable };
