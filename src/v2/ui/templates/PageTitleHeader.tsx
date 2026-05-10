@@ -25,11 +25,11 @@ export function PageTitleHeader({ icon: Icon, title, subtitle, right }: Props): 
 
   const content = (
     <div className="flex items-center gap-2 min-w-0" data-testid="page-title-header">
-      <span className="inline-flex items-center gap-1.5 rounded-md bg-primary-foreground/95 px-2 py-1 border border-primary/30 shadow-sm">
+      <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1 border border-primary/30">
         <Icon className="h-4 w-4 text-primary shrink-0" />
-        <span className="text-sm font-semibold text-primary truncate">{title}</span>
+        <span className="text-sm font-semibold text-foreground truncate">{title}</span>
         {subtitle && (
-          <span className="text-xs text-foreground/70 truncate hidden sm:inline">· {subtitle}</span>
+          <span className="text-xs text-muted-foreground truncate hidden sm:inline">· {subtitle}</span>
         )}
       </span>
       {right && <div className="ml-2 flex items-center gap-1">{right}</div>}

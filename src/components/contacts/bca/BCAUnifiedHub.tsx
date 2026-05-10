@@ -14,7 +14,7 @@
  *    puntini. Trascinandola sulle azioni intelligenti del pannello, l'azione
  *    sotto il puntatore si illumina e al drop esegue su quel contatto.
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
@@ -73,6 +73,21 @@ export default function BCAUnifiedHub() {
   }, [cards]);
   const detailCard = detailCardId ? cardsById.get(detailCardId) ?? null : null;
   const resolveCard = (id: string) => cardsById.get(id);
+
+  // Auto-selezione del primo biglietto della lista filtrata: stesso pattern
+  // di `EntityListWithDetail` (WCA Partner / CRM). Si attiva solo se non è
+  // già aperto un dettaglio e l'utente non è in selezione multipla.
+  const autoFocusedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoading) return;
+    if (detailCardId) { autoFocusedRef.current = null; return; }
+    if (selectedBca.size > 0) return;
+    const first = g.filtered[0];
+    if (!first) return;
+    if (autoFocusedRef.current === first.id) return;
+    autoFocusedRef.current = first.id;
+    setDetailCardId(first.id);
+  }, [isLoading, detailCardId, selectedBca.size, g.filtered]);
 
   const handleSync = async () => {
     setSyncing(true);
