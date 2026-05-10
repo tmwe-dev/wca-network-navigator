@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.62",
-  "description": "3.9.62 — Ripristina fallback stabile HybridOps.sendMessage quando il gate diagnostico fallisce sui metodi DOM (physical_click/form_submit/keyboard). I metodi CDP restano fail-fast diagnostici. Keep-alive e worker tab invariati.",
+  "version": "3.9.63",
+  "description": "3.9.63 — Selettori Messaggia/Altro allargati (CSS-first + shadow DOM), retry fino a 3 click su candidati multipli, fallback Altro anticipato dopo 2 tentativi. Diagnostica arricchita (profileLoaded, messageBtnSelectorsHit, firstButtonLabels, url). Fallback HybridOps.sendMessage e keep-alive invariati.",
   "permissions": [
     "cookies",
     "tabs",
