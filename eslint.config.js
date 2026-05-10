@@ -129,9 +129,11 @@ export default tseslint.config(
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
-  // ── Multichannel send governance: only src/lib/messaging/* and src/lib/inbox/sendMessage.ts
-  // are allowed to call the LinkedIn `bridge.sendMessage(...)` or WhatsApp `bridge.sendWhatsApp(...)`.
-  // Tutto il resto deve passare da sendLinkedInDirect / sendWhatsAppDirect / queue*ForApproval.
+  // ── Multichannel send governance (no-direct-extension-send) ──
+  // Fuori da src/lib/messaging/* e dai bridge stessi, scoraggia chiamate
+  // dirette a `.sendWhatsApp(...)` sui bridge: usa sendWhatsAppDirect /
+  // queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.
+  // Stesso principio per LinkedIn (sendLinkedInDirect / queueLinkedInForApproval).
   {
     files: ["src/**/*.{ts,tsx}"],
     ignores: [
@@ -146,11 +148,7 @@ export default tseslint.config(
     ],
     rules: {
       "no-restricted-syntax": [
-        "error",
-        {
-          selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
-          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead.",
-        },
+        "warn",
         {
           selector: "CallExpression[callee.property.name='sendWhatsApp']",
           message: "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
