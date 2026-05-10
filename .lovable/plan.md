@@ -1,75 +1,122 @@
-## Obiettivo
+## Diagnosi rapida
 
-Ripristinare la build LinkedIn 3.9.56 (la "migliore" per affidabilità d'invio) come versione attiva, e mettere a disposizione nell'area di test del pannello LinkedIn tre strategie alternative — così possiamo provarle in parallelo e scegliere quella che elimina la duplicazione messaggi senza reintrodurre gli hang risolti in 3.9.59.
+Ho verificato i file attuali:
 
-## 1. Rollback effettivo a 3.9.56
+- L'estensione installata nel tuo log è `v3.9.59`.
+- Il codice dell'app invece ora punta a `3.9.56` / `3.9.56-restore` in più punti.
+- Il catalogo segna `3.9.56-restore` come latest, ma il pulsante download top-bar costruisce il nome `linkedin-extension-3.9.56.zip`, quindi c'è disallineamento.
+- Il fallback `/linkedin-extension.zip` contiene davvero la `3.9.56-restore`, non la `3.9.59`.
+- La lettura inbox viene interrotta dal timeout client a 12s della strategia B/D: con la `3.9.59` questo è controproducente, perché la `3.9.59` ha già il bounded readInbox interno.
+- La UI attuale è troppo manuale: radio A/B/C/D + test isolati + pre-warm + read + send creano confusione e nascondono il problema reale.
 
-File toccati (solo questi 5 cambiavano tra 3.9.56 e 3.9.59):
-- `public/linkedin-extension/actions.js` ← versione 3.9.56
-- `public/linkedin-extension/background.js` ← versione 3.9.56
-- `public/linkedin-extension/content.js` ← versione 3.9.56
-- `public/linkedin-extension/tab-manager.js` ← versione 3.9.56
-- `public/linkedin-extension/manifest.json` ← `version: "3.9.56-restore"`
+## Piano di intervento
 
-Ripacchettizzo:
-- `public/linkedin-extension.zip` (zip "live" servito dal pannello)
-- `public/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip` (archivio versionato)
+### 1. Riallineare tutto a LinkedIn 3.9.59
 
-Aggiorno:
-- `public/chrome-extensions/catalog.json` → entry `3.9.56-restore` come `latest`
-- `src/lib/whatsappExtensionZip.ts` → riferimento versione corrente
+Rendo `3.9.59` la versione canonica attiva:
 
-Effetto: l'estensione installata sarà quella che inviava bene (con la diagnostica AI-Verified Click già presente). Il pre-warm worker tab sparisce: il messaggio "Unknown action: ensureWorkerTab" che vedevi all'inizio era proprio causato dalla 3.9.56 che riceveva chiamate non supportate dal client più recente — gestito al punto 2.
+- `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59"`
+- `catalog.json` con `3.9.59` come `latestVersion` e `current: true`
+- `/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip` come zip scaricato dal pulsante principale
+- `/linkedin-extension.zip` riallineato alla `3.9.59`
+- `public/linkedin-extension/` riallineata ai sorgenti contenuti nello zip `3.9.59`
 
-## 2. Adattamento client al rollback
+Risultato: app, catalogo, fallback, download e log versione parlano tutti della stessa build.
 
-`src/components/test-extensions/LinkedInTest.tsx` (e altri eventuali punti che invocano `ensureWorkerTab` / pre-warm) devono diventare tolleranti:
+### 2. Eliminare la selezione manuale delle strategie dal test principale
 
-- Se l'estensione risponde `Unknown action: ensureWorkerTab` → il client procede senza pre-warm (non blocca, non logga errore rosso, log informativo "estensione 3.9.56 senza pre-warm: ok").
-- `readInbox` resta invocato come prima; se va in hang il timeout lo gestisce a livello UI (vedi punto 3 per le strategie alternative).
+Tolgo il blocco radio A/B/C/D dal pannello operativo principale.
 
-Nessuna logica AI/edge function viene toccata.
+Al suo posto metto una sola azione chiara:
 
-## 3. Area test: 3 strategie selezionabili
+- `Esegui diagnostica LinkedIn completa`
 
-Nel pannello esistente `LinkedInTest.tsx` aggiungo un blocco "Strategia di invio (sperimentale)" con 3 radio-button. La scelta viene salvata in `localStorage` e passata come parametro all'azione di invio. Le tre opzioni:
+Questa diagnostica farà i controlli in sequenza, senza chiederti di scegliere strategia.
 
-### Strategia A — "Pure 3.9.56" (default dopo rollback)
-Comportamento identico a 3.9.56 originale. Nota in UI: "⚠️ può duplicare messaggi nella stessa chat se l'AI re-learn riparte". Serve come baseline di confronto.
+### 3. Creare test automatici per ogni funzione critica
 
-### Strategia B — "3.9.56 + readInbox timeout"
-Wrap client-side: la chiamata `readInbox` viene avvolta in un `Promise.race` con timeout 12s; se scade, l'UI mostra "lettura inbox saltata, riprovo al prossimo ciclo" senza appendere alla chat. Risolve gli hang a 90s visti stamattina senza modificare l'extension.
+La diagnostica automatica eseguirà e marcherà ogni step come `OK`, `KO`, `TIMEOUT` o `SKIP`:
 
-### Strategia C — "3.9.56 + anti-duplicazione hard-guard"
-Prima dell'invio, calcolo idempotency key client-side: `sha1(recipientUrl + normalizedText + floor(Date.now()/30000))`. La key viene salvata in `localStorage` con TTL 5 min. Se esiste già → invio bloccato con toast "messaggio identico inviato negli ultimi 30s, salto". Nessuna chiamata all'extension. Risolve la duplicazione anche se il flusso AI-relearn ritenta.
+1. Download metadata
+   - verifica che l'app punti alla versione corretta
+   - verifica percorso zip atteso
+   - verifica coerenza tra required version e catalogo
 
-### Strategia D — "B + C combinate"
-Entrambi i guard attivi insieme. Probabilmente la configurazione "definitiva" se A da sola duplica.
+2. Ping estensione
+   - controlla se l'estensione risponde
+   - confronta versione installata vs versione richiesta
 
-UI: 4 radio + un piccolo pannello "Diff vs 3.9.56" che mostra cosa fa ciascuna strategia, così durante i test si capisce subito quale è attiva. Tutto il codice delle strategie vive in un nuovo file `src/components/test-extensions/linkedinSendStrategies.ts` (puro frontend, nessun side-effect su edge function o DB).
+3. Worker tab
+   - esegue `ensureWorkerTab`
+   - misura tempo e stato `ready`
+   - se non supportato, lo segnala come incompatibilità versione
 
-## 4. Verifica
+4. Sessione LinkedIn
+   - esegue `verifySession`
+   - distingue login mancante, checkpoint/captcha, cookie mancante, caricamento lento
 
-- Riavvio dev server, verifico che `LinkedInTest.tsx` compili.
-- Confermo manifest version `3.9.56-restore` nello zip rigenerato (script Python: `unzip -p .../linkedin-extension.zip manifest.json`).
-- Confermo che `catalog.json` punta al nuovo zip e che `whatsappExtensionZip.ts` referenzia la versione corretta.
+5. Lettura inbox
+   - chiama `readLinkedInInbox` usando la logica nativa della `3.9.59`
+   - niente timeout client da 12s
+   - timeout UI più realistico e diagnostico, così capiamo se risponde, se torna vuota, o se resta appesa
 
-## 5. Cosa NON tocco
+6. Lettura thread singolo
+   - se inbox produce thread, prova il primo thread utile
+   - se c'è destinatario fisso, prova quello
 
-- Edge functions LinkedIn (`from-webapp-li`).
-- DAL, query keys, hook auth, AuthProvider (lasciati come da fix precedente).
-- Memoria `LinkedIn Single Channel Rule` rispettata: continua a passare solo da `from-webapp-li`.
-- Editorial review intatto.
-- WhatsApp extension: non viene toccata.
+7. Invio diagnostico non distruttivo dove possibile
+   - non mando messaggi automaticamente senza comando esplicito
+   - verifico invece composer/DOM/capacità metodo quando possibile
+   - l'invio reale resta un pulsante separato e protetto
 
-## Dettagli tecnici
+### 4. Report unico leggibile
 
-- Versione manifest: stringa `"3.9.56-restore"` (Chrome accetta segmenti alfanumerici nelle versioni dev unpacked).
-- Zip: rigenerato con `nix run nixpkgs#zip` da `public/linkedin-extension/` come da workflow standard.
-- Idempotency key in Strategia C: usa `crypto.subtle.digest('SHA-1', ...)`, fallback a hash deterministico semplice se non disponibile.
-- Le strategie B/C/D sono client-only: zero modifiche all'extension oltre al rollback. Questo permette di switchare tra strategie senza reinstallare l'extension ogni volta.
+Aggiungo un pannello risultati con tabella semplice:
 
-## Output finale per l'utente
+```text
+Funzione              Stato      Tempo      Dettaglio
+Download config       OK         -          punta a 3.9.59
+Estensione installata OK         120ms      v3.9.59
+Worker tab            OK         13ms       ready=yes
+Sessione              OK         2.1s       session_active
+Inbox                 KO         45s        timeout interno extension / risposta vuota / errore specifico
+Thread                SKIP       -          inbox non ha restituito thread
+```
 
-1. Reinstallare l'extension (zip 3.9.56-restore) — istruzioni a video nel pannello.
-2. Aprire `/v2/settings` (o dovunque viva `LinkedInTest.tsx`), selezionare la strategia, fare un invio di prova al destinatario fisso, leggere i log diagnostici già presenti.
+Sotto la tabella mostro una conclusione automatica:
+
+- `Problema di versione`
+- `Problema download`
+- `Problema sessione LinkedIn`
+- `Problema worker tab`
+- `Problema parser inbox`
+- `Problema invio/composer`
+
+### 5. Sistemare il download
+
+Correggo il pulsante download in modo che non costruisca più un path incoerente.
+
+Opzioni tecniche previste:
+
+- usare direttamente `LINKEDIN_EXTENSION_REQUIRED_VERSION = 3.9.59`, quindi scarica `linkedin-extension-3.9.59.zip`
+- mantenere cache-buster già presente
+- loggare errore leggibile se il fetch fallisce
+
+Così il download scarica la build che l'app richiede davvero.
+
+### 6. Conservare le strategie vecchie solo come diagnostica avanzata nascosta
+
+Non cancello subito il codice delle strategie, ma lo tolgo dal flusso principale.
+
+Se serve, resta disponibile come area avanzata/collassata, non come scelta obbligatoria per te.
+
+### 7. Verifiche finali
+
+Dopo l'implementazione verifico:
+
+- zip `3.9.59` presente e manifest corretto
+- catalogo valido JSON
+- costanti versione allineate
+- nessun riferimento principale a `3.9.56` come required/latest
+- pannello test senza selezione manuale A/B/C/D nel percorso principale
+- diagnostica automatica pronta a dirci quale funzione fallisce

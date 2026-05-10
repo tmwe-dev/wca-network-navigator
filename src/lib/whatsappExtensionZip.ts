@@ -6,9 +6,10 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// Rollback a 3.9.56 (build più affidabile per l'invio). Il manifest.json
-// dell'estensione riporta version="3.9.56" + version_name="3.9.56-restore".
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.56";
+// Versione canonica LinkedIn: 3.9.59 (bounded readInbox, ensureWorkerTab,
+// pre-warm tab persistente). Allineata con catalog.json e con lo zip
+// servito dal pulsante download della top-bar.
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";

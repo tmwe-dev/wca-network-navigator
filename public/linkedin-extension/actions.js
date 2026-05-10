@@ -5,6 +5,29 @@
 
 var Actions = globalThis.Actions || (function () {
 
+  function withTimeout(label, ms, work) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        resolve({ success: false, error: label + "_timeout_" + ms + "ms", timedOut: true });
+      }, ms);
+
+      Promise.resolve().then(work).then(function (result) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(result);
+      }, function (err) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ success: false, error: (err && err.message) || String(err) });
+      });
+    });
+  }
+
   function noExistingLinkedInTab(errorCode, actionLabel) {
     return Config.errorResponse(errorCode, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; " + actionLabel + " non apre nuove tab e non cambia pagina");
   }
@@ -927,10 +950,16 @@ var Actions = globalThis.Actions || (function () {
     await TabManager.sleep(2500);
 
     // ── Optimus-first ──
-    let optimus = await tryOptimusInbox(tab.id, false, null);
+    // 3.9.59 — Bound the AI/bridge path. If the webapp bridge stalls, fall
+    // through to deterministic legacy extraction instead of blocking readInbox.
+    let optimus = await withTimeout("optimus_inbox", 12000, function () {
+      return tryOptimusInbox(tab.id, false, null);
+    });
     if (optimus.success && optimus.items.length === 0) {
       console.log("[LI Optimus] 0 threads, forcing relearn...");
-      optimus = await tryOptimusInbox(tab.id, true, "Plan returned 0 threads, DOM may have changed");
+      optimus = await withTimeout("optimus_inbox_relearn", 8000, function () {
+        return tryOptimusInbox(tab.id, true, "Plan returned 0 threads, DOM may have changed");
+      });
     }
 
     if (optimus.success) {
@@ -1023,7 +1052,9 @@ var Actions = globalThis.Actions || (function () {
     // Legacy A: AX Tree
     let axError = null;
     try {
-      const axResult = await AXTree.readInbox(tab.id);
+      const axResult = await withTimeout("ax_inbox", 10000, function () {
+        return AXTree.readInbox(tab.id);
+      });
       if (axResult && axResult.threads && axResult.threads.length > 0) {
         axResult.method = "legacy-ax";
         return axResult;
