@@ -70,10 +70,56 @@ export function LinkedInTest() {
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
   const [strategy, setStrategy] = useState<LinkedInSendStrategy>(loadStrategy);
   const actionTimesRef = useRef<number[]>([]);
+  const [humanSim, setHumanSim] = useState<{
+    sentToday: number; dailyCap: number | null; sinceBurst: number; burstSize: number | null;
+    lastSendAt: number; cooldownMs: number; allowed: boolean; reason?: string; loaded: boolean; error?: string;
+  }>({ sentToday: 0, dailyCap: null, sinceBurst: 0, burstSize: null, lastSendAt: 0, cooldownMs: 0, allowed: true, loaded: false });
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
+
+  // 3.9.57-human-sim — Polling stato Human Simulator (silenzioso ogni 5s,
+  // dopo ogni invio e on-demand). Non scrive nei logs: pannello dedicato.
+  const refreshHumanSim = useCallback(async (verbose = false) => {
+    try {
+      const r = await liMsg("getHumanSimStats", {}, 4000) as Record<string, unknown>;
+      if (r?.success) {
+        const stats = (r.stats as Record<string, unknown>) || {};
+        const gate = (r.gate as Record<string, unknown>) || {};
+        setHumanSim({
+          sentToday: Number(stats.sentToday ?? 0),
+          dailyCap: stats.dailyCap == null ? null : Number(stats.dailyCap),
+          sinceBurst: Number(stats.sinceBurst ?? 0),
+          burstSize: stats.burstSize == null ? null : Number(stats.burstSize),
+          lastSendAt: Number(stats.lastSendAt ?? 0),
+          cooldownMs: Number(gate.waitMs ?? 0),
+          allowed: Boolean(gate.allowed),
+          reason: gate.reason as string | undefined,
+          loaded: true,
+        });
+        if (verbose) log(`🧑 Human Sim: ${stats.sentToday}/${stats.dailyCap} oggi · burst ${stats.sinceBurst}/${stats.burstSize} · cooldown ${gate.waitMs ?? 0}ms · ${gate.allowed ? "ok" : "BLOCK:" + (gate.reason || "?")}`, gate.allowed ? "info" : "warn");
+      } else if (verbose) {
+        const err = String(r?.error ?? "?");
+        log(`⚠️ Human Sim non disponibile: ${err}`, "warn");
+        if (/Unknown action: getHumanSimStats|human_simulator_not_loaded/i.test(err)) {
+          log("💡 Reinstalla l'estensione 3.9.57-human-sim per abilitare la diagnostica live.", "warn");
+        }
+        setHumanSim((s) => ({ ...s, loaded: false, error: err }));
+      }
+    } catch (e) {
+      if (verbose) log(`⚠️ Human Sim refresh failed: ${String(e)}`, "warn");
+    }
+  }, [log]);
+
+  // Auto-refresh ogni 5s (silenzioso). Si ferma se la pagina è hidden.
+  useEffect(() => {
+    refreshHumanSim(false);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") refreshHumanSim(false);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [refreshHumanSim]);
 
   useEffect(() => {
     try {
