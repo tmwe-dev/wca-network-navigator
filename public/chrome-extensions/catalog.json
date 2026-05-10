@@ -1,13 +1,20 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.18",
+    "latestVersion": "5.10.19",
     "items": [
+      {
+        "version": "5.10.19",
+        "filename": "whatsapp-extension-5.10.19.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.19.zip",
+        "current": true,
+        "note": "Fix: aggiunto 'ensureWorkerTab' alla whitelist ALLOWED_ACTIONS in content.js (era rifiutato come Unknown action)."
+      },
       {
         "version": "5.10.18",
         "filename": "whatsapp-extension-5.10.18.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.18.zip",
-        "current": true,
+        "current": false,
         "note": "Persistent Worker Tab: pre-warm onInstalled/onStartup di una sola tab di servizio web.whatsapp.com in background. Read/send usano la worker tab hot. Handler ensureWorkerTab esposto alla UI."
       },
       {
@@ -112,14 +119,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.57",
+    "latestVersion": "3.9.58",
     "items": [
+      {
+        "version": "3.9.58",
+        "filename": "linkedin-extension-3.9.58.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.58.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Fix: aggiunto 'ensureWorkerTab' alla whitelist ALLOWED_ACTIONS in content.js (era rifiutato come Unknown action dal Pre-warm)."
+      },
       {
         "version": "3.9.57",
         "filename": "linkedin-extension-3.9.57.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.57.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Persistent Worker Tab: tab di servizio in background parcheggiata su /messaging/, mai attivata. read/send usano worker tab pre-warmed. Pre-warm onInstalled/onStartup + invalidazione su tabs.onRemoved."
       },
       {
