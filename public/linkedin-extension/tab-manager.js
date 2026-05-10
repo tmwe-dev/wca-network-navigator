@@ -265,11 +265,10 @@ var TabManager = globalThis.TabManager || (function () {
     await loadOwnership();
     const canCreate = allowCreate !== false;
 
-    // 3.9.66 — La worker tab persistente è dedicata alle operazioni di
-    // /messaging/ (lettura inbox/thread). I profili /in/ e /pub/ NON devono
-    // più finire qui: l'invio profilo richiede di stare sulla pagina del
-    // profilo per cliccare "Messaggia" e aprire il composer (baseline 3.9.56).
-    if (url && /linkedin\.com\/messaging\//i.test(url)) {
+    // 3.9.57 — Per le operazioni di messaging usiamo la worker tab persistente.
+    // Nessuna adozione della tab utente (che potrebbe essere su un profilo
+    // qualsiasi). La worker viene navigata al target richiesto.
+    if (url && /linkedin\.com\/(messaging|in\/|pub\/)/i.test(url)) {
       try {
         const w = await ensureWorkerTab(url);
         if (w && w.id) {

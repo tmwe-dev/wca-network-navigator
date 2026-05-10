@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.66",
-  "description": "3.9.66 — Ripristino flusso baseline 3.9.56 per l'invio: i profili /in/ e /pub/ NON usano più la worker tab persistente (riservata a /messaging/ per la lettura). Click 'Messaggia' avviene di nuovo sulla pagina del profilo. In più, anche per i metodi CDP il gate timeout degrada al fallback stabile HybridOps.sendMessage (destinatario già validato hard guard).",
+  "version": "3.9.59",
+  "description": "3.9.59 — Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Persistent Worker Tab invariata.",
   "permissions": [
     "cookies",
     "tabs",
@@ -10,8 +10,7 @@
     "scripting",
     "debugger",
     "storage",
-    "webNavigation",
-    "alarms"
+    "webNavigation"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",

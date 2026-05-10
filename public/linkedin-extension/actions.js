@@ -221,10 +221,9 @@ var Actions = globalThis.Actions || (function () {
     // 2.ter) Aspetta che la tab sia "complete" (max 4s, poll 250ms). In
     // background il renderer monta più lento; senza questa attesa il probe
     // del bottone Messaggia parte troppo presto.
-    // 3.9.61 — Diagnostic budget: max ~2s di attesa "complete" (era 4s).
     let lastTabStatus = "unknown";
     let lastTabUrl = "";
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 16; i++) {
       try {
         const ti = await chrome.tabs.get(tab.id);
         lastTabStatus = (ti && ti.status) || "unknown";
@@ -329,241 +328,62 @@ var Actions = globalThis.Actions || (function () {
               for (var i = 0; i < scopes.length; i++) if (visible(scopes[i])) return true;
               return false;
             }
-            function findComposerBoxAnywhere() {
-              var scoped = deepQueryAll(
-                ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
-              );
-              for (var s = 0; s < scoped.length; s++) {
-                if (!visible(scoped[s])) continue;
-                var boxes = scoped[s].querySelectorAll(
-                  "[contenteditable='true'], div[role='textbox'], [role='textbox'], [aria-label*='message' i], [aria-label*='messaggio' i], [aria-label*='scrivi' i], [data-placeholder*='message' i], [data-placeholder*='messaggio' i]"
-                );
-                for (var b = 0; b < boxes.length; b++) if (visible(boxes[b])) return boxes[b];
-                if (scoped[s].getAttribute && scoped[s].getAttribute("contenteditable") === "true") return scoped[s];
-              }
-              var allBoxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-              for (var a = 0; a < allBoxes.length; a++) if (visible(allBoxes[a]) && !isInGlobalNav(allBoxes[a])) return allBoxes[a];
-              return null;
-            }
-            function linkedinSpaReadySnapshot() {
-              var visibleButtons = [];
-              try {
-                visibleButtons = Array.from(document.body.querySelectorAll("button, a, [role='button']")).filter(visible);
-              } catch (e) { visibleButtons = []; }
-              return {
-                readyState: document.readyState,
-                hasMain: !!document.querySelector("main, [role='main']"),
-                hasMessagingShell: !!document.querySelector(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo'], [class*='msg-s-message-list'], [class*='msg-conversations']"),
-                loading: !!document.querySelector("[class*='loading'], [aria-busy='true'], .artdeco-loader"),
-                bodyTextLength: ((document.body && document.body.innerText) || "").length,
-                visibleButtonsCount: visibleButtons.length
-              };
-            }
-            function resolveLabel(el) {
-              var lbl = (el.getAttribute("aria-label") || "");
-              var lblBy = el.getAttribute("aria-labelledby");
-              if (lblBy) {
-                try {
-                  lblBy.split(/\s+/).forEach(function (id) {
-                    var ref = document.getElementById(id);
-                    if (ref) lbl += " " + (ref.textContent || "");
-                  });
-                } catch (e) {}
-              }
-              return (lbl + " " + (el.textContent || "")).trim().toLowerCase();
-            }
-            // Selettori CSS espliciti tentati PRIMA della scansione testuale.
-            // Tracciati per diagnostica (`messageBtnSelectorsHit`).
-            var MESSAGE_CSS_SELECTORS = [
-              "button.message-anywhere-button",
-              "button[data-control-name*='message' i]",
-              "a[data-control-name*='message' i]",
-              "button[aria-label*='essag' i]",
-              "button[aria-label*='criv' i]",
-              "a[href*='/messaging/thread/']",
-              "a[href*='/messaging/compose']",
-              "a[href*='/messaging/']",
-              "[data-test-app-aware-link][href*='messaging']"
-            ];
-            function findMessageBtn(hits) {
+            function findMessageBtn() {
               var root = document.querySelector("main") || document.body;
-              // 1) Tentativo via selettori CSS espliciti (anche shadow DOM).
-              for (var s = 0; s < MESSAGE_CSS_SELECTORS.length; s++) {
-                var sel = MESSAGE_CSS_SELECTORS[s];
-                var nodes = deepQueryAll(sel, root).concat(deepQueryAll(sel));
-                for (var n = 0; n < nodes.length; n++) {
-                  var el = nodes[n];
-                  if (!visible(el) || isInGlobalNav(el)) continue;
-                  if (hits && hits.indexOf(sel) === -1) hits.push(sel);
-                  return el;
-                }
-              }
-              // 2) Fallback testuale (label / aria-labelledby / text).
               var btns = Array.from(root.querySelectorAll("button, a, [role='button'], [role='menuitem']"));
               for (var i = 0; i < btns.length; i++) {
                 var b = btns[i];
                 if (!visible(b) || isInGlobalNav(b)) continue;
-                var label = resolveLabel(b);
-                if (/^(message|messaggia|messaggio|scrivi|invia messaggio|send message|chat|dm|direct message)$/i.test(label)) {
-                  if (hits && hits.indexOf("text:exact") === -1) hits.push("text:exact");
-                  return b;
-                }
-                if (/messaggia|messaggio|message|send message|nachricht|mensaje|mensagem|wiadomo|envoyer|inviare|chat|direct message|^dm$/i.test(label)) {
-                  if (hits && hits.indexOf("text:partial") === -1) hits.push("text:partial");
-                  return b;
-                }
+                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
+                if (/^(message|messaggia|messaggio|scrivi|invia messaggio|send message)$/i.test(label)) return b;
+                if (/messaggia|messaggio|message|send message|nachricht|mensaje|mensagem|wiadomo|envoyer/i.test(label)) return b;
               }
               return null;
             }
-            function findMessageBtnsAll() {
-              var root = document.querySelector("main") || document.body;
-              var out = [];
-              for (var s = 0; s < MESSAGE_CSS_SELECTORS.length; s++) {
-                var nodes = deepQueryAll(MESSAGE_CSS_SELECTORS[s], root);
-                for (var n = 0; n < nodes.length; n++) {
-                  var el = nodes[n];
-                  if (visible(el) && !isInGlobalNav(el) && out.indexOf(el) === -1) out.push(el);
-                }
-              }
-              return out;
-            }
             function findMoreBtn() {
               var root = document.querySelector("main") || document.body;
-              // CSS-first
-              var cssSelectors = [
-                "button.artdeco-dropdown__trigger[aria-label*='ltro' i]",
-                "button.artdeco-dropdown__trigger[aria-label*='ore' i]",
-                "button[aria-label*='ore actions' i]",
-                "button[aria-label*='ù azioni' i]",
-                "button[aria-label*='ltro' i]"
-              ];
-              for (var s = 0; s < cssSelectors.length; s++) {
-                var nodes = deepQueryAll(cssSelectors[s], root);
-                for (var n = 0; n < nodes.length; n++) {
-                  if (visible(nodes[n]) && !isInGlobalNav(nodes[n])) return nodes[n];
-                }
-              }
               var btns = Array.from(root.querySelectorAll("button, [role='button']"));
               for (var i = 0; i < btns.length; i++) {
                 var b = btns[i];
                 if (!visible(b) || isInGlobalNav(b)) continue;
-                var label = resolveLabel(b);
+                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
                 if (/^(more|altro|più|more actions|più azioni)$/i.test(label)) return b;
-                if (/dropdown|menu azioni|action menu/i.test(label)) return b;
               }
               return null;
             }
             return (async function () {
               var started = Date.now();
               var limit = Math.max(12000, timeoutMs || 30000);
-              var messageClickAttempts = 0;
+              var clickedMessage = false;
               var clickedMore = false;
-              var msgSelectorsHit = [];
-              var clickedNodes = [];
-              // 3.9.64 — Path veloce per URL già su /messaging/. Su quelle
-              // pagine NON esiste alcun bottone "Messaggia" da cliccare: il
-              // composer è già nella pagina (in <aside>/.msg-thread, NON in
-              // <main>). La caccia ai bottoni qui è inutile e fa scadere il
-              // gate. Aspettiamo direttamente la textbox del composer
-              // scansionando l'INTERO documento (no scope su main).
-              var isMessagingUrl = /\/messaging\//i.test(location.pathname);
-              var last = {
-                readyState: document.readyState,
-                hasMain: !!document.querySelector("main"),
-                clickedMessage: false,
-                clickedMore: false,
-                shells: 0,
-                boxes: 0,
-                profileLoaded: false,
-                messageClickAttempts: 0,
-                messageBtnSelectorsHit: msgSelectorsHit,
-                visibleButtonsCount: 0,
-                firstButtonLabels: [],
-                url: location.href,
-                isMessagingUrl: isMessagingUrl,
-                msgFormPresent: false,
-                composerScope: "main"
-              };
-              // ── FAST PATH messaging ───────────────────────────────────
-              if (isMessagingUrl) {
-                last.composerScope = "document";
-                while (Date.now() - started < limit) {
-                  last.readyState = document.readyState;
-                  var spa = linkedinSpaReadySnapshot();
-                  last.hasMain = spa.hasMain;
-                  last.msgFormPresent = spa.hasMessagingShell;
-                  last.visibleButtonsCount = spa.visibleButtonsCount;
-                  var anyBox = findComposerBoxAnywhere();
-                  last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
-                  last.shells = deepQueryAll(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo'], [class*='msg-s-message-list']").filter(visible).length;
-                  if (anyBox) return { success: true, method: "messaging_fast_path", waitedMs: Date.now() - started, diagnostic: last };
-                  await sleep(250);
-                }
-                // Diagnostica timeout messaging.
-                try {
-                  var allBtnsM = Array.from(document.body.querySelectorAll("button, a, [role='button']")).filter(visible);
-                  last.visibleButtonsCount = allBtnsM.length;
-                  last.firstButtonLabels = allBtnsM.slice(0, 8).map(function (el) {
-                    var l = resolveLabel(el);
-                    return l.length > 40 ? l.slice(0, 40) + "…" : l;
-                  });
-                } catch (e) {}
-                last.url = location.href;
-                return { success: false, error: "composer_gate_timeout_messaging", waitedMs: Date.now() - started, diagnostic: last };
-              }
-              // ── PATH profilo (originale) ─────────────────────────────
+              var last = { readyState: document.readyState, hasMain: !!document.querySelector("main"), clickedMessage: false, clickedMore: false, shells: 0, boxes: 0 };
               while (Date.now() - started < limit) {
                 last.readyState = document.readyState;
                 last.hasMain = !!document.querySelector("main");
-                last.profileLoaded = !!(document.querySelector(".pv-top-card") || document.querySelector("[data-test-id*='top-card']") || document.querySelector("section.artdeco-card"));
                 var box = findBox();
                 if (box) return { success: true, method: "wa_style_composer_gate", waitedMs: Date.now() - started };
                 var shells = deepQueryAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
                 last.shells = shells.filter(visible).length;
                 last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
-                if (messageClickAttempts < 3 && !hasOpenComposerShell()) {
-                  // Prova anche un secondo bottone se il primo non ha aperto nulla.
-                  var candidates = findMessageBtnsAll();
-                  if (candidates.length === 0) {
-                    var single = findMessageBtn(msgSelectorsHit);
-                    if (single) candidates = [single];
-                  }
-                  for (var c = 0; c < candidates.length; c++) {
-                    var mb = candidates[c];
-                    if (clickedNodes.indexOf(mb) !== -1) continue;
-                    try {
-                      mb.click();
-                      clickedNodes.push(mb);
-                      messageClickAttempts++;
-                      last.clickedMessage = true;
-                      last.messageClickAttempts = messageClickAttempts;
-                      break;
-                    } catch (e) {}
+                if (!clickedMessage && !hasOpenComposerShell()) {
+                  var mb = findMessageBtn();
+                  if (mb) {
+                    try { mb.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
                   }
                 }
-                var moreThreshold = messageClickAttempts >= 2 ? 1500 : 2500;
-                if (!clickedMore && !hasOpenComposerShell() && Date.now() - started > moreThreshold) {
+                if (!clickedMessage && !clickedMore && !hasOpenComposerShell() && Date.now() - started > 2500) {
                   var more = findMoreBtn();
                   if (more) {
                     try { more.click(); clickedMore = true; last.clickedMore = true; } catch (e) {}
                     await sleep(700);
-                    var mb2 = findMessageBtn(msgSelectorsHit);
+                    var mb2 = findMessageBtn();
                     if (mb2) {
-                      try { mb2.click(); messageClickAttempts++; last.clickedMessage = true; last.messageClickAttempts = messageClickAttempts; } catch (e) {}
+                      try { mb2.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
                     }
                   }
                 }
-                await sleep(250);
+                await sleep(100);
               }
-              try {
-                var allBtns = Array.from((document.querySelector("main") || document.body).querySelectorAll("button, a, [role='button']")).filter(visible).filter(function (el) { return !isInGlobalNav(el); });
-                last.visibleButtonsCount = allBtns.length;
-                last.firstButtonLabels = allBtns.slice(0, 8).map(function (el) {
-                  var l = resolveLabel(el);
-                  return l.length > 40 ? l.slice(0, 40) + "…" : l;
-                });
-              } catch (e) {}
-              last.url = location.href;
               return { success: false, error: "composer_gate_timeout", waitedMs: Date.now() - started, diagnostic: last };
             })();
           },
@@ -616,18 +436,10 @@ var Actions = globalThis.Actions || (function () {
         return !!(r[0] && r[0].result);
       } catch (e) { return false; }
     }
-    async function currentTabIsMessaging() {
-      try {
-        const ti = await chrome.tabs.get(tab.id);
-        const u = (ti && (ti.url || ti.pendingUrl)) || "";
-        return /linkedin\.com\/messaging\//i.test(u);
-      } catch (e) { return false; }
-    }
     if (!composerAlreadyOpen && !isThreadUrl) {
       let profileReady = await probeMessageButton();
-      // 3.9.61 — Diagnostic: 8 × 500ms = 4s (era 15s). I test devono
-      // fallire rapidamente con motivo chiaro, non restare appesi.
-      for (let i = 0; i < 8 && !profileReady && !composerAlreadyOpen; i++) {
+      // Polling esteso: 30 × 500ms = 15s.
+      for (let i = 0; i < 30 && !profileReady && !composerAlreadyOpen; i++) {
         await TabManager.sleep(500);
         profileReady = await probeMessageButton();
         if (!profileReady) composerAlreadyOpen = await probeComposer();
@@ -648,8 +460,8 @@ var Actions = globalThis.Actions || (function () {
             "profile_not_ready: profilo LinkedIn non pronto in background (status=" + lastTabStatus + ", url=" + shortUrl + "), riprova"
           );
         }
-        // 3.9.61 — Polling composer ridotto: 12 × 250ms = 3s (era 8s).
-        for (let i = 0; i < 12; i++) {
+        // Click ottimistico riuscito: passiamo direttamente al polling composer.
+        for (let i = 0; i < 32; i++) {
           await TabManager.sleep(250);
           if (await probeComposer()) { composerAlreadyOpen = true; break; }
         }
@@ -658,54 +470,40 @@ var Actions = globalThis.Actions || (function () {
     // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia"
     //    con un retry in caso di fallimento transitorio.
     if (!composerAlreadyOpen && !isThreadUrl) {
-      const alreadyInMessaging = await currentTabIsMessaging();
-      if (!alreadyInMessaging) {
-        let clickResult = await HybridOps.clickMessage(tab.id);
-        if (!clickResult || !clickResult.success) {
-          await TabManager.sleep(1500);
-          clickResult = await HybridOps.clickMessage(tab.id);
-        }
-        if (!clickResult || !clickResult.success) {
-          return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
-        }
+      let clickResult = await HybridOps.clickMessage(tab.id);
+      if (!clickResult || !clickResult.success) {
+        await TabManager.sleep(1500);
+        clickResult = await HybridOps.clickMessage(tab.id);
       }
-      // 3.9.65 — Gate dinamico per LinkedIn SPA: dopo click può atterrare su
-      // /messaging/thread/new e montare il composer lentamente in background.
-      const gateAfterClick = await waitForComposerReady(25000);
+      if (!clickResult || !clickResult.success) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
+      }
+      const gateAfterClick = await waitForComposerReady(30000);
       composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
     } else if (isThreadUrl && !composerAlreadyOpen) {
-      // 3.9.65 — Thread URL: aspetta la SPA reale, non solo readyState=complete.
-      const threadGate = await waitForComposerReady(25000);
+      // Thread URL: aspetta il campo reale come WhatsApp, non un timer fisso.
+      const threadGate = await waitForComposerReady(30000);
       composerAlreadyOpen = !!(threadGate && threadGate.success);
     }
     if (!composerAlreadyOpen) {
-      // 3.9.65 — Ultimo gate adattivo: LinkedIn può avere status=complete ma
-      // DOM messaging ancora non montato. Polliamo la SPA prima di dichiarare fail.
-      const finalGate = await waitForComposerReady(25000);
+      // Ultimo gate stile WhatsApp: apri/attendi il campo disponibile prima di
+      // qualsiasi copia. Se fallisce, solo allora deleghiamo al writer produzione,
+      // che comunque scrive esclusivamente dopo aver trovato la textbox.
+      const finalGate = await waitForComposerReady(30000);
       if (finalGate && finalGate.success) {
         composerAlreadyOpen = true;
       } else {
-        var gateDiag = finalGate && finalGate.diagnostic ? " gate=" + JSON.stringify(finalGate.diagnostic) : "";
-        // 3.9.62 — Ripristino fallback stabile: se il gate diagnostico non
-        // trova il composer, deleghiamo a HybridOps.sendMessage che ha la
-        // pipeline robusta (poll lungo, more-menu, paste/insertText cascade)
-        // della 3.9.60. Solo per metodi DOM (non CDP): per i CDP preserviamo
-        // il fail-fast diagnostico così l'operatore vede subito il problema.
-        // 3.9.66 — Anche per i metodi CDP, se il gate non trova il composer
-        // permettiamo il degrade alla pipeline HybridOps.sendMessage stabile
-        // (3.9.56). Il destinatario è già stato validato sopra (HARD GUARD
-        // /in/<slug> o thread URL esplicito), quindi il fallback non può
-        // mandare al partner sbagliato.
         console.warn("[LI Send] composer gate timeout → fallback HybridOps.sendMessage", finalGate);
         var fallbackResult = await HybridOps.sendMessage(tab.id, message);
         if (fallbackResult && fallbackResult.success) {
           return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_gate", attempted_method: method });
         }
         var fbErr = (fallbackResult && fallbackResult.error) || (finalGate && finalGate.error) || "unknown";
-        return Config.errorResponse(
-          Config.ERROR.MESSAGE_FAILED,
-          "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
-        );
+        var gateDiag = finalGate && finalGate.diagnostic ? " gate=" + JSON.stringify(finalGate.diagnostic) : "";
+      return Config.errorResponse(
+        Config.ERROR.MESSAGE_FAILED,
+        "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
+      );
       }
     }
     await TabManager.sleep(150);
