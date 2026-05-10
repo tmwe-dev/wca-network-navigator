@@ -21,6 +21,32 @@ var Actions = globalThis.Actions || (function () {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     const target = profileUrl.replace(/\/$/, "");
+    // 3.9.57-human-sim — RATE LIMIT GATE
+    // Hardcoded: 25-30 invii/giorno, pausa 3-7 min ogni 5-8 invii, jitter 25-65s tra invii.
+    // Se cap giornaliero raggiunto → blocca con errore esplicito.
+    // Se cooldown attivo → attende internamente (fino a tot ms) prima di procedere.
+    let humanSimMeta = { enabled: true };
+    try {
+      if (typeof HumanSimulator !== "undefined") {
+        const gate = await HumanSimulator.checkRateLimit();
+        humanSimMeta.gate = gate;
+        if (!gate.allowed) {
+          return Config.errorResponse(Config.ERROR.MESSAGE_FAILED,
+            "human_sim_rate_limit: " + gate.reason + " (sentToday=" + gate.sentToday + "/" + gate.dailyCap + ")");
+        }
+        if (gate.waitMs && gate.waitMs > 0) {
+          // Cap massimo attesa interna: 8s. Se serve più → segnaliamo cooldown.
+          if (gate.waitMs > 8000) {
+            return Config.errorResponse(Config.ERROR.MESSAGE_FAILED,
+              "human_sim_cooldown: attendi " + Math.ceil(gate.waitMs / 1000) + "s prima del prossimo invio");
+          }
+          await HumanSimulator.sleep(gate.waitMs);
+          humanSimMeta.gate.waitedMs = gate.waitMs;
+        }
+      }
+    } catch (e) {
+      humanSimMeta = { enabled: false, error: String(e && e.message || e) };
+    }
     // P1 — Thread URL detection: se l'URL è un thread di messaggistica, il
     // bottone "Messaggia" non esiste. Saltiamo clickMessage e andiamo dritti
     // a sendMessage, che cerca direttamente la textbox del composer.
@@ -100,6 +126,14 @@ var Actions = globalThis.Actions || (function () {
         }
       } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
       if (!isThreadUrl && !composerAlreadyOpen) {
+        // 3.9.57-human-sim — PROFILE CHOREOGRAPHY (scroll + dwell umano)
+        // Eseguita PRIMA di cliccare "Messaggia". Solo su profilo, non su thread URL.
+        try {
+          if (typeof HumanSimulator !== "undefined") {
+            const choreo = await HumanSimulator.profileChoreography(tab.id);
+            humanSimMeta.profile_choreography = choreo;
+          }
+        } catch (e) { /* best-effort, non bloccante */ }
         const clickResult = await HybridOps.clickMessage(tab.id);
         if (!clickResult || !clickResult.success) {
           return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
@@ -111,7 +145,36 @@ var Actions = globalThis.Actions || (function () {
         // Thread/composer già aperto: diamo solo il tempo al composer di montarsi.
         await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
       }
+      // 3.9.57-human-sim — TYPING DECISION (1 su 3 char-by-char)
+      // Pre-fill del composer con digitazione umana. Il writer di hybrid-ops
+      // ha early-exit se vede il testo già presente → niente conflitti.
+      try {
+        if (typeof HumanSimulator !== "undefined" && HumanSimulator.shouldTypeChars()) {
+          await HumanSimulator.preWriteDwell();
+          const typeRes = await HumanSimulator.typeIntoComposer(tab.id, message);
+          humanSimMeta.typing = { method: typeRes.ok && typeRes.match ? "char_by_char" : "fallback_paste", detail: typeRes };
+          if (typeRes.ok && typeRes.match) {
+            await HumanSimulator.preSendReadDwell();
+          }
+        } else {
+          humanSimMeta.typing = { method: "paste" };
+        }
+      } catch (e) {
+        humanSimMeta.typing = { method: "paste", error: String(e && e.message || e) };
+      }
       const sendResult = await HybridOps.sendMessage(tab.id, message);
+      // 3.9.57-human-sim — POST-SEND + RECORD
+      try {
+        if (sendResult && sendResult.success && typeof HumanSimulator !== "undefined") {
+          const post = await HumanSimulator.postSendChoreography(tab.id);
+          humanSimMeta.post_send = post;
+          await HumanSimulator.recordSend();
+          humanSimMeta.stats = await HumanSimulator.getStats();
+        }
+      } catch (e) { /* best-effort */ }
+      if (sendResult && typeof sendResult === "object") {
+        try { sendResult.human_sim = humanSimMeta; } catch (e) {}
+      }
       return { tabId: tab.id, result: sendResult };
     }
     let { tabId, result } = await attempt();
