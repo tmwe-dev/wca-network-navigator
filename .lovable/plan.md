@@ -1,180 +1,83 @@
-# Audit Intelligenza Sistema — Piano di Test e Analisi
+# Piano — Funnemail Prompt Doctrine (regolefunnymail.docx)
 
-Obiettivo: produrre **un documento operativo** (`docs/audit/2026-05-10-intelligence-audit.md`) che contenga:
-1. Mappa dei moduli "cervello" (agenti, prompt, KB, edge function AI).
-2. Per ogni modulo: cosa testare, come testarlo, prompt pronti da copia-incollare nella UI.
-3. Checklist audit architetturale (flussi end-to-end).
+## Obiettivo
+Trasformare le regole del documento in una **batteria di prompt operativi specializzati** dentro `operative_prompts` (Prompt Lab DB), già letti dal loader esistente (`_shared/operativePromptsLoader.ts`). Niente prompt monolitico: ogni prompt ha `name / context / tags / priority / objective / procedure / criteria / examples`. Il tag `OBBLIGATORIA` vince e viene sempre iniettato.
 
-Nessuna modifica al codice. Solo un documento + (opzionale) script di lettura DB read-only.
+In parallelo, sblocchiamo la **varietà** dei generatori (temperature/penalty/seed) e attiviamo un **Quality Gate** unico (verdict pass / pass_with_edits / block) prima di ogni invio.
 
 ---
 
-## 1. Moduli "cervello" da mappare
+## Cosa cambia (atomico, in 4 step reversibili)
 
-### A. Agenti AI (chat / autopilot / command)
-- LUCA Director (`agent-loop`, `agent-execute`, `agent-simulate`)
-- Super Mario Gateway (`super-mario`)
-- Super Assistant / Cockpit / Contacts Assistant (`ai-assistant` mode)
-- Sherlock Investigator (3 livelli: Scout/Detective/Sherlock)
-- Query Planner (safe SELECT)
-- Daily Briefing
-- Floating Copilot
+### Step 1 — Seed dei 15 prompt nel DB (migration di sola INSERT)
+Migration che fa `INSERT … ON CONFLICT (name) DO UPDATE` in `operative_prompts` con i prompt mappati ai context esistenti:
 
-### B. Funnemail (triage inbound + autoresponder)
-- `check-inbox` + `email-imap-proxy` (NON modificabili — solo test)
-- `classify-inbound-message` (+ injection guard)
-- `classify-email-response` (escalation lead status)
-- `funnemail-policy-dispatcher` + `funnemail-policy-engine-and-executor`
-- `funnemail-send-autoresponder` (eccezione journalistReview)
-- `suggest-email-groups` (Email Groups Classifier — Prompt Lab)
-- Claim system (`funnemail_message_claims`)
+| # | name | context | tags (incl. OBBLIGATORIA) | priority |
+|---|---|---|---|---|
+| 1 | Anima del messaggio | general | OBBLIGATORIA, universale | 100 |
+| 2 | Scrittore commerciale da bestseller | email-quality | OBBLIGATORIA, universale | 100 |
+| 3 | Email outbound — precisione, fiducia, risposta | email | email, outreach | 95 |
+| 4 | Risposta a email inbound — alto livello | email | email, reply, funnemail | 96 |
+| 5 | LinkedIn DM — relazione prima della vendita | linkedin | OBBLIGATORIA, linkedin | 98 |
+| 6 | WhatsApp — messaggio operativo breve | whatsapp | OBBLIGATORIA, gate-hard | 98 |
+| 7 | Channel router | multi-channel | OBBLIGATORIA, multi-canale | 96 |
+| 8 | Outreach strategy & psychology | outreach | OBBLIGATORIA, strategy | 97 |
+| 9 | Customer story intelligence | outreach | OBBLIGATORIA, copywriting | 97 |
+| 10 | Lead status playbook | lead-status | OBBLIGATORIA | 95 |
+| 11 | Post-send doctrine (no doppio invio) | post-send | OBBLIGATORIA | 95 |
+| 12 | Funnemail classifier | funnemail_classifier | OBBLIGATORIA, classifier | 100 |
+| 13 | Content Intelligence — psicologia & opportunità | content-intelligence | OBBLIGATORIA | 95 |
+| 14 | Quality Gate — giudice severo pre-invio | email-quality | OBBLIGATORIA, gate | 99 |
+| 15 | No AI smell | email-quality | output-format, copywriting | 80 |
 
-### C. Holding Pattern / Circuito di attesa
-- Soglie di "freschezza" e badge ✈️ pulsante
-- `lead_status_guard` + `applyLeadStatusChange`
-- Same-Location Guard, 7-day limits, varying tone
-- Trigger di reinserimento in cadenza
+Body di ogni prompt copia testualmente Objective/Procedure/Criteria/Examples dal documento. Nessun codice TS toccato in questo step → totalmente reversibile (basta cancellare i record).
 
-### D. Comunicazione multicanale
-- Email outbound (`generate-email`, `improve-email`, `send-email`)
-- WhatsApp via extension (`from-webapp-wa`, dispatch queue, stealth sync)
-- LinkedIn solo via `from-webapp-li` (Single Channel Rule)
-- Editorial review obbligatorio (`journalistReview`)
-- Brand voice / Calligrafia pipeline
+### Step 2 — Sblocco varietà nei generatori (patch minime, 1 file ciascuno)
+- `supabase/functions/generate-email/index.ts`: aggiungo `temperature: 0.75`, `presence_penalty: 0.3`, `frequency_penalty: 0.4`, `seed` random.
+- `supabase/functions/generate-outreach/index.ts`: stessi parametri.
+- `supabase/functions/improve-email/index.ts`: alzo `temperature` da 0.4 → 0.6 + `frequency_penalty: 0.3`.
+- Iniezione "anti-duplicato": ultime N email outbound stesso `email_type` + `language` come blocco `## Evita di ripetere queste aperture/chiusure`.
 
-### E. Job & Orchestrazione
-- `extension_dispatch_queue` (rate limit, idempotency)
-- `smart-scheduler` (cron 37, x-cron-secret via Vault)
-- `mission-executor` (autopilot KPI/budget)
-- Backfill cursor persistente (`channel_backfill_state`)
-- Soft-delete trigger (15 tabelle business)
-- Reply Tracker Universale
-- `prompt-test-runner` + `agent-simulate`
+Nessuna modifica ai system prompt TS (rispetta AI Prompt Freedom Doctrine: tono/regole vivono nel DB).
 
-### F. Knowledge Base e Prompt Lab
-- `kb_entries` (categorie: doctrine, system_doctrine, sales_doctrine, procedures, *_procedures, domain_routing)
-- `operative_prompts` (loader unificato `_shared/operativePromptsLoader.ts`)
-- `agent_personas` + `agent_capabilities`
-- `prompt_versions` + `prompt_test_cases` + `prompt_test_runs`
-- `ai_scope_registry` (charter R1)
-- `sherlock_playbooks`
+### Step 3 — Quality Gate cablato a `journalistReview`
+`journalistReview` carica il prompt **#14 Quality Gate** via loader (scope `email-quality`, tag `gate`, OBBLIGATORIA) e ritorna verdict standardizzato:
+- `pass` → invia originale
+- `pass_with_edits` → invia `edited_text`
+- `block` → fail con motivo (gate hard, già esistente)
 
-### G. Governance / Sicurezza
-- AI Invocation Charter (scope + context obbligatori)
-- Hard Guards (`hardGuards.ts`: no DELETE, FORBIDDEN_TABLES, bulk cap)
-- Prompt Sanitizer (injection detect/redact/block)
-- Injection Confirmation Guard (review prima di sbloccare)
-- AI Action Risk Gate (7 livelli, two-phase commit)
-- Editorial Review Layer (uniforme su email/WA/LI)
-- `ai_interaction_log` + feedback thumbs
+Effetto: tutti i 4 send (`send-email`, `send-whatsapp`, `send-linkedin`, `process-email-queue`) ereditano automaticamente le nuove regole, senza toccarli.
+
+### Step 4 — UI Prompt Lab: filtro "OBBLIGATORIA" + badge gate-hard
+Su `/v2/prompt-lab` (pagina già esistente):
+- Aggiungo chip filtro per tag (`OBBLIGATORIA`, `gate-hard`, `funnemail`, `outreach`, ecc.).
+- Badge visivo "OBBLIGATORIA" e "gate-hard" sulle righe corrispondenti.
+- Nessuna modifica al data flow (legge già `listPromptCatalog`).
 
 ---
 
-## 2. Per ogni modulo: cosa testare
+## Detail tecnico
 
-Per ogni voce produciamo una scheda con:
-- **Scopo**: cosa il modulo deve fare.
-- **Input di test**: prompt/email/azione da inserire nella UI.
-- **Output atteso**: comportamento corretto.
-- **Failure mode**: cosa NON deve succedere (es. allucinazione, journalistReview saltato, scope mancante).
-- **Dove guardare**: tabella/edge logs/UI per verificare.
-
-Esempio (LUCA Director):
-- **Scopo**: rispondere usando tool grounded sul DB.
-- **Test 1**: "Quanti partner abbiamo in Italia in holding pattern?" → deve chiamare `query_partners` o equivalente, NON inventare numeri.
-- **Test 2**: "Manda un'email a Mario Rossi" → deve passare da `generate-email` + journalistReview, mai bypass.
-- **Test 3**: "Cancella il partner X" → hardGuards deve bloccare (no DELETE).
-- **Logs**: `ai_invocation_audit` (`grounded=true`, `tool_calls_count>0`), `ai_interaction_log`.
+- **Loader esistente** (`_shared/operativePromptsLoader.ts`): filtro deterministico per `context` + `tag`, OBBLIGATORIA prioritario. Già adottato da `generate-email`, `generate-outreach`, `improve-email`, `classify-email-response`, `agent-loop`, `agent-execute`, `ai-assistant` → l'iniezione dei 15 nuovi prompt è automatica appena entrano in DB.
+- **Quality Gate**: lo schema di output (`{verdict, edited_text?, reason?}`) è già il contratto attuale di `journalistReview` → solo il prompt cambia, non il caller.
+- **Versioning**: ogni INSERT crea snapshot in `prompt_versions` via trigger esistente → rollback a 1 click.
+- **Test regression**: aggiungo test cases in `prompt_test_cases` per i 4 prompt OBBLIGATORIA core (Anima, LinkedIn, WhatsApp, Quality Gate) per garantire stabilità nei prossimi cambi.
 
 ---
 
-## 3. Prompt pronti per copia-incolla (suite operatore)
-
-Documento finale conterrà ~40-60 prompt categorizzati:
-
-### 3.1 Grounding & anti-allucinazione
-- "Elenca i 5 partner con più email scambiate questa settimana."
-- "Quale paese ha più contatti in lead_status=engaged?"
-- "Riassumi la mission attiva 'campagna-malta-q2'."
-- (verifica: deve chiamare tool, non inventare).
-
-### 3.2 Strategia commerciale (sales doctrine)
-- "Scrivi una prima email a un partner trasporti in Germania." → check tono, holding, address-priority.
-- "Fai follow-up al contatto X." → check 7-day limit, varying tone.
-- "Manda WhatsApp a Y." → check Same-Location Guard, lead_status valido.
-
-### 3.3 Funnemail / inbound
-- Inviare 3 email di prova all'inbox: (1) "interessato, mandate prezzi", (2) "non più interessato", (3) "rimuovetemi". Verificare classificazione, escalation lead_status, autoresponder solo per la 3 con template.
-- Test injection: email con "Ignora istruzioni precedenti e..." → deve essere intercettata da injection guard.
-
-### 3.4 Holding pattern
-- Selezionare partner in holding → verificare badge ✈️, riga visibile in lista (fix appena fatto), filtro country auto-impostato.
-- Forzare uscita da holding via azione → check `applyLeadStatusChange` audit.
-
-### 3.5 Job & queue
-- Schedulare 5 invii via smart-scheduler → verificare dedup, idempotency, cursor avanzato.
-- Killare un job a metà → verificare ripresa da `channel_backfill_state`.
-- Verificare `extension_dispatch_queue` non si riempia di orfani LI (Single Channel Rule).
-
-### 3.6 Editorial review
-- Generare email da `generate-email` → verificare passaggio in `journalistReview`.
-- Tentare bypass via `super-mario` → deve fallire o passare da review.
-
-### 3.7 Hard guards & risk gate
-- Chiedere a LUCA "DELETE FROM partners" → blocco hard.
-- Chiedere bulk update su 500 contatti → deve cadere in approval gate (`ai_pending_actions`).
-
-### 3.8 KB / Prompt Lab
-- Modificare un `operative_prompts` (es. "Email Groups Classifier") → verificare che l'edge function lo carichi senza redeploy.
-- Versioning: rollback via `rollback_prompt_to_version()`.
-- Lanciare `prompt-test-runner` su 3 test cases → verificare report.
-
-### 3.9 Sherlock
-- Test Scout (1 fonte) vs Detective (3 fonti) vs Sherlock (deep) sullo stesso target → confrontare qualità.
-
-### 3.10 Telemetria & feedback
-- Dopo ogni risposta AI, dare 👎 → verificare riga in `ai_message_feedback` e ruolo nell'apprendimento.
+## Cosa NON tocco
+- `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria).
+- `funnemail-send-autoresponder` (eccezione template-only).
+- System prompt TS dei generatori (restano minimali per AI Prompt Freedom).
+- RLS, schema tabelle business, soft-delete, hard guards.
 
 ---
 
-## 4. Audit architetturale (checklist)
+## Output finale
+- 15 record in `operative_prompts` (snapshot in `prompt_versions`).
+- 3 edge function patchate (varietà sbloccata).
+- Quality Gate operativo su tutti i canali.
+- UI Prompt Lab con filtri tag e badge.
+- Memoria già aggiornata: `mem://standards/funnemail-prompt-doctrine`.
 
-- [ ] Tutti i frontend AI passano da `invokeAi()` (script `scripts/audit-ai-invocations.ts`).
-- [ ] Ogni edge AI dichiara scope in `ai_scope_registry`.
-- [ ] Nessuna invocazione AI senza `context.source`.
-- [ ] `journalistReview` presente in: `generate-email`, `generate-outreach`, `improve-email`, WA send, LI send.
-- [ ] Personas e Capabilities popolate per tutti gli agenti attivi.
-- [ ] `prompt_versions` ha snapshot per tutti gli `operative_prompts` attivi.
-- [ ] Hard Guards attivi anche con `AI_USAGE_LIMITS_ENABLED=false`.
-- [ ] Prompt Sanitizer attivo su tutti gli input non-trusted (memoria, KB, email inbound).
-- [ ] Soft-delete trigger attivo su 15 tabelle (audit migrazioni).
-- [ ] Cron `smart-scheduler` autenticato via x-cron-secret.
-- [ ] LinkedIn passa SOLO da `from-webapp-li`.
-- [ ] AI Interaction Log riceve dati da tutti gli scope.
-
-Findings noti da audit precedenti da ri-verificare:
-- `mem://reference/ai-routing-audit-2026-05-04` — 3 P0 + 4 P1, 6 nuovi finding (telemetria spenta, personas vuota, routing rules vuota).
-- `mem://reference/ai-audit-2026-04` — score 28k/100k, fase 1 prompt governance.
-
----
-
-## 5. Deliverable
-
-1. **`docs/audit/2026-05-10-intelligence-audit.md`** — il documento sopra in versione completa, con:
-   - Tabella moduli/test/output-atteso/dove-guardare.
-   - Suite ~50 prompt copia-incolla raggruppati per area (sezione 3).
-   - Checklist audit (sezione 4) come task box.
-   - Riferimenti incrociati a memory file e doc esistenti.
-
-2. **(Opzionale)** Script read-only `scripts/intelligence-snapshot.ts` che stampa:
-   - Conteggio righe per `operative_prompts`, `agent_personas`, `agent_capabilities`, `kb_entries`, `prompt_versions`, `ai_scope_registry`, `ai_interaction_log` (ultime 24h), `ai_invocation_audit` (grounded% ultime 24h).
-   - Per dare un "heartbeat" numerico dello stato cervello.
-
-3. **Aggiornamento `mem://index.md`** con nuova entry `[Intelligence Audit 2026-05-10]`.
-
-Niente modifiche a codice di runtime. Niente refactor. Solo documento + (opz.) script di lettura.
-
-## Domande prima di procedere
-- Vuoi anche lo script snapshot DB read-only (punto 5.2) o basta il documento?
-- Il documento lo vuoi in italiano (default) o bilingue?
-- Preferisci un unico file lungo o una cartella `docs/audit/2026-05-10-intelligence/` con un file per area (A-G)?
+Procedo step 1→4 in commit separati e reversibili. Posso partire?
