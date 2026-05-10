@@ -95,6 +95,14 @@ serve(async (req) => {
     // Best-effort: scope/context obbligatori per le chiamate dal nuovo gateway.
     // Modalità interna "ping" e legacy senza scope NON bloccano (warn-only),
     // così non rompiamo i call-site non ancora migrati.
+    // NOTE: recordInvocation è chiamato POST-loop con valori reali
+    // (grounded + tool_calls_count). I path early-return tool-decision /
+    // plan-execution loggano con tool_calls_count=-1 (ignoto) finché non
+    // vengono cablati. Vedi mem://reference/audit-debug-riparazione-2026-05-06
+    // deno-lint-ignore no-explicit-any
+    let guardSpec: any = null;
+    // deno-lint-ignore no-explicit-any
+    let recordInvocationFn: ((sb: any, spec: any, r: any) => Promise<void>) | null = null;
     try {
       const { aiGuard, recordInvocation } = await import("../_shared/aiInvocationGuard.ts");
       const guard = await aiGuard(req, reqBody, supabase, "ai-assistant");
@@ -107,12 +115,9 @@ serve(async (req) => {
           return guard.response;
         }
       } else {
-        // Audit best-effort
-        recordInvocation(supabase, guard.spec, {
-          grounded: false, // aggiornato dal toolLoopHandler in futuro
-          tool_calls_count: 0,
-          blocked: false,
-        }).catch(() => undefined);
+        // Conserviamo spec e funzione: il log finale avviene post-loop.
+        guardSpec = guard.spec;
+        recordInvocationFn = recordInvocation;
       }
     } catch {
       // guard caricamento fallito — degradiamo silenziosamente
@@ -144,6 +149,15 @@ serve(async (req) => {
         commandPromptBlock,
       );
       endMetrics(metrics, true, 200);
+      // TODO(grounding-telemetry): cablare tool_calls_count reale.
+      // Per ora logghiamo -1 = path early-return non strumentato.
+      if (recordInvocationFn && guardSpec) {
+        recordInvocationFn(supabase, guardSpec, {
+          grounded: false,
+          tool_calls_count: -1,
+          blocked: false,
+        }).catch(() => undefined);
+      }
       return result;
     }
 
@@ -180,6 +194,14 @@ serve(async (req) => {
         commandPromptBlock,
       );
       endMetrics(metrics, true, 200);
+      // TODO(grounding-telemetry): vedi mode tool-decision sopra.
+      if (recordInvocationFn && guardSpec) {
+        recordInvocationFn(supabase, guardSpec, {
+          grounded: false,
+          tool_calls_count: -1,
+          blocked: false,
+        }).catch(() => undefined);
+      }
       return result;
     }
 
@@ -378,6 +400,20 @@ serve(async (req) => {
     }
 
     endMetrics(metrics, true, 200);
+    // ── Telemetria grounding (post-loop, valori reali) ──
+    // Conta i tool_calls effettivi dalla cronologia messaggi.
+    let realToolCallsCount = 0;
+    for (const m of loopResult.state.allMessages) {
+      const tc = (m as Record<string, unknown>).tool_calls;
+      if (Array.isArray(tc)) realToolCallsCount += tc.length;
+    }
+    if (recordInvocationFn && guardSpec) {
+      recordInvocationFn(supabase, guardSpec, {
+        grounded: realToolCallsCount > 0,
+        tool_calls_count: realToolCallsCount,
+        blocked: false,
+      }).catch(() => undefined);
+    }
     // Surface usage + finish_reason al chiamante. Permette al frontend
     // (Harmonizer ecc.) di distinguere tra errore modello e troncamento per
     // max_tokens (finish_reason=length).
