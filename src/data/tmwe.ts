@@ -12,6 +12,11 @@ export const tmweQueryKeys = {
   profile: ["tmwe", "profile"] as const,
   shipments: (filters?: unknown) => ["tmwe", "shipments", filters] as const,
   tracking: (awb: string) => ["tmwe", "tracking", awb] as const,
+  partnerLink: (partnerId: string) => ["tmwe", "partnerLink", partnerId] as const,
+  matchCandidates: (partnerId: string) => ["tmwe", "match", partnerId] as const,
+  snapshot: (clientId: string) => ["tmwe", "snapshot", clientId] as const,
+  revenue: (clientId: string) => ["tmwe", "revenue", clientId] as const,
+  customersList: (filters?: unknown) => ["tmwe", "customers", filters] as const,
 };
 
 export interface TmweConnection {
