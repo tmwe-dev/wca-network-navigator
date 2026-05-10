@@ -160,7 +160,7 @@
         "filename": "linkedin-extension-3.9.48.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.48.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Backup ripristinato esatto, nessuna modifica. Pipeline originale che produce i due messaggi nelle due finestre."
       },
       {
