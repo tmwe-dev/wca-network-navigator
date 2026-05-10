@@ -176,10 +176,110 @@ var TabManager = globalThis.TabManager || (function () {
     } catch (err) { console.debug("[LI Tab]", err?.message); return false; }
   }
 
+  // ── 3.9.57 — ensureWorkerTab ──
+  // Idempotente. Garantisce che esista una tab di servizio in background
+  // parcheggiata su /messaging/. Mai attivata. Mai rubata all'utente: se
+  // l'utente ha aperto LinkedIn lui stesso e non c'è ancora una worker tab,
+  // adottiamo solo se la sua tab è già su /messaging/.
+  async function ensureWorkerTab(targetUrl) {
+    if (_ensureWorkerPromise) return _ensureWorkerPromise;
+    _ensureWorkerPromise = (async function () {
+      await loadOwnership();
+      const wantUrl = targetUrl || WORKER_HOME_URL;
+
+      // 1) Worker già nota e viva?
+      if (_workerTabId !== null) {
+        try {
+          const t = await chrome.tabs.get(_workerTabId);
+          if (t && /linkedin\.com/i.test(t.url || t.pendingUrl || "")) {
+            // Se serve un URL specifico e la worker è altrove, riportala lì.
+            if (targetUrl && !urlMatchesTarget(t.url || "", wantUrl)) {
+              try { await chrome.tabs.update(_workerTabId, { url: wantUrl }); } catch (e) { /* ignore */ }
+              await waitForLoad(_workerTabId, 20000);
+            } else if (t.status !== "complete") {
+              await waitForLoad(_workerTabId, 15000);
+            }
+            _workerReady = true;
+            saveOwnership();
+            return { id: _workerTabId, ready: true, reused: true };
+          }
+        } catch (e) {
+          _workerTabId = null;
+          _workerReady = false;
+        }
+      }
+
+      // 2) Adozione conservativa: se l'utente ha già una tab su /messaging/*,
+      //    la usiamo come worker (no navigation away → zero rischio focus steal).
+      try {
+        const existing = await chrome.tabs.query({ url: "*://*.linkedin.com/messaging/*" });
+        if (existing && existing[0]) {
+          _workerTabId = existing[0].id;
+          markOwned(_workerTabId);
+          if (targetUrl && !urlMatchesTarget(existing[0].url || "", wantUrl)) {
+            try { await chrome.tabs.update(_workerTabId, { url: wantUrl }); } catch (e) { /* ignore */ }
+            await waitForLoad(_workerTabId, 20000);
+          } else if (existing[0].status !== "complete") {
+            await waitForLoad(_workerTabId, 15000);
+          }
+          _workerReady = true;
+          saveOwnership();
+          return { id: _workerTabId, ready: true, reused: true, adopted: true };
+        }
+      } catch (e) { /* ignore */ }
+
+      // 3) Crea una tab di servizio inactive su /messaging/.
+      try {
+        const tab = await chrome.tabs.create({ url: wantUrl, active: false });
+        _workerTabId = tab.id;
+        markOwned(_workerTabId);
+        await waitForLoad(_workerTabId, 25000);
+        _workerReady = true;
+        saveOwnership();
+        console.log("[LI Tab][WORKER] Created persistent worker tab #" + _workerTabId);
+        return { id: _workerTabId, ready: true, reused: false, created: true };
+      } catch (e) {
+        console.warn("[LI Tab][WORKER] create failed:", e?.message);
+        _workerReady = false;
+        return { id: null, ready: false, error: e?.message || String(e) };
+      }
+    })().finally(function () { _ensureWorkerPromise = null; });
+    return _ensureWorkerPromise;
+  }
+
+  function getWorkerInfo() {
+    return { id: _workerTabId, ready: _workerReady };
+  }
+
+  // Invalidazione esterna (chiamata dal background quando la tab viene chiusa)
+  function invalidateWorker(closedTabId) {
+    if (closedTabId === undefined || closedTabId === _workerTabId) {
+      _workerTabId = null;
+      _workerReady = false;
+      saveOwnership();
+    }
+  }
+
   // ── getLinkedInTab: only reuses OWNED tabs, never user tabs ──
   async function getLinkedInTab(url, skipNavigateIfSameDomain, allowCreate) {
     await loadOwnership();
     const canCreate = allowCreate !== false;
+
+    // 3.9.57 — Per le operazioni di messaging usiamo la worker tab persistente.
+    // Nessuna adozione della tab utente (che potrebbe essere su un profilo
+    // qualsiasi). La worker viene navigata al target richiesto.
+    if (url && /linkedin\.com\/(messaging|in\/|pub\/)/i.test(url)) {
+      try {
+        const w = await ensureWorkerTab(url);
+        if (w && w.id) {
+          if (skipNavigateIfSameDomain) {
+            return { id: w.id, reused: true, worker: true };
+          }
+          // ensureWorkerTab ha già garantito la navigazione al target.
+          return { id: w.id, reused: !!w.reused, worker: true };
+        }
+      } catch (e) { console.warn("[LI Tab] worker resolver failed:", e?.message); }
+    }
 
     // 3.9.54 — Preferenza esatta: se url target valorizzato, cerchiamo
     // PRIMA una tab LinkedIn con path identico, prima di adottare una
