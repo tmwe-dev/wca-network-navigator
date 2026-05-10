@@ -416,6 +416,19 @@ var TabManager = globalThis.TabManager || (function () {
   // logic on independent code paths so a fix to one cannot break the other.
   async function getLinkedInTabForRead(url) {
     await loadOwnership();
+    // 3.9.57 — Worker tab first per messaging. Se url è null o /messaging/*,
+    // usiamo direttamente la worker tab pre-warmed.
+    const isMessaging = !url || /linkedin\.com\/messaging\//i.test(url);
+    if (isMessaging) {
+      try {
+        const w = await ensureWorkerTab(url || WORKER_HOME_URL);
+        if (w && w.id) {
+          console.log("[LI Tab][READ][WORKER] Using worker tab #" + w.id + (w.created ? " (cold)" : " (hot)"));
+          return { id: w.id, reused: true, worker: true };
+        }
+      } catch (e) { console.warn("[LI Tab][READ] worker failed:", e?.message); }
+    }
+
     if (url) {
       try {
         const allLi = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
@@ -522,6 +535,9 @@ var TabManager = globalThis.TabManager || (function () {
     waitForLoad: waitForLoad,
     getLinkedInTab: getLinkedInTab,
     getLinkedInTabForRead: getLinkedInTabForRead,
+    ensureWorkerTab: ensureWorkerTab,
+    getWorkerInfo: getWorkerInfo,
+    invalidateWorker: invalidateWorker,
     getTabId: getTabId,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
