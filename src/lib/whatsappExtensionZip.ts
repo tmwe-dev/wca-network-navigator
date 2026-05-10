@@ -187,7 +187,7 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
         version: "3.9.48",
         filename: "linkedin-extension-3.9.48.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.48.zip",
-        current: true,
+        current: false,
         note: "Backup ripristinato esatto, nessuna modifica. Pipeline originale: navigate focus-safe, click Messaggia, attesa composer, writer (doppio invio nelle due finestre come da backup).",
       },
       {
