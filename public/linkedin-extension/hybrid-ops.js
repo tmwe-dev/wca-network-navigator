@@ -269,11 +269,34 @@ var HybridOps = globalThis.HybridOps || (function () {
     // AX/AILearn restano definiti SOLO come read-only/diagnostica.
     // NESSUN writer parallelo: una sola fonte di scrittura, fallimento esplicito.
 
+    // 3.9.56 — AI VERIFY (read-only): chiediamo ad AILearn lo schema
+    // "messaging" per ottenere il sendButtonSelector. NON è un writer:
+    // il selector viene passato all'injected fn che lo prova PRIMA della
+    // regex storica. Cache-first; relearn solo su cache miss / button not
+    // found. Fallback completo alla regex se AI non disponibile.
+    let aiSendSelector = null;
+    let schemaSource = "none";
+    try {
+      if (typeof AILearn !== "undefined") {
+        const cached = await AILearn.getCached("messaging");
+        if (cached && cached.sendButtonSelector) {
+          aiSendSelector = cached.sendButtonSelector;
+          schemaSource = "cache";
+        } else if (Config.isReady()) {
+          const fresh = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
+          if (fresh && fresh.sendButtonSelector) {
+            aiSendSelector = fresh.sendButtonSelector;
+            schemaSource = "fresh";
+          }
+        }
+      }
+    } catch (e) { /* fail-open: regex fallback */ }
+
     // Level 3: Structural fallback with native input
     try {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        func: function (msg) {
+        func: function (msg, aiSendSelector) {
           // Poll up to 8s for the message textbox to appear after the dialog opens.
           // If still missing, try clicking the profile-scoped "Messaggia"/"Message"
           // button (including the "Altro/More" menu), then poll again.
@@ -501,6 +524,21 @@ var HybridOps = globalThis.HybridOps || (function () {
             // aria-label Send/Invia, type=submit dentro composer. Esclude
             // disabled e aria-disabled. Solo dentro composer.
             function findSendBtn() {
+              // 3.9.56 — AI VERIFY: prova prima il selector AI (read-only).
+              if (aiSendSelector && typeof aiSendSelector === "string") {
+                try {
+                  var aiNodes = document.querySelectorAll(aiSendSelector);
+                  for (var ai = 0; ai < aiNodes.length; ai++) {
+                    var bb = aiNodes[ai];
+                    if (!(bb.offsetParent !== null || bb.getClientRects().length > 0)) continue;
+                    if (bb.disabled || bb.getAttribute("aria-disabled") === "true") continue;
+                    // Deve essere dentro un composer scope (no global nav).
+                    if (!bb.closest(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble")) continue;
+                    bb.__matchedBy = "ai_schema";
+                    return bb;
+                  }
+                } catch (e) { /* selector invalido → fallback regex */ }
+              }
               var scopes = document.querySelectorAll(
                 ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble"
               );
@@ -515,10 +553,10 @@ var HybridOps = globalThis.HybridOps || (function () {
                   var al = (b.getAttribute("aria-label") || "").trim();
                   var t = (b.textContent || "").trim();
                   var typ = (b.getAttribute("type") || "").toLowerCase();
-                  if (/msg-form__send-button|msg-form__send|send-button/i.test(cls)) return b;
-                  if (/^(send|invia|invia messaggio|send message)$/i.test(al)) return b;
-                  if (/^(send|invia)$/i.test(t)) return b;
-                  if (typ === "submit" && /msg-form/i.test(scope.className || "")) return b;
+                  if (/msg-form__send-button|msg-form__send|send-button/i.test(cls)) { b.__matchedBy = "regex_class"; return b; }
+                  if (/^(send|invia|invia messaggio|send message)$/i.test(al)) { b.__matchedBy = "regex_aria"; return b; }
+                  if (/^(send|invia)$/i.test(t)) { b.__matchedBy = "regex_text"; return b; }
+                  if (typ === "submit" && /msg-form/i.test(scope.className || "")) { b.__matchedBy = "regex_submit"; return b; }
                 }
               }
               return null;
@@ -591,24 +629,133 @@ var HybridOps = globalThis.HybridOps || (function () {
               return { success: false, error: "send_button_click_dispatch_failed" };
             }
             const cleared = await textboxCleared();
+            var matchedBy = sendBtn.__matchedBy || "regex_unknown";
+            var selectorMatched = matchedBy === "ai_schema" ? "ai_schema" : "regex_fallback";
             if (cleared) {
-              return { success: true, method: "physical_click", verified: true };
+              return { success: true, method: "physical_click", verified: true, selectorMatched: selectorMatched, matchedBy: matchedBy };
             }
             return {
               success: true,
               method: "physical_click",
               verified: false,
               warning: "textbox_not_cleared_after_click_unverified",
+              selectorMatched: selectorMatched,
+              matchedBy: matchedBy,
             };
           })();
         },
-        args: [message],
+        args: [message, aiSendSelector],
       });
-      const fbResult = fbRes[0] && fbRes[0].result;
+      let fbResult = fbRes[0] && fbRes[0].result;
+
+      // 3.9.56 — Relearn + 1 retry SOLO se send_button_not_found e schema
+      // veniva da cache (nessun click avvenuto = no rischio doppio invio).
+      if (
+        fbResult && fbResult.success === false &&
+        fbResult.error === "send_button_not_found" &&
+        schemaSource === "cache" &&
+        Config.isReady() && typeof AILearn !== "undefined"
+      ) {
+        try {
+          await AILearn.clearCache();
+          const fresh = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
+          if (fresh && fresh.sendButtonSelector) {
+            schemaSource = "fresh_after_cache_miss";
+            aiSendSelector = fresh.sendButtonSelector;
+            // Retry minimale: il textbox è già scritto dal primo run, quindi
+            // qui ricerchiamo SOLO il bottone con il nuovo selector AI e clicchiamo.
+            // Guardia anti-doppio: se il composer è vuoto = primo invio andato.
+            const retryRes2 = await chrome.scripting.executeScript({
+              target: { tabId: tabId },
+              func: function (msg, sel) {
+                // Versione minimale del retry: cerca il bottone usando SOLO
+                // il selector AI fresh + scope composer. Non rifa la scrittura
+                // (textbox già contiene msg dal primo run).
+                function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+                function findBtn() {
+                  try {
+                    var nodes = document.querySelectorAll(sel);
+                    for (var i = 0; i < nodes.length; i++) {
+                      var b = nodes[i];
+                      if (!(b.offsetParent !== null || b.getClientRects().length > 0)) continue;
+                      if (b.disabled || b.getAttribute("aria-disabled") === "true") continue;
+                      if (!b.closest(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble")) continue;
+                      return b;
+                    }
+                  } catch (e) {}
+                  return null;
+                }
+                function findBox() {
+                  var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble");
+                  for (var s = 0; s < scopes.length; s++) {
+                    var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+                    for (var i = 0; i < boxes.length; i++) {
+                      var el = boxes[i];
+                      if (el.offsetParent !== null || el.getClientRects().length > 0) return el;
+                    }
+                  }
+                  return null;
+                }
+                return (async function () {
+                  var box = findBox();
+                  if (!box) return { success: false, error: "send_button_not_found", relearned: true };
+                  // Verifica che il composer contenga ancora il messaggio (no doppio invio).
+                  var current = (box.innerText || box.textContent || "").trim();
+                  if (!current || current.indexOf((msg || "").trim().slice(0, 20)) < 0) {
+                    return { success: true, method: "skipped_already_sent", verified: false, relearned: true, warning: "composer_empty_skipping_retry" };
+                  }
+                  var btn = null;
+                  for (var i = 0; i < 30; i++) { btn = findBtn(); if (btn) break; await sleep(100); }
+                  if (!btn) return { success: false, error: "send_button_not_found", relearned: true };
+                  try {
+                    btn.scrollIntoView({ block: "center", inline: "center" });
+                    var rect = btn.getBoundingClientRect();
+                    var opts = { bubbles: true, cancelable: true, composed: true, view: window, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, button: 0 };
+                    btn.dispatchEvent(new MouseEvent("mousedown", opts));
+                    btn.dispatchEvent(new MouseEvent("mouseup", opts));
+                    btn.dispatchEvent(new MouseEvent("click", opts));
+                    try { btn.click(); } catch (e) {}
+                  } catch (e) { return { success: false, error: "send_button_click_dispatch_failed", relearned: true }; }
+                  // textboxCleared
+                  var clearedOk = false;
+                  for (var j = 0; j < 15; j++) {
+                    await sleep(100);
+                    var cur = (box.innerText || box.textContent || "").trim();
+                    if (!cur) { clearedOk = true; break; }
+                  }
+                  return {
+                    success: true,
+                    method: "physical_click",
+                    verified: clearedOk,
+                    selectorMatched: "ai_schema",
+                    matchedBy: "ai_schema_relearned",
+                    relearned: true,
+                  };
+                })();
+              },
+              args: [message, fresh.sendButtonSelector],
+            }).catch(function () { return null; });
+            const retryResult = retryRes2 && retryRes2[0] && retryRes2[0].result;
+            if (retryResult) {
+              retryResult.schemaSource = "fresh_after_cache_miss";
+              retryResult.verifiedBy = "ai_schema_relearned";
+              if (retryResult.success) return retryResult;
+              fbResult = retryResult;
+            }
+          }
+        } catch (e) { /* fall through con fbResult originale */ }
+      }
+
+      if (fbResult) {
+        if (typeof fbResult.relearned === "undefined") fbResult.relearned = false;
+        if (typeof fbResult.schemaSource === "undefined") fbResult.schemaSource = schemaSource;
+        if (typeof fbResult.verifiedBy === "undefined") {
+          fbResult.verifiedBy = fbResult.selectorMatched === "ai_schema" ? "ai_schema" : "regex_fallback";
+        }
+      }
       if (fbResult && fbResult.success) return fbResult;
       // 3.9.54 — Niente fallback CDP/keyboard: il click ottimistico DOM
-      // è autoritativo. Se il bottone non era trovato/abilitato il caller
-      // riceve send_button_not_found / send_button_disabled e decide il retry.
+      // è autoritativo.
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "All message strategies failed");
     } catch (e) { return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message); }
   }

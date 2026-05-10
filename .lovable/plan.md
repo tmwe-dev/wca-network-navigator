@@ -1,97 +1,62 @@
-# Patch ibrida LinkedIn Extension — base 3.9.48
+## La risposta in una riga
+Hai ragione: il sistema AI per "leggere il DOM e dirci dove sono i bottoni" esiste già ed è collaudato (lo usiamo per `readInbox` e `extractProfile`). Lo abbiamo escluso a mano dal `sendMessage` per paura di doppi invii. Lo riattiviamo come **verificatore di selettori**, non come *clicker*.
 
-Obiettivo: scrivere testo, cliccare Send, non rubare focus, non aprire nuove tab, non duplicare. Eliminare la certificazione eccessiva del post-click che fa fallire invii andati a buon fine. Mantenere le protezioni moderne (anti-double-send, scope composer, hard guards URL).
+## Verifica fatta (✅)
+L'edge `supabase/functions/linkedin-ai-extract/index.ts` supporta già `pageType: "messaging"` e ritorna nello schema:
+```
+{ messageBoxSelector, threadHeader, threadUrl, lastMessageTime, sendButtonSelector }
+```
+→ **Nessuna modifica server richiesta.** Tutto si gioca nell'estensione.
 
-Base: `3.9.48` (no rollback). Versione target: `3.9.49`.
-
-## File toccati
-
-- `public/linkedin-extension/hybrid-ops.js` — riscrittura sezione post-click in `sendMessage` + cleanup overlay stale + anti-double-send.
-- `public/linkedin-extension/tab-manager.js` — `getLinkedInTab` con preferenza match URL esatto.
-- `public/linkedin-extension/manifest.json` — bump versione `3.9.48` → `3.9.49`.
-- `public/chrome-extensions/catalog.json` — entry `linkedin/3.9.49`, `latest` e `current` aggiornati.
-- `public/chrome-extensions/linkedin/linkedin-extension-3.9.49.zip` — nuovo bundle.
-- `public/linkedin-extension.zip` — rigenerato.
-- `src/lib/whatsappExtensionZip.ts` — `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.49"`.
-
-Nessun cambio a UI/test page, DAL, edge functions, DB, o pipeline AI.
-
-## Modifica chirurgica `hybrid-ops.js` (single change-area, righe ~470–582)
-
-1. **Anti-double-send modulo** (in cima al file, prima di `sendMessage`):
-   - Mappa in `chrome.storage.session` (fallback in-memory): `{ tabId+urlPath+msgHash → timestamp }`.
-   - Prima di scrivere, rifiuta con `success:false, error:"anti_double_send_2s"` se ultimo invio identico < 2000ms.
-   - Dopo click, registra il timestamp.
-
-2. **Cleanup overlay stale** (dentro l'IIFE injected, subito dopo `findBox()`):
-   - Enumera `.msg-overlay-conversation-bubble`, `.msg-overlay-conversation-bubble--minimized`, `[class*='msg-overlay-conversation']` visibili.
-   - Identifica il composer "target" come quello che contiene `msgBox` (closest).
-   - Per ciascun overlay non-target, clicca `[aria-label*='Chiudi'], [aria-label*='Close'], button.msg-overlay-bubble-header__control` se presente; altrimenti skip (no force-remove DOM).
-   - Mai chiudere il `.msg-form` target, mai chiudere il composer della pagina profilo.
-
-3. **Sostituire blocco righe 514–561** con click ottimistico:
-   ```text
-   sendBtn = polling 8s (invariato)
-   if (!sendBtn) return { success:false, error:"send_button_not_found" }
-   if (sendBtn.disabled || aria-disabled) return { success:false, error:"send_button_disabled" }
-   firePhysicalClick(sendBtn)  // unica azione di invio
-   registerAntiDouble(...)
-   // verifica soft, non-bloccante
-   const cleared = await textboxCleared()  // 1.5s polling come oggi
-   if (cleared) return { success:true, method:"physical_click", verified:true }
-   return {
-     success:true, method:"physical_click", verified:false,
-     warning:"textbox_not_cleared_after_click_unverified"
-   }
-   ```
-   - **Rimuovere** chiamate a `submitComposer()`, `Ctrl/Cmd+Enter` synthetic, e (sotto) i fallback `AXTree.clickSendButtonPhysical` / `AXTree.pressCtrlEnter` quando il physical click DOM ha avuto luogo su bottone enabled. Mantenerli SOLO quando `sendBtn` non era trovato/abilitato (gestito dai due `error` ritornati prima → niente fallback CDP automatico per evitare doppio invio).
-   - `submitComposer`, `textboxCleared`, `firePhysicalClick` restano definiti (ancora usati da `sendMessageWithMethod` diagnostico, righe 776–1023, da non toccare).
-
-4. **No focus stealing / no new tab**: nessuna chiamata a `chrome.tabs.update(tabId, { active: true })`, `chrome.windows.update(..., { focused: true })`, o `chrome.tabs.create` viene aggiunta. Verificare che la patch non introduca regressioni in tal senso (nessuna esiste oggi nel path `sendMessage`).
-
-## Modifica `tab-manager.js` `getLinkedInTab` (righe 163–250)
-
-Aggiungere uno step PRIMA del primo `chrome.tabs.query` generico:
-
-```text
-1. Se `url` è valorizzato:
-   - query `*://*.linkedin.com/*`
-   - filtra `urlMatchesTarget(t.url, url)` (path identico)
-   - se trovato: reuse senza navigate, ritorna { id, reused:true, exactMatch:true }
-2. Altrimenti: comportamento attuale (prima tab LinkedIn generica).
+## Pipeline 3.9.56 — "AI-Verified Click"
+```
+1. Apri composer            (invariato)
+2. Scrivi testo             (invariato — single writer)
+3. ── NUOVO: AI VERIFY ──
+   schema = AILearn.getCached("messaging")
+        || AILearn.learnFromAI(tabId, "messaging", url, key)
+4. findSendBtn():
+   PRIMA  → schema.sendButtonSelector (AI)
+   POI    → regex attuale (msg-form__send-button / aria-label / text)
+5. UN solo firePhysicalClick (invariato 3.9.54)
+6. textboxCleared 1.5s → verified true / false
+7. Se verified=false E lo schema veniva da cache:
+      AILearn.clearCache() → relearn → UNA retry
+      (protetto da anti-double-send 2s già esistente)
 ```
 
-Nessun cambio agli altri rami (cached owned, automation window, allowCreate).
+## File toccati
+- **`public/linkedin-extension/hybrid-ops.js`** — ~30 righe nel solo blocco `sendMessage`. Nessun refactor.
+  Nuovi campi nel result: `verifiedBy: "ai_schema" | "regex_fallback"`, `selectorUsed`, `schemaAgeMs`, `relearned: boolean`.
+- **`public/linkedin-extension/manifest.json`** → version `3.9.56` + descrizione.
+- **`public/chrome-extensions/catalog.json`** → 3.9.56 current, 3.9.55 storico.
+- **`src/lib/whatsappExtensionZip.ts`** → bump 3.9.56.
+- **Repackage** `linkedin-extension-3.9.56.zip` + `linkedin-extension.zip`.
 
-## Versionamento e packaging
+## Cosa NON viene toccato (zero rischio regressione)
+- `tab-manager.js` (la separazione read/send 3.9.55 resta)
+- `actions.js` / `readInbox` / `check-inbox` / `email-imap-proxy`
+- writer del testo nel composer
+- anti-double-send 2s
+- `linkedin-ai-extract` (già pronto)
 
-- `manifest.json` → `"version": "3.9.49"`.
-- Rigenerare ZIP con `nix run nixpkgs#zip` da `public/linkedin-extension/`, output sia in `public/linkedin-extension.zip` che `public/chrome-extensions/linkedin/linkedin-extension-3.9.49.zip`.
-- `catalog.json`: aggiungere entry `3.9.49` con changelog "Click ottimistico post-Send + cleanup overlay stale + tab targeting esatto + anti-double-send 2s", aggiornare `latest` e `current`.
-- `whatsappExtensionZip.ts`: `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.49"`.
+## Garanzie di sicurezza
+- AI **read-only**: estrae selettori, non clicca mai.
+- Single writer: resta UN solo `firePhysicalClick`.
+- Anti-double-send 2s: anche in caso di retry, il guard previene il doppio invio.
+- Edge AI giù / cache vuota → fallback **immediato** alla regex 3.9.55. Zero blocco.
+- Costo AI: ~1 chiamata ogni cache TTL (LinkedIn cambia DOM raramente), non per messaggio.
 
-## Cosa NON viene toccato
+---
 
-- `actions.js` (1515 righe): nessuna modifica. Hard guards `wrong_recipient`, anti-double-send a livello action, `composerAlreadyOpen` restano invariati.
-- `sendMessageWithMethod` (diagnostico, righe 767–1023): invariato.
-- Test UI `LinkedInTest.tsx`: invariato.
-- AX Tree / AILearn / config / popup / background: invariati.
+## Servono 2 decisioni prima di partire
 
-## Comportamento atteso post-patch
+**A. Retry dopo verified=false:**
+1. **Auto** — relearn + 1 retry automatica (più "magico", rischio teorico edge-case di doppio invio coperto dal guard 2s)
+2. **Manuale** — segnala "send non verificato, ritenta?" all'operatore (più safe, 1 click in più)
 
-| Scenario | Risultato |
-|---|---|
-| Send button trovato + enabled, textbox si svuota | `success:true, verified:true` |
-| Send button trovato + enabled, textbox NON si svuota in 1.5s | `success:true, verified:false, warning:"textbox_not_cleared_after_click_unverified"` |
-| Send button non trovato in 8s | `success:false, error:"send_button_not_found"` (no fallback CDP) |
-| Send button disabled | `success:false, error:"send_button_disabled"` |
-| Stesso messaggio identico < 2s sulla stessa tab+path | `success:false, error:"anti_double_send_2s"` |
-| Due overlay flottanti aperti, profilo target distinto | Overlay non-target chiusi via bottone close, composer target preservato |
-| Tab aperta su URL profilo target esatto | Reuse di quella tab, no navigate |
+**B. Diagnostica in `LinkedInTest.tsx`:**
+1. Sì, mostra `verifiedBy / selectorUsed / schemaAge / relearned` nel pannello test
+2. No, basta il log console
 
-## Verifica finale
-
-- Grep: nessun nuovo `tabs.update.*active:.*true` o `windows.update.*focused` aggiunto.
-- Grep: `submitComposer\|pressCtrlEnter\|clickSendButtonPhysical` in `sendMessage` (NON `sendMessageWithMethod`) → 0 occorrenze nel path principale dopo patch.
-- Diff vs 3.9.48 limitato a 3 file (`hybrid-ops.js`, `tab-manager.js`, `manifest.json`) + zip + catalog + costante client.
-- Smoke su `/v2/test-extensions` LinkedIn: pulsante "Invia LI" deve completare con `verified:true` su profilo pulito, `verified:false + warning` su profilo che lascia testo residuo, `anti_double_send_2s` se ricliccato entro 2s.
+Dimmi A1/A2 e B1/B2 e procedo con la 3.9.56.

@@ -105,14 +105,30 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.54",
+    "latestVersion": "3.9.56",
     "items": [
+      {
+        "version": "3.9.56",
+        "filename": "linkedin-extension-3.9.56.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.56.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "AI-Verified Click: AILearn (read-only) fornisce sendButtonSelector verificato prima del click. Cache-first, relearn+1 retry solo se bottone non trovato (zero rischio doppio invio). Fallback regex se AI giù o cache vuota. Single writer + anti-double-send 2s invariati."
+      },
+      {
+        "version": "3.9.55",
+        "filename": "linkedin-extension-3.9.55.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.55.zip",
+        "releaseDate": "2026-05-10",
+        "current": false,
+        "notes": "Path tab READ-ONLY separato (getLinkedInTabForRead): readInbox non dirotta più la tab attiva su /messaging/."
+      },
       {
         "version": "3.9.54",
         "filename": "linkedin-extension-3.9.54.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.54.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Click ottimistico post-Send: physical click su bottone enabled, verifica soft (verified=true|false) senza submit/Ctrl+Enter/CDP fallback per evitare doppi invii. Anti-double-send 2s su tab+path+msg. Cleanup overlay stale (X su bubble non-target). Tab targeting URL esatto."
       },
       {
