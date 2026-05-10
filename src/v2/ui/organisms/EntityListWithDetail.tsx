@@ -9,7 +9,7 @@
  * selezione, sort, search, filtri.
  */
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Filter as FilterIcon, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
@@ -220,6 +220,15 @@ export function EntityListWithDetail({
     setHoldingFilter(m);
     try { window.localStorage.setItem(holdingStorageKey, m); } catch { /* swallow */ }
   };
+
+  // Sblocco temporaneo (non persistito) del filtro holding quando si apre
+  // un partner via ricerca: garantisce che la riga selezionata appaia in
+  // elenco anche se è in holding pattern. Default rimane "exclude".
+  useEffect(() => {
+    const handler = () => setHoldingFilter("include");
+    window.addEventListener("network-list-show-holding", handler);
+    return () => window.removeEventListener("network-list-show-holding", handler);
+  }, []);
 
   // Step 0a: arricchisci con "occupazione" derivata da code/cockpit/draft.
   const { busy } = useBusyPartners();

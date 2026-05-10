@@ -273,17 +273,21 @@ export function NetworkFiltersSection() {
                   <button
                     key={p.id}
                     onClick={() => {
-                      // Imposta il paese del partner come unico filtro attivo
-                      // così la lista a sinistra mostra il record selezionato
-                      // (altrimenti se il country filter precedente non
-                      // contiene il partner, la lista resta vuota).
-                      const updates: Parameters<typeof g.batchUpdate>[0] = {
-                        networkSearch: p.company_name,
-                      };
+                      // Allinea al comportamento CRM: NON forziamo il testo
+                      // di ricerca (intrappolerebbe la lista). Impostiamo
+                      // solo il paese del partner come filtro attivo, così
+                      // la lista a sinistra mostra il suo paese e il record
+                      // selezionato compare in elenco. Se il partner è in
+                      // holding pattern, sblocchiamo temporaneamente il
+                      // filtro locale "Holding" della lista per questa
+                      // sessione, altrimenti il default "exclude" lo
+                      // nasconderebbe.
                       if (p.country_code) {
-                        updates.networkSelectedCountries = new Set([p.country_code]);
+                        g.setNetworkSelectedCountries(new Set([p.country_code]));
                       }
-                      g.batchUpdate(updates);
+                      window.dispatchEvent(
+                        new CustomEvent("network-list-show-holding")
+                      );
                       window.dispatchEvent(
                         new CustomEvent("network-select-partner", {
                           detail: { partnerId: p.id },
