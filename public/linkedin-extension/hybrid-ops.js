@@ -252,6 +252,14 @@ var HybridOps = globalThis.HybridOps || (function () {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: tab fuori da profilo/messaging (" + currentUrl + ")");
       }
     } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
+
+    // 3.9.54 — Anti-double-send 2s su (tab + url path + msg hash).
+    try {
+      var ad = await checkAndRegisterAntiDouble(tabId, message);
+      if (ad.blocked) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "anti_double_send_2s (last " + ad.since + "ms ago)");
+      }
+    } catch (e) { /* fail-open su errore storage */ }
     // P23 — POLITICA SINGLE WRITER (no AX/AI in produzione):
     //   1) clickMessage scoped (gestito dal caller / structural fallback)
     //   2) DOM writer deterministico (paste → execCommand → textContent)
