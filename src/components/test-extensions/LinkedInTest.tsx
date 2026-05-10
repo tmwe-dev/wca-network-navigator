@@ -298,6 +298,18 @@ export function LinkedInTest() {
   const testSendMessage = () => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
+    // Strategia anti-duplicazione (C/D): blocca un secondo invio identico
+    // dello stesso testo allo stesso destinatario entro 30s.
+    if (strategyHasDedup(strategy)) {
+      const key = await buildIdempotencyKey(sendUrl, sendText);
+      if (isDuplicateKey(key)) {
+        log(`🛡️ Anti-duplicazione: invio identico già fatto negli ultimi 30s (key=${key.slice(0, 8)}…). Skip.`, "warn");
+        return;
+      }
+      rememberKey(key);
+      log(`🛡️ Anti-duplicazione attiva · key=${key.slice(0, 8)}…`, "info");
+    }
+    log(`🎛️ Strategia di invio: ${STRATEGY_LABELS[strategy]}`, "info");
     // Pre-flight: verifica versione estensione installata
     try {
       const pong = await liMsg("ping", {}, 4000) as { success?: boolean; version?: string };
