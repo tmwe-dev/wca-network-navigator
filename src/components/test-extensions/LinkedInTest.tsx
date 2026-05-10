@@ -778,6 +778,58 @@ export function LinkedInTest() {
         </div>
       </div>
       <Terminal logs={logs} />
+      {/* 3.9.57-human-sim — Pannello stato Human Simulator */}
+      <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2 text-xs">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="font-medium text-muted-foreground">🧑 Stato Human Simulator</p>
+          <div className="flex items-center gap-2">
+            {humanSim.loaded ? (
+              <span className={`px-2 py-0.5 rounded font-mono ${humanSim.allowed ? "bg-green-500/15 text-green-500" : "bg-red-500/20 text-red-500"}`}>
+                {humanSim.allowed ? "✓ ok" : `⛔ ${humanSim.reason || "blocked"}`}
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded font-mono bg-yellow-500/15 text-yellow-500">
+                {humanSim.error ? "⚠ non disponibile" : "…caricamento"}
+              </span>
+            )}
+            <Button onClick={() => refreshHumanSim(true)} size="sm" variant="ghost" className="h-6 px-2 text-xs">↻</Button>
+          </div>
+        </div>
+        {humanSim.loaded && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div>
+                <span className="text-muted-foreground">Invii oggi:</span>{" "}
+                <b className={humanSim.dailyCap && humanSim.sentToday >= humanSim.dailyCap ? "text-red-500" : humanSim.dailyCap && humanSim.sentToday >= humanSim.dailyCap * 0.8 ? "text-yellow-500" : ""}>
+                  {humanSim.sentToday}/{humanSim.dailyCap ?? "?"}
+                </b>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Burst:</span>{" "}
+                <b>{humanSim.sinceBurst}/{humanSim.burstSize ?? "?"}</b>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Cooldown:</span>{" "}
+                <b className={humanSim.cooldownMs > 0 ? "text-yellow-500" : ""}>
+                  {humanSim.cooldownMs > 0 ? `${Math.ceil(humanSim.cooldownMs / 1000)}s` : "—"}
+                </b>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Ultimo invio:</span>{" "}
+                <b>{humanSim.lastSendAt ? `${Math.round((Date.now() - humanSim.lastSendAt) / 1000)}s fa` : "—"}</b>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">
+              Regole hardcoded 3.9.57: 25-30 invii/giorno · pausa 3-7 min ogni 5-8 invii · cooldown 25-65s tra invii · scroll/dwell profilo · digitazione char-by-char 1/3 invii.
+            </p>
+          </>
+        )}
+        {!humanSim.loaded && humanSim.error && (
+          <p className="text-[11px] text-muted-foreground">
+            Reinstalla l'estensione <b>3.9.57-human-sim</b> per abilitare la diagnostica live.
+          </p>
+        )}
+      </div>
       {quality && (
         <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2 text-xs">
           <div className="flex items-center justify-between">
