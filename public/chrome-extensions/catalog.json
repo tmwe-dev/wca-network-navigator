@@ -119,14 +119,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.57",
+    "latestVersion": "3.9.58",
     "items": [
+      {
+        "version": "3.9.58",
+        "filename": "linkedin-extension-3.9.58.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.58.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Fix: aggiunto 'ensureWorkerTab' alla whitelist ALLOWED_ACTIONS in content.js (era rifiutato come Unknown action dal Pre-warm)."
+      },
       {
         "version": "3.9.57",
         "filename": "linkedin-extension-3.9.57.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.57.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Persistent Worker Tab: tab di servizio in background parcheggiata su /messaging/, mai attivata. read/send usano worker tab pre-warmed. Pre-warm onInstalled/onStartup + invalidazione su tabs.onRemoved."
       },
       {
