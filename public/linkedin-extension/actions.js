@@ -140,10 +140,12 @@ var Actions = globalThis.Actions || (function () {
         }
         // 3.9.56-autoclose: ridotta da 3000 a 1200ms — il successivo
         // sendMessage ha già un poll interno per attendere il composer.
-        await TabManager.sleep(1200);
+        // 3.9.59: ulteriore riduzione 1200 → 500ms (poll interno hybrid-ops già 6×100ms).
+        await TabManager.sleep(500);
       } else {
         // Thread/composer già aperto: diamo solo il tempo al composer di montarsi.
-        await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
+        // 3.9.59: 500/1500 → 300/600ms.
+        await TabManager.sleep(composerAlreadyOpen ? 300 : 600);
       }
       // 3.9.57-human-sim — TYPING DECISION (1 su 3 char-by-char)
       // Pre-fill del composer con digitazione umana. Il writer di hybrid-ops
@@ -184,7 +186,8 @@ var Actions = globalThis.Actions || (function () {
       try { await chrome.tabs.update(tabId, { url: target }); } catch (e) { /* ignore */ }
       // 3.9.56-autoclose: ridotta da 2500 a 1000ms — composerCleared interno
       // (≤600ms) ha già verificato l'invio reale, niente serve attendere oltre.
-      await TabManager.sleep(1000);
+      // 3.9.59: 1000 → 400ms.
+      await TabManager.sleep(400);
       const retry = await attempt();
       result = retry.result;
     }
