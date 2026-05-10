@@ -1,95 +1,116 @@
-## Audit LinkedIn + WhatsApp — caccia al tesoro
+# Pipeline approvazione → invio reale (LI / WA / Email)
 
-Ho ricostruito il flusso end-to-end (UI → SSOT → ai_pending_actions → pending-action-executor → edge `send-*` → estensione) e l'ho confrontato con il "canale unico" v3.9.56 (`from-webapp-li` / `from-webapp-wa`).
+## Decisione confermata
+**Tutto in coda**, anche i singoli del cockpit. Niente dispatch diretto da `useSendLinkedIn` / `useSendWhatsApp` / "Send" email finché non c'è l'approvazione esplicita in `PendingActionsPanel`.
 
-Sotto i punti dove la confidenza è < 80%, divisi per gravità. Ognuno va valutato insieme prima di toccare codice.
+## Diagnosi degli errori già noti che andremo a sistemare
+1. `pending-action-executor` chiama `send-linkedin` / `send-whatsapp` con `Bearer SERVICE_ROLE_KEY`; quelle funzioni fanno `auth.getUser()` → 401 sicuro.
+2. Anche se passasse, `send-linkedin` / `send-whatsapp` scrivono nella **coda morta** `extension_dispatch_queue`, che nessuna estensione consuma più (v3.9.56 ascolta solo `from-webapp-li` / `from-webapp-wa`).
+3. La logica di invio reale di LI/WA vive **solo** nei bridge browser (`liBridge.sendDirectMessage`, `waBridge.sendWhatsApp`). L'executor server-side non potrà mai chiamarli.
+4. `send-email` lato server SMTP funziona, è l'unico canale che può rimanere headless.
 
----
+## Architettura (riusa, non riscrive)
 
-### 🔴 CRITICI — l'invio "approvato" oggi non parte
+```
+                Cockpit              Bulk / AI proposal
+                   │                         │
+                   ▼                         ▼
+            ┌───────────────────────────────────────┐
+            │   enqueueAction()  →  ai_pending_actions │
+            │   status='pending', risk gate, audit     │
+            └───────────────────────────────────────┘
+                              │
+                              ▼ click "Approva" in PendingActionsPanel
+                ┌─────────────────────────────────┐
+                │   useApproveAndDispatch (NEW)   │
+                └─────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+   send_email           send_whatsapp           send_linkedin
+ invoke send-email   waBridge.sendWhatsApp   liBridge.sendDirectMessage
+   (server SMTP)      (from-webapp-wa)        (from-webapp-li)
+        │                     │                     │
+        └─── reviewMessage HARD fail-closed PRIMA di ognuno ──┘
+                              │
+                              ▼
+       UPDATE ai_pending_actions = 'executed'/'failed'
+       INSERT supervisor_audit_log + activities (post-send)
+```
 
-**1. La coda `extension_dispatch_queue` è morta.**
-`send-linkedin` (riga 234) e `send-whatsapp` inseriscono ancora in `extension_dispatch_queue`. Nessuna estensione la consuma:
-- `linkedin-extension/content.js` ascolta solo `from-webapp-li` (riga 196).
-- `whatsapp-extension/content.js` ascolta solo `from-webapp-wa` (riga 234).
-- `partner-connect-extension/background.js` (riga 297) dichiara esplicitamente: «Usa il canale from-webapp-li». 
-Memoria `linkedin-single-channel-rule` lo segna come "debito noto fuori scope": di fatto, **ogni messaggio approvato in `ai_pending_actions` finisce in una coda fantasma e non viene mai inviato**.
+Le funzioni LinkedIn (hook bridge, edge `send-linkedin`, estensioni, protocollo `from-webapp-*`) **non vengono toccate**: vengono solo riusate come sono.
 
-**2. `pending-action-executor` chiama le edge con il service_role come `Authorization`.**
-File: `supabase/functions/pending-action-executor/index.ts` righe 230 e 248. Le edge `send-linkedin`/`send-whatsapp` fanno `supabase.auth.getUser()` su quel token (riga 40 di send-linkedin) → ritorna sempre `401 unauthorized`. Anche se la coda fosse viva, l'esecuzione fallirebbe sempre.
+## Modifiche, in ordine atomico
 
-**3. L'agent (LUCA / agent-execute) non invia davvero.**
-`supabase/functions/agent-execute/toolHandlers/emailTools.ts`:
-- `handleSendWhatsApp` (riga 184–205): fa solo INSERT in `activities` con `status:'pending'` + `runPostSendPipeline`. **Nessun postMessage, nessuna edge, nessuna coda.** Ritorna `{success:true, queued_to_bridge:true}` → l'AI riferisce all'utente "messaggio inviato" mentre non è mai partito.
-- `handleSendLinkedIn` (riga 246–263): identico. 
-Risultato: cadenze, autopilot e Command Page non producono output reale sui due canali.
+### Step 1 — Hook unico di enqueue (sostituisce i dispatch diretti)
+Nuovo `src/hooks/useEnqueueAction.ts`:
+- API: `enqueue({ action_type, payload, partner_id?, contact_id?, suggested_content?, context? })`
+- INSERT su `ai_pending_actions` con `status='pending'`, `decision_origin='user_manual'` o `'ai_proposed'`, snapshot del draft.
+- Toast: "📥 In coda di approvazione".
+- Ritorna l'`id` per eventuale jump alla riga in PendingActionsPanel.
 
-**4. Editorial Review by-passato dai send manuali.**
-- `src/hooks/useSendLinkedIn.ts` chiama direttamente `liBridge.sendDirectMessage` (riga 94) e `sendConnectionRequest` (riga 153) senza `journalistReview`. 
-- `src/hooks/useSendWhatsApp.ts` stesso pattern. 
-Memoria `editorial-review-layer-mandatory` li classifica come obbligatori → violazione doctrine sui due canali con il maggior volume manuale.
+### Step 2 — Cockpit: tutti i send buttons → enqueue
+Patch chirurgica a:
+- `src/hooks/useSendLinkedIn.ts` → `handleSendLinkedIn` e `handleConnectLinkedIn` chiamano `enqueueAction({ action_type: 'send_linkedin', payload: { recipient: profileUrl, message_text, … } })` invece del bridge diretto. Mantengono ricerca profilo + UI feedback.
+- `src/hooks/useSendWhatsApp.ts` → idem con `action_type: 'send_whatsapp'`.
+- L'invio email manuale dal cockpit (verifico file esatto durante implementazione, probabile `useSendEmail` / `EmailComposer`) → idem con `action_type: 'send_email'`.
+- Nessun bridge chiamato qui. Niente `reviewMessage` qui (rimandato all'approvazione, fonte unica).
 
----
+### Step 3 — Hook di dispatch on-approve (NEW)
+Nuovo `src/hooks/useApproveAndDispatch.ts`:
+- Carica `ai_pending_actions` per id.
+- Esegue `reviewMessage` (HARD, fail-closed) per `email|wa|linkedin`.
+- Switch per `action_type`:
+  - `send_email` / `send_proposal` → `supabase.functions.invoke('send-email', …)` con flag `journalist_reviewed:true`.
+  - `send_whatsapp` → `waBridge.sendWhatsApp(phone, finalText)`. Se bridge non disponibile / non autenticato → marca `failed` con detail leggibile e fallback clipboard+wa.me.
+  - `send_linkedin` → `liBridge.sendDirectMessage(profileUrl, finalText)` (cap 300 char). Stesso fallback clipboard.
+- UPDATE `ai_pending_actions` `status='executed'|'failed'`, `executed_at`, `execution_log`.
+- INSERT `supervisor_audit_log` con `decision_origin='user_approved'`.
+- Side-effects post-send (log activity, increment_partner_interaction) coerenti col cockpit attuale.
 
-### 🟠 ALTI — SSOT incompleto / fonti di confusione
+### Step 4 — Patch chirurgica `PendingActionsPanel.tsx`
+- `approveMutation` per `send_email | send_proposal | send_whatsapp | send_linkedin` chiama `useApproveAndDispatch` invece di `pending-action-executor`.
+- Per gli altri tipi (`schedule_followup`, `create_reminder`, `update_lead_status`) resta la chiamata a `pending-action-executor` (quei rami funzionano).
 
-**5. SSOT non collegato all'esecuzione.**
-`queueLinkedInForApproval` / `queueWhatsAppForApproval` scrivono in `ai_pending_actions`. L'approvazione passa per il branch rotto (#1+#2). La nuova SSOT è solo cosmetica finché executor + edge non sono allineate al canale `from-webapp-*`.
+### Step 5 — Pulizia executor edge
+`supabase/functions/pending-action-executor/index.ts`:
+- Rimuovo i case `send_whatsapp` e `send_linkedin` (impossibili headless, branch ingannevole).
+- Tengo `send_email` come fallback per scheduler/cron + fix auth: header `x-cron-secret` o reuse del JWT utente reale invece di passare il service role come Bearer.
+- Nessun altro cambio funzionale.
 
-**6. Due bridge LinkedIn coesistono.**
-- `useLinkedInExtensionBridge` (vecchio, usato da `useSendLinkedIn` cockpit) — `requestId` prefisso `li_*`.
-- `useLinkedInMessagingBridge` (nuovo, usato da inbox + test) — `requestId` prefisso `li_msg_*`.
-Entrambi montano un listener globale su `from-extension-li`. Ho ≥2 punti in cui possono concorrere sullo stesso evento → race / risposte perse. SSOT richiede un solo bridge.
+### Step 6 — Side-effect cleanup (atomico, separato)
+- `useBulkLinkedInDispatch` già scrive su `ai_pending_actions` → ok, ora avrà un executor reale.
+- `agent-execute` (LUCA) `send_whatsapp`/`send_linkedin` già propongono solo (decisione precedente "Mai") → invariato.
+- Nessun altro hook va toccato.
 
-**7. Night-pause LinkedIn calcolata in UTC.**
-`send-linkedin` riga 126: `clampedTime.getHours()` → ore UTC sul runtime Deno, ma il commento dice "CET". In estate è 2h di shift, in inverno 1h: i job notturni possono partire dentro la "pausa" o slittare di un giorno. Confidenza < 50%.
+## Cosa NON tocco (regola dura)
+- `useLinkedInExtensionBridge`, `useWhatsAppExtensionBridge`
+- estensioni Chrome / protocollo `from-webapp-*`
+- edge `send-linkedin`, `send-whatsapp` (resteranno in stato dormiente; deprecazione coda morta = debito separato già censito)
+- `send-email` edge (solo l'invocazione cambia, il codice no)
+- schema DB
 
----
+## Sicurezza / governance
+- Editorial review **obbligatorio** al momento dell'approvazione, fail-closed, una volta sola (non duplicato in cockpit + executor).
+- Hard guards (`hardGuards.ts`, risk gate) restano attivi sull'INSERT in `ai_pending_actions`.
+- Audit trail: `supervisor_audit_log` + `ai_decision_log.user_review='approved'` come oggi.
+- RLS invariato: `ai_pending_actions` già protetto per `user_id`.
 
-### 🟡 MEDI — comportamenti incoerenti, tracciamento parziale
+## Codex Cobra check
+- **CLASSIFY**: feature P0 cross-canale, tocca nodo critico "approval pipeline" → modalità chirurgica.
+- **DEFENSE**: review hard fail-closed prima di ogni dispatch; nessun bypass.
+- **ROLLBACK**: 6 step atomici, ognuno isolato. Step 5 e 2 sono i più rischiosi → mergiati per ultimi e con flag visivo nei toast ("in coda" vs "inviato").
+- **VERB**: "enqueue", "approve", "dispatch" — verbi distinti, no overload semantico.
+- **ANTI-duplicazione**: zero logica bridge duplicata; `useApproveAndDispatch` è l'unico punto di invio reale per LI/WA.
+- **CHANGELOG**: nuova memoria `mem://architecture/approval-dispatch-pipeline-v1` con il diagramma sopra.
 
-**8. Daily-limit LinkedIn basato sulla coda morta.**
-Riga 56–70: conta su `extension_dispatch_queue`. Visto che oggi nessuno invia da lì, il contatore reale è ~0 → il cap "50/giorno" non viene mai raggiunto, anche se l'utente manda 200 messaggi via bridge diretto. Va spostato su `channel_messages` (direction=outbound, channel=linkedin).
+## Aspettativa di risultato
+1. Apri cockpit, premi "Send" su email/WA/LI → toast "📥 In coda".
+2. Vai a PendingActionsPanel → vedi la riga.
+3. Premi "Approva" → review parte, poi:
+   - email parte via SMTP,
+   - WA parte tramite estensione (`from-webapp-wa`),
+   - LI parte tramite estensione (`from-webapp-li`).
+4. Stato finale `executed`, audit completo.
 
-**9. `send-whatsapp` privo di hard-cap e night-pause.**
-A differenza di LinkedIn, non ha daily limit né finestra oraria. Solo rate limit per minuto (`check_channel_rate_limit`). Asimmetria con la dottrina commerciale.
-
-**10. WhatsApp bridge: ping ogni 3 s + config con chiave nominata diversa.**
-- `useWhatsAppExtensionBridge` riga 111 → `setInterval(doPing, 3000)`. Carico continuo, log spam, drain mobile. Suggerisco 10–15 s come LinkedIn.
-- `setConfig` (riga 88) usa `anonKey`, mentre LinkedIn usa `supabaseAnonKey`. Contratto bridge non uniforme (rischio rottura silenziosa quando aggiorniamo l'estensione).
-
-**11. Rate-limit LinkedIn salta sugli scheduled.**
-Riga 143: `isImmediate = !scheduled || ≤now+60s`. Bulk programmati bypassano `check_channel_rate_limit`. Bulk a 100 messaggi @ T+5min può saturare.
-
-**12. `useSendLinkedIn` fallback clipboard silenzioso.**
-Quando il bridge fallisce (riga 108-115), copia il testo e apre il tab. Non scrive su `channel_messages`, non aggiorna `last_outbound_at`, non scatta holding-pattern. La cadenza pensa di avere inviato.
-
----
-
-### 🔵 BASSI — pulizia / debito noto
-
-**13. `useSendWhatsApp`** non logga `channel_messages` finché l'utente non risponde manualmente → impossibile dedup outbound nei thread.
-
-**14. `useBulkLinkedInDispatch`** ora alimenta `ai_pending_actions` (OK), ma con executor rotto è UI senza effetti → da disabilitare o gating finché #1/#2 non sono risolti.
-
-**15. `partner-connect-extension/wa-content.js`** legge ancora `extension_dispatch_queue` per WA in alcuni rami (debito eredità). Va confermato che non duplichi gli invii nel giorno in cui ripariamo l'executor.
-
----
-
-### Cosa propongo di decidere insieme (no codice ancora)
-
-**Opzione A — Riparare la pipeline approvazione (consigliata)**
-1. Sostituire in `pending-action-executor` la chiamata a `send-linkedin`/`send-whatsapp` con un meccanismo che, lato webapp aperta dell'owner, ri-emetta il `from-webapp-*` (es. canale realtime dedicato + listener globale singleton). Edge functions diventano gate (rate-limit + journalist + audit) ma non scrivono più nella coda morta.
-2. Allineare `agent-execute` agli stessi gate (oggi fittizio).
-3. Spegnere/migrare `extension_dispatch_queue` (read-only deprecation).
-
-**Opzione B — Riabilitare la coda**
-Far partire l'estensione a poll-are `extension_dispatch_queue` (com'era nelle versioni vecchie). Più semplice ma rinuncia al canale unico v3.9.56 e va contro la memoria `linkedin-single-channel-rule`.
-
-**Opzione C — Solo manuale**
-Ammettere che oggi LI/WA funzionano solo dal cockpit con utente attivo: rimuovere bulk/agent/cadence sui due canali finché la pipeline non c'è (chiusura debito a freddo).
-
-Domande aperte da sciogliere:
-- Confermiamo che la dottrina è "canale unico from-webapp-*" anche per send approvati? (impatta opzione A vs B)
-- L'agent può inviare LI/WA in autonomia o solo proporre per approvazione? (impatta #3)
-- Daily-cap 50 LI: lo vogliamo per utente, per partner, o globale workspace?
+Pronto a implementare quando approvi.
