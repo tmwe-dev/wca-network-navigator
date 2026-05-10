@@ -430,6 +430,13 @@ var Actions = globalThis.Actions || (function () {
               var clickedMore = false;
               var msgSelectorsHit = [];
               var clickedNodes = [];
+              // 3.9.64 — Path veloce per URL già su /messaging/. Su quelle
+              // pagine NON esiste alcun bottone "Messaggia" da cliccare: il
+              // composer è già nella pagina (in <aside>/.msg-thread, NON in
+              // <main>). La caccia ai bottoni qui è inutile e fa scadere il
+              // gate. Aspettiamo direttamente la textbox del composer
+              // scansionando l'INTERO documento (no scope su main).
+              var isMessagingUrl = /\/messaging\//i.test(location.pathname);
               var last = {
                 readyState: document.readyState,
                 hasMain: !!document.querySelector("main"),
@@ -442,8 +449,52 @@ var Actions = globalThis.Actions || (function () {
                 messageBtnSelectorsHit: msgSelectorsHit,
                 visibleButtonsCount: 0,
                 firstButtonLabels: [],
-                url: location.href
+                url: location.href,
+                isMessagingUrl: isMessagingUrl,
+                msgFormPresent: false,
+                composerScope: "main"
               };
+              // ── FAST PATH messaging ───────────────────────────────────
+              if (isMessagingUrl) {
+                last.composerScope = "document";
+                while (Date.now() - started < limit) {
+                  last.readyState = document.readyState;
+                  // Su /messaging/ la textbox può essere ovunque nel DOM.
+                  var msgForms = deepQueryAll(".msg-form, .msg-form__contenteditable, .msg-form__msg-content-container");
+                  last.msgFormPresent = msgForms.some(visible);
+                  var anyBox = null;
+                  // 1) Preferito: contenteditable dentro .msg-form
+                  for (var f = 0; f < msgForms.length; f++) {
+                    if (!visible(msgForms[f])) continue;
+                    var inner = msgForms[f].querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+                    if (inner && visible(inner)) { anyBox = inner; break; }
+                    if (msgForms[f].getAttribute && msgForms[f].getAttribute("contenteditable") === "true") { anyBox = msgForms[f]; break; }
+                  }
+                  // 2) Fallback: qualsiasi contenteditable visibile nel doc
+                  if (!anyBox) {
+                    var allEditables = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+                    for (var e2 = 0; e2 < allEditables.length; e2++) {
+                      if (visible(allEditables[e2])) { anyBox = allEditables[e2]; break; }
+                    }
+                  }
+                  last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
+                  last.shells = msgForms.filter(visible).length;
+                  if (anyBox) return { success: true, method: "messaging_fast_path", waitedMs: Date.now() - started, diagnostic: last };
+                  await sleep(250);
+                }
+                // Diagnostica timeout messaging.
+                try {
+                  var allBtnsM = Array.from(document.body.querySelectorAll("button, a, [role='button']")).filter(visible);
+                  last.visibleButtonsCount = allBtnsM.length;
+                  last.firstButtonLabels = allBtnsM.slice(0, 8).map(function (el) {
+                    var l = resolveLabel(el);
+                    return l.length > 40 ? l.slice(0, 40) + "…" : l;
+                  });
+                } catch (e) {}
+                last.url = location.href;
+                return { success: false, error: "composer_gate_timeout_messaging", waitedMs: Date.now() - started, diagnostic: last };
+              }
+              // ── PATH profilo (originale) ─────────────────────────────
               while (Date.now() - started < limit) {
                 last.readyState = document.readyState;
                 last.hasMain = !!document.querySelector("main");
