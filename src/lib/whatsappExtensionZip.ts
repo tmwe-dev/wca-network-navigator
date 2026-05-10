@@ -5,8 +5,8 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.56";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.18";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.57";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -35,13 +35,20 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.17",
+    latestVersion: "5.10.18",
     items: [
+      {
+        version: "5.10.18",
+        filename: "whatsapp-extension-5.10.18.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.18.zip",
+        current: true,
+        note: "Persistent Worker Tab: pre-warm onInstalled/onStartup di una sola tab di servizio web.whatsapp.com in background. Read/send usano la worker tab già hot. Invalidazione su tabs.onRemoved + handler ensureWorkerTab esposto alla UI.",
+      },
       {
         version: "5.10.17",
         filename: "whatsapp-extension-5.10.17.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.17.zip",
-        current: true,
+        current: false,
         note: "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato.",
       },
       {
@@ -139,13 +146,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.56",
+    latestVersion: "3.9.57",
     items: [
+      {
+        version: "3.9.57",
+        filename: "linkedin-extension-3.9.57.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.57.zip",
+        current: true,
+        note: "Persistent Worker Tab: una sola tab di servizio in background parcheggiata su /messaging/, mai attivata. read/send messaging usano la worker tab pre-warmed (cold start una volta sola). Pre-warm onInstalled/onStartup, invalidazione su tabs.onRemoved.",
+      },
       {
         version: "3.9.56",
         filename: "linkedin-extension-3.9.56.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56.zip",
-        current: true,
+        current: false,
         note: "AI-Verified Click: AILearn (read-only) fornisce sendButtonSelector verificato prima del click. Cache-first, relearn+1 retry SOLO se bottone non trovato (zero rischio doppio invio). Fallback regex se AI giù. Single writer e anti-double-send 2s invariati.",
       },
       {

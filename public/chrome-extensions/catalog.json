@@ -1,13 +1,20 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.17",
+    "latestVersion": "5.10.18",
     "items": [
+      {
+        "version": "5.10.18",
+        "filename": "whatsapp-extension-5.10.18.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.18.zip",
+        "current": true,
+        "note": "Persistent Worker Tab: pre-warm onInstalled/onStartup di una sola tab di servizio web.whatsapp.com in background. Read/send usano la worker tab hot. Handler ensureWorkerTab esposto alla UI."
+      },
       {
         "version": "5.10.17",
         "filename": "whatsapp-extension-5.10.17.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.17.zip",
-        "current": true,
+        "current": false,
         "note": "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato."
       },
       {
@@ -105,14 +112,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.56",
+    "latestVersion": "3.9.57",
     "items": [
+      {
+        "version": "3.9.57",
+        "filename": "linkedin-extension-3.9.57.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.57.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Persistent Worker Tab: tab di servizio in background parcheggiata su /messaging/, mai attivata. read/send usano worker tab pre-warmed. Pre-warm onInstalled/onStartup + invalidazione su tabs.onRemoved."
+      },
       {
         "version": "3.9.56",
         "filename": "linkedin-extension-3.9.56.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.56.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "AI-Verified Click: AILearn (read-only) fornisce sendButtonSelector verificato prima del click. Cache-first, relearn+1 retry solo se bottone non trovato (zero rischio doppio invio). Fallback regex se AI giù o cache vuota. Single writer + anti-double-send 2s invariati."
       },
       {

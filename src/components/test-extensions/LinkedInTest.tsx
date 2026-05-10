@@ -129,8 +129,30 @@ export function LinkedInTest() {
   const testPing = () => runWithCooldown(async () => {
     log("🔌 Ping estensione LinkedIn...");
     const r = await liMsg("ping", {}, 5000);
-    if (r?.success) log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
-    else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+    if (r?.success) {
+      log(`✅ Estensione attiva (v${r.version || "?"})`, "ok");
+      const wid = (r as Record<string, unknown>).workerTabId;
+      const wready = (r as Record<string, unknown>).workerReady;
+      if (wid) log(`  🧷 worker tab #${wid} · ready=${wready ? "yes" : "no"}`, wready ? "ok" : "warn");
+      else log("  🧷 worker tab non ancora pronta — usa 🚀 Pre-warm o esegui un'azione (verrà creata lazy)", "warn");
+    } else log(`❌ Non raggiungibile: ${r?.error || JSON.stringify(r)}`, "error");
+  });
+
+  // 3.9.57 — Pre-warm esplicito della worker tab. Una volta sola si paga il
+  // costo di apertura tab + caricamento /messaging/. Da quel momento read e
+  // send sono "hot" (3-6s invece di 25-50s).
+  const testPreWarm = () => runWithCooldown(async () => {
+    log("🚀 Pre-warm worker tab LinkedIn (apre /messaging/ in background)...");
+    const t0 = Date.now();
+    const r = await liMsg("ensureWorkerTab", {}, 35000) as Record<string, unknown>;
+    const elapsed = Date.now() - t0;
+    if (r?.success) {
+      const created = r.created ? "creata" : r.adopted ? "adottata da tab utente" : r.reused ? "riusata" : "ok";
+      log(`✅ Worker tab pronta in ${elapsed}ms (#${r.workerTabId}, ${created})`, "ok");
+      log(`  warmupMs=${r.warmupMs ?? "?"} · ready=${r.ready ? "yes" : "no"}`, "info");
+    } else {
+      log(`❌ Pre-warm fallito: ${r?.error || JSON.stringify(r)}`, "error");
+    }
   });
 
   const testSession = () => runWithCooldown(async () => {
@@ -193,7 +215,15 @@ export function LinkedInTest() {
   });
 
   const testReadInbox = () => runWithCooldown(async () => {
-    log("📨 Lettura inbox LinkedIn (90s timeout — la prima lettura su tab nuova può richiedere 40-60s)...");
+    log("📨 Lettura inbox LinkedIn (worker tab pre-warmed → tipicamente 3-8s)...");
+    // Stato worker pre-azione, per capire se l'azione paga un cold start.
+    try {
+      const pre = await liMsg("ping", {}, 4000) as Record<string, unknown>;
+      const wid = pre?.workerTabId;
+      const wready = pre?.workerReady;
+      if (wid && wready) log(`  🧷 worker tab già hot (#${wid})`, "info");
+      else log(`  🧷 worker non pronta → la lettura paga la cold-start UNA volta`, "warn");
+    } catch { /* best-effort */ }
     // Countdown ogni 15s: l'operatore vede che il sistema sta lavorando, non impallato.
     const t0 = Date.now();
     const ticker = setInterval(() => {
@@ -229,7 +259,7 @@ export function LinkedInTest() {
     } else {
       log(`⚠️ Nessun thread trovato. Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "warn");
       if (String(r?.error || "").includes("Timeout")) {
-        log("💡 Probabile causa: la tab LinkedIn non era su /messaging/ e l'estensione ha dovuto aprirne una nuova in background. Riprova: la seconda lettura sarà rapida.", "warn");
+        log("💡 Worker tab probabilmente in cold start. Premi 🚀 Pre-warm per scaldarla, poi riprova: sarà istantanea.", "warn");
       }
     }
   });
@@ -487,6 +517,7 @@ export function LinkedInTest() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex flex-wrap gap-2">
           <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
+          <Button onClick={testPreWarm} disabled={running} size="sm" variant="outline" title="Apre la worker tab persistente su /messaging/. Una volta sola, poi tutte le azioni sono istantanee.">🚀 Pre-warm</Button>
           <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
           <Button onClick={testSyncCookie} disabled={running} size="sm">🍪 Sync Cookie</Button>
           <Button onClick={testAutoLogin} disabled={running} size="sm">🔐 Auto-Login</Button>
