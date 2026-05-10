@@ -60,6 +60,81 @@ export const TMWE_OPS = {
     identity: "system",
     scope: "admin",
   },
+  // ---- Anagrafica clienti ----
+  "anagrafica.list": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_anagrafica_crud",
+    identity: "user",
+    scope: "profile:read",
+  },
+  "anagrafica.byId": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_anagrafica_crud",
+    identity: "user",
+    scope: "profile:read",
+  },
+  "anagrafica.searchByVat": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_anagrafica_crud",
+    identity: "user",
+    scope: "profile:read",
+  },
+  "anagrafica.contacts": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_anagrafica_contacts",
+    identity: "user",
+    scope: "profile:read",
+  },
+  "anagrafica.addresses": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_anagrafica_addresses",
+    identity: "user",
+    scope: "profile:read",
+  },
+  "anagrafica.vies": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_anagrafica_vies",
+    identity: "user",
+    scope: "profile:read",
+  },
+  // ---- Listini ----
+  "listini.list": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_listini",
+    identity: "user",
+    scope: "rate:read",
+  },
+  "listini.assignments": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_listini_assignments",
+    identity: "user",
+    scope: "rate:read",
+  },
+  "listini.prices": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_listini_prices",
+    identity: "user",
+    scope: "rate:read",
+  },
+  "listini.rateLookup": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_listini_rate_lookup",
+    identity: "user",
+    scope: "rate:read",
+  },
+  // ---- Fatturazione ----
+  "invoices.byClient": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_invoices_crud",
+    identity: "user",
+    scope: "profile:read",
+  },
+  "invoices.billableShipments": {
+    method: "GET",
+    path: "/erp/tmwe_json/api_invoice_billable_shipments",
+    identity: "user",
+    scope: "profile:read",
+  },
 } as const satisfies Record<string, TmweOpDef>;
 
 export type TmweOpName = keyof typeof TMWE_OPS;
