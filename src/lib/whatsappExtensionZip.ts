@@ -6,11 +6,11 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// Versione canonica LinkedIn: 3.9.60 (keep-alive service worker MV3 via
-// 3.9.61: diagnostic fast-path su sendMessageWithMethod (gate composer 8s,
-// CDP wrapped con timeout 5s) — i pulsanti diagnostici non restano più 45s.
-// Allineata con catalog.json e con lo zip servito dal pulsante download.
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.61";
+// Versione canonica LinkedIn: 3.9.62 — ripristina fallback HybridOps.sendMessage
+// quando il gate composer diagnostico fallisce sui metodi DOM (physical_click,
+// form_submit, keyboard_shortcut). I metodi CDP restano fail-fast diagnostici.
+// Keep-alive (3.9.60) e worker tab persistente invariati.
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.62";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -150,13 +150,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.61",
+    latestVersion: "3.9.62",
     items: [
+      {
+        version: "3.9.62",
+        filename: "linkedin-extension-3.9.62.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.62.zip",
+        current: true,
+        note: "Ripristina fallback HybridOps.sendMessage quando il gate composer diagnostico fallisce sui metodi DOM. CDP resta fail-fast. Keep-alive e worker invariati.",
+      },
       {
         version: "3.9.61",
         filename: "linkedin-extension-3.9.61.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.61.zip",
-        current: true,
+        current: false,
         note: "Diagnostic fast-path: i pulsanti CDP/Click fisico non restano più appesi 45s. Gate composer ridotti a ~8s e chrome.debugger wrapped con timeout 5s. Pipeline produzione (sendMessage) e keep-alive invariati.",
       },
       {

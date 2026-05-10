@@ -1,115 +1,71 @@
-## Diagnosi
+Diagnosi fatta sui pacchetti LinkedIn:
 
-Dai log l’estensione non dorme più:
+1. Backup trovato
+- Esiste un backup esplicito: `public/chrome-extensions/linkedin/backups/linkedin-messaggio-backup-2-3.9.24.zip`.
+- Quella versione aveva un flusso più semplice e stabile: apriva/riusava il composer e poi chiamava direttamente `HybridOps.sendMessage`.
+- Il punto importante: la scrittura del testo era dentro `HybridOps.sendMessage`, con una cascata robusta `paste → execCommand → Selection API → textContent`.
 
-- `ping` risponde subito con `v3.9.60`
-- worker tab pronta e riusata in `12ms`
-- sessione attiva
-- cookie sync OK
-- auto-login OK
-- ricerca profilo OK
+2. Ultime due versioni confrontate
+- `3.9.60` e `3.9.61` sono identiche su `tab-manager.js` e `background.js`.
+- Quindi keep-alive e worker tab non sono la causa di questo errore.
+- La differenza reale è in `actions.js` e `hybrid-ops.js`.
 
-Il blocco è solo sull’ultimo miglio dell’invio diagnostico:
-
-```text
-Test metodo: CDP click
-Timeout 45s
-```
-
-Nel codice attuale il flusso `sendMessageWithMethod` è diventato troppo lungo prima di arrivare al test CDP: navigazione worker, attese profilo, probe composer, gate fino a 30s, poi CDP. Quindi il pulsante diagnostico “CDP click” non è più un test isolato rapido: attraversa quasi tutta la pipeline pesante e può consumare i 45s della UI.
-
-## Piano di intervento
-
-### 1. Non toccare readInbox e keep-alive
-
-Lascio invariati:
-
-- `readInbox` bounded interno 3.9.59/3.9.60
-- worker tab persistente
-- `chrome.alarms` keep-alive v3.9.60
-- download/catalog/versioning già allineati a `3.9.60`
-
-Il problema ora non è “estensione dormiente”, ma invio diagnostico CDP appeso.
-
-### 2. Separare i test diagnostici dalla pipeline di invio completa
-
-Modifico `sendLinkedInMessageWithMethod` in modo che per i metodi diagnostici non passi più da tutti i gate lunghi.
-
-Nuovo comportamento:
-
-- naviga/usa la worker tab sul destinatario fisso
-- attende solo caricamento breve e deterministico
-- apre il composer se serve con budget breve
-- delega subito a `HybridOps.sendMessageWithMethod`
-- se il composer non si apre, ritorna errore diagnostico leggibile invece di restare appeso
-
-Target: un test click deve fallire in pochi secondi con motivo preciso, non dopo 45s generici.
-
-### 3. Mettere timeout interni reali sui CDP
-
-Nel ramo `HybridOps.sendMessageWithMethod` aggiungo timeout espliciti anche alle chiamate:
-
-- `AXTree.clickSendButtonPhysical(tabId)`
-- `AXTree.pressCtrlEnter(tabId, isMac)`
-- verifica `composerCleared(...)`
-
-Così se Chrome debugger/CDP resta bloccato, la risposta torna come:
+3. Causa precisa del log attuale
+Il log dice:
 
 ```text
-cdp_physical_click_timeout_6000ms
+composer_gate_failed_diagnostic: composer_gate_timeout
+status=complete
+gate={"boxes":0,"clickedMessage":false,"clickedMore":false,"hasMain":true,"shells":0}
 ```
 
-invece di lasciare scadere il timeout esterno da 45s.
+Questo significa:
+- LinkedIn è caricato (`status=complete`, `hasMain=true`).
+- La pagina profilo c'è.
+- Però il gate diagnostico non trova nessun composer (`boxes=0`, `shells=0`).
+- E non riesce nemmeno a cliccare `Messaggia` / `Altro` (`clickedMessage=false`, `clickedMore=false`).
 
-### 4. Ripristinare una via “produzione stabile” separata dal CDP
+Il problema non è CDP: il CDP non parte proprio, perché prima fallisce l'apertura/rilevamento del composer.
 
-Il pulsante principale `Invia LI` deve continuare a usare `sendMessage`, cioè la pipeline stabile single-writer:
+4. Cosa si è rotto tra 3.9.60 e 3.9.61
+In `3.9.60`, quando il gate composer falliva, il codice faceva ancora fallback a:
 
-- una sola scrittura nel composer
-- anti-double-send
-- click DOM fisico ottimistico
-- nessun fallback multiplo che rischia duplicati
+```text
+HybridOps.sendMessage(tab.id, message)
+```
 
-I pulsanti CDP restano solo diagnostici, non diventano la strada principale.
+Quel fallback era la parte “che scriveva davvero”, perché dentro aveva la logica lunga e robusta per trovare il textbox, aprire il composer e scrivere.
 
-### 5. Aggiornare la UI test per non confondere
+In `3.9.61`, quel fallback è stato rimosso per far fallire i test CDP velocemente. Risultato: ora il test è più diagnostico, ma ha perso la via stabile che provava davvero a scrivere.
 
-Nel pannello LinkedIn:
+Piano di ripristino minimo:
 
-- rinomino i pulsanti CDP come diagnostici/fallback, non come strada consigliata
-- mostro nel log la distinzione:
-  - pipeline principale
-  - test click isolato
-  - CDP fallback diagnostico
-- se arriva timeout CDP, suggerisco di provare prima `Invia LI` o `Click fisico`, non di continuare con CDP
+1. Ripristinare la via di scrittura stabile
+- Rimettere in `sendLinkedInMessageWithMethod` il fallback a `HybridOps.sendMessage(tab.id, message)` quando il gate diagnostico fallisce.
+- Farlo solo dopo aver riportato l’errore diagnostico, senza duplicare invii.
+- Questo recupera il comportamento funzionante della 3.9.60/backup.
 
-### 6. Versione nuova e pacchetto reinstallabile
+2. Separare chiaramente test diagnostico e invio reale
+- Il pulsante CDP deve restare diagnostico.
+- Il pulsante di invio reale deve usare la pipeline stabile `sendMessage`.
+- Se CDP non trova il composer, non deve bloccare tutta la capacità di scrivere.
 
-Creo una nuova build:
+3. Rendere `clickMessage` verificabile
+- Oggi `clickMessage` può tornare `success: true` appena clicca un bottone, anche se il composer non si apre.
+- Aggiungo una verifica breve dopo il click: se dopo il click non appare textbox/composer, ritorna errore specifico invece di falso successo.
 
-- manifest `3.9.61`
-- catalog `latestVersion: 3.9.61`
-- `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.61"`
-- zip `public/chrome-extensions/linkedin/linkedin-extension-3.9.61.zip`
-- fallback `public/linkedin-extension.zip` aggiornato
+4. Mantenere invariati i pezzi che ora funzionano
+- Non tocco `background.js` keep-alive.
+- Non tocco `tab-manager.js` worker tab.
+- Non tocco `readInbox` bounded.
+- Non tocco la scrittura robusta dentro `HybridOps.sendMessage`, perché è proprio la parte da preservare.
 
-### 7. Verifiche finali
+5. Nuovo pacchetto
+- Versione nuova `3.9.62`.
+- Catalog e fallback zip aggiornati.
+- Zip verificato: manifest `3.9.62`, fallback coerente, nessuna versione attiva sbagliata.
 
-Prima di chiudere verifico:
-
-- manifest nello zip = `3.9.61`
-- catalog JSON valido
-- fallback zip contiene la stessa versione
-- nessun riferimento required/latest a `3.9.60` come versione attiva
-- `sendMessageWithMethod` non può più restare 45s senza risposta
-- il keep-alive resta presente
-- readInbox resta bounded
-
-## Risultato atteso
-
-Dopo reinstallazione della `3.9.61`:
-
-- l’estensione resta sveglia come ora
-- i test CDP non dormono più 45s: rispondono OK/KO con errore specifico
-- il flusso principale `Invia LI` resta separato e più sicuro
-- capiamo finalmente se il problema reale è composer, bottone Send, CDP debugger o click DOM
+Risultato atteso:
+- Il CDP non resta più appeso.
+- Se il gate CDP non trova il composer, si capisce subito.
+- Ma la possibilità di scrivere/inviare torna tramite la pipeline stabile che era ancora presente in `3.9.60` e derivata dal backup funzionante.
