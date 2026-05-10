@@ -405,6 +405,7 @@ var TabManager = globalThis.TabManager || (function () {
     safeRemove: safeRemove,
     waitForLoad: waitForLoad,
     getLinkedInTab: getLinkedInTab,
+    getLinkedInTabForRead: getLinkedInTabForRead,
     getTabId: getTabId,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
