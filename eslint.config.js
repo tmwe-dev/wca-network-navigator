@@ -141,6 +141,7 @@ export default tseslint.config(
       "src/lib/inbox/sendMessage.ts",
       "src/hooks/useLinkedInMessagingBridge.ts",
       "src/hooks/useWhatsAppExtensionBridge.ts",
+      "src/hooks/useApproveAndDispatch.ts",
       "src/components/test-extensions/**",
       "src/test/**",
       "src/**/*.test.{ts,tsx}",
