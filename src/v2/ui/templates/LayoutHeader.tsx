@@ -21,7 +21,6 @@ import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
 import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { NavMenuPopover } from "./NavMenuPopover";
-import { AutoPageTitle } from "./header/AutoPageTitle";
 import { Menu, Sparkles } from "lucide-react";
 import { ThemePicker, useInitTheme } from "@/v2/ui/theme/ThemePicker";
 
@@ -99,10 +98,8 @@ export function LayoutHeader({
         {/* Header contestuale per la sezione Esplora (auto-nascosto altrove) */}
         <ExploreContextHeader />
 
-        {/* Slot per PageTitleHeader (Cockpit, Inbox, Email, ecc.) — riempito via Portal */}
-        <div id="page-title-slot" className="flex min-w-0 items-center gap-2">
-          <AutoPageTitle />
-        </div>
+        {/* Slot per PageTitleHeader (riempito via Portal dalle pagine che lo montano esplicitamente) */}
+        <div id="page-title-slot" className="flex min-w-0 items-center gap-2" />
 
         {/* Slot dinamico per controlli pagina (campagne, ecc.) — riservato ma compresso */}
         <div id="campaign-header-controls" className="flex min-w-0 items-center gap-2" />
