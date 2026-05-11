@@ -17,6 +17,7 @@ import { runAiClassification, persistClassificationSideEffects } from "./stages/
 import { runEmailProcessManager, runFunnemailDispatcher } from "./stages/stagePostClassification.ts";
 import { runFunnemailScoutAndClassify, runFunnemailAutoRoute, runFunnemailPolicyPipeline } from "./stages/stageFunnemailPipeline.ts";
 import { runContentClassification, refreshConversationContext, runTriageAndAlert } from "./stages/stageContentAndContext.ts";
+import { createTracer } from "../_shared/pipelineTrace.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -77,6 +78,17 @@ Deno.serve(async (req) => {
     const recordStage = makeRecordStage(supabase, message_id, body.user_id ?? null);
     if (channel === "email") void recordStage("received", { channel, from_address });
 
+    // ── Pipeline trace (fail-safe, non blocca mai) ──
+    // trace_id = message_id per correlare deterministicamente tutti gli step su un singolo messaggio.
+    const tracer = createTracer(supabase, {
+      traceId: message_id,
+      entityType: channel === "email" ? "email" : channel === "whatsapp" ? "whatsapp" : "linkedin",
+      entityId: message_id,
+      entityLabel: subject || from_address || null,
+      operatorId: body.user_id ?? null,
+    });
+    void tracer.step("classify_inbound:received", { input: { from_address, subject, channel }, status: "started" });
+
     // ── Idempotency guard ──
     // Il messaggio può essere classificato sia dal trigger DB on_inbound_message
     // sia dal fallback check-inbox/postProcessing. Se esiste già una riga
@@ -126,22 +138,36 @@ Deno.serve(async (req) => {
     }
 
     // ── Stage 1: AI Classification (LLM + side-effects sincroni) ──
+    const t1 = Date.now();
     const { result, model } = await runAiClassification(supabase, body);
+    void tracer.step("classify_inbound:ai", {
+      output: { classification: result.classification, confidence: result.confidence, sentiment: result.sentiment, urgency: result.urgency },
+      aiModel: model, aiScope: "classification", durationMs: Date.now() - t1, status: "success",
+    });
     await persistClassificationSideEffects(supabase, body, result, model);
 
     // ── Stage 2: Post-classification (PM + Funnemail dispatcher) ──
+    const t2 = Date.now();
     const postClassResult = await runEmailProcessManager(supabase, body, result);
     const funnemailResult = await runFunnemailDispatcher(supabase, body, result);
+    void tracer.step("classify_inbound:post_classification", {
+      output: { post_class: !!postClassResult, funnemail_dispatched: !!funnemailResult },
+      durationMs: Date.now() - t2, status: "success",
+    });
 
     // ── Stage 3: Funnemail pipeline (scout → classify → auto-route). Fire-and-forget. ──
+    const t3 = Date.now();
     await runFunnemailScoutAndClassify(supabase, body, result, recordStage);
     await runFunnemailAutoRoute(supabase, body, recordStage);
     await runFunnemailPolicyPipeline(supabase, body, recordStage);
+    void tracer.step("classify_inbound:funnemail_pipeline", { durationMs: Date.now() - t3, status: "success" });
 
     // ── Stage 4: Strato 2 (content) + refresh + triage. Fire-and-forget. ──
+    const t4 = Date.now();
     await runContentClassification(supabase, body);
     await refreshConversationContext(supabase, body);
     await runTriageAndAlert(supabase, body);
+    void tracer.step("classify_inbound:content_and_triage", { durationMs: Date.now() - t4, status: "success" });
 
     endMetrics(metrics, true, 200);
     if (channel === "email") void recordStage("completed", { post_classification: !!postClassResult, funnemail: !!funnemailResult });
