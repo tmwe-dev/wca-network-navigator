@@ -18,9 +18,11 @@ type: reference
 - Nessuna scrittura su `funnemail_actions_log` (tag_only no-op) — corretto
 
 ## Pendenti P0
-- Lotto 3: seed `agent_routing_rules` (0 rows → persona-aware routing inattivo)
 - Backfill mittenti orfani (20 messaggi): richiede creazione automatica email_address_rules o policy "any sender → group fallback"
-- aiInvocationLogger wrapper su 3 edge top-traffic per riattivare telemetria
+
+## Lotto 3 + 4 (chiusi 2026-05-11)
+- **Lotto 3**: 5 regole globali in `agent_routing_rules` (owner jose@tmwe.it, agent_id=NULL): bounce/NDR (p10, archived+skip), unsubscribe (p15, blacklisted+skip), out_of_office (p20, skip), amministrativo priority (p30, bias administrative), fornitori bias (p80). Pickup automatico via `loadRoutingRules` in `classify-email-response`.
+- **Lotto 4**: `_shared/monitoring.ts` esteso con persistenza best-effort su `edge_metrics` (fire-and-forget service-role, mai throw). Riattiva telemetria su tutte le edge già wrappate con `startMetrics/endMetrics/logEdgeError` — nessuna modifica alle edge stesse. Deployate: classify-inbound-message, funnemail-classify, generate-email, agent-execute, classify-email-response.
 
 ## File chiave
 - `supabase/functions/funnemail-backfill-inbound/index.ts`
