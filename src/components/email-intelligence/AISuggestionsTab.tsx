@@ -33,6 +33,7 @@ import { SenderActionsDialog } from "./management/SenderActionsDialog";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { DeepSearchEmailBulkButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailBulkButton";
 import { ClassificationInsightsPanel } from "./ClassificationInsightsPanel";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 interface AddressRow {
   id: string;
@@ -316,7 +317,16 @@ const SuggestionCard = memo(function SuggestionCard({
 
 export default function AISuggestionsTab() {
   const qc = useQueryClient();
-  const [minEmailCount, setMinEmailCount] = useState(3);
+  // SSOT: la soglia "Min. email" vive nei filtri globali (chiave `emailIntelVolume`)
+  // così slider in toolbar e chip nel drawer restano sincronizzati.
+  const g = useGlobalFilters();
+  const minEmailCount = g.filters.emailIntelVolume === "all"
+    ? 1
+    : Math.max(1, parseInt(g.filters.emailIntelVolume, 10) || 1);
+  const setMinEmailCount = useCallback((v: number) => {
+    const safe = Math.max(1, Math.min(20, Math.round(v)));
+    g.setFilter("emailIntelVolume", safe <= 1 ? "all" : String(safe));
+  }, [g]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("uncategorized");
   const [suggestedGroupFilter, setSuggestedGroupFilter] = useState<string>("all");
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
