@@ -3039,6 +3039,89 @@ export type Database = {
           },
         ]
       }
+      bulk_job_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          job_id: string
+          payload: Json
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          job_id: string
+          payload?: Json
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          job_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_job_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error_count: number
+          error_message: string | null
+          id: string
+          payload: Json
+          processed: number
+          scope: string
+          source_view: string | null
+          status: string
+          success_count: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          error_count?: number
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          processed?: number
+          scope: string
+          source_view?: string | null
+          status?: string
+          success_count?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_count?: number
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          processed?: number
+          scope?: string
+          source_view?: string | null
+          status?: string
+          success_count?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_cards: {
         Row: {
           company_name: string | null
