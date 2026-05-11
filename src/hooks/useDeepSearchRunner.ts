@@ -27,8 +27,23 @@ export const DeepSearchContext = createContext<DeepSearchState | null>(null);
 
 export function useDeepSearch(): DeepSearchState {
   const ctx = useContext(DeepSearchContext);
-  if (!ctx) throw new Error("useDeepSearch must be used within DeepSearchProvider");
-  return ctx;
+  if (ctx) return ctx;
+  // Fallback safe (no-op) per evitare crash di pagina quando il Provider
+  // non è ancora montato (es. transizioni di mount/HMR). I metodi di
+  // mutazione mostrano un warning solo in dev.
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.warn("[useDeepSearch] DeepSearchProvider non montato — uso stub no-op");
+  }
+  return {
+    running: false,
+    canvasOpen: false,
+    results: [],
+    current: null,
+    start: () => {},
+    stop: () => {},
+    setCanvasOpen: () => {},
+  };
 }
 
 const STEP_TIMEOUT_MS = 60_000;
