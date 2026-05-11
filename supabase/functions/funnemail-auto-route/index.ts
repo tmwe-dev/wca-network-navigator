@@ -21,6 +21,7 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createTracer } from "../_shared/pipelineTrace.ts";
 
 interface RequestBody {
   message_id: string;
@@ -112,6 +113,16 @@ Deno.serve(async (req) => {
 
     const addr = lc(body.from_address);
     const dom = domainOf(addr);
+
+    // Pipeline trace (fail-safe). trace_id = message_id per correlare con classify-inbound-message.
+    const tracer = createTracer(supabase, {
+      traceId: body.message_id,
+      entityType: "email",
+      entityId: body.message_id,
+      entityLabel: body.subject || body.from_address || null,
+      operatorId: body.user_id,
+    });
+    void tracer.step("auto_route:start", { input: { from_address: addr, domain: dom }, status: "started" });
 
     // S6 — domain guard: carica config (fallback su set built-in se assente).
     let genericDomains: Set<string> = FALLBACK_GENERIC_DOMAINS;

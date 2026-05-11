@@ -100,6 +100,7 @@ const PromptCatalogPage = lazy(() => import("./ui/pages/PromptCatalogPage"));
 const PromptTestsPage = lazy(() => import("./ui/pages/PromptTestsPage"));
 const PromptReaderPage = lazy(() => import("./ui/pages/prompt-lab/PromptReaderPage"));
 const AiInteractionLogPage = lazy(() => import("./ui/pages/AiInteractionLogPage"));
+const PipelineTracesPage = lazy(() => import("./ui/pages/PipelineTracesPage"));
 const RubricaWhatsAppPage = lazy(() => import("./ui/pages/RubricaWhatsAppPage").then((m) => ({ default: m.RubricaWhatsAppPage })));
 const RubricaLinkedInPage = lazy(() => import("./ui/pages/RubricaLinkedInPage").then((m) => ({ default: m.RubricaLinkedInPage })));
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
@@ -328,6 +329,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="prompt-reader" element={<Navigate to="/v2/settings/prompt-reader" replace />} />
           <Route path="settings/prompt-reader" element={guardedPage(PromptReaderPage, "PromptReader")} />
           <Route path="ai-interactions-log" element={guardedPage(AiInteractionLogPage, "AiInteractionLog")} />
+          <Route path="pipeline-traces" element={guardedPage(PipelineTracesPage, "PipelineTraces")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="knowledge-base" element={<Navigate to="/v2/settings/kb" replace />} />
           <Route path="kb-supervisor" element={<Navigate to="/v2/settings/kb" replace />} />

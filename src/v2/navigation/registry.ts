@@ -99,6 +99,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
       { label: "Prompt Reader",        path: "/v2/settings/prompt-reader" },
       { label: "Proposals Review",     path: "/v2/prompt-lab/proposals" },
       { label: "Registro Interazioni AI", path: "/v2/ai-interactions-log" },
+      { label: "Pipeline Traces",      path: "/v2/pipeline-traces" },
       { label: "Suggestions Review",   path: "/v2/prompt-lab/suggestions" },
     ],
   },
