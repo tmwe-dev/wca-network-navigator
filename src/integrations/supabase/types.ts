@@ -9544,6 +9544,66 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_traces: {
+        Row: {
+          ai_model: string | null
+          ai_scope: string | null
+          created_at: string
+          duration_ms: number | null
+          entity_id: string | null
+          entity_label: string | null
+          entity_type: string
+          error_message: string | null
+          id: string
+          input_summary: Json | null
+          operator_id: string | null
+          output_summary: Json | null
+          parent_trace_id: string | null
+          status: string
+          step_name: string
+          step_order: number
+          trace_id: string
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_scope?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          input_summary?: Json | null
+          operator_id?: string | null
+          output_summary?: Json | null
+          parent_trace_id?: string | null
+          status?: string
+          step_name: string
+          step_order?: number
+          trace_id: string
+        }
+        Update: {
+          ai_model?: string | null
+          ai_scope?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          input_summary?: Json | null
+          operator_id?: string | null
+          output_summary?: Json | null
+          parent_trace_id?: string | null
+          status?: string
+          step_name?: string
+          step_order?: number
+          trace_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           ai_config: Json | null
