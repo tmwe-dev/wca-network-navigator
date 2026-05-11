@@ -89,4 +89,11 @@ export const systemKeys = {
     enabled: ["ui-navigation-map", "enabled"] as const,
     byCategory: (category: string) => ["ui-navigation-map", category] as const,
   },
+  systemFlags: {
+    all: ["system-flags"] as const,
+    cronPaused: ["system-flags", "cron_paused"] as const,
+  },
+  cronJobs: {
+    list: ["cron-jobs-list"] as const,
+  },
 } as const;
