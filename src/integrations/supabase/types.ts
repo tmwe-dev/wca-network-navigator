@@ -12649,6 +12649,17 @@ export type Database = {
           schedule: string
         }[]
       }
+      cron_recent_runs: {
+        Args: { p_limit?: number }
+        Returns: {
+          end_time: string
+          jobid: number
+          jobname: string
+          return_message: string
+          start_time: string
+          status: string
+        }[]
+      }
       cron_service_headers: { Args: never; Returns: Json }
       decrypt_wca_password: { Args: { p_encrypted: string }; Returns: string }
       deduct_credits: {
