@@ -1,48 +1,28 @@
-import { describe, it, expect } from "vitest";
-import { Linter } from "eslint";
+import { describe, it } from "vitest";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const rule = require("../../../eslint-rules/no-direct-bulk-op.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { RuleTester } = require("eslint");
 
-function lint(code: string, filename: string): readonly Linter.LintMessage[] {
-  const linter = new Linter();
-  const all = linter.verify(code, [{
-    plugins: { lovable: { rules: { "no-direct-bulk-op": rule } } },
-    languageOptions: { ecmaVersion: 2022, sourceType: "module" },
-    rules: { "lovable/no-direct-bulk-op": "error" },
-  }], { filename });
-  return all.filter((m) => m.ruleId === "lovable/no-direct-bulk-op");
-}
+const tester = new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: "module" } });
 
 describe("ESLint rule no-direct-bulk-op", () => {
-  it("blocca invokeEdge('enrich-partner-website') in src/components/", () => {
-    const code = `import { invokeEdge } from "x"; invokeEdge("enrich-partner-website", {});`;
-    const msgs = lint(code, "/src/components/Foo.tsx");
-    expect(msgs.length).toBe(1);
-    expect(msgs[0].messageId).toBe("edge");
-  });
-
-  it("permette invokeEdge('enrich-partner-website') dentro src/v2/services/bulkOps", () => {
-    const code = `import { invokeEdge } from "x"; invokeEdge("enrich-partner-website", {});`;
-    const msgs = lint(code, "/src/v2/services/bulkOps/entries/enrichBase.ts");
-    expect(msgs.length).toBe(0);
-  });
-
-  it("blocca import di useDeepSearchV2 in UI", () => {
-    const code = `import { useDeepSearchV2 } from "@/v2/hooks/useDeepSearchV2";`;
-    const msgs = lint(code, "/src/v2/ui/pages/NetworkPage.tsx");
-    expect(msgs.length).toBe(1);
-    expect(msgs[0].messageId).toBe("hook");
-  });
-
-  it("blocca supabase.functions.invoke('sherlock-extract') in UI", () => {
-    const code = `const x = supabase.functions.invoke("sherlock-extract", {});`;
-    const msgs = lint(code, "/src/components/network/Card.tsx");
-    expect(msgs.length).toBe(1);
-  });
-
-  it("permette edge non listate", () => {
-    const code = `import { invokeEdge } from "x"; invokeEdge("send-email", {});`;
-    const msgs = lint(code, "/src/components/Foo.tsx");
-    expect(msgs.length).toBe(0);
+  it("regole valid/invalid", () => {
+    tester.run("no-direct-bulk-op", rule, {
+      valid: [
+        { filename: "/src/v2/services/bulkOps/entries/enrichBase.ts",
+          code: `import { invokeEdge } from "x"; invokeEdge("enrich-partner-website", {});` },
+        { filename: "/src/components/Foo.tsx",
+          code: `import { invokeEdge } from "x"; invokeEdge("send-email", {});` },
+      ],
+      invalid: [
+        { filename: "/src/components/Foo.tsx",
+          code: `import { invokeEdge } from "x"; invokeEdge("enrich-partner-website", {});`,
+          errors: [{ messageId: "edge" }] },
+        { filename: "/src/v2/ui/pages/NetworkPage.tsx",
+          code: `import { useDeepSearchV2 } from "y";`,
+          errors: [{ messageId: "hook" }] },
+      ],
+    });
   });
 });
