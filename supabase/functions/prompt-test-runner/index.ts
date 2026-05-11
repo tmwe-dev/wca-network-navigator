@@ -24,6 +24,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sanitizeForPrompt, summarizeFindings } from "../_shared/promptSanitizer.ts";
+import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -309,6 +310,12 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Cron kill-switch: solo quando invocato in cron mode
+    if (cronAuthorized) {
+      const blocked = await cronPausedResponse(admin, "prompt-test-runner");
+      if (blocked) return blocked;
+    }
 
     // Carica test cases (cron: tutti gli attivi entro cap; JWT: filtrati per user_id)
     let testCases: TestCaseRow[];
