@@ -4,15 +4,21 @@
  * Default: pallino colorato. Click → popover con dettagli e shortcut ai pannelli.
  */
 import * as React from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Activity, WifiOff, Wifi, Pause, Play, Bot, Mail, Moon,
+  Activity, WifiOff, Wifi, Pause, Play, Bot, Mail, Moon, Radio, Coins,
 } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
+import { getCronPaused, setCronPaused } from "@/data/systemFlags";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface OutreachQueue {
   pendingCount: number;
@@ -36,9 +42,35 @@ interface Props {
 
 export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): React.ReactElement {
   const isOnline = useOnlineStatus();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: cronPaused = false } = useQuery({
+    queryKey: queryKeys.system.systemFlags.cronPaused,
+    queryFn: getCronPaused,
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+
+  const cronToggle = useMutation({
+    mutationFn: async (next: boolean) => {
+      const { data: u } = await supabase.auth.getUser();
+      await setCronPaused(next, u.user?.id ?? null);
+    },
+    onSuccess: (_d, next) => {
+      qc.invalidateQueries({ queryKey: queryKeys.system.systemFlags.cronPaused });
+      toast({
+        title: next ? "Trasmissioni AI in pausa" : "Trasmissioni AI riprese",
+        description: next
+          ? "Tutti i cron job automatici sono fermi finché non riprendi."
+          : "I cron job riprenderanno alla prossima schedulazione.",
+      });
+    },
+    onError: (e) => toast({ title: "Errore toggle cron", description: String((e as Error).message), variant: "destructive" }),
+  });
 
   // Determina colore globale
-  const hasIssue = !isOnline || outreachQueue.paused || globalSync.nightPause;
+  const hasIssue = !isOnline || outreachQueue.paused || globalSync.nightPause || cronPaused;
   const isBusy = outreachQueue.processing || outreachQueue.pendingCount > 0;
   const dotColor = !isOnline
     ? "bg-destructive"
@@ -50,6 +82,8 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
 
   const summary = !isOnline
     ? "Offline"
+    : cronPaused
+      ? "Cron in pausa"
     : outreachQueue.paused
       ? "Coda in pausa"
       : globalSync.nightPause
