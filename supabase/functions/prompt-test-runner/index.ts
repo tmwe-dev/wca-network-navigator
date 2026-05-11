@@ -258,62 +258,75 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: estraiamo l'utente dal JWT (no rete: solo decode)
+    // ── Auth dual mode: cron-secret OR JWT ──
+    const cronSecret = Deno.env.get("SCHEDULER_CRON_SECRET");
+    const headerSecret = req.headers.get("x-cron-secret");
+    const cronAuthorized = !!cronSecret && headerSecret === cronSecret;
+
     const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ")) {
+    if (!cronAuthorized && !authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "missing_auth" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let body: { test_case_id?: string; prompt_id?: string; trigger_source?: string };
+    let body: { test_case_id?: string; prompt_id?: string; trigger_source?: string; cron_limit?: number };
     try {
-      body = await req.json();
+      body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     } catch {
-      return new Response(JSON.stringify({ error: "invalid_json" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      body = {};
     }
 
-    if (!body.test_case_id && !body.prompt_id) {
+    // Cron mode: nessun parametro richiesto, esegue tutti i test attivi (capped)
+    if (!cronAuthorized && !body.test_case_id && !body.prompt_id) {
       return new Response(JSON.stringify({ error: "missing_test_case_id_or_prompt_id" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Validate user from JWT (read-only, no network)
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await userClient.auth.getUser();
-    const authedUserId = userData?.user?.id ?? null;
-    if (!authedUserId) {
-      return new Response(JSON.stringify({ error: "invalid_jwt" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Get triggered_by_operator_id (best-effort: may be null)
     let triggeredBy: string | null = null;
-    try {
-      const { data } = await userClient.rpc("get_current_operator_id");
-      triggeredBy = (data as string | null) ?? null;
-    } catch (_) { /* ignore */ }
+    let authedUserId: string | null = null;
+
+    if (!cronAuthorized) {
+      // JWT path
+      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData } = await userClient.auth.getUser();
+      authedUserId = userData?.user?.id ?? null;
+      if (!authedUserId) {
+        return new Response(JSON.stringify({ error: "invalid_jwt" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      try {
+        const { data } = await userClient.rpc("get_current_operator_id");
+        triggeredBy = (data as string | null) ?? null;
+      } catch (_) { /* ignore */ }
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Carica test cases
+    // Carica test cases (cron: tutti gli attivi entro cap; JWT: filtrati per user_id)
     let testCases: TestCaseRow[];
-    if (body.test_case_id) {
+    if (cronAuthorized) {
+      const cap = Math.min(Math.max(body.cron_limit ?? 50, 1), 200);
+      const { data } = await admin
+        .from("prompt_test_cases")
+        .select("*")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: true })
+        .limit(cap);
+      testCases = (data as TestCaseRow[] | null) ?? [];
+    } else if (body.test_case_id) {
       const { data } = await admin
         .from("prompt_test_cases")
         .select("*")
         .eq("id", body.test_case_id)
-        .eq("user_id", authedUserId)
+        .eq("user_id", authedUserId!)
         .eq("is_active", true);
       testCases = (data as TestCaseRow[] | null) ?? [];
     } else {
@@ -321,7 +334,7 @@ Deno.serve(async (req) => {
         .from("prompt_test_cases")
         .select("*")
         .eq("prompt_id", body.prompt_id!)
-        .eq("user_id", authedUserId)
+        .eq("user_id", authedUserId!)
         .eq("is_active", true);
       testCases = (data as TestCaseRow[] | null) ?? [];
     }
@@ -344,7 +357,7 @@ Deno.serve(async (req) => {
       {},
     );
 
-    const triggerSource = body.trigger_source ?? "manual";
+    const triggerSource = body.trigger_source ?? (cronAuthorized ? "cron_nightly" : "manual");
     const runs: RunResult[] = [];
     for (const tc of testCases) {
       const prompt = prompts[tc.prompt_id];
