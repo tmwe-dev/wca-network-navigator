@@ -15,6 +15,7 @@ import { Button } from "../atoms/Button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
 import { StatusPill } from "./header/StatusPill";
+import { AutomationsPanel } from "./header/AutomationsPanel";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
 import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
@@ -92,6 +93,8 @@ export function LayoutHeader({
           outreachQueue={outreachQueue}
           globalSync={globalSync}
         />
+
+        <AutomationsPanel />
 
         {/* Header contestuale per la sezione Esplora (auto-nascosto altrove) */}
         <ExploreContextHeader />
