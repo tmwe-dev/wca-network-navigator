@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Mail, Plane, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Mail, Plane, ArrowDownLeft, ArrowUpRight, Clock } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +22,39 @@ const CHANNEL_COLORS: Record<string, string> = {
   whatsapp: "text-emerald-500 bg-emerald-500/10",
   linkedin: "text-muted-foreground bg-muted",
 };
+
+/**
+ * SLA badge per Holding Pattern: classifica l'età dell'ultima attività.
+ * Verde <72h (fresco), giallo 72–168h (sorvegliare), rosso >168h (scaduto).
+ * UI-only — non altera dati né logiche di business.
+ */
+function holdingSlaBadge(latestDate: string | null | undefined) {
+  if (!latestDate) return null;
+  const ts = new Date(latestDate).getTime();
+  if (!Number.isFinite(ts)) return null;
+  const hours = Math.max(0, Math.round((Date.now() - ts) / 36e5));
+  let cls = "text-success border-success/40 bg-success/10";
+  let label = `${hours}h`;
+  if (hours >= 168) {
+    cls = "text-destructive border-destructive/40 bg-destructive/10";
+    label = `${Math.floor(hours / 24)}g · scaduto`;
+  } else if (hours >= 72) {
+    cls = "text-warning border-warning/40 bg-warning/10";
+    label = `${Math.floor(hours / 24)}g`;
+  } else if (hours >= 24) {
+    label = `${Math.floor(hours / 24)}g`;
+  }
+  return (
+    <Badge
+      variant="outline"
+      className={cn("text-[8px] px-1 h-3.5 gap-0.5 shrink-0", cls)}
+      title={`Ultima attività ${hours}h fa`}
+    >
+      <Clock className="w-2.5 h-2.5" />
+      {label}
+    </Badge>
+  );
+}
 
 interface HoldingContactListProps {
   channel: HoldingChannel;
@@ -91,6 +124,7 @@ export function HoldingContactList({
                       {"isImportedContact" in group && (group as unknown as Record<string, unknown>).isImportedContact ? (
                         <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">Imported</Badge>
                       ) : null}
+                      {holdingSlaBadge(group.latestDate)}
                     </div>
                     {"contactName" in group && (group as unknown as Record<string, unknown>).contactName ? (
                       <p className="text-[10px] text-muted-foreground truncate">{String((group as unknown as Record<string, unknown>).contactName)}</p>
