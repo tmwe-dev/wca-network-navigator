@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Linter } from "eslint";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const rule = require("../../../eslint-rules/no-direct-bulk-op.js");
+const rule = require("../../../eslint-rules/no-direct-bulk-op.cjs");
 
 function lint(code: string, filename: string): readonly Linter.LintMessage[] {
   const linter = new Linter();
