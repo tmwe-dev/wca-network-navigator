@@ -11,6 +11,7 @@ import "../_shared/llmFetchInterceptor.ts";
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 const BATCH_SIZE = 5;
 const RATE_LIMIT_MS = 10_000;
@@ -43,6 +44,11 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  {
+    const paused = await cronPausedResponse(supabase, "batch-enrichment-worker");
+    if (paused) return paused;
+  }
 
   const startedAt = Date.now();
   const log = {
