@@ -245,11 +245,13 @@ Deno.serve(async (req) => {
       model,
     };
     if (existing && body.force) {
-      await supabase.from("funnemail_decisions")
+      const { error: updErr } = await supabase.from("funnemail_decisions")
         .update(decisionRow)
         .eq("message_id", body.message_id);
+      if (updErr) console.error("[funnemail-classify] update error", updErr);
     } else {
-      await supabase.from("funnemail_decisions").insert(decisionRow);
+      const { error: insErr } = await supabase.from("funnemail_decisions").insert(decisionRow);
+      if (insErr) console.error("[funnemail-classify] insert error", JSON.stringify(insErr));
     }
 
     endMetrics(metrics, true, 200);
