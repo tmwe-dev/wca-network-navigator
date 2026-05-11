@@ -11,6 +11,7 @@ interface MessageRecord {
   body_text?: string;
   body_html?: string;
   partner_id?: string;
+  direction?: string;
   raw_payload?: Record<string, unknown>;
 }
 
@@ -65,8 +66,11 @@ export async function classifyInboundEmails(
   // l'edge function (es. GUC service_role_key non configurata).
   // Max 10 per sync per non saturare AI.
   try {
+    // FIX 2026-05-11: `direction` è top-level su channel_messages, NON dentro raw_payload.
+    // Tutti i messages sintetizzati da check-inbox sono inbound (saveMessageToDb forza direction="inbound"),
+    // quindi accettiamo qualsiasi messaggio senza direction esplicita = "outbound".
     const toClassify = messages
-      .filter((m) => (m.raw_payload as Record<string, unknown>)?.direction === "inbound")
+      .filter((m) => !m.direction || m.direction === "inbound")
       .slice(0, 10);
 
     if (toClassify.length === 0) return;
