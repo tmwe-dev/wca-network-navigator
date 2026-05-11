@@ -43,11 +43,19 @@ export default function FunnemailTab(): React.ReactElement {
   const qc = useQueryClient();
   const [editing, setEditing] = React.useState<FunnemailGroupRow | null>(null);
 
-  const { data: groups = [], isLoading } = useQuery({
+  const { data: groups = [], isLoading, error: groupsError } = useQuery({
     queryKey: QKEY_GROUPS,
     queryFn: listFunnemailGroups,
     staleTime: 30_000,
+    retry: 1,
   });
+
+  React.useEffect(() => {
+    if (groupsError) {
+      // eslint-disable-next-line no-console
+      console.error("[FunnemailTab] listFunnemailGroups failed", groupsError);
+    }
+  }, [groupsError]);
 
   const { data: actions = [] } = useQuery({
     queryKey: QKEY_ACTIONS,
@@ -97,6 +105,14 @@ export default function FunnemailTab(): React.ReactElement {
               <tbody>
                 {isLoading && (
                   <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">Caricamento…</td></tr>
+                )}
+                {!isLoading && groupsError && (
+                  <tr><td colSpan={4} className="px-3 py-8 text-center text-red-500">
+                    Errore caricamento gruppi: {groupsError instanceof Error ? groupsError.message : "unknown"}
+                  </td></tr>
+                )}
+                {!isLoading && !groupsError && groups.length === 0 && (
+                  <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">Nessun gruppo trovato</td></tr>
                 )}
                 {!isLoading && groups.map((g) => {
                   const acts = g.funnemail_policy?.actions ?? [];
