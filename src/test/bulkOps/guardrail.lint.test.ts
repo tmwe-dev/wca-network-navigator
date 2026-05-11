@@ -5,11 +5,12 @@ const rule = require("../../../eslint-rules/no-direct-bulk-op.cjs");
 
 function lint(code: string, filename: string): readonly Linter.LintMessage[] {
   const linter = new Linter();
-  return linter.verify(code, [{
+  const all = linter.verify(code, [{
     plugins: { lovable: { rules: { "no-direct-bulk-op": rule } } },
     languageOptions: { ecmaVersion: 2022, sourceType: "module" },
     rules: { "lovable/no-direct-bulk-op": "error" },
   }], { filename });
+  return all.filter((m) => m.ruleId === "lovable/no-direct-bulk-op");
 }
 
 describe("ESLint rule no-direct-bulk-op", () => {
