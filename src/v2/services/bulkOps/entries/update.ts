@@ -11,8 +11,8 @@ export const updateOriginEntry: BulkEntry<UpdateOriginItem, { ok: boolean }> = {
   continueOnError: true,
   handler: async (item) => {
     assertCalledFromRunner("update.origin");
-    const mod = (await import("@/data/contacts")) as unknown as Record<string, AnyAsync>;
-    if (!mod.bulkUpdateContactsOrigin) throw new Error("bulkUpdateContactsOrigin not exported");
+    const mod = (await import("@/data/contacts/queries")) as unknown as Record<string, AnyAsync>;
+    if (!mod.bulkUpdateContactsOrigin) throw new Error("bulkUpdateContactsOrigin not exported by @/data/contacts/queries");
     await mod.bulkUpdateContactsOrigin([item.contactId], item.origin);
     return { ok: true };
   },
