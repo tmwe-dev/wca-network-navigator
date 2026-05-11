@@ -11,10 +11,16 @@ Deno.serve(async (req) => {
   try {
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const which = (body.mailbox as string) || "booking";
+    const useSmtpPwd = !!body.use_smtp_pwd;
     const user = which === "booking" ? "booking@tmwe.it" : (Deno.env.get("IMAP_USER") || "luca@tmwe.it");
     const pass = which === "booking"
-      ? (Deno.env.get("IMAP_PASSWORD_BOOKING") || "")
+      ? (useSmtpPwd
+          ? (Deno.env.get("SMTP_PASSWORD_BOOKING") || "")
+          : (Deno.env.get("IMAP_PASSWORD_BOOKING") || ""))
       : (Deno.env.get("IMAP_PASSWORD") || "");
+    const passLen = pass.length;
+    const passHead = pass.slice(0, 2);
+    const passTail = pass.slice(-2);
     const debug = { user, hasPass: !!pass, host: "imaps.aruba.it" };
     if (!pass) return new Response(JSON.stringify({ error: "no_password", debug }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
