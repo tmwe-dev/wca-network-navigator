@@ -24,12 +24,33 @@ export interface CronGuardConfig {
 
 export type CronGuardResult =
   | { skip: false }
-  | { skip: true; reason: "disabled_by_user" | "throttled"; nextInMin?: number };
+  | { skip: true; reason: "disabled_by_user" | "throttled" | "cron_paused"; nextInMin?: number };
 
 export async function cronGuardCheck(
   supabase: SupabaseLike,
   config: CronGuardConfig
 ): Promise<CronGuardResult> {
+  // 0. Global kill-switch (system_flags.cron_paused)
+  try {
+    const { data: pausedRow } = await supabase
+      .from("system_flags")
+      .select("value")
+      .eq("key", "cron_paused")
+      .maybeSingle();
+    const raw = pausedRow?.value;
+    if (raw === true || raw === "true") {
+      console.warn(JSON.stringify({
+        level: "warn",
+        event: "cron_paused_skip",
+        function: config.jobName,
+        timestamp: new Date().toISOString(),
+      }));
+      return { skip: true, reason: "cron_paused" };
+    }
+  } catch {
+    // fail-open
+  }
+
   // 1. Toggle
   try {
     const { data: enabledRow } = await supabase

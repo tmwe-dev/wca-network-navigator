@@ -13,6 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 const BATCH_SIZE = 25;
 const MAX_CONCURRENT = 5;
@@ -51,6 +52,8 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
+    const paused = await cronPausedResponse(supabase, "agent-task-drainer");
+    if (paused) return paused;
     // ─── 1. Stuck detection: reset tasks running >10 min ───
     const stuckCutoff = new Date(Date.now() - STUCK_THRESHOLD_MINUTES * 60_000).toISOString();
     const { data: stuckRows, error: stuckErr } = await supabase

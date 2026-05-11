@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { embedBatch, DEFAULT_EMBEDDING_MODEL } from "../_shared/embeddings.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { swallowedError } from "../_shared/swallowedError.ts";
+import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 interface MemoryRow {
   id: string;
@@ -56,6 +57,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+    const paused = await cronPausedResponse(supabase, "memory-promoter");
+    if (paused) return paused;
 
     const stats = { promoted_l1_to_l2: 0, promoted_l2_candidate: 0, promoted_l2_to_l3: 0, decayed: 0, pruned: 0, embeddings_generated: 0, conflicts_detected: 0, consolidated: 0 };
 

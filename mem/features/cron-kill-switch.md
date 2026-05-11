@@ -8,5 +8,6 @@ type: feature
 - Helper edge: `supabase/functions/_shared/cronGate.ts` → `cronPausedResponse(admin, fn)` ritorna 503 + log strutturato `cron_paused_skip` se flag attiva.
 - DAL: `src/data/systemFlags.ts` (getCronPaused, setCronPaused, listSystemFlags).
 - UI: toggle "Trasmissioni AI" in StatusPill (top bar), refetch ogni 30s, invalida e mostra toast.
-- Adottato in: `prompt-test-runner` (cron mode only). DA RETROFITTARE su: smart-scheduler, cadence-engine, outreach_scheduler_tick, agent_task_drainer_tick, batch_enrichment_worker_tick, kb-promoter, memory-promoter, email-cron-sync, kb_embed_backfill_daily, memory_embed_backfill_daily, ai-backup, ai-learning-feedback.
+- Adottato in: `prompt-test-runner` (cron mode), `smart-scheduler` (cron mode), `cadence-engine`, `agent-task-drainer`, `batch-enrichment-worker`, `kb-promoter`, `memory-promoter`. Via `cronGuardCheck` (cron_paused integrato): `outreach-scheduler`, `email-cron-sync`, `agent-autonomous-cycle`, `agent-autopilot-worker`.
+- NON gated (richiedono JWT utente o backup user-driven): `ai-backup`, `kb-embed-backfill`, `memory-embed-backfill`.
 - Le invocazioni manuali (JWT) NON sono bloccate dal gate: la pausa ferma solo le trasmissioni automatiche.

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -12,6 +13,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+    const paused = await cronPausedResponse(supabase, "kb-promoter");
+    if (paused) return paused;
 
     const stats = { promoted_to_5: 0, promoted_to_7: 0, deactivated: 0 };
 
