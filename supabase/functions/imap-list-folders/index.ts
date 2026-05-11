@@ -1,5 +1,5 @@
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import { getCaCertsForHost } from "../check-inbox/caCerts.ts";
+import { getCaCertsForHost } from "./caCerts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
