@@ -18,9 +18,52 @@ export default function EmailIntelligenceOperationsPage() {
     return counts;
   }, [jobs]);
 
+  // KPI live derivati dai dati già caricati (no extra query, refresh ogni 15s)
+  const kpis = useMemo(() => {
+    const now = Date.now();
+    const oneHourAgo = now - 3600_000;
+    const lastHour = brain.filter((b) => new Date(b.received_at).getTime() >= oneHourAgo);
+    const withDecision = brain.filter((b) => b.decision_action != null);
+    const highConf = brain.filter((b) => (b.decision_confidence ?? 0) >= 0.7);
+    const queueDepth = (stats.received ?? 0) + (stats.classified ?? 0) + (stats.routed ?? 0);
+    return {
+      perHour: lastHour.length,
+      accuracyPct: brain.length ? Math.round((highConf.length / brain.length) * 100) : 0,
+      claimRatePct: brain.length ? Math.round((withDecision.length / brain.length) * 100) : 0,
+      queueDepth,
+    };
+  }, [brain, stats]);
+
   return (
     <div className="flex flex-col gap-4 p-4 overflow-auto">
       <h1 className="text-xl font-semibold">Funnemail Operations</h1>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Card>
+          <CardContent className="py-3">
+            <div className="text-xs text-muted-foreground uppercase">Smistati / ora</div>
+            <div className="text-2xl font-semibold">{kpis.perHour}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3">
+            <div className="text-xs text-muted-foreground uppercase">Accuracy ≥70%</div>
+            <div className="text-2xl font-semibold">{kpis.accuracyPct}%</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3">
+            <div className="text-xs text-muted-foreground uppercase">Claim rate</div>
+            <div className="text-2xl font-semibold">{kpis.claimRatePct}%</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3">
+            <div className="text-xs text-muted-foreground uppercase">Queue depth</div>
+            <div className={`text-2xl font-semibold ${kpis.queueDepth > 50 ? "text-warning" : ""}`}>{kpis.queueDepth}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
         {Object.entries(stats).map(([stage, count]) => (
