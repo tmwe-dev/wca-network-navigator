@@ -1,126 +1,116 @@
+## Obiettivo
 
-# Piano operativo — 4 interventi su email pipeline e prompt governance
+Un solo entry point per ciascuno dei 6 blocchi operativi bulk (enrichment, deep search, download, inbound enrichment, verifiche bulk, update bulk). UI ridotte a "pulsanti che chiamano". Guardrail automatici che bloccano l'uso di funzioni alternative.
 
-Quattro blocchi indipendenti, atomici, ordinati per dipendenza. Ogni blocco è auto-contenuto e reversibile (no big-bang).
+## Architettura target
 
----
+Nuovo modulo `src/v2/services/bulkOps/` come SSOT:
 
-## Blocco 1 — Import prompt avanzati dal docx in `operative_prompts` (con versioning)
+```text
+src/v2/services/bulkOps/
+├── registry.ts          # Mappa scope → entry point unico
+├── types.ts             # BulkJob, BulkResult, BulkScope
+├── runner.ts            # runBulkOp(scope, items, opts) — stato/retry/log centralizzati
+├── jobStore.ts          # Persistenza su bulk_jobs (DB) + realtime
+├── entries/
+│   ├── enrichBase.ts    # → enrich-partner-website / batch-enrichment-worker
+│   ├── deepSearch.ts    # → useSherlock (Scout/Detective/Sherlock)
+│   ├── download.ts      # → process-download-job + bridge
+│   ├── inboundEnrich.ts # → process-inbound-enrichment
+│   ├── verify.ts        # → WA/LI/Email/Dedup verifications
+│   └── update.ts        # → bulk update DAL (origin, lead_status, email rules)
+└── guardrails.ts        # Hook che blocca chiamate dirette in dev
+```
 
-**Cosa**: inserire 2 prompt OBBLIGATORIA come prima ondata, con snapshot in `prompt_versions` (trigger già attivo).
+## Mapping entry point unico (per blocco)
 
-**Prompt importati (Wave 1 di 15)**:
-1. **Funnemail Classifier** — context: `funnemail_classifier`, tags: `[OBBLIGATORIA, classification, inbound]`, priority **100**
-2. **Quality Gate / Verificatore** — context: `email-quality`, tags: `[OBBLIGATORIA, quality-gate, output-format]`, priority **100**
-
-**Formato**: template "Professore" (Identità / Obiettivo / Metodo / Guardrail / Output JSON) — vedi `docs/prompt-standard.md`.
-
-**Output Quality Gate**: `verdict: "pass" | "pass_with_edits" | "block"`, `edited_text`, `warnings[]`, `quality_score`, `reasoning_summary` — coerente con contratto di `journalistReviewLayer.ts` e `reviewMessage.ts`.
-
-**Output Funnemail Classifier**: `intent`, `category`, `domain`, `urgency`, `sentiment`, `channel_suggested`, `next_action`, `confidence` — coerente con `classify-inbound-message`.
-
-**Migrazione**:
-- `INSERT` in `operative_prompts` con `user_id` = NULL (globali) o per ciascun owner attivo (decisione: globali + override per-utente possibile in seguito).
-- Nessun deprecato di prompt esistenti in questa wave (solo additivo). Eventuali duplicati funzionali verranno soft-deprecati in Wave 2 dopo verifica eval.
-- Trigger DB esistente crea automaticamente lo snapshot in `prompt_versions`.
-
-**Test regressione**: aggiunti 2 `prompt_test_cases` (uno per Quality Gate "block" su email con superlativi vuoti, uno per Funnemail Classifier su quote_request) — eseguibili via `prompt-test-runner`.
-
-**Wave 2 (NON in questo piano, solo annotata)**: gli altri 13 prompt della doctrine — da inserire dopo che Wave 1 ha girato 48h con metriche stabili.
-
----
-
-## Blocco 2 — Riparazione pipeline inbound (cablaggio policy executor)
-
-**Diagnosi attuale**:
-- `classify-inbound-message` chiama già `funnemail-scout-sender` → `funnemail-classify` → `funnemail-auto-route` (Stage 3).
-- **Manca**: `funnemail-auto-route` → `funnemail-policy-engine` → `funnemail-policy-executor`. Oggi l'auto-route produce decisioni ma le azioni non vengono eseguite idempotentemente.
-- `check-inbox/postProcessing.ts:64` filtra ancora `raw_payload.direction === "inbound"` (campo top-level) → bypass legacy.
-
-**Fix**:
-1. **Cablaggio policy** in `classify-inbound-message`: dopo `runFunnemailAutoRoute`, aggiungere `runFunnemailPolicyPipeline(supabase, body, result, recordStage)` che:
-   - chiama `funnemail-policy-engine` (resolve policy + plan azioni)
-   - per ogni azione del piano chiama `funnemail-policy-executor` con `idempotency_key` = `${message_id}:${action_type}`
-   - log stage = `policy_applied` su `email_processing_jobs`
-   - fail-soft: errori loggati ma non bloccanti
-2. **Fix filtro `postProcessing.ts:64`**: cambiare `raw_payload.direction` → `direction` (top-level). Una sola riga, alto impatto.
-3. **Telemetria**: garantire che ogni stage scriva su `email_processing_jobs` (received → scouted → classified → routed → policy_applied → completed). Già parzialmente coperto, completare gli stage mancanti.
-
-**Hard guard**: nessuna azione `draft_reply` o `autoresponder` viene davvero eseguita dal policy executor (resta delega a generate-email/funnemail-send-autoresponder che hanno journalistReview o eccezione template-only). Comportamento esistente preservato.
-
-**Verifica**: query post-deploy — `SELECT stage, count(*) FROM email_processing_jobs WHERE created_at > now() - interval '1 day' GROUP BY 1` per confermare che ≥80% raggiunga `completed`/`policy_applied`.
-
----
-
-## Blocco 3 — Handler mancanti in `postClassificationPipeline`
-
-**Diagnosi**: 16 categorie commerciali enumerate in `ClassificationCategory` ma non gestite dallo `switch` di routing commerciale (linee 181–278). Oggi cadono nel default → nessuna azione.
-
-**Categorie senza handler**: `quote_request`, `booking_request`, `rate_inquiry`, `shipment_tracking`, `cargo_status`, `documentation_request`, `invoice_query`, `payment_request`, `payment_confirmation`, `credit_note`, `account_statement`, `service_inquiry`, `technical_issue`, `feedback`, `newsletter`, `system_notification`.
-
-**Strategia**: NON creare 16 handler dedicati (rischio bloat). Raggruppare in **5 handler tematici**, ognuno crea una `ai_pending_action` con `action_type` e `requires_approval` corretti:
-
-| Handler | Categorie | action_type pending |
+| Blocco | Entry point UNICO | Da dismettere / rendere interno |
 |---|---|---|
-| `handleQuoteOrBooking` | quote_request, booking_request, rate_inquiry | `prepare_quote` (requires_approval: true) |
-| `handleShipmentOps` | shipment_tracking, cargo_status, documentation_request | `lookup_shipment` (requires_approval: false, esegue subito) |
-| `handleFinancialQuery` | invoice_query, payment_request, payment_confirmation, credit_note, account_statement | `financial_review` (requires_approval: true, escalation a admin) |
-| `handleServiceOrSupport` | service_inquiry, technical_issue, feedback | delega a `handleQuestion` esistente con tag `service` |
-| `handleNoise` | newsletter, system_notification | log + skip (no action, marker per learning loop) |
+| 1. Arricchimento base | `bulkOps.run("enrich.base", ...)` → wrap di `useBaseEnrichment` | chiamate dirette a `enrich-partner-website` da UI; pulsanti propri in OraclePanel/NetworkPage/Cockpit |
+| 2. Deep Search | `bulkOps.run("deepsearch.sherlock", ...)` → `useSherlock` (3 livelli) | `useDeepSearchV2` e `useDeepSearchRunner` resi **interni** a `bulkOps.entries`; `useDeepSearchLocal` mantenuto solo come back-end batch enrichment (già da memoria), non più chiamabile da UI |
+| 3. Download | `bulkOps.run("download.partner", ...)` → `process-download-job` + bridge | invocazioni dirette a `scrape-website` / bridge da componenti |
+| 4. Inbound enrichment | `bulkOps.run("enrich.inbound", ...)` → `process-inbound-enrichment` | chiamate ad-hoc da Funnemail UI |
+| 5. Verifiche bulk | `bulkOps.run("verify.{wa\|li\|email\|dedup}", ...)` | `useBulkLinkedInDispatch`, `useLinkedInLookup`, `useLinkedInFlow` resi interni; UI usa solo `bulkOps` |
+| 6. Update bulk | `bulkOps.run("update.{origin\|leadStatus\|emailRules\|backfill\|analyzeAi\|dispatch}", ...)` | DAL functions (`bulkUpdateContactsOrigin`, `applyLeadStatusChange`, `bulkUpdateAutoAction`, `bulkSetBlocked`, `backfillForAddress/Group`, `suggest-email-groups`) restano ma **uso diretto vietato dalla UI**: passare via `bulkOps` |
 
-**Implementazione**:
-- Nuovo file `_shared/commercialCategoryHandlers.ts` (LOC budget <200) con i 5 handler.
-- Switch in `postClassificationPipeline.ts` esteso: aggiunte 16 nuove `case` che chiamano i 5 handler.
-- Nessuna chiamata diretta ad AI: tutti gli handler creano solo `ai_pending_actions` (azione differita), il draft eventuale resta delegato a generate-email passando per journalistReview (vedi Blocco 4).
+> Le funzioni "interne" non vengono cancellate: vengono spostate sotto `bulkOps/entries/` o marcate `@internal` con barrel export che non le ri-esporta. Nessun refactor opportunistico al loro interno.
 
-**Sicurezza**: nessun handler invia messaggi diretti. Tutte le azioni che producono outbound passano da `ai_pending_actions` → `pending-action-executor` → orchestratori che già hanno journalistReview.
+## Runner centralizzato
 
----
+`runBulkOp(scope, items, opts)` fa:
 
-## Blocco 4 — Chiusura bypass `journalistReview` su `generateReplyDraft`
+1. **Validate**: `scope` deve esistere nel `registry`.
+2. **Persist**: crea record in nuova tabella `bulk_jobs` (status, scope, total, processed, errors, created_by, source_view).
+3. **Execute**: delega all'entry interna; `Promise.allSettled` con concurrency cap; `withRetry` (già in `src/v2/bridge/retry.ts`) per errori transienti.
+4. **Log**: `structuredLogger` + eventi su `bulk_job_events` (append-only).
+5. **Realtime**: hook `useBulkJob(jobId)` per progress UI (riusa pattern di `useDownloadJobs`).
 
-**Diagnosi**: 4 callsite di `generateReplyDraft` in `_shared/`:
-- `emailRouter.ts:127` (handleInterested)
-- `emailRouter.ts:276` (handleFollowUp / send_graceful_close)
-- `questionAndComplaintHandler.ts:76` (reply_to_question)
-- `questionAndComplaintHandler.ts:150` (handle_complaint)
+## Guardrail
 
-`generateReplyDraft` chiama `aiChat` direttamente e scrive `draft_subject`/`draft_body` in `ai_pending_actions.action_payload` **senza passare da `journalistReview`**. Quando l'operatore approva, il draft va in send-* dove journalistReview gira come gate finale (già OK), ma **l'operatore vede già un draft non revisionato**, rischiando approvazione di contenuto di bassa qualità.
+**A. Routing registry** (`registry.ts`): unica fonte di verità `scope → handler`. Nessun handler raggiungibile fuori dal registry.
 
-**Fix minimale, locale, reversibile**:
-1. In `generateReplyDraft` (un solo punto), dopo che l'AI produce `draft_body`, chiamare `journalistReview({ draft: draft_body, channel: "email", partnerId, contactId, mode: "review_and_correct" })`:
-   - `verdict === "block"` → NON salvare il draft, scrivere in `action_payload.draft_blocked = true` + `block_reason`. L'operatore vedrà la pending action con badge "draft bloccato dal Quality Gate" e potrà comporre manualmente.
-   - `verdict === "pass_with_edits"` → salvare `edited_text` invece dell'originale, marker `draft_reviewed_at`.
-   - `verdict === "pass"` → salvare originale, marker `draft_reviewed_at`.
-   - errore LLM → fail-open (salva originale + warning, parità con pattern esistente in `send-email`).
-2. Aggiungere flag `journalist_reviewed: true` nel payload così send-email NON ri-revisiona (anti doppia review, già pattern coperto in memoria).
-3. Test regressione: estendere `src/test/journalist-pipeline-coverage.test.ts` con 1 caso che verifica che `generateReplyDraft` invochi `journalistReview` e gestisca i 3 verdict.
+**B. ESLint rule** `no-direct-bulk-op`: vieta import di:
+- `enrich-partner-website`, `batch-enrichment-worker`, `process-download-job`, `process-inbound-enrichment`, `suggest-email-groups`, `backfill-email-rules` da file `src/**/ui/**` e `src/components/**`
+- hook `useDeepSearchV2`, `useDeepSearchRunner`, `useDeepSearchLocal`, `useBulkLinkedInDispatch` fuori da `src/v2/services/bulkOps/`
+- DAL bulk functions fuori da `src/v2/services/bulkOps/` e `src/data/`
 
-**Niente refactor opportunistici**: la firma pubblica di `generateReplyDraft` resta identica, solo aggiunta interna del gate. Tutti i 4 caller continuano a funzionare invariati.
+Modello: replicare pattern di `eslint-rules/no-direct-ai-invoke.js`.
 
----
+**C. Runtime guard (DEV only)**: `assertCalledFromBulkOps()` invocato dentro le entry interne; lancia errore in `import.meta.env.DEV` se lo stack non contiene `bulkOps/runner`.
 
-## Ordine di rollout
+**D. CI script**: `scripts/audit-bulk-ops.ts` (modello `audit-ai-invocations.ts`) → fail se trova caller proibiti.
 
-1. **Blocco 1** (prompt + test) — additivo, zero rischio.
-2. **Blocco 4** (gate su generateReplyDraft) — usa Quality Gate appena importato.
-3. **Blocco 3** (handler 16 categorie) — popola pending actions, alcune produrranno draft via Blocco 4.
-4. **Blocco 2** (cablaggio policy executor + fix filtro) — abilita la pipeline a girare sulla maggioranza delle inbound.
+## Migrazione UI (chirurgica, no logica nuova)
 
-Ogni blocco ha changelog separato in `mem/reference/` e può essere rollback-ato indipendentemente (Blocco 1 = soft-deprecate; Blocco 2 = revert cablaggio; Blocco 3 = revert switch case; Blocco 4 = revert wrapper).
+Aggiornare i call-site mappati nella ricognizione precedente, sostituendo l'invocazione attuale con `bulkOps.run(scope, items)`:
 
-## Out of scope (esplicito)
+- `OraclePanel`, `NetworkPage`, `CockpitPage`, `Settings/Enrichment` → `enrich.base` / `deepsearch.sherlock`
+- `LiveOperationCards`, `JobMonitor`, `AcquisizionePartnerPage` → `download.partner`
+- `Funnemail`, `EmailIntelligence` → `enrich.inbound`, `update.emailRules`, `update.analyzeAi`, `update.backfill`
+- `ContactsPage`, `Missions`, `HoldingPattern` → `verify.*`, `update.origin`, `update.leadStatus`, `verify.wa`, `verify.li`
+- `EmailComposer/Canvas`, `SherlockLauncherDialog`, `HeaderToolsMenu` → `deepsearch.sherlock`
+- `ImportWizard` → `verify.dedup`
 
-- Wave 2 dei 13 prompt restanti (Anima del messaggio, Customer story, ecc.) — fase successiva.
-- Riarchitettura `check-inbox` per usare `invokeAi` charter (debito noto, non in questo piano).
-- Consolidamento `email_classifications` legacy → `ai_interaction_log`.
-- Dashboard metriche pipeline inbound.
+Nessun cambiamento di stile/markup. Solo handler dei pulsanti.
 
-## Dettagli tecnici
+## DB
 
-- **DB**: nessuna nuova tabella. Migrazioni solo `INSERT` in `operative_prompts` + `prompt_test_cases`.
-- **Edge functions modificate**: `classify-inbound-message`, `_shared/postClassificationPipeline.ts`, `_shared/classificationRules.ts`, `check-inbox/postProcessing.ts`.
-- **Edge functions nuove**: nessuna (`funnemail-policy-engine`/`-executor` già esistono).
-- **Nuovi file**: `_shared/commercialCategoryHandlers.ts`, `_shared/funnemailPolicyPipeline.ts`.
-- **Test**: 2 nuovi `prompt_test_cases` + 1 nuovo test in `journalist-pipeline-coverage.test.ts`.
-- **Sicurezza**: nessun cambiamento RLS, nessun bypass JWT, idempotency_key su tutte le azioni policy.
+Nuova migrazione:
+- `bulk_jobs` (id, scope, source_view, total, processed, success_count, error_count, status, created_by, created_at, completed_at, payload jsonb)
+- `bulk_job_events` (id, job_id, event_type, payload jsonb, created_at) — append-only
+- RLS: owner-only + admin via `has_role`
+- Realtime publication su entrambe
+
+## Test di regressione
+
+`src/test/bulkOps/`:
+1. `registry.test.ts` — ogni scope ha esattamente un handler.
+2. `runner.test.ts` — persistenza job, retry, eventi.
+3. `enrich-base.entry.test.ts` — chiama l'edge attesa, non altre.
+4. `deepsearch.entry.test.ts` — risolve a `useSherlock`, non a V2/Runner/Local.
+5. `download.entry.test.ts`
+6. `inbound-enrich.entry.test.ts`
+7. `verify.entry.test.ts` (4 sotto-scope)
+8. `update.entry.test.ts` (6 sotto-scope)
+9. `guardrail.lint.test.ts` — esegue ESLint rule su fixture proibite/permesse.
+10. `guardrail.audit.test.ts` — esegue `scripts/audit-bulk-ops.ts` su snapshot src/.
+
+E2E (Playwright) di smoke:
+- `e2e/bulk-ops-routing.spec.ts` — clicca un pulsante per scope e verifica che nasca un record `bulk_jobs` con `scope` corretto.
+
+## Cosa NON tocco (per principio madre)
+
+- Logica interna di `enrich-partner-website`, `process-download-job`, `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria vincolante).
+- Sherlock engine interno.
+- `journalistReview` e gate editoriale.
+- Soft-delete trigger.
+- Tutti i prompt operativi e Funnemail pipeline (lavoro precedente preservato).
+
+## Output atteso
+
+- 1 modulo `bulkOps` + registry.
+- 2 tabelle nuove (`bulk_jobs`, `bulk_job_events`) + RLS + realtime.
+- 1 ESLint rule + 1 audit script wired in CI.
+- ~25 call-site UI aggiornati a chiamare solo `bulkOps.run(...)`.
+- ~10 file di test verdi.
+- 1 memoria nuova: `mem://architecture/bulk-ops-single-entry-point`.
