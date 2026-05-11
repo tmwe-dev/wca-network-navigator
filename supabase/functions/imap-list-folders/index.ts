@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
     const passTail = pass.slice(-2);
     const debug = { user, hasPass: !!pass, passLen, passHead, passTail, secretUsed: which === "booking" ? (useSmtpPwd ? "SMTP_PASSWORD_BOOKING" : "IMAP_PASSWORD_BOOKING") : "IMAP_PASSWORD", host: "imaps.aruba.it" };
     if (!pass) return new Response(JSON.stringify({ error: "no_password", debug }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    (globalThis as any).__lastDebug = debug;
 
     const client = new ImapClient({
       host: debug.host,
