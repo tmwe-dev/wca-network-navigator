@@ -15,7 +15,7 @@ import { resolveCaller, assertMessageOwned } from "../_shared/ownership.ts";
 import { makeRecordStage, type RequestBody } from "./stages/types.ts";
 import { runAiClassification, persistClassificationSideEffects } from "./stages/stageClassifyAi.ts";
 import { runEmailProcessManager, runFunnemailDispatcher } from "./stages/stagePostClassification.ts";
-import { runFunnemailScoutAndClassify, runFunnemailAutoRoute } from "./stages/stageFunnemailPipeline.ts";
+import { runFunnemailScoutAndClassify, runFunnemailAutoRoute, runFunnemailPolicyPipeline } from "./stages/stageFunnemailPipeline.ts";
 import { runContentClassification, refreshConversationContext, runTriageAndAlert } from "./stages/stageContentAndContext.ts";
 
 Deno.serve(async (req) => {
@@ -136,6 +136,7 @@ Deno.serve(async (req) => {
     // ── Stage 3: Funnemail pipeline (scout → classify → auto-route). Fire-and-forget. ──
     await runFunnemailScoutAndClassify(supabase, body, result, recordStage);
     await runFunnemailAutoRoute(supabase, body, recordStage);
+    await runFunnemailPolicyPipeline(supabase, body, recordStage);
 
     // ── Stage 4: Strato 2 (content) + refresh + triage. Fire-and-forget. ──
     await runContentClassification(supabase, body);

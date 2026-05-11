@@ -82,3 +82,48 @@ export async function runFunnemailAutoRoute(
     void recordStage("routed");
   } catch (_e) { /* fail-safe */ }
 }
+
+/**
+ * Blocco 2 — cablaggio policy engine + executor dopo l'auto-route.
+ * Risolve la policy effettiva per il mittente, costruisce il piano di azioni
+ * e le esegue idempotentemente. Fail-safe: errori loggati ma non bloccanti.
+ */
+export async function runFunnemailPolicyPipeline(
+  supabase: Sb,
+  body: RequestBody,
+  recordStage: RecordStage,
+): Promise<void> {
+  if (body.channel !== "email" || !body.user_id || !body.message_id) return;
+  try {
+    const { data: planData } = await supabase.functions.invoke("funnemail-policy-engine", {
+      headers: internalHeaders(),
+      body: {
+        message_id: body.message_id,
+        from_address: body.from_address,
+        user_id: body.user_id,
+      },
+    });
+    const plan = (planData as { actions?: Array<{ action_type: string; payload?: Record<string, unknown> }> } | null)?.actions ?? [];
+    if (plan.length === 0) {
+      void recordStage("policy_applied", { actions: 0 });
+      return;
+    }
+    let executed = 0;
+    for (const action of plan) {
+      try {
+        await supabase.functions.invoke("funnemail-policy-executor", {
+          headers: internalHeaders(),
+          body: {
+            message_id: body.message_id,
+            user_id: body.user_id,
+            action_type: action.action_type,
+            payload: action.payload ?? {},
+            idempotency_key: `${body.message_id}:${action.action_type}`,
+          },
+        });
+        executed += 1;
+      } catch (_ae) { /* fail-safe per singola action */ }
+    }
+    void recordStage("policy_applied", { actions: plan.length, executed });
+  } catch (_e) { /* fail-safe globale */ }
+}
