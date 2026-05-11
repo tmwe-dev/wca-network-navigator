@@ -11,14 +11,29 @@ Portare Funnemail + governance prompt + smistamento job da 5.5/10 a 10/10, in 5 
 ---
 
 ## Sprint 1 — Pulizia prompt (2 → 9/10)
-**Obiettivo:** 1 sola versione canonica per ogni `(name, context)`.
+**Diagnosi reale (verificata 11/05):** non ci sono duplicati esatti `(user_id, name, context)`. Il problema sono **nomi diversi attivi sullo stesso scope** per lo stesso utente — comportamento non deterministico.
 
-1. Script `scripts/dedup-operative-prompts.ts`: per ogni `(user_id, name, context)` mantiene la riga con `priority` più alta + `updated_at` più recente; le altre → `is_active=false` + tag `deprecated_2026_05_11`.
-2. Caso speciale `funnemail_classifier`: scelta manuale della versione vincente (2925 char) → unica `is_active=true`, le altre archiviate.
-3. Fix del seed che continua a creare duplicati: aggiungere check `findOperativePromptByNameContext` prima dell'insert + UNIQUE INDEX parziale `(user_id, name, context) WHERE is_active`.
-4. Test: `prompt_test_runner` su 5 prompt critici (Funnemail Classifier, Reply Writer, Quality Gate, Content Intelligence, Inbound System) → tutti verdi.
+### 1.1 ✅ FATTO — `funnemail_classifier` deduplicato
+Tutti i 6 utenti hanno ora **1 sola versione attiva**: "Funnemail Classifier v1". Le 2 varianti ("Funnemail Classifier", "Funnemail classifier — capire prima di agire") sono state marcate `is_active=false` + tag `deprecated_2026_05_11`. Reversibile.
 
-**Definition of Done:** `SELECT name, context, count(*) FROM operative_prompts WHERE is_active GROUP BY 1,2 HAVING count(*)>1` ritorna 0 righe.
+### 1.2 Collisioni residue da risolvere (per scope, atomicamente)
+- `classification` (3-4 nomi/utente): `Email Groups Classifier` + `Group-Aware Classification` + `Inbound Message System` + `Inbound Triage TMWE` → decidere ruolo di ciascuno o scegliere uno canonico.
+- `email-quality` (4 nomi/utente): `Quality Gate / Verificatore v1` + `Quality gate — giudice severo` + `No AI smell` + `Scrittore commerciale` → questi possono essere **layer compositivi legittimi** (gate + style + naturalezza). Da confermare con utente prima di toccare.
+- `outreach` (3-4 nomi/utente): mix `Recipient psychology` + `Customer story intelligence` + `Anti-Ripetizione` + `Wake-Up Composer` → idem, possibili layer.
+- `email`: `Email outbound` vs `Reply writer` vs `Email Single A→Z` → vere alternative concorrenti.
+- `command`, `general`, `content-intelligence`: collisioni minori.
+
+**Decisione richiesta:** per ogni scope, l'utente conferma se i prompt sono *layer compositivi* (tutti caricati e concatenati) o *alternativi* (uno solo deve vincere). Senza questa risposta non posso deduplicare in sicurezza.
+
+### 1.3 Guard anti-regressione (dopo 1.2)
+- Trigger DB `prevent_active_name_collision` su `operative_prompts` che blocca un INSERT/UPDATE che porterebbe lo stesso `(user_id, context, name)` ad avere >1 riga `is_active=true`.
+- Per scope dichiarati "single-winner" (es. `funnemail_classifier`): UNIQUE INDEX parziale `(user_id, context) WHERE is_active AND context = ANY(single_winner_scopes)`.
+
+### 1.4 Test regressione
+- 5 prompt_test_cases minimi su Funnemail Classifier v1 (input email amministrativa → expected category=admin; input commerciale → expected=lead, ecc.).
+- Eseguiti via edge `prompt-test-runner`. Failure blocca CI.
+
+**Definition of Done:** ogni scope ha policy esplicita (single-winner vs layer); per i single-winner, query `count distinct names per (user_id, context) where is_active` ritorna 1; trigger guard attivo; ≥5 test_cases verdi.
 
 ---
 
