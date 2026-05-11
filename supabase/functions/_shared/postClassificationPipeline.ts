@@ -18,6 +18,14 @@ import { handleInterested, handleNotInterested, handleFollowUp, type RouterInput
 import { handleBounce, handleUnsubscribe, type BounceHandlerInput } from "./bounceAndUnsubscribeHandler.ts";
 import { handleQuestion, handleComplaint, handleOutOfOffice, type QuestionComplaintInput } from "./questionAndComplaintHandler.ts";
 import {
+  handleQuoteOrBooking,
+  handleShipmentOps,
+  handleFinancialQuery,
+  handleServiceOrSupport,
+  handleNoise,
+  type CommercialHandlerInput,
+} from "./commercialCategoryHandlers.ts";
+import {
   handleOperativeRequest,
   handleAdministrativeRequest,
   handleSupportRequest,
@@ -270,6 +278,47 @@ export async function runPostClassificationPipeline(
         case "follow_up":
           await handleFollowUp(supabase, routerInput, result);
           break;
+
+        case "quote_request":
+        case "booking_request":
+        case "rate_inquiry": {
+          const ch: CommercialHandlerInput = { ...routerInput, contactId: enrichedInput.contactId };
+          await handleQuoteOrBooking(supabase, ch, result);
+          break;
+        }
+
+        case "shipment_tracking":
+        case "cargo_status":
+        case "documentation_request": {
+          const ch: CommercialHandlerInput = { ...routerInput, contactId: enrichedInput.contactId };
+          await handleShipmentOps(supabase, ch, result);
+          break;
+        }
+
+        case "invoice_query":
+        case "payment_request":
+        case "payment_confirmation":
+        case "credit_note":
+        case "account_statement": {
+          const ch: CommercialHandlerInput = { ...routerInput, contactId: enrichedInput.contactId };
+          await handleFinancialQuery(supabase, ch, result);
+          break;
+        }
+
+        case "service_inquiry":
+        case "technical_issue":
+        case "feedback": {
+          const ch: CommercialHandlerInput = { ...routerInput, contactId: enrichedInput.contactId };
+          await handleServiceOrSupport(supabase, ch, result);
+          break;
+        }
+
+        case "newsletter":
+        case "system_notification": {
+          const ch: CommercialHandlerInput = { ...routerInput, contactId: enrichedInput.contactId };
+          await handleNoise(supabase, ch, result);
+          break;
+        }
 
         case "spam":
         case "uncategorized":
