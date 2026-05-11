@@ -20,12 +20,11 @@ Tutti i 6 utenti hanno ora **1 sola versione attiva**: "Funnemail Classifier v1"
 Analisi del contenuto dei prompt su `classification`, `email`, `email-quality`, `outreach`: confermati come **layer compositivi legittimi** (ogni prompt copre un ruolo distinto: classifier vs router vs triage vs system base; outbound vs reply vs style; ecc.). **Nessun ulteriore intervento richiesto.**
 
 ### 1.3 Guard anti-regressione (dopo 1.2)
-- UNIQUE INDEX parziale su `operative_prompts(user_id, context, name) WHERE is_active = true` → blocca veri duplicati esatti.
-- Tabella `operative_prompts_scope_policy(context, mode = 'single-winner'|'layered')` + trigger che blocca >1 nome attivo per scope `single-winner` (oggi solo `funnemail_classifier`).
+- ✅ FATTO — UNIQUE INDEX parziale `operative_prompts_active_unique_idx (user_id, context, name) WHERE is_active = true` attivo. I prossimi seed che provassero a re-inserire un duplicato esatto fallirebbero con violazione di vincolo.
+- ⏳ Tabella `operative_prompts_scope_policy(context, mode)` + trigger single-winner: rinviato (non serve subito, oggi `funnemail_classifier` è già pulito).
 
 ### 1.4 Test regressione
-- 5 prompt_test_cases minimi su Funnemail Classifier v1 (input email amministrativa → expected category=admin; input commerciale → expected=lead, ecc.).
-- Eseguiti via edge `prompt-test-runner`. Failure blocca CI.
+- `prompt_test_cases` ha già 17 righe (audit aggiornato). Verificare copertura su Funnemail Classifier v1 nei prossimi sprint.
 
 **Definition of Done:** scope policy esplicita in DB; trigger guard attivo; ≥5 test_cases verdi.
 
@@ -36,9 +35,9 @@ Analisi del contenuto dei prompt su `classification`, `email`, `email-quality`, 
 
 1. ✅ FATTO — `Amministrativo` + `FORNITORI` abilitati con policy `{tag_only, crm_update}`, min_confidence 0.6, pilot=true, no draft_reply, no autoresponder. Reversibile.
 2. ✅ Già live — `classify-inbound-message` chiama `dispatchFunnemail` post-classificazione → ogni nuovo inbound dei 2 gruppi pilota attiverà Funnemail in tempo reale.
-3. ⏳ Backfill ultimi 7gg inbound (52 messaggi) per popolare `ai_classification_suggestion` → necessita edge function `funnemail-backfill` (nuovo).
-4. ⏳ Verifica a 48h: query `funnemail_actions_log` + `funnemail_decisions` per i 2 gruppi → se ≥80% inbound coperti e 0 errori, allargare a 3 gruppi commerciali.
-5. ⏳ Cron `funnemail-policy-engine` per re-processare messaggi falliti (DLQ).
+3. ⏳ Backfill 7gg storico (52 inbound) — fare DOPO la finestra di osservazione 48h.
+4. ⏳ Verifica a 48h: `funnemail_actions_log` + `funnemail_decisions` ≥80% sui gruppi pilota → poi allargare.
+5. ⏳ Cron retry per messaggi falliti — dipende da volume DLQ osservato.
 
 **Definition of Done:** ≥80% degli inbound nei gruppi pilota ha `funnemail_decisions` + `funnemail_actions_log` entro 48h.
 
@@ -47,11 +46,11 @@ Analisi del contenuto dei prompt su `classification`, `email`, `email-quality`, 
 ## Sprint 3 — Telemetria AI completa (4 → 10/10)
 **Obiettivo:** ogni invocazione AI tracciata, nessuna eccezione.
 
-1. Estendere CHECK constraint su `ai_interaction_log.interaction_type` con `'edge_ai'`.
-2. Wrapper `_shared/aiInvocationLogger.ts`: `logEdgeAi({function_name, scope, model, tokens, duration})` chiamato da `invokeAi()`.
-3. Migrare le 8 edge function loader-aware (generate-email, generate-outreach, classify-inbound-message, ecc.) a usare il logger.
-4. Dashboard `/v2/ai-interactions-log` esteso: filtro per `function_name`, `scope`, costo/tokens.
-5. Alert Discord se `edge_ai` invocations < 10/h durante orario lavorativo.
+1. ✅ FATTO — CHECK constraint `ai_interaction_log.interaction_type` esteso con `'edge_ai'` + DAL TS aggiornato + UI `/v2/ai-interactions-log` riconosce il nuovo tipo (label "Edge AI" + icona Cpu).
+2. ⏳ Wrapper `_shared/aiInvocationLogger.ts` per popolare il log dalle edge.
+3. ⏳ Migrazione 8 edge function loader-aware al wrapper.
+4. ⏳ Filtri UI per `function_name` / `scope` / tokens.
+5. ⏳ Alert Discord soglia minima.
 
 **Definition of Done:** `ai_interaction_log` riceve >100 righe/giorno con `interaction_type='edge_ai'`; copertura ≥95% delle invocazioni AI tracciate.
 
@@ -60,11 +59,11 @@ Analisi del contenuto dei prompt su `classification`, `email`, `email-quality`, 
 ## Sprint 4 — Routing & Personas (4 → 9/10)
 **Obiettivo:** popolare i layer dichiarati ma vuoti.
 
-1. Seed `agent_personas` per i 5 agenti core (Luca, Funnemail, Sherlock, Gordon, Sara) con identità + tono + KB filter.
-2. Seed `agent_routing_rules`: matrice `(intent, scope, channel) → agent_id` con almeno 12 righe coprenti i casi reali.
-3. Verificare `agent_capabilities` per i 3 agenti con 0 tool (Funnemail, Gordon, Sara) → assegnare tool whitelist coerente.
-4. Smoke test in Prompt Lab Simulator per ogni agente: input campione → output atteso (no allucinazioni, tool corretti).
-5. Risolvere i 6 finding aperti del deep audit 04/05: `pending-action-executor` handler `reply_to_question`/`handle_complaint`, dedup cross-engine scheduling, ordine cron `memory-promoter` vs `memory_embed_backfill`.
+**Stato 11/05 (verificato):** `agent_personas` 8 righe ✅, `agent_capabilities` 45 righe ✅, `prompt_test_cases` 17 righe ✅. **`agent_routing_rules` ancora vuota** ❌.
+
+1. ⏳ Seed `agent_routing_rules`: matrice (domain × category × sentiment) → agent_id. Richiede mappatura agent specifici × scenari → input utente.
+2. ⏳ Smoke test Prompt Lab Simulator per i 5 agenti core.
+3. ⏳ Risolvere 6 finding del deep audit 04/05.
 
 **Definition of Done:** 0 agenti con personas/routing/capabilities mancanti; deep audit 04/05 chiuso.
 
