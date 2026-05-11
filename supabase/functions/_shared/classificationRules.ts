@@ -4,6 +4,7 @@
  */
 
 import { aiChat } from "./aiGateway.ts";
+import { journalistReview } from "./journalistReviewLayer.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -120,17 +121,75 @@ Restituisci il draft in questo formato JSON:
       if (jsonMatch) {
         const draft = JSON.parse(jsonMatch[0]);
         if (draft.draft_subject && draft.draft_body) {
+          // ── EDITORIAL GATE (Blocco 4) — journalistReview obbligatorio sui draft inbound ──
+          let finalSubject = draft.draft_subject as string;
+          let finalBody = draft.draft_body as string;
+          let draftBlocked = false;
+          let blockReason: string | null = null;
+          let qualityScore: number | undefined;
+          let reviewVerdict: string | undefined;
+          try {
+            const review = await journalistReview(
+              supabase,
+              input.userId,
+              {
+                final_draft: finalBody,
+                resolved_brief: { objective: categoryHint, email_type: category },
+                channel: "email",
+                commercial_state: { lead_status: "unknown" },
+                partner: { id: input.partnerId ?? null },
+                contact: input.senderName ? { name: input.senderName } : undefined,
+                is_reply: true,
+                original_inbound: {
+                  subject: input.subject,
+                  summary: input.aiSummary,
+                  sender: input.senderEmail,
+                  classification: input.category,
+                  sentiment: input.sentiment,
+                },
+              },
+              { mode: "review_and_correct" },
+            );
+            reviewVerdict = review.verdict;
+            qualityScore = review.quality_score;
+            if (review.verdict === "block") {
+              draftBlocked = true;
+              blockReason = review.reasoning_summary || "Quality Gate block";
+            } else if (review.verdict === "pass_with_edits" && review.edited_text) {
+              finalBody = review.edited_text;
+            }
+          } catch (e) {
+            // fail-open coerente con send-email: salva originale + warning
+            console.warn(`[generateReplyDraft] journalistReview error: ${e instanceof Error ? e.message : String(e)}`);
+          }
+
+          // Carica payload corrente per merge sicuro
+          const { data: currentRow } = await supabase
+            .from("ai_pending_actions")
+            .select("action_payload")
+            .eq("id", pendingActionId)
+            .maybeSingle();
+          const currentPayload = (currentRow?.action_payload ?? {}) as Record<string, unknown>;
+
+          const nextPayload: Record<string, unknown> = {
+            ...currentPayload,
+            draft_generated_at: new Date().toISOString(),
+            draft_review_verdict: reviewVerdict,
+            draft_quality_score: qualityScore,
+            // anti doppia review: send-email salterà journalistReview se vede questo flag
+            journalist_reviewed: true,
+          };
+          if (draftBlocked) {
+            nextPayload.draft_blocked = true;
+            nextPayload.draft_block_reason = blockReason;
+          } else {
+            nextPayload.draft_subject = finalSubject;
+            nextPayload.draft_body = finalBody;
+            nextPayload.draft_blocked = false;
+          }
           await supabase
             .from("ai_pending_actions")
-            .update({
-              // deno-lint-ignore no-explicit-any
-              action_payload: ((action_payload: any) => ({
-                ...action_payload,
-                draft_subject: draft.draft_subject,
-                draft_body: draft.draft_body,
-                draft_generated_at: new Date().toISOString(),
-              })) as unknown as Record<string, unknown>,
-            })
+            .update({ action_payload: nextPayload as unknown as Record<string, unknown> })
             .eq("id", pendingActionId);
         }
       }
