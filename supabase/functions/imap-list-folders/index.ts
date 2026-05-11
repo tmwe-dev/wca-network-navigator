@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ user, folders }, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: String(err?.message || err) }), {
+  } catch (err: any) {
+    const dbg = (globalThis as any).__lastDebug || null;
+    return new Response(JSON.stringify({ error: String(err?.message || err), debug: dbg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
