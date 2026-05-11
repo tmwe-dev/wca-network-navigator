@@ -8,21 +8,23 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-    const mailbox = (body.mailbox as string) || "booking";
-    const passEnv = mailbox === "booking" ? "IMAP_PASSWORD_BOOKING" : "IMAP_PASSWORD";
-    const userEnv = mailbox === "booking" ? "booking@tmwe.it" : Deno.env.get("IMAP_USER")!;
-    const pass = Deno.env.get(passEnv) || Deno.env.get("IMAP_PASSWORD");
-    if (!pass) return new Response(JSON.stringify({ error: "no_password" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const user = Deno.env.get("IMAP_USER") || "booking@tmwe.it";
+    const pass = Deno.env.get("IMAP_PASSWORD");
+    const debug = { user, hasPass: !!pass, host: Deno.env.get("IMAP_HOST") || "imaps.aruba.it" };
+    if (!pass) return new Response(JSON.stringify({ error: "no_password", debug }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const client = new ImapFlow({
-      host: "imaps.aruba.it",
+      host: debug.host,
       port: 993,
       secure: true,
-      auth: { user: userEnv, pass },
+      auth: { user, pass },
       logger: false,
     });
-    await client.connect();
+    try {
+      await client.connect();
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "connect_failed", message: String(e?.message || e), debug }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const list = await client.list();
     await client.logout();
     const folders = list.map((f) => ({
@@ -33,7 +35,7 @@ Deno.serve(async (req) => {
       specialUse: f.specialUse,
       subscribed: f.subscribed,
     }));
-    return new Response(JSON.stringify({ user: userEnv, folders }, null, 2), {
+    return new Response(JSON.stringify({ user, folders }, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
