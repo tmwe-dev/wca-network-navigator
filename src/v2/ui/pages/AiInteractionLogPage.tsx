@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Download, ThumbsUp, ThumbsDown, RefreshCw, Mic, MessageSquare, Volume2 } from "lucide-react";
+import { Download, ThumbsUp, ThumbsDown, RefreshCw, Mic, MessageSquare, Volume2, Cpu } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 import {
@@ -20,12 +20,14 @@ const TYPE_LABELS: Record<AiInteractionType, string> = {
   voice_tts: "Voce AI (TTS)",
   voice_conversation: "Conversazione vocale",
   voice_stt: "Voce utente (STT)",
+  edge_ai: "Edge AI",
 };
 
 function typeIcon(t: AiInteractionType) {
   if (t === "chat_text") return <MessageSquare className="h-3 w-3" />;
   if (t === "voice_tts") return <Volume2 className="h-3 w-3" />;
   if (t === "voice_stt") return <Mic className="h-3 w-3" />;
+  if (t === "edge_ai") return <Cpu className="h-3 w-3" />;
   return <Volume2 className="h-3 w-3" />;
 }
 

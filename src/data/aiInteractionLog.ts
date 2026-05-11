@@ -8,7 +8,8 @@ export type AiInteractionType =
   | "chat_text"
   | "voice_tts"
   | "voice_conversation"
-  | "voice_stt";
+  | "voice_stt"
+  | "edge_ai";
 
 export type AiInteractionRole = "user" | "assistant" | "system" | "tool";
 
