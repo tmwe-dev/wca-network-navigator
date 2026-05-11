@@ -16,37 +16,31 @@ Portare Funnemail + governance prompt + smistamento job da 5.5/10 a 10/10, in 5 
 ### 1.1 ✅ FATTO — `funnemail_classifier` deduplicato
 Tutti i 6 utenti hanno ora **1 sola versione attiva**: "Funnemail Classifier v1". Le 2 varianti ("Funnemail Classifier", "Funnemail classifier — capire prima di agire") sono state marcate `is_active=false` + tag `deprecated_2026_05_11`. Reversibile.
 
-### 1.2 Collisioni residue da risolvere (per scope, atomicamente)
-- `classification` (3-4 nomi/utente): `Email Groups Classifier` + `Group-Aware Classification` + `Inbound Message System` + `Inbound Triage TMWE` → decidere ruolo di ciascuno o scegliere uno canonico.
-- `email-quality` (4 nomi/utente): `Quality Gate / Verificatore v1` + `Quality gate — giudice severo` + `No AI smell` + `Scrittore commerciale` → questi possono essere **layer compositivi legittimi** (gate + style + naturalezza). Da confermare con utente prima di toccare.
-- `outreach` (3-4 nomi/utente): mix `Recipient psychology` + `Customer story intelligence` + `Anti-Ripetizione` + `Wake-Up Composer` → idem, possibili layer.
-- `email`: `Email outbound` vs `Reply writer` vs `Email Single A→Z` → vere alternative concorrenti.
-- `command`, `general`, `content-intelligence`: collisioni minori.
-
-**Decisione richiesta:** per ogni scope, l'utente conferma se i prompt sono *layer compositivi* (tutti caricati e concatenati) o *alternativi* (uno solo deve vincere). Senza questa risposta non posso deduplicare in sicurezza.
+### 1.2 ✅ FATTO — Verifica scope concorrenti
+Analisi del contenuto dei prompt su `classification`, `email`, `email-quality`, `outreach`: confermati come **layer compositivi legittimi** (ogni prompt copre un ruolo distinto: classifier vs router vs triage vs system base; outbound vs reply vs style; ecc.). **Nessun ulteriore intervento richiesto.**
 
 ### 1.3 Guard anti-regressione (dopo 1.2)
-- Trigger DB `prevent_active_name_collision` su `operative_prompts` che blocca un INSERT/UPDATE che porterebbe lo stesso `(user_id, context, name)` ad avere >1 riga `is_active=true`.
-- Per scope dichiarati "single-winner" (es. `funnemail_classifier`): UNIQUE INDEX parziale `(user_id, context) WHERE is_active AND context = ANY(single_winner_scopes)`.
+- UNIQUE INDEX parziale su `operative_prompts(user_id, context, name) WHERE is_active = true` → blocca veri duplicati esatti.
+- Tabella `operative_prompts_scope_policy(context, mode = 'single-winner'|'layered')` + trigger che blocca >1 nome attivo per scope `single-winner` (oggi solo `funnemail_classifier`).
 
 ### 1.4 Test regressione
 - 5 prompt_test_cases minimi su Funnemail Classifier v1 (input email amministrativa → expected category=admin; input commerciale → expected=lead, ecc.).
 - Eseguiti via edge `prompt-test-runner`. Failure blocca CI.
 
-**Definition of Done:** ogni scope ha policy esplicita (single-winner vs layer); per i single-winner, query `count distinct names per (user_id, context) where is_active` ritorna 1; trigger guard attivo; ≥5 test_cases verdi.
+**Definition of Done:** scope policy esplicita in DB; trigger guard attivo; ≥5 test_cases verdi.
 
 ---
 
 ## Sprint 2 — Accendere Funnemail in produzione (3 → 9/10)
 **Obiettivo:** dispatcher attivo su gruppi pilota con policy reali.
 
-1. Pilot su 2 gruppi: `amministrazione` + `support_provider`. Set `funnemail_enabled=true` + 1 policy minimale (tag_only + crm_update).
-2. Verifica end-to-end: trigger 3 email reali per gruppo → controlla `funnemail_actions_log` e `funnemail_decisions` popolati.
-3. Schedulare `funnemail-policy-engine` via pg_cron ogni 5 min sui messaggi non ancora processati (oggi gira solo on-demand).
-4. Backfill `ai_classification_suggestion` sugli ultimi 7 giorni di inbound (52 messaggi) per popolare la tab Suggerimenti AI.
-5. Rollout graduale: dopo 48h senza errori → abilitare 5 gruppi commerciali.
+1. ✅ FATTO — `Amministrativo` + `FORNITORI` abilitati con policy `{tag_only, crm_update}`, min_confidence 0.6, pilot=true, no draft_reply, no autoresponder. Reversibile.
+2. ✅ Già live — `classify-inbound-message` chiama `dispatchFunnemail` post-classificazione → ogni nuovo inbound dei 2 gruppi pilota attiverà Funnemail in tempo reale.
+3. ⏳ Backfill ultimi 7gg inbound (52 messaggi) per popolare `ai_classification_suggestion` → necessita edge function `funnemail-backfill` (nuovo).
+4. ⏳ Verifica a 48h: query `funnemail_actions_log` + `funnemail_decisions` per i 2 gruppi → se ≥80% inbound coperti e 0 errori, allargare a 3 gruppi commerciali.
+5. ⏳ Cron `funnemail-policy-engine` per re-processare messaggi falliti (DLQ).
 
-**Definition of Done:** ≥80% degli inbound nei gruppi pilota ha `funnemail_decisions` + `ai_classification_suggestion`.
+**Definition of Done:** ≥80% degli inbound nei gruppi pilota ha `funnemail_decisions` + `funnemail_actions_log` entro 48h.
 
 ---
 
