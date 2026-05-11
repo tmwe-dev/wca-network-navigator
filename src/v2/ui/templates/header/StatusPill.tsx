@@ -176,6 +176,35 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
           </Button>
         </div>
 
+        {/* Trasmissioni AI (cron kill-switch) */}
+        <div className="flex items-center justify-between text-xs border-t border-border/40 pt-2">
+          <div className="flex items-center gap-2">
+            <Radio className={`h-3.5 w-3.5 ${cronPaused ? "text-amber-500" : "text-emerald-500"}`} />
+            <span>Trasmissioni AI</span>
+            <Badge variant="outline" className="h-4 px-1 text-[10px]">
+              {cronPaused ? "in pausa" : "attive"}
+            </Badge>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            disabled={cronToggle.isPending}
+            onClick={() => cronToggle.mutate(!cronPaused)}
+          >
+            {cronPaused ? (<><Play className="h-3 w-3 mr-1" /> Riprendi</>) : (<><Pause className="h-3 w-3 mr-1" /> Pausa tutto</>)}
+          </Button>
+        </div>
+
+        {/* Token cockpit shortcut */}
+        <div className="flex items-center justify-between text-xs border-t border-border/40 pt-2">
+          <div className="flex items-center gap-2">
+            <Coins className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>Token live & per funzione</span>
+          </div>
+          <Link to="/v2/token-cockpit" className="text-[11px] underline text-primary">Apri cockpit</Link>
+        </div>
+
         {/* Detail bar (riusa componenti legacy per non perdere info) */}
         <div className="border-t border-border/40 pt-2 space-y-2">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
