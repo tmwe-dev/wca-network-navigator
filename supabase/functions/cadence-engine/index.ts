@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -41,6 +42,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const paused = await cronPausedResponse(supabase, "cadence-engine");
+    if (paused) return paused;
 
     // 1. Fetch due actions
     const { data: actions, error: fetchErr } = await supabase
