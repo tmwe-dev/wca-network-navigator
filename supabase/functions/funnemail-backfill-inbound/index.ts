@@ -60,17 +60,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Trova inbound non classificate degli ultimi N gg
+    // 2. Risolvi from_address dei gruppi pilot via email_address_rules
+    const { data: rules, error: rulesErr } = await supabase
+      .from("email_address_rules")
+      .select("email_address")
+      .in("group_id", groupIds);
+    if (rulesErr) throw rulesErr;
+    const pilotAddresses = Array.from(
+      new Set((rules ?? []).map((r: { email_address: string }) => r.email_address.toLowerCase())),
+    );
+
+    // 3. Trova inbound non classificate degli ultimi N gg sui mittenti pilot
     const since = new Date(Date.now() - days * 86400_000).toISOString();
-    const { data: msgs, error: msgErr } = await supabase
+    let query = supabase
       .from("channel_messages")
-      .select("id, from_address, subject, body_text, partner_id, user_id, group_id")
+      .select("id, from_address, subject, body_text, partner_id, user_id")
       .eq("direction", "inbound")
       .eq("channel", "email")
       .gte("created_at", since)
-      .in("group_id", groupIds)
-      .is("ai_classification_suggestion", null)
-      .limit(limit * 2);
+      .is("ai_classification_suggestion", null);
+    if (pilotAddresses.length > 0) {
+      query = query.in("from_address", pilotAddresses);
+    }
+    const { data: msgs, error: msgErr } = await query.limit(limit * 2);
     if (msgErr) throw msgErr;
 
     // 3. Filtra già presenti in funnemail_decisions (idempotenza)
@@ -89,7 +101,6 @@ Deno.serve(async (req) => {
       message_id: m.id,
       from_address: m.from_address,
       subject: (m.subject ?? "").slice(0, 80),
-      group_id: m.group_id,
     }));
 
     if (dryRun) {
