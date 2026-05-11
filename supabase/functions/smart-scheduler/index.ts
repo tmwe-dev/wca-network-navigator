@@ -6,6 +6,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(req.headers.get("origin"));
@@ -43,6 +44,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
+
+    // Cron kill-switch: blocca solo invocazioni automatiche (cronAuthorized).
+    if (cronAuthorized) {
+      const paused = await cronPausedResponse(supabase, "smart-scheduler");
+      if (paused) return paused;
+    }
 
     const { data: users } = await supabase.from("profiles").select("user_id");
     let totalProposals = 0;
