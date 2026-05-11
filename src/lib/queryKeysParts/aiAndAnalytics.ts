@@ -63,6 +63,7 @@ export const aiAndAnalyticsKeys = {
     history: (userId: string, limit?: number) => ["prompt-lab-global-runs", "history", userId, limit] as const,
   },
   promptCatalog: { all: (userId: string) => ["prompt-lab-catalog", userId] as const },
+  promptLabHealth: ["prompt-lab-health"] as const,
   promptProposals: { list: (filters?: unknown) => ["prompt-change-proposals", filters] as const },
   kbProposals: { list: (filters?: unknown) => ["kb-entry-proposals", filters] as const },
   kbIndexMap: ["kb-index-map"] as const,

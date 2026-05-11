@@ -51,6 +51,7 @@ import { AIProfileTab } from "./prompt-lab/tabs/AIProfileTab";
 import { JournalistsTab } from "./prompt-lab/tabs/JournalistsTab";
 import { PromptTestsTab } from "./prompt-lab/tabs/PromptTestsTab";
 import { PromptHistoryTab } from "./prompt-lab/tabs/PromptHistoryTab";
+import { PromptLabHealthBanner } from "./prompt-lab/PromptLabHealthBanner";
 import {
   FlaskConical,
   Brain,
@@ -185,6 +186,7 @@ export function PromptLabPage() {
                 hint="Configura i prompt operativi degli agenti AI. Modifica un blocco a sinistra, salva o chiedi di migliorarlo con AI. Le modifiche sono in produzione, usa Review prima di accettare suggerimenti automatici."
                 right={<MetricsSummaryBadge />}
               />
+              <PromptLabHealthBanner />
               <div className="flex items-center justify-between border-b bg-background flex-shrink-0 pr-2">
                 <TabsList className="rounded-none justify-start h-auto p-0 bg-transparent gap-0">
                   {PROMPT_LAB_GROUPS.map((g) => {
