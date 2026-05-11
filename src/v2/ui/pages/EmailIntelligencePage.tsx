@@ -74,11 +74,20 @@ export function EmailIntelligencePage(): React.ReactElement {
     queryKey: queryKeys.emailIntel.classifyToday,
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
-      const { count } = await supabase
-        .from("email_classifications")
-        .select("id", { count: "exact", head: true })
-        .gte("classified_at", today);
-      return count ?? 0;
+      // Conta sia la pipeline legacy (email_classifications) sia quella nuova
+      // Funnemail (funnemail_decisions) per dare un totale coerente con quanto
+      // l'AI ha effettivamente classificato oggi.
+      const [legacy, funnemail] = await Promise.all([
+        supabase
+          .from("email_classifications")
+          .select("id", { count: "exact", head: true })
+          .gte("classified_at", today),
+        supabase
+          .from("funnemail_decisions" as unknown as never)
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", today),
+      ]);
+      return (legacy.count ?? 0) + (funnemail.count ?? 0);
     },
     staleTime: 60_000,
   });
