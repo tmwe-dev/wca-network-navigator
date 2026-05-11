@@ -11226,6 +11226,30 @@ export type Database = {
           },
         ]
       }
+      system_flags: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           key: string
@@ -12817,6 +12841,7 @@ export type Database = {
         Args: { p_value: string }
         Returns: string
       }
+      is_cron_paused: { Args: never; Returns: boolean }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
       is_org_admin: {
