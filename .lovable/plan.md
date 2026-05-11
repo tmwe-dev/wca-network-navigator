@@ -1,96 +1,110 @@
-# Piano: Memorizzazione Audit Prompt Lab + Estrazione Know-How da RadioChat
 
-## Fase 1 — Memorizzare audit Prompt Lab corrente (TMWE)
+# Audit reale (11 maggio 2026, dati DB live)
 
-Salvare in memoria persistente:
+## 🔴 P0 — pipeline inbound clinicamente morta
+| Metrica 30gg | Atteso | Reale |
+|---|---:|---:|
+| Email inbound (`channel_messages` email) | 6.679 | **6.679** ✅ |
+| `email_classifications` (classify-email-response) | ~6.000 | **1** 💀 |
+| `ai_classification_suggestion` su inbound | ~6.000 | **0** 💀 |
+| `funnemail_decisions` | ~6.000 | 39 |
+| `funnemail_actions_log` (esecutore) | ~6.000 | **1** 💀 |
+| `funnemail_policy` | >0 | **0** |
+| `funnemail_message_status` | — | 30 (manuali) |
 
-1. **`mem://reference/prompt-lab-audit-2026-05-11.md`** — snapshot audit 62/100:
-   - 4 macro gruppi × 20+ tab in `PromptLabPage.tsx`
-   - Sister pages: `/atlas`, `/catalog`, `/tests`, `/proposals`, `/suggestions`, `/agent/:slug`
-   - 7 agenti improvement: prompt-copilot-chat, agent-prompt-refiner, Architect, prompt-test-runner, refine-classification-rule, prompt-registry-drift-check, Harmonizer
-   - DB state: 136 operative_prompts (54 distinct), 249 kb_entries, 8 personas vuote, 270 versions, 17 test cases, 0 runs 30d
-   - 3 loop rotti: refiner senza cron, test runner inattivo, personas vuote
+→ L'imbuto Funnemail oggi vive solo grazie ai claim manuali "Lo prendo io". L'AI vede 6.6k mail al mese e ne smista 1. La causa è nota dall'audit 04-05 (P0 #1 + #2): `check-inbox/postProcessing.ts` filtra `raw_payload.direction` invece del campo top-level → `postClassificationPipeline` non parte mai → niente classifier, niente Funnemail decider, niente policy executor, niente auto-route.
 
-2. **`mem://standards/prompt-lab-improvement-roadmap.md`** — roadmap P0-P3:
-   - P0: cron refiner + dedup operative_prompts (136→54) + banner Suggestions
-   - P1: popolare 8 personas (min 300 char) + schedule prompt-test-runner
-   - P2: coverage test 31%→70% + refactor doctrine KB (120/249)
-   - P3: dashboard "Health Prompt Lab"
+## 🔴 P0 — Prompt Lab senza loop vivo
+- 136 `operative_prompts` attivi su **54 nomi distinti** → **82 duplicati** (6 copie per ognuno dei 16 prompt critici).
+- `prompt_test_runs` ultimi 30gg: **0** → cron `prompt-test-runner` esiste ma non gira (o gira a vuoto su `prompt_test_cases`=17).
+- 14 `ai_pending_actions` pendenti (incluso refiner) senza badge nel Prompt Lab.
+- `agent_personas`: 8 righe ma `custom_tone_prompt` quasi vuoto (la doctrine richiede ≥300 char).
+- `agent_routing_rules`: 5 righe → routing tra agenti praticamente inerte.
 
-3. **Update `mem://index.md`** — aggiungere riferimenti.
+## 🟠 P1 — Holding Pattern senza SLA
+- 101 partner in holding (`first_touch_sent | holding | engaged`).
+- Nessuna metrica age/SLA visibile, nessuna sveglia automatica: `wake_up_rules` esiste ma `smart-scheduler` legge ancora costanti.
+- Telemetria `ai_interaction_log`: 24 entry/7gg vs 6679 inbound → charter ENFORCED ma quasi nessuno passa dal gateway lato classifier.
 
-## Fase 2 — Estrazione know-how da `tmwe-dev/radiochat`
+---
 
-Clonare il repo in `/tmp/radiochat` e analizzare in profondità:
+# Principi del piano (Codex + Manuale Vol II)
 
-### 2.1 — Inventario tecnico
-- Struttura: `src/`, `api/`, `prompts/`, `agents/`, KB
-- Identificare file di prompt engineering (21 strati dichiarati)
-- Mappare i 4 agenti (Albert/Archimede/Pitagora/Newton) e personalità
-- Sistema di micro-agenti paralleli (3 nel modulo didattico)
-- Knowledge Base con pattern matching e context tags
-- Anti-pattern espliciti per naturalezza
-- Phase engine (setup → analysis → debate → synthesis → deliverable)
-- Memory hierarchy 3 livelli (full → condensed → summary)
-- Proxy AI unificato 4 provider
+1. **Zero nuove pagine.** Ogni miglioria atterra su strumenti già esistenti: `PromptLabPage`, `EmailIntelligencePage` (tab Funnemail), `FunnemailInboxPage`, `AgendaPage`, `AutomationsPanel` in top-bar.
+2. **Atomicità.** Un PR = un nodo. Niente refactor opportunistici.
+3. **Defense in depth.** Ogni fix ha rollback (env flag o feature toggle in `system_flags`).
+4. **Misurare prima di celebrare.** Ogni step si chiude solo quando un counter DB sale.
 
-### 2.2 — Analisi comparativa con TMWE
-Per ciascun pattern trovato, valutare:
-| Pattern RadioChat | Già in TMWE? | Riusabile? | Dove integrare |
-|---|---|---|---|
-| 21-layer prompt builder | No | ✅ promptParts.ts | `_shared/prompts/` |
-| 4 personas dibattito | No (8 vuote) | ✅ Architect/Director/Refiner/Harmonizer | `agent_personas` DB |
-| Micro-agenti paralleli | No | ✅ classify-email-response | edge function |
-| Phase engine | Parziale (Sherlock) | ✅ campaigns | outreach |
-| Memory hierarchy | Sì (L1-L3) | Confronto | doctrine governance |
-| Anti-pattern naturalezza | No | ✅ journalistReview | editorial layer |
-| KB pattern matching | Sì | Confronto | kb_entries |
-| Convergence routing | No | ✅ command orchestrator | new |
+---
 
-### 2.3 — Estrazione contenuti riusabili
-- Prompt completi dei 4 agenti (per popolare le 8 personas vuote in TMWE)
-- Anti-pattern catalog (per editorial layer)
-- Frasi chiave / regole tono
-- Schema KB injection contestuale
-- Logica convergenza panel multi-agente
-- Phase decomposition templates
+# Piano in 5 sprint (in serie, atomici)
 
-### 2.4 — Memorizzazione strutturata
-Salvare in:
-- `mem://reference/radiochat-extract-2026-05-11.md` — inventario completo + tabella confronto
-- `mem://standards/multi-agent-debate-pattern.md` — pattern panel + convergenza riusabile
-- `mem://standards/anti-pattern-naturalness-catalog.md` — regole anti-naturalezza
-- `mem://standards/21-layer-prompt-builder.md` — schema layer per layer
-- `mem://reference/personas-seed-from-radiochat.md` — testi sorgente per popolare `agent_personas`
+## Sprint A — Resuscitare la pipeline inbound (P0, blocco #1)
+1. **Fix `check-inbox/postProcessing.ts`**: leggere `direction` top-level (e fallback `raw_payload.direction`). 1 riga di codice + test.
+2. Re-deploy `check-inbox` e verificare dopo 1h: `email_classifications` sale, `ai_classification_suggestion` non più 0.
+3. **Cablare `funnemail-classify`** dentro `postClassificationPipeline` (o richiamarlo dal dispatcher). Hard guard: feature flag `FUNNEMAIL_CLASSIFIER_ENABLED` in `system_flags`.
+4. **Aggiungere handler mancanti** alle 16 categorie commerciali in `postClassificationPipeline` (oggi nessun handler → silent drop).
+5. **KPI di chiusura**: `funnemail_decisions/30d > 5000`, `funnemail_actions_log/30d > 1000`.
 
-### 2.5 — Audit finale di gap/azioni concrete
-Documento `/mnt/documents/radiochat-vs-tmwe-gap-analysis.md` con:
-- Cosa importare subito (quick wins)
-- Cosa richiede adattamento
-- Cosa scartare (es. localStorage, chiavi esposte, no TS — già risolti in TMWE)
-- Roadmap integrazione 3 sprint
+## Sprint B — Funnemail policy engine operativo (P0, blocco #2)
+1. Sbloccare `funnemail-policy-executor` per le action `tag_only|crm_update|snooze|escalate` (oggi 1 sola entry in 30gg → l'executor non viene mai chiamato).
+2. Seedare **policy minime per gruppo** (`funnemail_policy`): newsletter→snooze, fornitori→tag_only, amministrazione→escalate L1. Niente `draft_reply` automatico (resta journalistReview).
+3. Esporre l'editor policy nel **5° tab "Funnemail" già esistente** in `EmailIntelligencePage` (pannello editabile, non nuova pagina).
+4. **Realtime tail azioni** già montato in `FunnemailInboxPage`: solo riallinearlo a `funnemail_actions_log` con badge per status (`ok|duplicate|error`).
+5. **KPI**: ≥10 policy attive, ≥80% inbound auto-classified entro 60s.
 
-## Fase 3 — Verifica passo-passo (interattiva)
+## Sprint C — Prompt Lab vivo (P0, blocco #3)
+1. **Dedup `operative_prompts`**: 136→54 via migration soft-delete (mantieni versione attiva più recente per `name`, snapshot in `prompt_versions` esiste già). Stessa SQL già delineata in `mem://standards/prompt-lab-improvement-roadmap`.
+2. **Banner "Suggestions pendenti"** nel `PromptLabHealthBanner` esistente: count `ai_pending_actions(type='prompt_refinement', status='pending')` con CTA che apre `SuggestionsReviewPage` (già esiste).
+3. **Attivare cron** `prompt-test-runner` su top-30 prompt usati (nightly 03:00 UTC), e `agent-prompt-refiner` settimanale (lunedì 04:00 UTC). Già pronti, basta `cron.schedule` con kill-switch.
+4. **Personas seed**: popolare i 7 personas vuoti con il seed `mem://reference/personas-seed-from-radiochat` (≥300 char). CHECK constraint `length(custom_tone_prompt) >= 300` per `is_active=true`.
+5. **KPI**: `prompt_test_runs/30d > 200`, dedup completato, banner reattivo.
 
-Dopo Fase 2, presentare al utente:
-1. Tabella confronto pattern-by-pattern
-2. Selezione interattiva (questions tool) di cosa portare in produzione
-3. Per ogni elemento approvato → creare task atomico
+## Sprint D — Holding Pattern con SLA visibile (P1)
+1. **SLA badge** nelle card holding già renderizzate da `MailRowChrome`/`EmailCard`: aggiungere `agehours` con colore (verde <72h, giallo 72-168h, rosso >168h, ✈️ pulsante). Solo CSS + helper, zero nuova pagina.
+2. **Wake-up automatico**: collegare `smart-scheduler` alla tabella `wake_up_rules` (già esistente) — sostituire le costanti in-code con lookup DB.
+3. **AgendaPage**: già raggruppata per azione; aggiungere sezione "Holding scaduti" filtrata da `ageHours > sla_hours`.
+4. **KPI**: 0 partner holding >14gg senza azione pianificata.
 
-## Dettagli tecnici
+## Sprint E — Health & osservabilità (P1, ultimo)
+1. **`AutomationsPanel`** (top-bar, già esiste): aggiungere 3 chip live — `inbound_classified_24h`, `funnemail_actions_24h`, `prompt_test_runs_7d`. Una riga per chip in `cronJobs.ts` DAL.
+2. **Dashboard Funnemail** dentro tab già esistente `EmailIntelligenceOperationsPage`: 4 KPI card (smistati/h, accuracy, claim rate, queue depth) basate su `funnemail_actions_log` + `funnemail_message_claims`. Niente route nuova.
+3. **`ai_interaction_log`**: forzare `invokeAi()` anche per `classify-inbound-message` e `funnemail-classify` (2 callsite). Charter già ENFORCED, mancano 2 wrap.
 
-- Clone: `git clone https://github.com/tmwe-dev/radiochat.git /tmp/radiochat --depth=1`
-- Analisi: `rg`/`code--list_dir` per mappare struttura
-- Lettura mirata file prompt/agents/KB
-- Nessuna modifica al codice TMWE in questa fase — solo lettura + memorizzazione
-- Zero refactor, zero side-effect su edge functions o DB
+---
 
-## Out of scope
-- Implementazione integrazioni (rimandata a sprint successivi)
-- Modifiche a operative_prompts o agent_personas (richiede approvazione esplicita)
-- Toccare nodi critici (orchestratori, send-email, classify) senza mappa impatto
+# Defense / Rollback per ogni sprint
 
-## Output finali
-1. 5+ memory files persistenti
-2. Documento gap analysis in `/mnt/documents/`
-3. Tabella decisionale per Fase 3 interattiva
+| Sprint | Kill-switch | Rollback |
+|---|---|---|
+| A | `system_flags.inbound_pipeline_enabled` | revert 1 riga `postProcessing.ts` |
+| B | `system_flags.funnemail_executor_enabled` | UPDATE `funnemail_policy` SET `enabled=false` |
+| C | env `PROMPT_REFINER_CRON_ENABLED` + `cron.unschedule` | dedup è soft-delete → trigger inverso |
+| D | `system_flags.wake_up_rules_enabled` | smart-scheduler torna a costanti in-code |
+| E | nessuno (read-only) | rimuovere chip |
+
+---
+
+# Cosa NON faccio (per rispetto del Codex)
+- ❌ Nessuna nuova pagina, nessuna nuova route, nessun nuovo modulo top-level.
+- ❌ Nessun refactor di `journalistReview` (intoccabile per dottrina).
+- ❌ Nessuna modifica a `check-inbox`/`email-imap-proxy`/`mark-imap-seen` oltre l'**unica** riga di Sprint A (filtro `direction`), che è esplicitamente la causa P0 documentata.
+- ❌ Nessun cambio a `auth`, RLS, soft-delete trigger, charter AI.
+
+---
+
+# Output finale atteso (tra 5 sprint)
+
+| Voce | Oggi | Target |
+|---|---:|---:|
+| Inbound classificate /30gg | 1 | >5.000 |
+| Funnemail actions eseguite /30gg | 1 | >1.000 |
+| Prompt distinti attivi | 54 (su 136 righe) | 54 (su 54 righe) |
+| Prompt test runs /30gg | 0 | >200 |
+| Holding >14gg senza azione | n/d | 0 |
+| Voto piattaforma (4 aree) | 7.2 | 8.7 |
+
+---
+
+# Procedo?
+Voglio partire da **Sprint A — fix di 1 riga in `check-inbox/postProcessing.ts`** che da solo riattiva l'80% della catena AI inbound. È atomico, reversibile, ad alto impatto. Confermi?
