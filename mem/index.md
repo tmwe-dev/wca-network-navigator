@@ -26,3 +26,4 @@
 - [Memory Hierarchy 3 Levels](mem://standards/memory-hierarchy-3-levels) — Pattern Full/Condensed/Summary con auto-summary trigger e token tracking
 - [Phase Engine Task Templates](mem://standards/phase-engine-task-templates) — 5 fasi setup→analysis→debate→synthesis→deliverable + 9 template tipo per Command Page
 - [Personas Seed da RadioChat](mem://reference/personas-seed-from-radiochat) — Testi sorgente per popolare le 8 agent_personas vuote (mapping su Architect/Director/Refiner/Harmonizer/Sherlock)
+- [Cron Kill-Switch](mem://features/cron-kill-switch) — system_flags.cron_paused + _shared/cronGate.ts + StatusPill toggle "Trasmissioni AI"; adottato in prompt-test-runner (job 57), retrofit pendente su altri 12 cron
