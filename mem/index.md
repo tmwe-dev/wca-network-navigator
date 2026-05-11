@@ -19,3 +19,10 @@
 - [BulkOps SSOT](mem://architecture/bulk-ops-single-entry-point) — Modulo bulkOps unico entry point per 6 blocchi (enrich, deepsearch, download, inbound, verify, update); ESLint rule + test di regressione
 - [Sprint Funnemail + Prompt 2026-05-11](mem://reference/sprint-funnemail-prompt-2026-05-11) — Dedup funnemail_classifier (3→1), pilot Funnemail (Amministrativo+FORNITORI), UNIQUE INDEX operative_prompts, ai_interaction_log accetta edge_ai
 - [Sprint Codex Funnemail 2026-05-11](mem://reference/sprint-codex-funnemail-2026-05-11) — Pilot Funnemail esteso a 35 gruppi (tag_only), edge backfill-inbound, cron policy-engine 10min (jobid 56), fix CHECK funnemail_message_status (classified/escalated/auto_handled), 31 inbound classificate conf=1.0
+- [Prompt Lab Audit 2026-05-11](mem://reference/prompt-lab-audit-2026-05-11) — Snapshot 62/100: 4 macro gruppi tab, 7 agenti improvement, 136/54 dedup operative_prompts, 8 personas vuote, 0 test runs 30g, 3 loop rotti
+- [Prompt Lab Improvement Roadmap](mem://standards/prompt-lab-improvement-roadmap) — P0 cron refiner+test runner+dedup, P1 personas+coverage, P2 KB refactor, P3 health dashboard
+- [RadioChat Extract 2026-05-11](mem://reference/radiochat-extract-2026-05-11) — Inventario tecnico repo tmwe-dev/radiochat (TS) + tabella confronto pattern riusabili in TMWE
+- [Multi-Agent Debate Pattern](mem://standards/multi-agent-debate-pattern) — Personalità 5 dimensioni, framework dibattito 6 sezioni localizzato, skip logic consenso, convergence engine
+- [Memory Hierarchy 3 Levels](mem://standards/memory-hierarchy-3-levels) — Pattern Full/Condensed/Summary con auto-summary trigger e token tracking
+- [Phase Engine Task Templates](mem://standards/phase-engine-task-templates) — 5 fasi setup→analysis→debate→synthesis→deliverable + 9 template tipo per Command Page
+- [Personas Seed da RadioChat](mem://reference/personas-seed-from-radiochat) — Testi sorgente per popolare le 8 agent_personas vuote (mapping su Architect/Director/Refiner/Harmonizer/Sherlock)
