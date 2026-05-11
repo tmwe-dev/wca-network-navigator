@@ -35,7 +35,7 @@ describe("ESLint rule no-direct-bulk-op", () => {
   });
 
   it("blocca supabase.functions.invoke('sherlock-extract') in UI", () => {
-    const code = `supabase.functions.invoke("sherlock-extract", {});`;
+    const code = `const x = supabase.functions.invoke("sherlock-extract", {});`;
     const msgs = lint(code, "/src/components/network/Card.tsx");
     expect(msgs.length).toBe(1);
   });
