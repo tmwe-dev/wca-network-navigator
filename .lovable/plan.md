@@ -1,116 +1,108 @@
 ## Obiettivo
+Portare Funnemail + governance prompt + smistamento job da 5.5/10 a 10/10, in 5 sprint atomici e verificabili. Ogni sprint chiude con metriche misurabili e test di regressione.
 
-Un solo entry point per ciascuno dei 6 blocchi operativi bulk (enrichment, deep search, download, inbound enrichment, verifiche bulk, update bulk). UI ridotte a "pulsanti che chiamano". Guardrail automatici che bloccano l'uso di funzioni alternative.
+## Stato attuale (audit 11/05)
+- Architettura 8/10 — buona, ma non eseguita
+- Runtime 3/10 — 0 gruppi `funnemail_enabled`, 0 policy override, 0 suggerimenti AI salvati su 52 inbound
+- Prompt 2/10 — 36 prompt con 5–6× duplicati, 3 versioni concorrenti su `funnemail_classifier`
+- Telemetria 4/10 — `ai_interaction_log` chat-only, edge AI non loggati
+- KB & dispatching 4/10 — `agent_personas`/`agent_routing_rules` vuote, nessun cron su policy-engine
 
-## Architettura target
+---
 
-Nuovo modulo `src/v2/services/bulkOps/` come SSOT:
+## Sprint 1 — Pulizia prompt (2 → 9/10)
+**Diagnosi reale (verificata 11/05):** non ci sono duplicati esatti `(user_id, name, context)`. Il problema sono **nomi diversi attivi sullo stesso scope** per lo stesso utente — comportamento non deterministico.
 
-```text
-src/v2/services/bulkOps/
-├── registry.ts          # Mappa scope → entry point unico
-├── types.ts             # BulkJob, BulkResult, BulkScope
-├── runner.ts            # runBulkOp(scope, items, opts) — stato/retry/log centralizzati
-├── jobStore.ts          # Persistenza su bulk_jobs (DB) + realtime
-├── entries/
-│   ├── enrichBase.ts    # → enrich-partner-website / batch-enrichment-worker
-│   ├── deepSearch.ts    # → useSherlock (Scout/Detective/Sherlock)
-│   ├── download.ts      # → process-download-job + bridge
-│   ├── inboundEnrich.ts # → process-inbound-enrichment
-│   ├── verify.ts        # → WA/LI/Email/Dedup verifications
-│   └── update.ts        # → bulk update DAL (origin, lead_status, email rules)
-└── guardrails.ts        # Hook che blocca chiamate dirette in dev
-```
+### 1.1 ✅ FATTO — `funnemail_classifier` deduplicato
+Tutti i 6 utenti hanno ora **1 sola versione attiva**: "Funnemail Classifier v1". Le 2 varianti ("Funnemail Classifier", "Funnemail classifier — capire prima di agire") sono state marcate `is_active=false` + tag `deprecated_2026_05_11`. Reversibile.
 
-## Mapping entry point unico (per blocco)
+### 1.2 Collisioni residue da risolvere (per scope, atomicamente)
+- `classification` (3-4 nomi/utente): `Email Groups Classifier` + `Group-Aware Classification` + `Inbound Message System` + `Inbound Triage TMWE` → decidere ruolo di ciascuno o scegliere uno canonico.
+- `email-quality` (4 nomi/utente): `Quality Gate / Verificatore v1` + `Quality gate — giudice severo` + `No AI smell` + `Scrittore commerciale` → questi possono essere **layer compositivi legittimi** (gate + style + naturalezza). Da confermare con utente prima di toccare.
+- `outreach` (3-4 nomi/utente): mix `Recipient psychology` + `Customer story intelligence` + `Anti-Ripetizione` + `Wake-Up Composer` → idem, possibili layer.
+- `email`: `Email outbound` vs `Reply writer` vs `Email Single A→Z` → vere alternative concorrenti.
+- `command`, `general`, `content-intelligence`: collisioni minori.
 
-| Blocco | Entry point UNICO | Da dismettere / rendere interno |
+**Decisione richiesta:** per ogni scope, l'utente conferma se i prompt sono *layer compositivi* (tutti caricati e concatenati) o *alternativi* (uno solo deve vincere). Senza questa risposta non posso deduplicare in sicurezza.
+
+### 1.3 Guard anti-regressione (dopo 1.2)
+- Trigger DB `prevent_active_name_collision` su `operative_prompts` che blocca un INSERT/UPDATE che porterebbe lo stesso `(user_id, context, name)` ad avere >1 riga `is_active=true`.
+- Per scope dichiarati "single-winner" (es. `funnemail_classifier`): UNIQUE INDEX parziale `(user_id, context) WHERE is_active AND context = ANY(single_winner_scopes)`.
+
+### 1.4 Test regressione
+- 5 prompt_test_cases minimi su Funnemail Classifier v1 (input email amministrativa → expected category=admin; input commerciale → expected=lead, ecc.).
+- Eseguiti via edge `prompt-test-runner`. Failure blocca CI.
+
+**Definition of Done:** ogni scope ha policy esplicita (single-winner vs layer); per i single-winner, query `count distinct names per (user_id, context) where is_active` ritorna 1; trigger guard attivo; ≥5 test_cases verdi.
+
+---
+
+## Sprint 2 — Accendere Funnemail in produzione (3 → 9/10)
+**Obiettivo:** dispatcher attivo su gruppi pilota con policy reali.
+
+1. Pilot su 2 gruppi: `amministrazione` + `support_provider`. Set `funnemail_enabled=true` + 1 policy minimale (tag_only + crm_update).
+2. Verifica end-to-end: trigger 3 email reali per gruppo → controlla `funnemail_actions_log` e `funnemail_decisions` popolati.
+3. Schedulare `funnemail-policy-engine` via pg_cron ogni 5 min sui messaggi non ancora processati (oggi gira solo on-demand).
+4. Backfill `ai_classification_suggestion` sugli ultimi 7 giorni di inbound (52 messaggi) per popolare la tab Suggerimenti AI.
+5. Rollout graduale: dopo 48h senza errori → abilitare 5 gruppi commerciali.
+
+**Definition of Done:** ≥80% degli inbound nei gruppi pilota ha `funnemail_decisions` + `ai_classification_suggestion`.
+
+---
+
+## Sprint 3 — Telemetria AI completa (4 → 10/10)
+**Obiettivo:** ogni invocazione AI tracciata, nessuna eccezione.
+
+1. Estendere CHECK constraint su `ai_interaction_log.interaction_type` con `'edge_ai'`.
+2. Wrapper `_shared/aiInvocationLogger.ts`: `logEdgeAi({function_name, scope, model, tokens, duration})` chiamato da `invokeAi()`.
+3. Migrare le 8 edge function loader-aware (generate-email, generate-outreach, classify-inbound-message, ecc.) a usare il logger.
+4. Dashboard `/v2/ai-interactions-log` esteso: filtro per `function_name`, `scope`, costo/tokens.
+5. Alert Discord se `edge_ai` invocations < 10/h durante orario lavorativo.
+
+**Definition of Done:** `ai_interaction_log` riceve >100 righe/giorno con `interaction_type='edge_ai'`; copertura ≥95% delle invocazioni AI tracciate.
+
+---
+
+## Sprint 4 — Routing & Personas (4 → 9/10)
+**Obiettivo:** popolare i layer dichiarati ma vuoti.
+
+1. Seed `agent_personas` per i 5 agenti core (Luca, Funnemail, Sherlock, Gordon, Sara) con identità + tono + KB filter.
+2. Seed `agent_routing_rules`: matrice `(intent, scope, channel) → agent_id` con almeno 12 righe coprenti i casi reali.
+3. Verificare `agent_capabilities` per i 3 agenti con 0 tool (Funnemail, Gordon, Sara) → assegnare tool whitelist coerente.
+4. Smoke test in Prompt Lab Simulator per ogni agente: input campione → output atteso (no allucinazioni, tool corretti).
+5. Risolvere i 6 finding aperti del deep audit 04/05: `pending-action-executor` handler `reply_to_question`/`handle_complaint`, dedup cross-engine scheduling, ordine cron `memory-promoter` vs `memory_embed_backfill`.
+
+**Definition of Done:** 0 agenti con personas/routing/capabilities mancanti; deep audit 04/05 chiuso.
+
+---
+
+## Sprint 5 — Governance & test di regressione (qualunque → 10/10)
+**Obiettivo:** impedire regressioni future.
+
+1. Implementare la **Prompt Governance Doctrine** già definita in `docs/adr/0004`: edge `prompt-change-kernel` come unico punto di scrittura; UI Prompt Lab → solo `change_request`.
+2. Rubric Engine deterministico: 2-3 rubriche bloccanti per agente (length, JSON schema, presenza tag obbligatori).
+3. Coverage Matrix `(agent × scope × KB × golden_input × rubric)` come tabella DB + dashboard `/v2/governance/coverage`.
+4. CI: blocca merge se `prompt_test_runner` fallisce su qualunque rubrica bloccante.
+5. KB Health Dashboard: stale entries, duplicati, copertura embedding.
+
+**Definition of Done:** nessuna scrittura diretta su `operative_prompts` fuori dal kernel; Coverage Matrix ≥90%; CI bloccante attiva.
+
+---
+
+## Scorecard target post-piano
+| Area | Oggi | Target |
 |---|---|---|
-| 1. Arricchimento base | `bulkOps.run("enrich.base", ...)` → wrap di `useBaseEnrichment` | chiamate dirette a `enrich-partner-website` da UI; pulsanti propri in OraclePanel/NetworkPage/Cockpit |
-| 2. Deep Search | `bulkOps.run("deepsearch.sherlock", ...)` → `useSherlock` (3 livelli) | `useDeepSearchV2` e `useDeepSearchRunner` resi **interni** a `bulkOps.entries`; `useDeepSearchLocal` mantenuto solo come back-end batch enrichment (già da memoria), non più chiamabile da UI |
-| 3. Download | `bulkOps.run("download.partner", ...)` → `process-download-job` + bridge | invocazioni dirette a `scrape-website` / bridge da componenti |
-| 4. Inbound enrichment | `bulkOps.run("enrich.inbound", ...)` → `process-inbound-enrichment` | chiamate ad-hoc da Funnemail UI |
-| 5. Verifiche bulk | `bulkOps.run("verify.{wa\|li\|email\|dedup}", ...)` | `useBulkLinkedInDispatch`, `useLinkedInLookup`, `useLinkedInFlow` resi interni; UI usa solo `bulkOps` |
-| 6. Update bulk | `bulkOps.run("update.{origin\|leadStatus\|emailRules\|backfill\|analyzeAi\|dispatch}", ...)` | DAL functions (`bulkUpdateContactsOrigin`, `applyLeadStatusChange`, `bulkUpdateAutoAction`, `bulkSetBlocked`, `backfillForAddress/Group`, `suggest-email-groups`) restano ma **uso diretto vietato dalla UI**: passare via `bulkOps` |
+| Architettura | 8 | 10 |
+| Runtime | 3 | 10 |
+| Prompt | 2 | 10 |
+| Telemetria | 4 | 10 |
+| KB & dispatching | 4 | 10 |
+| **Totale** | **5.5** | **10** |
 
-> Le funzioni "interne" non vengono cancellate: vengono spostate sotto `bulkOps/entries/` o marcate `@internal` con barrel export che non le ri-esporta. Nessun refactor opportunistico al loro interno.
+## Esecuzione
+- Sprint atomici: nessun sprint inizia se il precedente non ha DoD verde.
+- Ogni sprint = 1 PR singola (no refactor opportunistici, regola del Metodo Enterprise Vol II).
+- Rollback plan documentato per ogni sprint (snapshot `prompt_versions`, feature flag su dispatcher).
 
-## Runner centralizzato
-
-`runBulkOp(scope, items, opts)` fa:
-
-1. **Validate**: `scope` deve esistere nel `registry`.
-2. **Persist**: crea record in nuova tabella `bulk_jobs` (status, scope, total, processed, errors, created_by, source_view).
-3. **Execute**: delega all'entry interna; `Promise.allSettled` con concurrency cap; `withRetry` (già in `src/v2/bridge/retry.ts`) per errori transienti.
-4. **Log**: `structuredLogger` + eventi su `bulk_job_events` (append-only).
-5. **Realtime**: hook `useBulkJob(jobId)` per progress UI (riusa pattern di `useDownloadJobs`).
-
-## Guardrail
-
-**A. Routing registry** (`registry.ts`): unica fonte di verità `scope → handler`. Nessun handler raggiungibile fuori dal registry.
-
-**B. ESLint rule** `no-direct-bulk-op`: vieta import di:
-- `enrich-partner-website`, `batch-enrichment-worker`, `process-download-job`, `process-inbound-enrichment`, `suggest-email-groups`, `backfill-email-rules` da file `src/**/ui/**` e `src/components/**`
-- hook `useDeepSearchV2`, `useDeepSearchRunner`, `useDeepSearchLocal`, `useBulkLinkedInDispatch` fuori da `src/v2/services/bulkOps/`
-- DAL bulk functions fuori da `src/v2/services/bulkOps/` e `src/data/`
-
-Modello: replicare pattern di `eslint-rules/no-direct-ai-invoke.js`.
-
-**C. Runtime guard (DEV only)**: `assertCalledFromBulkOps()` invocato dentro le entry interne; lancia errore in `import.meta.env.DEV` se lo stack non contiene `bulkOps/runner`.
-
-**D. CI script**: `scripts/audit-bulk-ops.ts` (modello `audit-ai-invocations.ts`) → fail se trova caller proibiti.
-
-## Migrazione UI (chirurgica, no logica nuova)
-
-Aggiornare i call-site mappati nella ricognizione precedente, sostituendo l'invocazione attuale con `bulkOps.run(scope, items)`:
-
-- `OraclePanel`, `NetworkPage`, `CockpitPage`, `Settings/Enrichment` → `enrich.base` / `deepsearch.sherlock`
-- `LiveOperationCards`, `JobMonitor`, `AcquisizionePartnerPage` → `download.partner`
-- `Funnemail`, `EmailIntelligence` → `enrich.inbound`, `update.emailRules`, `update.analyzeAi`, `update.backfill`
-- `ContactsPage`, `Missions`, `HoldingPattern` → `verify.*`, `update.origin`, `update.leadStatus`, `verify.wa`, `verify.li`
-- `EmailComposer/Canvas`, `SherlockLauncherDialog`, `HeaderToolsMenu` → `deepsearch.sherlock`
-- `ImportWizard` → `verify.dedup`
-
-Nessun cambiamento di stile/markup. Solo handler dei pulsanti.
-
-## DB
-
-Nuova migrazione:
-- `bulk_jobs` (id, scope, source_view, total, processed, success_count, error_count, status, created_by, created_at, completed_at, payload jsonb)
-- `bulk_job_events` (id, job_id, event_type, payload jsonb, created_at) — append-only
-- RLS: owner-only + admin via `has_role`
-- Realtime publication su entrambe
-
-## Test di regressione
-
-`src/test/bulkOps/`:
-1. `registry.test.ts` — ogni scope ha esattamente un handler.
-2. `runner.test.ts` — persistenza job, retry, eventi.
-3. `enrich-base.entry.test.ts` — chiama l'edge attesa, non altre.
-4. `deepsearch.entry.test.ts` — risolve a `useSherlock`, non a V2/Runner/Local.
-5. `download.entry.test.ts`
-6. `inbound-enrich.entry.test.ts`
-7. `verify.entry.test.ts` (4 sotto-scope)
-8. `update.entry.test.ts` (6 sotto-scope)
-9. `guardrail.lint.test.ts` — esegue ESLint rule su fixture proibite/permesse.
-10. `guardrail.audit.test.ts` — esegue `scripts/audit-bulk-ops.ts` su snapshot src/.
-
-E2E (Playwright) di smoke:
-- `e2e/bulk-ops-routing.spec.ts` — clicca un pulsante per scope e verifica che nasca un record `bulk_jobs` con `scope` corretto.
-
-## Cosa NON tocco (per principio madre)
-
-- Logica interna di `enrich-partner-website`, `process-download-job`, `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria vincolante).
-- Sherlock engine interno.
-- `journalistReview` e gate editoriale.
-- Soft-delete trigger.
-- Tutti i prompt operativi e Funnemail pipeline (lavoro precedente preservato).
-
-## Output atteso
-
-- 1 modulo `bulkOps` + registry.
-- 2 tabelle nuove (`bulk_jobs`, `bulk_job_events`) + RLS + realtime.
-- 1 ESLint rule + 1 audit script wired in CI.
-- ~25 call-site UI aggiornati a chiamare solo `bulkOps.run(...)`.
-- ~10 file di test verdi.
-- 1 memoria nuova: `mem://architecture/bulk-ops-single-entry-point`.
+## Approvazione richiesta
+Confermi di partire da **Sprint 1 (pulizia prompt)**? È quello a leverage più alto e sblocca la qualità dei successivi.
