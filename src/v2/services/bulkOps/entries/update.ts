@@ -25,9 +25,9 @@ export const updateLeadStatusEntry: BulkEntry<UpdateLeadStatusItem, { ok: boolea
   continueOnError: true,
   handler: async (item) => {
     assertCalledFromRunner("update.leadStatus");
-    const mod = (await import("@/data/leadStatusGuard")) as unknown as Record<string, AnyAsync>;
-    if (!mod.applyLeadStatusChange) throw new Error("applyLeadStatusChange not exported");
-    await mod.applyLeadStatusChange({ contactId: item.contactId, newStatus: item.newStatus, statusReason: item.statusReason });
+    const mod = (await import("@/data/contacts/queries")) as unknown as Record<string, AnyAsync>;
+    if (!mod.updateLeadStatus) throw new Error("updateLeadStatus not exported by @/data/contacts/queries");
+    await mod.updateLeadStatus([item.contactId], item.newStatus);
     return { ok: true };
   },
 };
