@@ -46,7 +46,7 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
   const { toast } = useToast();
 
   const { data: cronPaused = false } = useQuery({
-    queryKey: queryKeys.system.systemFlags.cronPaused,
+    queryKey: queryKeys.systemFlags.cronPaused,
     queryFn: getCronPaused,
     refetchInterval: 30000,
     staleTime: 15000,
@@ -58,7 +58,7 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
       await setCronPaused(next, u.user?.id ?? null);
     },
     onSuccess: (_d, next) => {
-      qc.invalidateQueries({ queryKey: queryKeys.system.systemFlags.cronPaused });
+      qc.invalidateQueries({ queryKey: queryKeys.systemFlags.cronPaused });
       toast({
         title: next ? "Trasmissioni AI in pausa" : "Trasmissioni AI riprese",
         description: next
