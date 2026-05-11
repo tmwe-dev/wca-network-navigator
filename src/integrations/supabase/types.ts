@@ -12977,6 +12977,13 @@ export type Database = {
           merged_rows: number
         }[]
       }
+      prompt_lab_cron_status: {
+        Args: never
+        Returns: {
+          cron_refiner: boolean
+          cron_test_runner: boolean
+        }[]
+      }
       purge_inbound_activities: {
         Args: { p_only_orphans?: boolean }
         Returns: Json
