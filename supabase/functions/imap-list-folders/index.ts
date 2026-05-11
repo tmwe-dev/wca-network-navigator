@@ -9,6 +9,7 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
+    const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const which = (body.mailbox as string) || "booking";
     const user = which === "booking" ? "booking@tmwe.it" : (Deno.env.get("IMAP_USER") || "luca@tmwe.it");
     const pass = which === "booking"
