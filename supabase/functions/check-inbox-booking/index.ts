@@ -1,6 +1,8 @@
 /**
- * check-inbox/index.ts — Thin orchestrator.
- * Imports from: imapConnection, messageProcessor, postProcessing.
+ * check-inbox-booking/index.ts — Copia esatta di check-inbox dedicata
+ * ESCLUSIVAMENTE alla casella aziendale booking@tmwe.it (server mx01.vmteca.net).
+ * Le credenziali sono hardcoded (host/user) + password da secret IMAP_PASSWORD_BOOKING
+ * (fallback SMTP_PASSWORD_BOOKING). NON usa le credenziali personali dell'operatore.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -29,7 +31,7 @@ Deno.serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { headers: dynCors });
 
-  const metrics = startMetrics("check-inbox");
+  const metrics = startMetrics("check-inbox-booking");
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
@@ -75,11 +77,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── IMAP config ──
-    const imapHost = Deno.env.get("IMAP_HOST") || "";
-    const imapUser = Deno.env.get("IMAP_USER") || "";
-    const imapPassword = Deno.env.get("IMAP_PASSWORD") || "";
-    if (!imapHost || !imapUser || !imapPassword) throw new Error("IMAP credentials not configured");
+    // ── IMAP config — BOOKING ONLY (hardcoded, ignora env IMAP_HOST/USER) ──
+    const imapHost = "mx01.vmteca.net";
+    const imapUser = "booking@tmwe.it";
+    const imapPassword =
+      Deno.env.get("IMAP_PASSWORD_BOOKING") ||
+      Deno.env.get("SMTP_PASSWORD_BOOKING") ||
+      "";
+    if (!imapPassword) throw new Error("IMAP_PASSWORD_BOOKING not configured");
 
     // ── Get sync state ──
     const syncState = await getSyncState(supabase, userId, imapHost, imapUser);
@@ -166,7 +171,7 @@ Deno.serve(async (req) => {
       const resync = await resyncUnreadFlags(supabase, imapExec, userId);
       if (resync.checked > 0) {
         console.log(JSON.stringify({
-          fn: "check-inbox",
+          fn: "check-inbox-booking",
           step: "flag_resync",
           checked: resync.checked,
           marked_read: resync.markedRead,
@@ -191,7 +196,7 @@ Deno.serve(async (req) => {
       const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
       if (enq.enqueued > 0) {
         console.log(JSON.stringify({
-          fn: "check-inbox",
+          fn: "check-inbox-booking",
           step: "enrichment_enqueue",
           enqueued: enq.enqueued,
           skipped: enq.skipped,
@@ -208,7 +213,7 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
-    logEdgeError("check-inbox", err);
+    logEdgeError("check-inbox-booking", err);
     endMetrics(metrics, false, 500);
     return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, dynCors);
   }
