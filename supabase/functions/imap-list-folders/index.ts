@@ -9,9 +9,12 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const user = Deno.env.get("IMAP_USER") || "booking@tmwe.it";
-    const pass = Deno.env.get("IMAP_PASSWORD");
-    const debug = { user, hasPass: !!pass, host: Deno.env.get("IMAP_HOST") || "imaps.aruba.it" };
+    const which = (body.mailbox as string) || "booking";
+    const user = which === "booking" ? "booking@tmwe.it" : (Deno.env.get("IMAP_USER") || "luca@tmwe.it");
+    const pass = which === "booking"
+      ? (Deno.env.get("IMAP_PASSWORD_BOOKING") || "")
+      : (Deno.env.get("IMAP_PASSWORD") || "");
+    const debug = { user, hasPass: !!pass, host: "imaps.aruba.it" };
     if (!pass) return new Response(JSON.stringify({ error: "no_password", debug }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const client = new ImapClient({
