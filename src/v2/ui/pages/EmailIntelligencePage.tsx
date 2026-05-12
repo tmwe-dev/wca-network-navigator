@@ -10,6 +10,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Brain } from "lucide-react";
+import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
 
 const ManualGroupingTab = lazy(() => import("@/components/email-intelligence/ManualGroupingTab"));
 const AISuggestionsTab = lazy(() => import("@/components/email-intelligence/AISuggestionsTab"));
@@ -26,6 +27,10 @@ function TabFallback() {
 }
 
 export function EmailIntelligencePage(): React.ReactElement {
+  // Mailbox attiva: i KPI "Da classificare" / "Suggerimenti AI" devono
+  // riferirsi solo ai mittenti della casella corrente, non al totale globale.
+  const { allowlist, mailboxKey, activeMailbox } = useMailboxSenderAllowlist();
+
   useEffect(() => {
     let restoringFromBrowserGesture = false;
     const blockBrowserHistoryGesture = () => {
@@ -45,27 +50,43 @@ export function EmailIntelligencePage(): React.ReactElement {
 
   // Badge counts
   const { data: uncategorizedCount = 0 } = useQuery({
-    queryKey: queryKeys.emailIntel.uncategorizedCount,
+    queryKey: [...queryKeys.emailIntel.uncategorizedCount, mailboxKey],
+    enabled: !!allowlist,
     queryFn: async () => {
-      const { count } = await supabase
+      if (!allowlist || allowlist.size === 0) return 0;
+      // Carichiamo solo l'email_address (paginato) per intersecare client-side
+      // con l'allowlist mailbox-scoped. Le regole restano shared.
+      const { data } = await supabase
         .from("email_address_rules")
-        .select("id", { count: "exact", head: true })
+        .select("email_address")
         .is("group_id", null);
-      return count ?? 0;
+      const seen = new Set<string>();
+      for (const r of (data ?? []) as Array<{ email_address: string }>) {
+        const k = (r.email_address || "").toLowerCase();
+        if (allowlist.has(k)) seen.add(k);
+      }
+      return seen.size;
     },
     staleTime: 60_000,
   });
 
   const { data: aiSuggestionsCount = 0 } = useQuery({
-    queryKey: queryKeys.emailIntel.aiSuggestionsCount,
+    queryKey: [...queryKeys.emailIntel.aiSuggestionsCount, mailboxKey],
+    enabled: !!allowlist,
     queryFn: async () => {
-      const { count } = await supabase
+      if (!allowlist || allowlist.size === 0) return 0;
+      const { data } = await supabase
         .from("email_address_rules")
-        .select("id", { count: "exact", head: true })
+        .select("email_address")
         .is("group_id", null)
         .not("ai_suggested_group", "is", null)
         .is("ai_suggestion_accepted", null);
-      return count ?? 0;
+      const seen = new Set<string>();
+      for (const r of (data ?? []) as Array<{ email_address: string }>) {
+        const k = (r.email_address || "").toLowerCase();
+        if (allowlist.has(k)) seen.add(k);
+      }
+      return seen.size;
     },
     staleTime: 60_000,
   });
@@ -109,7 +130,11 @@ export function EmailIntelligencePage(): React.ReactElement {
       <PageTitleHeader
         icon={Brain}
         title="Email Intelligence"
-        subtitle="classificazione mittenti"
+        subtitle={
+          activeMailbox
+            ? `mittenti di ${activeMailbox.label}`
+            : "classificazione mittenti"
+        }
         right={
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <KpiPill label="Da classificare" value={uncategorizedCount} tone="primary" />

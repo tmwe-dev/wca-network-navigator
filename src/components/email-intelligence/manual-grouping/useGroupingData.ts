@@ -10,9 +10,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { DEFAULT_GROUPS as PREDEFINED_GROUPS } from "@/types/email-management";
+import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
 
 export function useGroupingData() {
   const qc = useQueryClient();
+  // Mailbox-awareness: filtriamo i mittenti per casella selezionata.
+  // Le regole/gruppi restano condivisi, cambia solo CHI VIENE MOSTRATO.
+  const { allowlist, mailboxKey, activeMailbox } = useMailboxSenderAllowlist();
   const [senders, setSenders] = useState<SenderAnalysis[]>([]);
   const [classifiedSenders, setClassifiedSenders] = useState<SenderAnalysis[]>([]);
   const [groups, setGroups] = useState<EmailSenderGroup[]>([]);
@@ -198,7 +202,14 @@ export function useGroupingData() {
         isBlocked: r.is_blocked === true,
       }));
 
-      setSenders(senderList);
+      // Filtra per mailbox attiva: mostra solo i mittenti che hanno
+      // effettivamente scritto nella casella corrente. Se l'allowlist
+      // non è ancora pronta (null) mostriamo lista vuota — sarà ripopolata
+      // dall'effect che osserva mailboxKey.
+      const filteredSenders = allowlist
+        ? senderList.filter((s) => allowlist.has(s.email.toLowerCase()))
+        : [];
+      setSenders(filteredSenders);
 
       // Load classified senders (have group_id OR group_name) → mostrati nel rail con opacità ridotta.
       const classifiedRules = await fetchAllRows<{
@@ -255,7 +266,10 @@ export function useGroupingData() {
           : undefined,
         isBlocked: r.is_blocked === true,
       }));
-      setClassifiedSenders(classifiedList);
+      const filteredClassified = allowlist
+        ? classifiedList.filter((s) => allowlist.has(s.email.toLowerCase()))
+        : [];
+      setClassifiedSenders(filteredClassified);
 
       // After loading uncategorized senders, also refresh assigned-rules map.
       await loadAssignedRules();
@@ -275,15 +289,25 @@ export function useGroupingData() {
       // Get only THIS user's inbound email senders
       const messages = await fetchAllRows<{ from_address: string | null }>(
         (from, to) =>
-          supabase
-            .from("channel_messages")
-            .select("from_address")
-            .eq("channel", "email")
-            .eq("direction", "inbound")
-            .eq("user_id", user.id)
-            .not("from_address", "is", null)
-            .order("id", { ascending: true })
-            .range(from, to),
+          (() => {
+            let q = supabase
+              .from("channel_messages")
+              .select("from_address")
+              .eq("channel", "email")
+              .eq("direction", "inbound")
+              .eq("user_id", user.id)
+              .not("from_address", "is", null)
+              .order("id", { ascending: true })
+              .range(from, to);
+            // Limita la popolazione regole alla mailbox attiva, così
+            // "Popola" non importa indirizzi appartenenti ad altre caselle.
+            if (activeMailbox?.kind === "personal") {
+              q = q.is("mailbox_id", null);
+            } else if (activeMailbox?.kind === "shared") {
+              q = q.eq("mailbox_id", activeMailbox.mailbox_id);
+            }
+            return q;
+          })(),
       );
 
       // Count per address
@@ -402,7 +426,9 @@ export function useGroupingData() {
   // Initial load
   useEffect(() => {
     loadData();
-  }, []);
+    // Re-load quando cambia mailbox o quando l'allowlist diventa pronta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mailboxKey, allowlist]);
 
   return {
     senders,
