@@ -27,6 +27,7 @@ export const commsKeys = {
   },
   email: {
     count: ["email-count"] as const,
+    countByMailbox: (mailboxKey?: string) => ["email-count", mailboxKey ?? "any"] as const,
     mailboxes: ["email-mailboxes"] as const,
     mailboxesAll: ["email-mailboxes", "all"] as const,
     operatorAccess: (operatorId: string) => ["email-mailboxes", "access", operatorId] as const,
