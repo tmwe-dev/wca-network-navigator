@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StepOperatorIdentity, type OperatorIdentityValues } from "./StepOperatorIdentity";
 
+function describeSaveError(err: unknown): string {
+  if (!err) return "errore sconosciuto";
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object") {
+    const e = err as { message?: string; details?: string; hint?: string; code?: string };
+    return [e.message, e.details, e.hint, e.code ? `(code ${e.code})` : null]
+      .filter(Boolean)
+      .join(" — ") || "errore sconosciuto";
+  }
+  return String(err);
+}
+
 interface OnboardingWizardProps {
   onComplete: () => void;
 }
@@ -76,35 +88,39 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         .eq("user_id", user.id);
       if (error) throw error;
 
-      // Ensure operator row exists and is in sync. Never touches is_admin —
-      // that is governed exclusively from Settings → Operatori.
+      // Sync row operator (UPDATE-first per evitare conflitti su unique email).
+      // Never touches is_admin — governato da Settings → Operatori.
       const operatorEmail = (user.email ?? "").toLowerCase();
       if (operatorEmail) {
-        const { error: opErr } = await supabase
+        const operatorPatch = {
+          name: values.displayName.trim() || operatorEmail.split("@")[0],
+          whatsapp_phone: values.whatsapp.trim() || null,
+          linkedin_profile_url: values.linkedinUrl.trim() || null,
+          is_active: true,
+        };
+        const { data: existing } = await supabase
           .from("operators")
-          .upsert(
-            {
-              user_id: user.id,
-              name: values.displayName.trim() || operatorEmail.split("@")[0],
-              email: operatorEmail,
-              whatsapp_phone: values.whatsapp.trim() || null,
-              linkedin_profile_url: values.linkedinUrl.trim() || null,
-              is_active: true,
-            },
-            { onConflict: "user_id" },
-          );
-        if (opErr) {
-          // Non bloccare l'onboarding se l'operator row esiste già con email
-          // diversa: l'admin la riconcilia da Settings.
-          console.warn("[onboarding] operator upsert non-blocking:", opErr.message);
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (existing?.id) {
+          const { error: opErr } = await supabase
+            .from("operators")
+            .update(operatorPatch)
+            .eq("id", existing.id);
+          if (opErr) console.warn("[onboarding] operator update non-blocking:", describeSaveError(opErr));
+        } else {
+          const { error: opErr } = await supabase
+            .from("operators")
+            .insert({ ...operatorPatch, user_id: user.id, email: operatorEmail });
+          if (opErr) console.warn("[onboarding] operator insert non-blocking:", describeSaveError(opErr));
         }
       }
 
       toast.success("Profilo configurato. Benvenuto!");
       onComplete();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "errore";
-      toast.error(`Salvataggio fallito: ${msg}`);
+      toast.error(`Salvataggio fallito: ${describeSaveError(err)}`);
     } finally {
       setSaving(false);
     }
