@@ -9,4 +9,4 @@ type: feature
 - Seed: booking@tmwe.it (auto-grant), amministrazione@tmwe.it (manuale).
 - DAL: `src/data/mailboxes.ts`. Context: `ActiveMailboxContext` (per-operator localStorage).
 - UI: `MailboxSelector` in `LayoutHeader`; pannello admin "Caselle Aziendali" in Settings; checkbox per-operatore in `OperatorsSettingsPanel`.
-- TODO futuro: passare `mailbox_id` a check-inbox/email-imap-proxy/mark-imap-seen + helper `_shared/resolveMailbox.ts`. Ad oggi le edge usano ancora solo le credenziali personali dell'operatore.
+- Edge IMAP multi-mailbox attive: `check-inbox`, `email-imap-proxy` (test/fetch/send), `mark-imap-seen` accettano header opzionale `x-mailbox-id`. Senza header → casella personale (legacy invariato). Con header → credenziali via `_shared/resolveMailbox.ts` (mappa slug → ENV `IMAP_PASSWORD_<SLUG>` / `SMTP_PASSWORD_<SLUG>`). `email_sync_state` e `channel_messages` filtrati per `(user_id, mailbox_id)`.
