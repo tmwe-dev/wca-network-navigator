@@ -3499,6 +3499,7 @@ export type Database = {
           imap_uid: number | null
           in_reply_to: string | null
           internal_date: string | null
+          mailbox_id: string | null
           message_id_external: string | null
           operator_id: string | null
           parse_status: string | null
@@ -3542,6 +3543,7 @@ export type Database = {
           imap_uid?: number | null
           in_reply_to?: string | null
           internal_date?: string | null
+          mailbox_id?: string | null
           message_id_external?: string | null
           operator_id?: string | null
           parse_status?: string | null
@@ -3585,6 +3587,7 @@ export type Database = {
           imap_uid?: number | null
           in_reply_to?: string | null
           internal_date?: string | null
+          mailbox_id?: string | null
           message_id_external?: string | null
           operator_id?: string | null
           parse_status?: string | null
@@ -3607,6 +3610,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "channel_messages_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "channel_messages_operator_id_fkey"
             columns: ["operator_id"]
