@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useAuth } from "@/providers/AuthProvider";
 import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 import { queryKeys } from "@/lib/queryKeys";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import {
@@ -50,6 +51,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const g = useGlobalFilters();
   const { user } = useAuth();
   const { activeOperator, operators, viewingAll } = useActiveOperator();
+  const { activeMailbox } = useActiveMailbox();
   // Hard guard: usiamo activeOperator SOLO se appartiene davvero alla lista
   // accessibile dall'utente corrente. Senza questo check, un id "fantasma"
   // (es. cache stale di un account precedente) farebbe vedere a Luigi
@@ -66,6 +68,14 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     ? null
     : trustedActiveOp?.user_id ?? user?.id ?? null;
   const folderOwnerUserId = targetUserId ?? user?.id ?? null;
+  // Filtro casella: passiamo personal/shared al DAL così la inbox mostra
+  // solo i messaggi della casella attiva nel selettore in header.
+  const mailboxFilter = React.useMemo<{ kind: "personal" } | { kind: "shared"; id: string } | null>(() => {
+    if (!activeMailbox) return null;
+    if (activeMailbox.kind === "shared") return { kind: "shared", id: activeMailbox.mailbox_id };
+    return { kind: "personal" };
+  }, [activeMailbox]);
+  const mailboxKey = activeMailbox ? `${activeMailbox.kind}:${activeMailbox.mailbox_id}` : "none";
   const rawSelectedFolder = g.filters.funnemailFolder || "all";
   const setSelectedFolder = React.useCallback(
     (slug: string) => g.setFilter("funnemailFolder", slug),
@@ -74,8 +84,8 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const [selectedMessageId, setSelectedMessageId] = React.useState<string | null>(null);
 
   const groupedQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.grouped(folderOwnerUserId ?? "anon", targetUserId),
-    queryFn: () => listFunnemailGroupedInbox(folderOwnerUserId!, targetUserId),
+    queryKey: queryKeys.funnemailInbox.grouped(folderOwnerUserId ?? "anon", targetUserId, mailboxKey),
+    queryFn: () => listFunnemailGroupedInbox(folderOwnerUserId!, targetUserId, mailboxFilter),
     enabled: !!folderOwnerUserId,
     staleTime: 60_000,
     refetchInterval: 60_000,
