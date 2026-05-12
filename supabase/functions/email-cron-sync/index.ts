@@ -75,8 +75,9 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
         let ownerUserId = access?.operator_id as string | undefined;
 
-        // Fallback: nessun operatore con accesso esplicito → usa un admin
-        // (così Amministrazione & co. vengono comunque sincronizzate dal cron).
+        // Fallback: nessun operatore con accesso esplicito → usa il primo
+        // admin (o, se non esiste, un operator qualsiasi). Così Amministrazione
+        // & co. vengono sincronizzate dal cron senza richiedere assegnazioni.
         if (!ownerUserId) {
           const { data: admin } = await supabase
             .from("profiles")
@@ -85,6 +86,14 @@ Deno.serve(async (req: Request) => {
             .limit(1)
             .maybeSingle();
           ownerUserId = admin?.user_id as string | undefined;
+        }
+        if (!ownerUserId) {
+          const { data: anyOp } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .limit(1)
+            .maybeSingle();
+          ownerUserId = anyOp?.user_id as string | undefined;
         }
         if (!ownerUserId) continue;
 
