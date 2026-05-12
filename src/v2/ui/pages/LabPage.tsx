@@ -1,68 +1,88 @@
 /**
  * LabPage — Hub unificato "Lab & Verifiche".
  *
- * Aggrega in un'unica pagina, tramite tab + querystring deep-link,
- * tutte le aree di test/diagnostica/verifica del sistema:
- *  - Scenari AI (AiTestHub)
- *  - E2E Smoke
- *  - Diagnostica
- *  - Telemetria
- *  - Observability
- *  - Test Extensions (WA/LI/FireScrape)
- *  - Design System Preview
+ * Sorgente unica delle tab: `src/v2/config/labTabs.ts` (UNA riga per tab).
+ * Nessuna business logic: ogni componente è caricato lazy as-is.
  *
- * Nessuna logica nuova: ogni tab importa il componente esistente as-is.
+ * Deep-link: /v2/lab?group=<group>&tab=<tab>
  */
-import { lazy, Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
-import { FlaskConical, Activity, Stethoscope, BarChart3, Eye, Puzzle, Palette } from "lucide-react";
+import { FlaskConical } from "lucide-react";
+import {
+  LAB_GROUPS,
+  LAB_TABS,
+  DEFAULT_LAB_GROUP,
+  DEFAULT_LAB_TAB_BY_GROUP,
+  getLabTabsByGroup,
+  type LabTabGroup,
+} from "@/v2/config/labTabs";
 
-const AiTestHubPage = lazy(() => import("./AiTestHubPage").then((m) => ({ default: m.AiTestHubPage })));
-const E2EStatusPage = lazy(() => import("./E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
-const DiagnosticsPage = lazy(() => import("./DiagnosticsPage").then((m) => ({ default: m.DiagnosticsPage })));
-const TelemetryPage = lazy(() => import("./TelemetryPage").then((m) => ({ default: m.TelemetryPage })));
-const ObservabilityPage = lazy(() => import("./ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
-const DesignSystemPreviewPage = lazy(() => import("./DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
-const TestExtensionsContent = lazy(() => import("@/components/test-extensions/TestExtensionsView").then((m) => ({ default: m.TestExtensionsContent })));
-
-const TABS = [
-  { id: "scenari", label: "Scenari AI", icon: FlaskConical, Comp: AiTestHubPage },
-  { id: "e2e", label: "E2E Smoke", icon: Activity, Comp: E2EStatusPage },
-  { id: "diagnostica", label: "Diagnostica", icon: Stethoscope, Comp: DiagnosticsPage },
-  { id: "telemetria", label: "Telemetria", icon: BarChart3, Comp: TelemetryPage },
-  { id: "observability", label: "Observability", icon: Eye, Comp: ObservabilityPage },
-  { id: "extensions", label: "Extensions", icon: Puzzle, Comp: TestExtensionsContent },
-  { id: "design", label: "Design System", icon: Palette, Comp: DesignSystemPreviewPage },
-] as const;
-
-type TabId = typeof TABS[number]["id"];
-const VALID: ReadonlySet<string> = new Set(TABS.map((t) => t.id));
+const VALID_GROUPS = new Set<string>(LAB_GROUPS.map((g) => g.id));
 
 export function LabPage() {
   const [params, setParams] = useSearchParams();
-  const raw = params.get("tab");
-  const active: TabId = (raw && VALID.has(raw) ? raw : "scenari") as TabId;
 
-  const onChange = (v: string) => {
-    const next = new URLSearchParams(params);
-    next.set("tab", v);
-    setParams(next, { replace: true });
+  const rawGroup = params.get("group");
+  const group: LabTabGroup =
+    rawGroup && VALID_GROUPS.has(rawGroup) ? (rawGroup as LabTabGroup) : DEFAULT_LAB_GROUP;
+
+  const tabsInGroup = useMemo(() => getLabTabsByGroup(group), [group]);
+  const validTabIds = useMemo(() => new Set(tabsInGroup.map((t) => t.id)), [tabsInGroup]);
+
+  const rawTab = params.get("tab");
+  const activeTab =
+    rawTab && validTabIds.has(rawTab) ? rawTab : DEFAULT_LAB_TAB_BY_GROUP[group];
+
+  const setGroup = (next: string) => {
+    const np = new URLSearchParams(params);
+    np.set("group", next);
+    np.set("tab", DEFAULT_LAB_TAB_BY_GROUP[next as LabTabGroup] ?? "");
+    setParams(np, { replace: true });
   };
+
+  const setTab = (next: string) => {
+    const np = new URLSearchParams(params);
+    np.set("group", group);
+    np.set("tab", next);
+    setParams(np, { replace: true });
+  };
+
+  const ActiveComp = LAB_TABS.find((t) => t.id === activeTab)?.Component;
 
   return (
     <div className="flex flex-col gap-4">
       <PageTitleHeader
         title="Lab & Verifiche"
-        subtitle="Cabina unica di test, diagnostica, telemetria e QA"
+        subtitle="Cabina unica di test, prompt, observability e QA — sorgente: src/v2/config/labTabs.ts"
         icon={FlaskConical}
       />
-      <Tabs value={active} onValueChange={onChange} className="w-full">
-        <TabsList className="flex flex-wrap h-auto justify-start gap-1 bg-muted/40 p-1">
-          {TABS.map((t) => {
+
+      {/* Group selector */}
+      <Tabs value={group} onValueChange={setGroup} className="w-full">
+        <TabsList className="flex flex-wrap h-auto justify-start gap-1 bg-muted/60 p-1">
+          {LAB_GROUPS.map((g) => {
+            const Icon = g.icon;
+            const count = LAB_TABS.filter((t) => t.group === g.id).length;
+            return (
+              <TabsTrigger key={g.id} value={g.id} className="gap-2">
+                <Icon className="w-4 h-4" strokeWidth={1.5} />
+                <span>{g.label}</span>
+                <span className="text-xs text-muted-foreground">({count})</span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
+
+      {/* Tabs of current group */}
+      <Tabs value={activeTab} onValueChange={setTab} className="w-full">
+        <TabsList className="flex flex-wrap h-auto justify-start gap-1 bg-muted/30 p-1">
+          {tabsInGroup.map((t) => {
             const Icon = t.icon;
             return (
               <TabsTrigger key={t.id} value={t.id} className="gap-2">
@@ -73,20 +93,15 @@ export function LabPage() {
           })}
         </TabsList>
 
-        {TABS.map((t) => {
-          const Comp = t.Comp;
-          return (
-            <TabsContent key={t.id} value={t.id} className="mt-4 focus-visible:outline-none">
-              {active === t.id ? (
-                <FeatureErrorBoundary featureName={`Lab/${t.id}`}>
-                  <Suspense fallback={<PageSkeleton />}>
-                    <Comp />
-                  </Suspense>
-                </FeatureErrorBoundary>
-              ) : null}
-            </TabsContent>
-          );
-        })}
+        <TabsContent value={activeTab} className="mt-4 focus-visible:outline-none">
+          {ActiveComp ? (
+            <FeatureErrorBoundary featureName={`Lab/${group}/${activeTab}`}>
+              <Suspense fallback={<PageSkeleton />}>
+                <ActiveComp />
+              </Suspense>
+            </FeatureErrorBoundary>
+          ) : null}
+        </TabsContent>
       </Tabs>
     </div>
   );
