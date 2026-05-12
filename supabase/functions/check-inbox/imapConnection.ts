@@ -107,10 +107,11 @@ export async function handleUidvalidityChange(
 
 export async function fetchUidBatch(
   imapExec: { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> },
-  lastUid: number
+  lastUid: number,
+  unreadOnly = false,
 ): Promise<UidBatch> {
   try {
-    const nextBatch = await getNextUidBatch(imapExec, lastUid);
+    const nextBatch = await getNextUidBatch(imapExec, lastUid, unreadOnly);
     return {
       uids: nextBatch.uids,
       remainingCount: nextBatch.remaining,

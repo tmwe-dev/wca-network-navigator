@@ -88,8 +88,12 @@ export function bgSyncIsRunning(): boolean {
   return running;
 }
 
-export async function bgSyncStart(mailboxId?: string | null) {
+export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?: boolean } = {}) {
   if (running) return;
+  // Default: download massivo limitato alle mail NON LETTE per evitare di
+  // scaricare l'intera storia della casella (può essere decine di migliaia
+  // di email su caselle condivise). Il chiamante può forzare `unreadOnly:false`.
+  const unreadOnly = opts.unreadOnly ?? true;
 
   running = true;
   abortSync = false;
@@ -126,7 +130,7 @@ export async function bgSyncStart(mailboxId?: string | null) {
       let result: { total: number; has_more?: boolean; remaining?: number; messages?: Array<Record<string, unknown>>; transient?: boolean; resourceLimit?: boolean };
 
       try {
-        result = await callCheckInbox(mailboxId ?? null) as typeof result;
+        result = await callCheckInbox(mailboxId ?? null, { unreadOnly }) as typeof result;
         consecutiveErrors = 0;
       } catch (batchErr: unknown) {
         consecutiveErrors += 1;
