@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listAccessibleMailboxes, type AccessibleMailbox } from "@/data/mailboxes";
 import { useCurrentOperator } from "@/hooks/useOperators";
 import { queryKeys } from "@/lib/queryKeys";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface Ctx {
   mailboxes: AccessibleMailbox[];
@@ -23,20 +24,29 @@ const Context = React.createContext<Ctx>({
   isLoading: false,
 });
 
-const STORAGE_KEY_PREFIX = "lov:active-mailbox:";
+// v2: lo storage è scoped sia per user.id che per operator.id, così la
+// scelta della casella di un account non contamina un altro login sullo
+// stesso browser, e l'admin che impersona vede la mailbox dell'impersonato.
+const STORAGE_KEY_PREFIX = "lov:active-mailbox:v2:";
 
 export function ActiveMailboxProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { data: currentOp } = useCurrentOperator();
   const opId = currentOp?.id ?? null;
 
   const { data: mailboxes = [], isLoading } = useQuery({
-    queryKey: queryKeys.email.mailboxes,
-    queryFn: () => listAccessibleMailboxes(),
-    enabled: !!opId,
+    // Cache per user.id + operator.id: nessun riutilizzo cross-account.
+    queryKey: [...queryKeys.email.mailboxes, userId, opId],
+    // Passiamo l'operator id esplicito alla RPC: niente fallback implicito
+    // ad auth.uid() che, in caso di cache stale, mostrerebbe le mailbox
+    // dell'utente sbagliato.
+    queryFn: () => listAccessibleMailboxes(opId ?? undefined),
+    enabled: !!userId && !!opId,
     staleTime: 60_000,
   });
 
-  const storageKey = opId ? `${STORAGE_KEY_PREFIX}${opId}` : null;
+  const storageKey = userId && opId ? `${STORAGE_KEY_PREFIX}${userId}:${opId}` : null;
 
   const [activeId, setActiveId] = React.useState<string | null>(() => {
     if (typeof window === "undefined" || !storageKey) return null;
