@@ -123,7 +123,7 @@ export async function bgSyncStart(mailboxId?: string | null) {
 
     while (!abortSync) {
       batchNum += 1;
-      let result: { total: number; has_more?: boolean; remaining?: number; messages?: Array<Record<string, unknown>> };
+      let result: { total: number; has_more?: boolean; remaining?: number; messages?: Array<Record<string, unknown>>; transient?: boolean; resourceLimit?: boolean };
 
       try {
         result = await callCheckInbox(mailboxId ?? null) as typeof result;
@@ -144,6 +144,34 @@ export async function bgSyncStart(mailboxId?: string | null) {
         };
         notifyProgress();
         await new Promise((resolve) => setTimeout(resolve, 2000 * consecutiveErrors));
+        continue;
+      }
+
+      // CPU exhaustion (546 WORKER_RESOURCE_LIMIT) o cold-start (503 BOOT_ERROR)
+      // arrivano come { total: 0, transient: true } da callCheckInbox.
+      // NON considerarli "fine sync": fai backoff e riprova lo stesso batch.
+      if (result.transient) {
+        consecutiveErrors += 1;
+        const reason = result.resourceLimit ? "CPU edge satura" : "edge in avvio";
+        log.warn("transient batch, retrying", { batchNum, consecutiveErrors, maxRetries: MAX_RETRIES, reason });
+        if (consecutiveErrors >= MAX_RETRIES) {
+          progress = {
+            ...progress,
+            status: "error",
+            errorMessage: `Edge function in sovraccarico (${reason}). Riprova fra qualche minuto.`,
+          };
+          notifyProgress();
+          break;
+        }
+        progress = {
+          ...progress,
+          batch: batchNum,
+          lastSubject: `⏸️ ${reason}, riprovo… (${consecutiveErrors}/${MAX_RETRIES})`,
+          status: "syncing",
+        };
+        notifyProgress();
+        // backoff lineare: 5s → 10s → 15s … (CPU edge si libera in pochi secondi)
+        await new Promise((resolve) => setTimeout(resolve, 5000 * consecutiveErrors));
         continue;
       }
 
