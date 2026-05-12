@@ -35,25 +35,38 @@ function isSkippableCheckInboxError(err: unknown): err is ApiError {
  * altri 37 callsite e per beneficiare del logging strutturato + body
  * extraction da FunctionsHttpError.
  */
-export async function callCheckInbox(mailboxId?: string | null): Promise<unknown> {
+export interface CallCheckInboxOptions {
+  readonly unreadOnly?: boolean;
+}
+
+export async function callCheckInbox(
+  mailboxId?: string | null,
+  opts: CallCheckInboxOptions = {},
+): Promise<unknown> {
   if (inFlightCheckInbox) {
     log.warn("check-inbox already running, joining existing invocation");
     return inFlightCheckInbox;
   }
 
-  inFlightCheckInbox = callCheckInboxOnce(mailboxId ?? null).finally(() => {
+  inFlightCheckInbox = callCheckInboxOnce(mailboxId ?? null, opts).finally(() => {
     inFlightCheckInbox = null;
   });
 
   return inFlightCheckInbox;
 }
 
-async function callCheckInboxOnce(mailboxId: string | null): Promise<unknown> {
+async function callCheckInboxOnce(
+  mailboxId: string | null,
+  opts: CallCheckInboxOptions,
+): Promise<unknown> {
   try {
+    const headers: Record<string, string> = {};
+    if (mailboxId) headers["x-mailbox-id"] = mailboxId;
+    if (opts.unreadOnly) headers["x-unread-only"] = "1";
     const json = await invokeEdge<unknown>("check-inbox", {
       body: {},
       context: "callCheckInbox",
-      headers: mailboxId ? { "x-mailbox-id": mailboxId } : undefined,
+      headers: Object.keys(headers).length > 0 ? headers : undefined,
     });
     // best-effort runtime check (mai bloccante)
     safeParseCheckInboxResult(json);
