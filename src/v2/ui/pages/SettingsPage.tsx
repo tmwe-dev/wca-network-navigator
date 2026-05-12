@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power, Activity, Puzzle, Layers } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power, Activity, Puzzle, Layers, FlaskConical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -41,6 +41,7 @@ import ExtensionsPanel from "@/components/settings/ExtensionsPanel";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { SECONDARY_NAV } from "@/v2/navigation/registry";
+import LabPage from "@/v2/ui/pages/LabPage";
 
 const DEV_PAGE_GROUPS = SECONDARY_NAV;
 
@@ -114,6 +115,7 @@ export function SettingsPage() {
     { value: "backup-export", label: "Backup & Export", icon: Package },
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "development", label: "Development", icon: Layers },
+    { value: "lab", label: "Lab & Verifiche", icon: FlaskConical },
     { value: "download-email", label: "Download Email", icon: Mail },
     { value: "estensioni", label: "Estensioni", icon: Puzzle },
     { value: "generale", label: "Generale", icon: SettingsIcon },
@@ -271,6 +273,7 @@ export function SettingsPage() {
               </div>
             )}
             {tab === "development" && <DevelopmentPagesPanel />}
+            {tab === "lab" && <LabPage />}
           </div>
         )}
       </div>
