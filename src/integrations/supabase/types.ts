@@ -5815,6 +5815,7 @@ export type Database = {
           imap_user: string
           last_sync_at: string | null
           last_uid: number
+          mailbox_id: string | null
           operator_id: string | null
           shared_mailbox_id: string | null
           stored_uidvalidity: number | null
@@ -5828,6 +5829,7 @@ export type Database = {
           imap_user?: string
           last_sync_at?: string | null
           last_uid?: number
+          mailbox_id?: string | null
           operator_id?: string | null
           shared_mailbox_id?: string | null
           stored_uidvalidity?: number | null
@@ -5841,6 +5843,7 @@ export type Database = {
           imap_user?: string
           last_sync_at?: string | null
           last_uid?: number
+          mailbox_id?: string | null
           operator_id?: string | null
           shared_mailbox_id?: string | null
           stored_uidvalidity?: number | null
@@ -5848,6 +5851,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_sync_state_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_sync_state_operator_id_fkey"
             columns: ["operator_id"]
