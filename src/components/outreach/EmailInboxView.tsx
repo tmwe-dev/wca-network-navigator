@@ -157,6 +157,33 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
 
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border">
+      {/* Banner casella attiva: rende esplicito quale inbox stai leggendo */}
+      <div className="flex-shrink-0 border-b border-border bg-muted/40 px-3 py-1.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <Inbox className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground shrink-0">
+            Inbox di
+          </span>
+          <span className="text-sm font-semibold text-foreground truncate">
+            {activeMailbox?.label ?? "Personale"}
+          </span>
+          {activeMailbox?.email && (
+            <span className="text-[11px] text-muted-foreground truncate">
+              · {activeMailbox.email}
+            </span>
+          )}
+          <span
+            className={cn(
+              "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium border",
+              activeMailbox?.kind === "shared"
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "bg-muted text-muted-foreground border-border",
+            )}
+          >
+            {activeMailbox?.kind === "shared" ? "Condivisa" : "Personale"}
+          </span>
+        </div>
+      </div>
       {/* Compact header: search + stats in one row */}
         <div className="flex-shrink-0 border-b border-border px-3 py-2">
           <div className="flex items-center gap-2">
