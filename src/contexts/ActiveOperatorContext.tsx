@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { useOperators, useCurrentOperator, type Operator } from "@/hooks/useOperators";
+import { useAuth } from "@/providers/AuthProvider";
 
 type ActiveOperatorCtx = {
   operators: Operator[];
@@ -21,14 +22,20 @@ const Ctx = createContext<ActiveOperatorCtx>({
   setViewingAll: () => {},
 });
 
-const STORAGE_KEY = "activeOperator:v1";
+// v2: chiave per-user. Evita che la selezione di un account "contagi"
+// chi accede dopo dallo stesso browser.
+const STORAGE_KEY_PREFIX = "activeOperator:v2:";
+const LEGACY_STORAGE_KEY = "activeOperator:v1";
+const storageKeyFor = (userId: string | null) =>
+  userId ? `${STORAGE_KEY_PREFIX}${userId}` : null;
 
 type Persisted = { activeId: string | null; viewingAll: boolean };
 
-function readPersisted(): Persisted {
-  if (typeof window === "undefined") return { activeId: null, viewingAll: false };
+function readPersisted(userId: string | null): Persisted {
+  const key = storageKeyFor(userId);
+  if (typeof window === "undefined" || !key) return { activeId: null, viewingAll: false };
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return { activeId: null, viewingAll: false };
     const parsed = JSON.parse(raw) as Partial<Persisted>;
     return {
@@ -41,29 +48,50 @@ function readPersisted(): Persisted {
 }
 
 export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { data: operators = [], isLoading: loadingOps } = useOperators();
   const { data: currentOp, isLoading: loadingCurrent } = useCurrentOperator();
-  const initial = readPersisted();
-  const [activeId, setActiveId] = useState<string | null>(initial.viewingAll ? null : initial.activeId);
-  const [viewingAll, setViewingAllState] = useState<boolean>(initial.viewingAll);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [viewingAll, setViewingAllState] = useState<boolean>(false);
 
-  // Default to current user's operator solo se non c'è nulla di persistito
-  // E non siamo in modalità "tutti".
+  // Quando cambia l'utente loggato (login/logout/swap), ripuliamo lo stato
+  // in memoria e ricarichiamo lo storage SCOPED per quel user.id.
+  // Bonifica anche la chiave legacy globale, se presente, così non sopravvive
+  // tra account diversi.
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      try { window.localStorage.removeItem(LEGACY_STORAGE_KEY); } catch { /* ignore */ }
+    }
+    if (!userId) {
+      setActiveId(null);
+      setViewingAllState(false);
+      return;
+    }
+    const persisted = readPersisted(userId);
+    setActiveId(persisted.viewingAll ? null : persisted.activeId);
+    setViewingAllState(persisted.viewingAll);
+  }, [userId]);
+
+  // Default all'operatore dell'utente corrente se nulla di persistito.
+  useEffect(() => {
+    if (!userId) return;
     if (activeId || viewingAll) return;
-    const persisted = readPersisted();
+    const persisted = readPersisted(userId);
     if (persisted.activeId || persisted.viewingAll) return;
     if (currentOp?.id) setActiveId(currentOp.id);
-  }, [currentOp, activeId, viewingAll]);
+  }, [userId, currentOp, activeId, viewingAll]);
 
   // Persist selection
   useEffect(() => {
+    const key = storageKeyFor(userId);
+    if (!key) return;
     try {
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeId, viewingAll }));
+        window.localStorage.setItem(key, JSON.stringify({ activeId, viewingAll }));
       }
     } catch { /* ignore */ }
-  }, [activeId, viewingAll]);
+  }, [userId, activeId, viewingAll]);
 
   const handleSetActiveId = (id: string) => {
     setViewingAllState(false);
@@ -75,11 +103,13 @@ export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
     setActiveId(null);
   };
 
+  // Hard guard: se l'activeId persistito non corrisponde a NESSUN operatore
+  // accessibile dall'utente corrente (es. id "fantasma" di un altro account),
+  // ricadiamo sull'operatore proprio. Mai su un id sconosciuto.
+  const resolvedActive = activeId ? operators.find(o => o.id === activeId) ?? null : null;
   const activeOperator = viewingAll
     ? null
-    : activeId
-      ? operators.find(o => o.id === activeId) || currentOp || null
-      : currentOp || null;
+    : resolvedActive ?? currentOp ?? null;
 
   const isImpersonating = !viewingAll && activeOperator != null && currentOp != null && activeOperator.id !== currentOp.id;
 

@@ -21,6 +21,7 @@ import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { AuthLifecycle } from "@/providers/AuthLifecycle";
 import { TraceConsole } from "@/v2/observability/TraceConsole";
 import { traceCollector } from "@/v2/observability/traceCollector";
 import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
@@ -112,6 +113,7 @@ const App = () => (
   <GlobalErrorBoundary>
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
+        <AuthLifecycle />
         <InboundNotificationsProvider>
           <ContactDrawerProvider>
             <TooltipProvider>

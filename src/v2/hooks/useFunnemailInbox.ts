@@ -49,14 +49,22 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const qc = useQueryClient();
   const g = useGlobalFilters();
   const { user } = useAuth();
-  const { activeOperator, viewingAll } = useActiveOperator();
+  const { activeOperator, operators, viewingAll } = useActiveOperator();
+  // Hard guard: usiamo activeOperator SOLO se appartiene davvero alla lista
+  // accessibile dall'utente corrente. Senza questo check, un id "fantasma"
+  // (es. cache stale di un account precedente) farebbe vedere a Luigi
+  // l'inbox di Luca.
+  const trustedActiveOp =
+    activeOperator && operators.some((o) => o.id === activeOperator.id)
+      ? activeOperator
+      : null;
   // Allinea Funnemail al switcher operatore (come InArrivoTab).
   // - viewingAll       => null (RLS decide la visibilità globale).
   // - operatore scelto => filtra channel_messages.user_id su di lui.
   // - fallback         => utente loggato.
   const targetUserId: string | null = viewingAll
     ? null
-    : activeOperator?.user_id ?? user?.id ?? null;
+    : trustedActiveOp?.user_id ?? user?.id ?? null;
   const folderOwnerUserId = targetUserId ?? user?.id ?? null;
   const rawSelectedFolder = g.filters.funnemailFolder || "all";
   const setSelectedFolder = React.useCallback(

@@ -12,10 +12,13 @@ type OperatorUpdate = Database["public"]["Tables"]["operators"]["Update"];
 export type Operator = OperatorRow;
 
 export function useOperators() {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
+  const userId = user?.id ?? null;
 
   return useQuery({
-    queryKey: queryKeys.operators.all,
+    // Scoped per user.id: il cache di un utente non può essere riusato
+    // per un altro account loggato sullo stesso browser.
+    queryKey: [...queryKeys.operators.all, userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("operators")
@@ -24,15 +27,17 @@ export function useOperators() {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: status === "authenticated",
+    enabled: status === "authenticated" && !!userId,
   });
 }
 
 export function useCurrentOperator() {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
+  const userId = user?.id ?? null;
 
   return useQuery({
-    queryKey: queryKeys.operators.current,
+    // Scoped per user.id (vedi useOperators).
+    queryKey: [...queryKeys.operators.current, userId],
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return null;
@@ -44,7 +49,7 @@ export function useCurrentOperator() {
       if (error) throw error;
       return data;
     },
-    enabled: status === "authenticated",
+    enabled: status === "authenticated" && !!userId,
   });
 }
 
