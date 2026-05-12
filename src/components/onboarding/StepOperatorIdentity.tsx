@@ -40,8 +40,20 @@ function normalizeE164(input: string): string {
 
 export function StepOperatorIdentity({ initial, email, saving, onSubmit }: Props) {
   const [values, setValues] = useState<OperatorIdentityValues>(initial);
+  const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => { setValues(initial); }, [initial.displayName, initial.phone, initial.whatsapp, initial.linkedinUrl]);
+  // Idrata UNA sola volta quando arrivano i dati dal profilo,
+  // così non sovrascrive ciò che l'utente sta scrivendo (il bug
+  // che cancellava il numero WhatsApp appena digitato).
+  useEffect(() => {
+    if (hydrated) return;
+    const hasAny =
+      initial.displayName || initial.phone || initial.whatsapp || initial.linkedinUrl;
+    if (hasAny) {
+      setValues(initial);
+      setHydrated(true);
+    }
+  }, [initial, hydrated]);
 
   const update = <K extends keyof OperatorIdentityValues>(key: K, v: OperatorIdentityValues[K]) =>
     setValues(prev => ({ ...prev, [key]: v }));
