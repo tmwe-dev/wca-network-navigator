@@ -21,6 +21,7 @@ import {
   getLabTabsByGroup,
   type LabTabGroup,
 } from "@/v2/config/labTabs";
+import { LabGuideDialog } from "@/v2/ui/organisms/lab/LabGuideDialog";
 
 const VALID_GROUPS = new Set<string>(LAB_GROUPS.map((g) => g.id));
 
@@ -56,11 +57,14 @@ export function LabPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageTitleHeader
-        title="Lab & Verifiche"
-        subtitle="Cabina unica di test, prompt, observability e QA — sorgente: src/v2/config/labTabs.ts"
-        icon={FlaskConical}
-      />
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <PageTitleHeader
+          title="Lab & Verifiche"
+          subtitle="Cabina unica di test, prompt, observability e QA — sorgente: src/v2/config/labTabs.ts"
+          icon={FlaskConical}
+        />
+        <LabGuideDialog initialGroup={group} initialTabId={activeTab} />
+      </div>
 
       {/* Group selector */}
       <Tabs value={group} onValueChange={setGroup} className="w-full">
