@@ -365,13 +365,14 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
           <Route path="settings/admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
           <Route path="settings/email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
-          <Route path="settings/diagnostics" element={guardedPage(DiagnosticsPage, "Diagnostics")} />
-          <Route path="settings/telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
-          <Route path="settings/observability" element={guardedPage(ObservabilityPage, "Observability")} />
-          <Route path="settings/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
-          <Route path="settings/e2e-status" element={guardedPage(E2EStatusPage, "E2EStatus")} />
-          <Route path="settings/alert-routing" element={guardedPage(AlertRoutingPage, "AlertRouting")} />
-          <Route path="settings/brand-voice" element={guardedPage(BrandVoicePage, "BrandVoice")} />
+          {/* Legacy settings/* lab paths → /v2/lab */}
+          <Route path="settings/diagnostics"   element={<Navigate to="/v2/lab?group=observability&tab=diagnostica" replace />} />
+          <Route path="settings/telemetry"     element={<Navigate to="/v2/lab?group=observability&tab=telemetria" replace />} />
+          <Route path="settings/observability" element={<Navigate to="/v2/lab?group=observability&tab=observability" replace />} />
+          <Route path="settings/health"        element={<Navigate to="/v2/lab?group=observability&tab=health" replace />} />
+          <Route path="settings/e2e-status"    element={<Navigate to="/v2/lab?group=tests&tab=e2e" replace />} />
+          <Route path="settings/alert-routing" element={<Navigate to="/v2/lab?group=observability&tab=alert-routing" replace />} />
+          <Route path="settings/brand-voice"   element={<Navigate to="/v2/lab?group=prompts&tab=brand-voice" replace />} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />
@@ -388,10 +389,10 @@ export function V2Routes(): React.ReactElement {
           <Route path="funnemail-inbox" element={guardedPage(FunnemailInboxPage, "FunnemailInbox")} />
           <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
-          <Route path="token-cockpit" element={guardedPage(TokenCockpitPage, "TokenCockpit")} />
+          {/* token-cockpit standalone removed: moved to Lab Hub (see redirect above) */}
           <Route path="tmwe/clients" element={guardedPage(TmweClientsPage, "TmweClients")} />
           <Route path="notifications" element={guardedPage(NotificationsPage, "Notifications")} />
-          <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
+          <Route path="design-system-preview" element={<Navigate to="/v2/lab?group=design&tab=design" replace />} />
 
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>
