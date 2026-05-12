@@ -35,6 +35,8 @@ export interface SendEmailParams {
   partner_id?: string;
   contact_id?: string;
   thread_id?: string;
+  /** UUID di shared_mailboxes — se presente l'invio usa SMTP della casella aziendale. */
+  mailbox_id?: string | null;
 }
 
 export interface SendWhatsAppParams {
@@ -128,6 +130,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendResult> {
           html: safeHtml,
           partner_id: params.partner_id,
         },
+        headers: params.mailbox_id ? { "x-mailbox-id": params.mailbox_id } : undefined,
         context: "sendMessage.email",
       })
     );
