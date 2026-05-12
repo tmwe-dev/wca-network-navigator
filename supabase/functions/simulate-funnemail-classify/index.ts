@@ -14,7 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics } from "../_shared/monitoring.ts";
-import { checkInjectionGuard } from "../_shared/injectionGuard.ts";
+import { detectInjection } from "../_shared/promptSanitizer.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
@@ -100,13 +100,15 @@ Deno.serve(async (req) => {
       status: "started",
     });
 
-    // ── Stage 1: Injection guard ──
+    // ── Stage 1: Injection guard (detection only, no DB review) ──
     const t1 = Date.now();
-    const guardRes = checkInjectionGuard(`${subject}\n${text}`, "email-inbound");
+    const findings = detectInjection(`${subject}\n${text}`);
+    const highSeverity = findings.some((f) => f.severity === "high");
+    const blocked = highSeverity;
     await tracer.step("simulate:injection_guard", {
       input: { sample: text.slice(0, 200) },
-      output: { hits: guardRes.hits, severity: guardRes.severity, blocked: guardRes.blocked },
-      status: guardRes.blocked ? "error" : "success",
+      output: { findings, blocked, count: findings.length },
+      status: blocked ? "error" : "success",
       durationMs: Date.now() - t1,
     });
 
@@ -122,8 +124,8 @@ Deno.serve(async (req) => {
       output: {
         subjectNorm: normSubject.text,
         bodyNormPreview: normBody.text.slice(0, 400),
-        droppedQuotes: normBody.droppedQuotes,
-        droppedSignature: normBody.droppedSignature,
+        steps: normBody.report.steps,
+        truncated: normBody.report.truncated,
       },
       durationMs: Date.now() - t2,
     });
@@ -172,7 +174,7 @@ Deno.serve(async (req) => {
       urgency: "normal", intent: "", reasoning: "No API key (skipped)",
     };
     let aiError: string | null = null;
-    if (LOVABLE_API_KEY && !guardRes.blocked) {
+    if (LOVABLE_API_KEY && !blocked) {
       try {
         const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -272,7 +274,7 @@ Deno.serve(async (req) => {
       proposedAction,
       knownPartner,
       domain,
-      injectionBlocked: guardRes.blocked,
+      injectionBlocked: blocked,
     };
     await tracer.step("simulate:verdict", {
       output: verdict, status: "success", durationMs: 0,
