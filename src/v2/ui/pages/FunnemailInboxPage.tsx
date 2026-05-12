@@ -13,6 +13,7 @@ import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { EmailDetailView } from "@/components/outreach/EmailDetailView";
 import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 import { FunnemailMailList } from "./funnemail-inbox/FunnemailMailList";
 import { MessageClaimBanner } from "./funnemail-inbox/MessageClaimBanner";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const VIEW_TABS: Array<{ value: ViewKey; label: string }> = [
 export default function FunnemailInboxPage(): React.ReactElement {
   const ctrl = useFunnemailInbox();
   const g = useGlobalFilters();
+  const { activeMailbox } = useActiveMailbox();
 
   React.useEffect(() => {
     const prev = document.title;
@@ -46,6 +48,14 @@ export default function FunnemailInboxPage(): React.ReactElement {
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
       <PageTitleHeader icon={Sparkles} title="Funnemail" subtitle="Inbox classificata AI" />
+      {activeMailbox ? (
+        <div className="flex-shrink-0 border-b border-border bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground">
+          Casella attiva: <span className="font-medium text-foreground">{activeMailbox.label}</span>
+          <span className="ml-2 text-muted-foreground/70">
+            · l'AI smista solo le mail nuove non lette (le storiche restano importate ma non analizzate)
+          </span>
+        </div>
+      ) : null}
       <PersistentResizablePanelGroup
         storageId="funnemail-inbox:list-vs-reader"
         direction="horizontal"
