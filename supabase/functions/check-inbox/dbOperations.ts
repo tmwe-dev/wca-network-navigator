@@ -110,6 +110,7 @@ export interface AttachmentRecord {
 export interface SaveMessageParams {
   userId: string;
   operatorId: string | null;
+  mailboxId: string | null;
   uid: number;
   uidvalidity: number | null;
   messageId: string;
@@ -190,6 +191,7 @@ export async function saveMessageToDb(
   const msgData: Record<string, unknown> = {
     user_id: params.userId,
     operator_id: params.operatorId,
+    mailbox_id: params.mailboxId,
     channel: "email",
     direction: "inbound",
     source_type: params.match.source_type,
