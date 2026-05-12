@@ -73,11 +73,24 @@ Deno.serve(async (req: Request) => {
           .eq("shared_mailbox_id", mbox.id)
           .limit(1)
           .maybeSingle();
-        if (!access?.operator_id) continue;
+        let ownerUserId = access?.operator_id as string | undefined;
+
+        // Fallback: nessun operatore con accesso esplicito → usa un admin
+        // (così Amministrazione & co. vengono comunque sincronizzate dal cron).
+        if (!ownerUserId) {
+          const { data: admin } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("operator_role", "admin")
+            .limit(1)
+            .maybeSingle();
+          ownerUserId = admin?.user_id as string | undefined;
+        }
+        if (!ownerUserId) continue;
 
         await supabase.from("email_sync_state").upsert(
           {
-            user_id: access.operator_id,
+            user_id: ownerUserId,
             mailbox_id: mbox.id,
             last_uid: 0,
             last_sync_at: null,
