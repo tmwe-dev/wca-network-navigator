@@ -35,24 +35,25 @@ function isSkippableCheckInboxError(err: unknown): err is ApiError {
  * altri 37 callsite e per beneficiare del logging strutturato + body
  * extraction da FunctionsHttpError.
  */
-export async function callCheckInbox(): Promise<unknown> {
+export async function callCheckInbox(mailboxId?: string | null): Promise<unknown> {
   if (inFlightCheckInbox) {
     log.warn("check-inbox already running, joining existing invocation");
     return inFlightCheckInbox;
   }
 
-  inFlightCheckInbox = callCheckInboxOnce().finally(() => {
+  inFlightCheckInbox = callCheckInboxOnce(mailboxId ?? null).finally(() => {
     inFlightCheckInbox = null;
   });
 
   return inFlightCheckInbox;
 }
 
-async function callCheckInboxOnce(): Promise<unknown> {
+async function callCheckInboxOnce(mailboxId: string | null): Promise<unknown> {
   try {
     const json = await invokeEdge<unknown>("check-inbox", {
       body: {},
       context: "callCheckInbox",
+      headers: mailboxId ? { "x-mailbox-id": mailboxId } : undefined,
     });
     // best-effort runtime check (mai bloccante)
     safeParseCheckInboxResult(json);

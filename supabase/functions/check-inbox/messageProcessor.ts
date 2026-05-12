@@ -59,6 +59,7 @@ export async function processMessage(
   supabase: any,
   supabaseAdmin: any,
   isOversized: boolean,
+  mailboxId: string | null = null,
 ): Promise<{
   msgData: Record<string, unknown> | null;
   error: string | null;
@@ -273,6 +274,7 @@ export async function processMessage(
     const result = await saveMessageToDb(supabase, {
       userId,
       operatorId,
+      mailboxId,
       uid,
       uidvalidity,
       messageId,

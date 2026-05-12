@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 
 import {
   createImapConfig,
@@ -76,13 +77,16 @@ Deno.serve(async (req) => {
     }
 
     // ── IMAP config ──
-    const imapHost = Deno.env.get("IMAP_HOST") || "";
-    const imapUser = Deno.env.get("IMAP_USER") || "";
-    const imapPassword = Deno.env.get("IMAP_PASSWORD") || "";
-    if (!imapHost || !imapUser || !imapPassword) throw new Error("IMAP credentials not configured");
+    // Multi-mailbox: header opzionale `x-mailbox-id`. Se assente → casella personale (legacy).
+    const requestedMailboxId = req.headers.get("x-mailbox-id");
+    const resolved = await resolveMailbox(supabase as never, requestedMailboxId);
+    const imapHost = resolved.imap_host;
+    const imapUser = resolved.imap_user;
+    const imapPassword = resolved.imap_password;
+    const activeMailboxId = resolved.mailbox_id; // null = personale
 
     // ── Get sync state ──
-    const syncState = await getSyncState(supabase, userId, imapHost, imapUser);
+    const syncState = await getSyncState(supabase, userId, imapHost, imapUser, activeMailboxId);
     let lastUid = syncState.lastUid;
     let storedUidvalidity = syncState.storedUidvalidity;
 
@@ -92,7 +96,7 @@ Deno.serve(async (req) => {
     const { uidvalidity } = await selectInbox(client);
 
     // Handle UIDVALIDITY change
-    const uidvalidityReset = await handleUidvalidityChange(supabase, userId, storedUidvalidity, uidvalidity);
+    const uidvalidityReset = await handleUidvalidityChange(supabase, userId, storedUidvalidity, uidvalidity, activeMailboxId);
     if (uidvalidityReset === 0 && storedUidvalidity !== null && storedUidvalidity !== uidvalidity) {
       lastUid = 0;
       storedUidvalidity = uidvalidity;
@@ -113,7 +117,7 @@ Deno.serve(async (req) => {
     for (const uid of uids) {
 
       // Skip if already in DB
-      if (await skipDuplicateUid(supabase, userId, uid)) {
+      if (await skipDuplicateUid(supabase, userId, uid, activeMailboxId)) {
         maxUid = uid;
         continue;
       }
@@ -128,11 +132,12 @@ Deno.serve(async (req) => {
         supabase,
         supabaseAdmin,
         false, // isOversized determined inside processMessage now
+        activeMailboxId,
       );
 
       if (error === "duplicate_by_hash" || error === "duplicate_by_message_id") {
         maxUid = uid;
-        await updateSyncState(supabase, userId, uid);
+        await updateSyncState(supabase, userId, uid, activeMailboxId);
         continue;
       }
 
@@ -155,7 +160,7 @@ Deno.serve(async (req) => {
       } else if (error) {
         if (uid > maxUid) {
           maxUid = uid;
-          await updateSyncState(supabase, userId, uid);
+          await updateSyncState(supabase, userId, uid, activeMailboxId);
         }
       }
     }
