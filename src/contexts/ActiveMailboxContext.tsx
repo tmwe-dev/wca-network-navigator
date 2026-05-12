@@ -6,7 +6,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listAccessibleMailboxes, type AccessibleMailbox } from "@/data/mailboxes";
-import { useCurrentOperator } from "@/hooks/useOperators";
+import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
 import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -32,8 +32,11 @@ const STORAGE_KEY_PREFIX = "lov:active-mailbox:v2:";
 export function ActiveMailboxProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { data: currentOp } = useCurrentOperator();
-  const opId = currentOp?.id ?? null;
+  // Usiamo l'operatore ATTIVO (quello selezionato nel dropdown header,
+  // anche se admin sta impersonando un altro), non l'operatore proprietario
+  // dell'account loggato. Così cambiando dropdown cambia anche la mailbox.
+  const { activeOperator } = useActiveOperator();
+  const opId = activeOperator?.id ?? null;
 
   const { data: mailboxes = [], isLoading } = useQuery({
     // Cache per user.id + operator.id: nessun riutilizzo cross-account.
