@@ -335,6 +335,7 @@ export async function markFunnemailMessagesRead(messageIds: string[]): Promise<v
 export async function listFunnemailGroupedInbox(
   userId: string,
   targetUserId?: string | null,
+  mailboxFilter?: { kind: "personal" } | { kind: "shared"; id: string } | null,
 ): Promise<FunnemailGroupedInbox> {
   // `userId` = utente loggato (per regole/gruppi personali).
   // `targetUserId` = utente di cui vogliamo vedere le email (impersonation).
@@ -354,6 +355,10 @@ export async function listFunnemailGroupedInbox(
         .eq("channel", "email")
         .eq("direction", "inbound");
       if (targetUserId) q = q.eq("user_id", targetUserId);
+      // Filtro casella: personale = mailbox_id NULL (legacy + caselle non taggate);
+      // condivisa = mailbox_id == id specifico. Nessun filtro = vista aggregata.
+      if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
+      else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
       return q
         .order("email_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
