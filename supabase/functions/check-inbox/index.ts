@@ -106,7 +106,12 @@ Deno.serve(async (req) => {
 
     // ── Fetch UID batch ──
     const imapExec = client as unknown as { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> };
-    const batch = await fetchUidBatch(imapExec, lastUid);
+    // Header opzionale `x-unread-only: 1` → scarica solo mail non lette.
+    // Usato dal "Download massivo" per evitare di scaricare migliaia di
+    // email già lette/storiche dal server.
+    const unreadOnlyHeader = req.headers.get("x-unread-only");
+    const unreadOnly = unreadOnlyHeader === "1" || unreadOnlyHeader === "true";
+    const batch = await fetchUidBatch(imapExec, lastUid, unreadOnly);
     const { uids, remainingCount, hasMore } = batch;
 
 
