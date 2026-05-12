@@ -88,15 +88,12 @@ Deno.serve(async (req: Request) => {
         }
         if (!ownerUserId) continue;
 
-        await supabase.from("email_sync_state").upsert(
-          {
-            user_id: ownerUserId,
-            mailbox_id: mbox.id,
-            last_uid: 0,
-            last_sync_at: null,
-          },
-          { onConflict: "user_id,mailbox_id" },
-        );
+        await supabase.from("email_sync_state").insert({
+          user_id: ownerUserId,
+          mailbox_id: mbox.id,
+          last_uid: 0,
+          last_sync_at: null,
+        });
       }
     } catch (e) {
       console.warn("[email-cron-sync] shared mailbox auto-enroll failed:", e);
