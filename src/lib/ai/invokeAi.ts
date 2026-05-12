@@ -93,6 +93,7 @@ export const AI_FUNCTION_NAMES = new Set<string>([
   "analyze-partner",
   "calculate-lead-scores",
   "deduplicate-contacts",
+  "simulate-funnemail-classify",
 ]);
 
 export async function invokeAi<TResponse = unknown, TBody = Record<string, unknown>>(
