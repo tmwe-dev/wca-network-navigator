@@ -24,6 +24,7 @@ type MarkAsReadInput = {
   id: string;
   channel?: string | null;
   user_id?: string | null;
+  mailbox_id?: string | null;
 };
 
 export function useMessageAttachments(messageId: string | null) {
