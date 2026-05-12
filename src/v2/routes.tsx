@@ -86,6 +86,7 @@ const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ d
 const FinderApiPage = lazy(() => import("./ui/pages/FinderApiPage").then((m) => ({ default: m.FinderApiPage })));
 const FinderApiSchemaMapPage = lazy(() => import("./ui/pages/finder-api/FinderApiSchemaMapPage").then((m) => ({ default: m.FinderApiSchemaMapPage })));
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
+const EmailLabPage = lazy(() => import("./ui/pages/EmailLabPage"));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
 const E2EStatusPage = lazy(() => import("./ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
 const BrandVoicePage = lazy(() => import("./ui/pages/BrandVoicePage").then((m) => ({ default: m.BrandVoicePage })));
