@@ -42,9 +42,21 @@ export function useMessageAttachments(messageId: string | null) {
   });
 }
 
-export function useUnreadCount(channel?: string) {
+export type MailboxFilter =
+  | { kind: "personal" }
+  | { kind: "shared"; id: string }
+  | null
+  | undefined;
+
+function mailboxKeyOf(mb: MailboxFilter): string | undefined {
+  if (!mb) return undefined;
+  return mb.kind === "shared" ? `shared:${mb.id}` : "personal";
+}
+
+export function useUnreadCount(channel?: string, mailboxFilter?: MailboxFilter) {
+  const mailboxKey = mailboxKeyOf(mailboxFilter);
   return useQuery({
-    queryKey: queryKeys.channelMessages.unread(channel),
+    queryKey: queryKeys.channelMessages.unread(channel, undefined, mailboxKey),
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
@@ -52,6 +64,8 @@ export function useUnreadCount(channel?: string) {
         .eq("direction", "inbound")
         .is("read_at", null);
       if (channel) q = q.eq("channel", channel);
+      if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
+      else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
       const { count, error } = await q;
       if (error) throw error;
       return count || 0;
@@ -68,12 +82,13 @@ export function useMarkAsRead() {
       const messageId = typeof input === "string" ? input : input.id;
       const messageChannel = typeof input === "string" ? null : (input.channel ?? null);
       const messageUserId = typeof input === "string" ? null : (input.user_id ?? null);
+      const messageMailboxId = typeof input === "string" ? null : (input.mailbox_id ?? null);
 
       const { data: updatedMessage, error } = await supabase
         .from("channel_messages")
         .update({ read_at: new Date().toISOString() })
         .eq("id", messageId)
-        .select("id, channel, user_id")
+        .select("id, channel, user_id, mailbox_id")
         .maybeSingle();
 
       if (error) throw error;
@@ -88,6 +103,8 @@ export function useMarkAsRead() {
 
       const resolvedChannel = messageChannel ?? updatedMessage.channel ?? null;
       const resolvedUserId = messageUserId ?? updatedMessage.user_id ?? null;
+      const resolvedMailboxId =
+        messageMailboxId ?? (updatedMessage as { mailbox_id?: string | null }).mailbox_id ?? null;
 
       if (resolvedChannel !== "email") return;
 
@@ -103,6 +120,7 @@ export function useMarkAsRead() {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${session.access_token}`,
+              ...(resolvedMailboxId ? { "x-mailbox-id": resolvedMailboxId } : {}),
             },
             body: JSON.stringify({ message_id: messageId }),
           })
