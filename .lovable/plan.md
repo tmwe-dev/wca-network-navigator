@@ -1,108 +1,78 @@
-## Diagnosi (audit)
+## Audit: perché il selettore in alto oggi non cambia ciò che vedi
 
-Ho seguito tutta la catena `auth → operatore → casella → query inbox`. Le cause sono multiple e si sommano: si parla di **isolamento per-utente mai applicato**.
+Ho verificato il flusso completo: header → ActiveMailboxContext → /v2/inbox → query DB → sync/mark-read.
 
-### Catena attuale e dove si rompe
+### Evidenze principali
 
-```text
-AuthProvider (user.id = Luigi)
-   │
-   ├─ useCurrentOperator()     ← queryKey: ["operators","current"]   ⚠ NON scoped per user.id
-   │     restituisce ancora Luca dal cache TanStack precedente
-   │
-   ├─ useOperators()           ← queryKey: ["operators","all"]       ⚠ NON scoped per user.id
-   │     mostra dropdown con la lista di un altro account
-   │
-   ├─ ActiveOperatorContext
-   │     STORAGE_KEY = "activeOperator:v1"                            ⚠ globale, NON per user.id
-   │     activeId persiste tra logout/login di utenti diversi
-   │     → activeOperator = Luca
-   │
-   ├─ ActiveMailboxContext
-   │     queryKey = queryKeys.email.mailboxes                         ⚠ globale, NON per user.id
-   │     listAccessibleMailboxes() chiamato senza operatorId
-   │     storage key ancorato a opId vecchio → mailbox stale
-   │
-   └─ useFunnemailInbox
-         targetUserId = activeOperator?.user_id ?? user?.id
-         → essendo activeOperator = Luca, l'inbox di Luigi mostra
-           messaggi con user_id = Luca. SINTOMO ESATTO.
-```
+1. **/v2/inbox non usa la casella attiva**
+   - La pagina `/v2/inbox` monta `InArrivoTab` → `EmailInboxView` → `useChannelMessages("email", ...)`.
+   - `useChannelMessages` filtra per canale, ricerca, pagina e operatore, ma **non filtra mai per `mailbox_id`**.
+   - Quindi cambiare la casella nel selettore non può cambiare la lista email visibile in `/v2/inbox`.
 
-Cause radice (in ordine di gravità):
+2. **Funnemail è parzialmente corretto, ma non basta per la Inbox classica**
+   - `useFunnemailInbox` e `useFunnemailInboxSidebarData` leggono già `useActiveMailbox()` e passano `mailbox_id` al DAL.
+   - La Inbox classica `/v2/inbox`, cioè quella che l’utente sta guardando ora, non è collegata allo stesso filtro.
 
-1. **Cache React Query non isolata per user.id** → `useCurrentOperator`, `useOperators` (e tutte le `queryKeys.operators.*`) sopravvivono al cambio di account.
-2. **`activeOperator:v1` localStorage globale** → la scelta di un account "contagia" gli account che fanno login dopo nello stesso browser.
-3. **`ActiveMailboxContext.queryKey` globale + parametro `operatorId` non passato** → cache mailbox condivisa tra utenti.
-4. **Nessun reset al `SIGNED_OUT`/cambio user.id** in nessuno dei due context: lo stato in memoria e in localStorage non viene mai pulito.
-5. **`useFunnemailInbox` si fida ciecamente di `activeOperator.user_id`** anche quando questo è incoerente con la sessione corrente.
+3. **Il DB conferma il problema di dato/tagging**
+   - `channel_messages` contiene **10021 email inbound tutte con `mailbox_id = NULL`**.
+   - Le shared mailbox esistono:
+     - `booking@tmwe.it`, attiva, auto-grant, 6 operatori abilitati
+     - `amministrazione@tmwe.it`, attiva, nessun grant
+   - Ma entrambe hanno **0 email taggate** su `channel_messages.mailbox_id`.
+   - Quindi anche dove il filtro shared esiste, oggi non può mostrare contenuti finché non viene fatta una sync con header `x-mailbox-id` e credenziali corrette.
 
-## Obiettivo
+4. **Download massivo e auto-sync ignorano la casella attiva**
+   - `Scarica nuove` usa `callCheckInbox(mailboxId)` ed è già collegato alla casella attiva.
+   - `Download massivo` usa `bgSyncStart()` → `callCheckInbox()` senza mailbox id: scarica sempre la personale.
+   - `Auto-sync` chiama `useCheckInbox`, quindi è collegato, ma il singleton di download continuo resta fuori contesto.
 
-Quando un utente fa login, deve vedere SOLO il suo ambiente (operatore, mailbox, inbox) finché non sceglie esplicitamente di impersonare un altro operatore (e solo se admin). Nessuna contaminazione tra account sullo stesso browser.
+5. **Mark-as-read IMAP non passa la mailbox**
+   - `useMarkAsRead` aggiorna il DB, poi chiama `mark-imap-seen` senza `x-mailbox-id`.
+   - Per una mail condivisa, il DB verrebbe segnato letto, ma il flag `\Seen` verrebbe cercato sulla casella personale e saltato/fallirebbe.
 
-## Fix proposto (strategia)
+6. **Possibile bug backend nel resync flags**
+   - `check-inbox` chiama `resyncUnreadFlags(supabase, imapExec, userId)` senza mailbox id.
+   - Dentro `flagResync.ts` la query prende tutte le email unread dell’utente, non solo quelle della mailbox attiva. Con caselle condivise può confrontare UID di una mailbox contro un’altra.
 
-### A. Scope del cache TanStack per user.id
+7. **Conteggi/badge non sono mailbox-aware**
+   - `useUnreadCount`, `useEmailCount`, `useNavBadgeCountsV2` non filtrano per mailbox.
+   - Anche dopo aver filtrato la lista, badge e contatori possono continuare a mostrare numeri aggregati, facendo sembrare il selettore “inefficace”.
 
-In `src/lib/queryKeys.ts` aggiungere a tutte le chiavi sensibili al contesto-utente un segmento `user.id`. Esempio:
+## Piano di fix minimo e reversibile
 
-```text
-queryKeys.operators.current(userId)   // ["operators","current", userId]
-queryKeys.operators.all(userId)       // ["operators","all", userId]
-queryKeys.email.mailboxes(userId)     // ["email","mailboxes", userId]
-```
+### 1. Collegare `/v2/inbox` alla casella attiva
+- In `EmailInboxView`, leggere `useActiveMailbox()` e derivare un filtro mailbox:
+  - personale → `mailbox_id IS NULL`
+  - condivisa → `mailbox_id = activeMailbox.mailbox_id`
+- Estendere `useChannelMessages` con parametro opzionale `mailboxFilter`.
+- Aggiornare `queryKeys.channelMessages.list` per includere la mailbox, così React Query refetcha subito quando cambi selezione.
+- Resettare pagina e selezione messaggio quando cambia mailbox, per evitare dettaglio/lista stale.
 
-Aggiornare i 3 hook che le usano (`useOperators`, `useCurrentOperator`, `ActiveMailboxContext`) leggendo `useAuth().user?.id` ed `enabled: !!userId`.
+### 2. Rendere coerenti conteggi e badge email
+- Estendere `useUnreadCount("email")` con mailbox filter opzionale.
+- Estendere `useEmailCount` con mailbox filter opzionale.
+- Aggiornare i contatori dentro `InArrivoTab` / `EmailInboxView` in modo che la toolbar mostri i numeri della casella attiva, non il totale globale.
+- Lasciare WhatsApp/LinkedIn invariati.
 
-### B. ActiveOperatorContext → per-user
+### 3. Passare la mailbox al download massivo
+- Modificare `bgSyncStart` per accettare `mailboxId?: string | null`.
+- Modificare `useContinuousSync` per leggere `useActiveMailbox()` e chiamare `bgSyncStart(mailboxId)`.
+- Mantenere il comportamento legacy se `mailboxId` è assente/null.
 
-- `STORAGE_KEY` diventa `activeOperator:v2:${user.id}`.
-- Al `SIGNED_OUT` (o cambio `user.id`): reset di `activeId`/`viewingAll` a default e rimozione della chiave del vecchio user.
-- Hard guard: se `activeId` non corrisponde a nessun operatore della lista accessibile dell'utente corrente → fallback a `currentOp` (mai a un id "fantasma").
+### 4. Passare la mailbox al mark-as-read IMAP
+- Aggiungere `mailbox_id` al tipo `ChannelMessage` e alle select necessarie.
+- In `EmailInboxView`, quando selezioni una mail, chiamare `markAsRead.mutate({ id, channel, user_id, mailbox_id })`.
+- In `useMarkAsRead`, se `mailbox_id` è valorizzato, inviare header `x-mailbox-id` a `mark-imap-seen`.
 
-### C. ActiveMailboxContext → per-user e per-operator
+### 5. Correggere il resync flags backend per evitare cross-mailbox
+- Estendere `resyncUnreadFlags` con `mailboxId` opzionale.
+- In `check-inbox/index.ts`, passare `activeMailboxId`.
+- Dentro `flagResync.ts`, filtrare `channel_messages` per:
+  - `mailbox_id IS NULL` se personale
+  - `mailbox_id = activeMailboxId` se shared
 
-- `STORAGE_KEY` diventa `lov:active-mailbox:v2:${user.id}:${operator.id}`.
-- Reset al `SIGNED_OUT`/cambio user.
-- `listAccessibleMailboxes()` riceve `currentOp.id` esplicito (no più null implicito).
-- `enabled` legato a `user.id && currentOp.id`.
-
-### D. AuthProvider → invalidate globale al logout
-
-In `AuthProvider`, su evento `SIGNED_OUT` (o cambio `user.id` rispetto al precedente):
-- `queryClient.clear()` (purge completo del cache TanStack: previene leak tra account).
-- Pulizia delle chiavi `lov:active-mailbox:*` e `activeOperator:*` non legate al nuovo user.
-
-Per farlo introduco un piccolo `useAuthLifecycle()` montato in `App.tsx` che ascolta `useAuth().event` e usa `useQueryClient()`.
-
-### E. Hardening lato consumer
-
-- `useFunnemailInbox`: prima di usare `activeOperator.user_id` verifica che `activeOperator.id` sia presente nella lista `operators` dell'utente corrente (cioè: l'admin sta davvero impersonando, non è un dato stale). Se non lo è, ignora `activeOperator` e usa `user.id`.
-- `OperationalContextSelector`: nasconde il dropdown finché `useCurrentOperator` non è risolto per il `user.id` corrente (evita flash di un account precedente).
-
-## Cosa NON tocco
-
-- RPC `get_accessible_mailboxes` e `get_current_operator_id`: già corrette, usano `auth.uid()`.
-- RLS su `operators` / `shared_mailboxes`: già corrette.
-- Logica di invio/lettura email a valle: il fix è puramente "wiring" del contesto.
-- Wizard di onboarding e nodi critici (submit, send, AI orchestratori).
-
-## File previsti
-
-- `src/lib/queryKeys.ts` — chiavi per-user.
-- `src/hooks/useOperators.ts` — uso `user.id` nelle queryKey + `enabled`.
-- `src/contexts/ActiveOperatorContext.tsx` — storage per-user + reset su logout + guard.
-- `src/contexts/ActiveMailboxContext.tsx` — storage per-user/operator + parametro RPC esplicito.
-- `src/providers/AuthProvider.tsx` (o nuovo `src/providers/AuthLifecycle.tsx`) — `queryClient.clear()` al logout/cambio user.
-- `src/v2/hooks/useFunnemailInbox.ts` — guard su `activeOperator` valido.
-- `src/components/header/OperationalContextSelector.tsx` — gating di rendering.
-
-## Verifica post-fix
-
-1. Login come Luigi → inbox Funnemail mostra solo messaggi con `user_id = Luigi` e `mailbox = luigi@tmwe.it`.
-2. Logout → login come Luca → inbox Luca, dropdown senza tracce di Luigi.
-3. Da admin (Luca) impersono Luigi → vedo l'ambiente Luigi; tornando "Tutti gli operatori" o ricliccando Luca, lo stato si aggiorna.
-4. localStorage ispezionato dopo logout: nessuna chiave `activeOperator:*` riferita a un user diverso da quello loggato.
-
-Confermi che procedo con questo piano?
+### 6. Verifica dati e funzionamento
+- Controllare query reali di `/v2/inbox`: devono contenere `mailbox_id=is.null` per personale e `mailbox_id=eq.<id>` per shared.
+- Verificare che cambio selezione invalidi/refetchi la lista.
+- Verificare che `Scarica nuove` e `Download massivo` chiamino `check-inbox` con header `x-mailbox-id` quando la casella è condivisa.
+- Nota operativa: al momento il DB non contiene email shared già taggate; dopo il fix, selezionando Booking e scaricando nuove email, i nuovi messaggi verranno salvati con `mailbox_id=booking` e la lista inizierà a differenziarsi.
