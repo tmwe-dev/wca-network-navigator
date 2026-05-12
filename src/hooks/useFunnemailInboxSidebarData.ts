@@ -6,8 +6,14 @@ import { listFunnemailGroupedInbox, type FunnemailGroupedInbox } from "@/data/fu
 
 export function useFunnemailInboxSidebarData() {
   const { user } = useAuth();
-  const { activeOperator, viewingAll } = useActiveOperator();
-  const targetUserId = viewingAll ? null : activeOperator?.user_id ?? user?.id ?? null;
+  const { activeOperator, operators, viewingAll } = useActiveOperator();
+  // Vedi useFunnemailInbox: usiamo activeOperator solo se è davvero
+  // accessibile dall'utente corrente, altrimenti fallback su user.id.
+  const trustedActiveOp =
+    activeOperator && operators.some((o) => o.id === activeOperator.id)
+      ? activeOperator
+      : null;
+  const targetUserId = viewingAll ? null : trustedActiveOp?.user_id ?? user?.id ?? null;
   const folderOwnerUserId = targetUserId ?? user?.id ?? null;
   return useQuery<FunnemailGroupedInbox>({
     queryKey: queryKeys.funnemailInbox.grouped(folderOwnerUserId ?? "anon", targetUserId),
