@@ -77,8 +77,8 @@ export const commsKeys = {
     root: ["funnemail-inbox"] as const,
     folders: ["funnemail-inbox", "folders"] as const,
     counts: ["funnemail-inbox", "counts"] as const,
-    grouped: (userId: string, operatorUserId?: string | null) =>
-      ["funnemail-inbox", "grouped", userId, operatorUserId ?? "self"] as const,
+    grouped: (userId: string, operatorUserId?: string | null, mailboxKey?: string | null) =>
+      ["funnemail-inbox", "grouped", userId, operatorUserId ?? "self", mailboxKey ?? "any"] as const,
     mailsByFolder: (slug: string, limit: number) =>
       ["funnemail-inbox", "mails", slug, limit] as const,
     decision: (messageId?: string | null) => ["funnemail-inbox", "decision", messageId ?? "none"] as const,
