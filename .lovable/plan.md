@@ -1,73 +1,73 @@
-## Audit gestione email — Findings & Piano
+## Audit completo dei tasti di sincronizzazione email
 
-### Stato attuale (audit)
+### Mappa dei tasti (pagina `/v2/inbox` → `InArrivoTab` → `EmailToolbar`)
 
-**A. Funnemail Inbox per casella** — ✅ OK
-- `useFunnemailInbox` legge `useActiveMailbox()` e passa `mailboxFilter` al DAL.
-- `listFunnemailGroupedInbox` filtra `channel_messages.mailbox_id IS NULL` (personale) o `= id` (condivisa).
-- I tab "Tutte / Non lette" funzionano lato client.
+| Tasto | Hook | Cosa fa | Stato |
+|---|---|---|---|
+| **Scarica nuove** | `useCheckInbox` → `callCheckInbox(mailboxId)` | 1 batch, scansione completa (legge tutto) | ⚠️ funziona ma scansiona anche le lette |
+| **Download non lette** | `useContinuousSync` → `bgSyncStart(mailboxId, {unreadOnly:true})` | loop continuo, solo unread, header `x-unread-only:1` | ❌ **ROTTO** (CORS) |
+| **Stop** | `bgSyncStop()` | flag `abortSync = true` | ✅ |
+| **Auto** | `useEmailAutoSync` | timer 2 min → `callCheckInbox()` | ✅ |
+| **Reset cursore** | `useResetSync` → UPDATE `email_sync_state` | azzera last_uid | ✅ |
 
-**B. Badge contatori in sidebar (`useUnreadCountsV2`)** — ❌ GAP
-- Conta `channel_messages` non lette **globalmente**, ignora la mailbox attiva. Operatore con accesso a 3 caselle vede sempre lo stesso numero, indipendentemente da dove è entrato.
+### Problema #1 — CAUSA PRINCIPALE del fallimento "Download non lette"
 
-**C. Classificazione AI su mail storiche** — ❌ GAP CRITICO
-- Trigger DB `trg_on_inbound_message` (AFTER INSERT WHEN direction='inbound') chiama `classify-inbound-message` per **ogni** email inbound inserita, inclusi backfill massivi.
-- Conseguenza: scaricando le mail di Booking/Iman/Luigi (anche vecchie), parte AI su migliaia di messaggi → costo, rumore, decisioni Funnemail su roba che nessuno leggerà.
-- Esiste anche `funnemail-backfill-inbound` (manuale, dry_run di default) — non è il problema principale, ma va lasciato off.
+I log console mostrano una raffica di `FunctionsFetchError` con `status: undefined` su `check-inbox`. Gli edge function logs mostrano che la funzione **esegue il boot ma non completa mai la response** per quelle chiamate (nessun metric line dopo il `booted`).
 
-**D. Suggerimenti gruppi su mittenti già categorizzati** — ⚠️ PARZIALE
-- `suggest-email-groups`: filtra `group_id IS NULL` ✅, ma non controlla `group_name IS NOT NULL` (campo legacy compilato dalle vecchie classificazioni). Risultato: alcuni mittenti categorizzati via legacy possono ricomparire.
-- `AISuggestionsTab` ha `statusFilter` "uncategorized/categorized/all" basato solo su `group_id`.
-- `useGroupingData` già esclude `group_id IS NULL AND group_name IS NULL` ✅.
-- KPI "Da classificare" e "Suggerimenti AI" già intersecano con allowlist mailbox (recente) ✅.
+Diagnosi: in `src/lib/checkInbox.ts` la chiamata aggiunge l'header `x-unread-only: 1` quando `bgSyncStart` parte in modalità unread. Ma in `supabase/functions/_shared/cors.ts` (riga 43), `Access-Control-Allow-Headers` elenca:
 
-**E. Pipeline post-classificazione** — ✅ OK, niente da toccare
-- `classify-inbound-message` → `funnemail-classify` → `funnemail-auto-route` → `funnemail-policy-engine`. Tutta la catena è idempotente per `message_id`.
+```
+authorization, x-client-info, apikey, content-type,
+x-supabase-client-platform, …, x-mailbox-id, x-sync-user-id,
+x-cron-secret, x-injection-review-id
+```
 
----
+**Manca `x-unread-only`.** Il browser fa il preflight OPTIONS, il server non dichiara questo header come permesso, e il browser blocca la POST → `TypeError: Failed to fetch` → supabase-js lo riveste come `FunctionsFetchError` con `status: undefined`. Per questo gli edge logs mostrano `booted` ma nessun completamento: il preflight cached scade e ogni POST fallisce subito a livello di rete.
 
-### Piano interventi (minimi, non rompono comportamento)
+**Spiega anche perché**: la prima sincronizzazione di 492 email (14:16:55) era partita da auto-sync / "Scarica nuove" (senza `x-unread-only`), e quella ha funzionato.
 
-**1. Stop classificazione AI su mail già lette / storiche** *(nodo critico — fix mirato sul trigger DB)*
-- Migrazione che aggiorna `public.on_inbound_message()` aggiungendo, prima del `PERFORM net.http_post(...classify-inbound-message)`, due short-circuit:
-  - skip se `NEW.read_at IS NOT NULL` (la mail era già `\Seen` su IMAP → l'utente l'ha già vista, non serve smistarla);
-  - skip se `NEW.email_date < (now() - interval '48 hours')` (cuscinetto contro download massivi retroattivi).
-- Effetto: il prossimo download di Booking/Iman/Luigi importa tutte le mail nel DB ma l'AI parte solo sulle nuove non lette. Comportamento real-time invariato.
-- **Niente** modifica al resto del trigger (outreach reply tracking, activities, dedup) — chirurgico.
+### Problema #2 — Retry inefficace su `FunctionsFetchError`
 
-**2. Badge sidebar mailbox-aware**
-- `src/v2/hooks/useUnreadCountsV2.ts`: aggiungere dipendenza da `useActiveMailbox` e filtrare `channel_messages` su `mailbox_id IS NULL` / `= activeMailbox.mailbox_id`. Query key invalidata al cambio casella.
-- Nessun impatto su `pendingTasks` / `pendingQueue` (restano globali — sono cross-mailbox per natura).
+`src/lib/checkInbox.ts::isSkippableCheckInboxError` intercetta solo 503 `BOOT_ERROR` e 546 `WORKER_RESOURCE_LIMIT`. Un `FunctionsFetchError` (network/CORS) non ha `httpStatus` → non viene riconosciuto come transient → la retry rimbalza per 10 batch in `bgSyncStart` con back-off lineare (2s → 20s) producendo solo rumore. Va aggiunto: se l'errore è una `TypeError`/`FunctionsFetchError` senza status → trattalo come transient.
 
-**3. Suggerimenti AI: escludere anche legacy `group_name`**
-- `supabase/functions/suggest-email-groups/index.ts`: nella `buildAddressQuery`, oltre a `.is("group_id", null)` aggiungere `.is("group_name", null)`. Una riga.
-- `AISuggestionsTab` `statusFilter === "uncategorized"`: stesso filtro combinato.
-- Effetto: zero proposte su mittenti già messi in un gruppo (anche legacy).
+### Problema #3 — "Scarica nuove" non rispetta il flag unread
 
-**4. UI Funnemail — indicatore mailbox attiva**
-- Sotto `PageTitleHeader` aggiungere riga sottile "Casella: {activeMailbox.label}" così l'operatore sa sempre su quale account sta smistando. Pure presentazione, niente logica.
+Il pulsante principale chiama `callCheckInbox(mailboxId)` senza `{ unreadOnly: true }`. Quando l'utente clicca "Scarica nuove", l'edge function fa `flag_resync` su tutta la finestra (vedi log: `checked: 492, marked_read: 492`) — pesante e in conflitto con la richiesta dell'utente di lavorare solo sulle non lette. Aggiungere `{ unreadOnly: true }` come default coerente con la doctrine.
+
+### Problema #4 — Single-flight troppo stretto
+
+`inFlightCheckInbox` in `src/lib/checkInbox.ts` deduplica per nome funzione, ignorando `mailboxId` e `unreadOnly`. Se il cron auto-sync (casella personale, full) parte mentre l'utente clicca "Download non lette" su una casella condivisa, le due chiamate si fondono e la seconda riceve i dati della prima. Va dedupato per `(mailboxId, unreadOnly)`.
 
 ---
 
-### Tecnico — file toccati
+## Piano di fix (minimale, edge-only + lib client)
 
-- **DB migration**: `on_inbound_message()` — solo guardia `read_at IS NOT NULL OR email_date < now() - 48h` davanti al `PERFORM net.http_post`.
-- **`src/v2/hooks/useUnreadCountsV2.ts`** — filtro mailbox.
-- **`supabase/functions/suggest-email-groups/index.ts`** — filtro `group_name IS NULL`.
-- **`src/components/email-intelligence/AISuggestionsTab.tsx`** — filtro `group_name IS NULL` su `statusFilter === "uncategorized"`.
-- **`src/v2/ui/pages/FunnemailInboxPage.tsx`** — sotto-header con label mailbox attiva.
+### 1. Sblocco CORS (root cause)
+File: `supabase/functions/_shared/cors.ts`
+- Aggiungere `x-unread-only` all'elenco `Access-Control-Allow-Headers`.
 
-### Cosa NON tocco
+### 2. Resilienza `callCheckInbox`
+File: `src/lib/checkInbox.ts`
+- Estendere `isSkippableCheckInboxError` per riconoscere anche `FunctionsFetchError` / errori senza `httpStatus` con name `TypeError|FunctionsFetchError|FunctionsRelayError` → ritornare `{ transient: true }` così bgSyncStart fa back-off.
+- Cambiare la chiave di dedup `inFlightCheckInbox` in una `Map<string, Promise>` con chiave `${mailboxId ?? "personal"}|${unreadOnly ? "u" : "all"}`.
 
-- `check-inbox` / `email-imap-proxy` / `mark-imap-seen` (memoria: intoccabili).
-- `funnemail-classify`, `funnemail-auto-route`, policy engine (logica già corretta).
-- `email-cron-sync` (appena messo a posto).
-- Trigger su outreach reply / activities / partner timeline (continua a funzionare per tutte le inbound, anche vecchie — serve per il CRM).
-- Email Intelligence: regole/gruppi restano condivisi per design.
+### 3. "Scarica nuove" passa `unreadOnly: true`
+File: `src/hooks/useEmailSync.ts` (`useCheckInbox`)
+- Modificare la mutation in `callCheckInbox(mailboxId, { unreadOnly: true })`. Anche `useEmailAutoSync` (`src/hooks/useEmailAutoSync.ts`) → idem.
 
-### Check di accettazione
+### 4. UI: rinominare il pulsante secondario
+File: `src/components/outreach/EmailToolbar.tsx`
+- Tooltip "Download non lette" → spiegare che è un loop continuo. Nessun cambio funzionale.
 
-- Scarico massivo Booking → 0 chiamate AI sulle mail più vecchie di 48h o già `\Seen`; le nuove non lette vengono classificate normalmente.
-- Operatore commuta fra Booking e personale → badge sidebar cambia.
-- Funnemail "Suggerimenti AI" non propone più mittenti già in un gruppo (group_id o group_name).
-- Header Funnemail mostra la casella attiva.
+### 5. Verifica post-deploy
+- Deploy `check-inbox` (per propagare il nuovo CORS shared).
+- Da `/v2/inbox`: cliccare "Download non lette" e leggere i log: niente più `FunctionsFetchError`, ogni batch deve produrre un metric line in `check-inbox`.
+- Verificare che "Scarica nuove" non scateni più 492 `marked_read` su mail già viste.
+
+### Non tocco
+- Logica `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria `linkedin-single-channel-rule` / `email-download-integrity`).
+- Trigger DB `on_inbound_message` (già fixato nello sprint precedente).
+- Editorial review, classificazione AI, queue.
+
+### Stima impatto
+3 file client + 1 file shared edge + 1 redeploy. Zero migrazioni DB. Zero breaking change su contratti API.
