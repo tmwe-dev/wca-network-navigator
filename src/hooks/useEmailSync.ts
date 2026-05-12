@@ -42,7 +42,9 @@ export function useCheckInbox() {
   const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
 
   return useMutation({
-    mutationFn: () => callCheckInbox(mailboxId),
+    // Default doctrine: "Scarica nuove" lavora solo sulle non lette.
+    // Evita flag_resync massivi su email già viste (vedi audit 2026-05-12).
+    mutationFn: () => callCheckInbox(mailboxId, { unreadOnly: true }),
     onSuccess: (raw) => {
       // Realtime handles list updates; only refresh count
       queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
