@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
-import { Building2, User, MailOpen } from "lucide-react";
+import { Building2, User, MailOpen, HelpCircle } from "lucide-react";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -78,6 +78,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
               : false;
 
           const group = getGroup(msg.from_address);
+          const groupColor = group?.groupColor ?? null;
 
           // Sorgente (partner / contact) mostrata come piccolo chip in alto a destra,
           // sopra al group badge — niente più chip “buttati al centro card”.
@@ -97,13 +98,31 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
               {sourceChip}
               {group?.groupName ? (
                 <span
-                  className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-foreground"
+                  className="inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-semibold text-foreground"
+                  style={{
+                    backgroundColor: groupColor ? `${groupColor}26` : undefined,
+                    borderColor: groupColor ? `${groupColor}80` : undefined,
+                  }}
                   title={`Gruppo: ${group.groupName}`}
                 >
+                  {groupColor && (
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ backgroundColor: groupColor }}
+                    />
+                  )}
                   {group.groupIcon && <span>{group.groupIcon}</span>}
                   <span className="max-w-[140px] truncate">{group.groupName}</span>
                 </span>
-              ) : null}
+              ) : (
+                <span
+                  className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400"
+                  title="Email non ancora assegnata a un gruppo"
+                >
+                  <HelpCircle className="h-3 w-3" />
+                  Non classificata
+                </span>
+              )}
             </div>
           );
 
@@ -163,6 +182,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 size="sm"
                 previewText={(msg.body_text || "").replace(/\s+/g, " ").trim().slice(0, 220) || null}
                 groupBadge={groupBadge}
+                groupColor={groupColor}
                 trailing={trailing}
                 actions={actions}
                 onClick={() => onSelect(msg)}
