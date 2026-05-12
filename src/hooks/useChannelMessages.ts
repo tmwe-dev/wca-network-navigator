@@ -18,6 +18,7 @@ export type ChannelMessage = {
   source_type: string | null;
   source_id: string | null;
   partner_id: string | null;
+  mailbox_id: string | null;
   from_address: string | null;
   to_address: string | null;
   cc_addresses: string | null;
