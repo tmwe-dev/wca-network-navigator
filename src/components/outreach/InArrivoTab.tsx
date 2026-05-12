@@ -12,6 +12,7 @@ import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
 import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const EmailInboxView = lazyRetry(() =>
@@ -80,7 +81,13 @@ export function InArrivoTab() {
     return () => window.removeEventListener("channel-sync-done", handler);
   }, []);
 
-  const { data: emailUnread = 0 } = useUnreadCount("email");
+  const { activeMailbox } = useActiveMailbox();
+  const emailMailboxFilter = activeMailbox
+    ? activeMailbox.kind === "shared"
+      ? { kind: "shared" as const, id: activeMailbox.mailbox_id }
+      : { kind: "personal" as const }
+    : undefined;
+  const { data: emailUnread = 0 } = useUnreadCount("email", emailMailboxFilter);
   const { data: waUnread = 0 } = useUnreadCount("whatsapp");
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
 
