@@ -19,6 +19,7 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { reviewMessage } from "@/lib/messaging/reviewMessage";
 import DOMPurify from "dompurify";
 import { createLogger } from "@/lib/log";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 
 const log = createLogger("useApproveAndDispatch");
 
@@ -54,6 +55,8 @@ export function useApproveAndDispatch() {
   const [dispatching, setDispatching] = useState(false);
   const liBridge = useLinkedInExtensionBridge();
   const waBridge = useWhatsAppExtensionBridge();
+  const { activeMailbox } = useActiveMailbox();
+  const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
 
   const dispatch = async (pendingActionId: string): Promise<DispatchResult> => {
     setDispatching(true);
@@ -118,7 +121,7 @@ export function useApproveAndDispatch() {
       switch (actionType) {
         case "send_email":
         case "send_proposal":
-          result = await dispatchEmail(payload, finalText, partnerId, contactId);
+          result = await dispatchEmail(payload, finalText, partnerId, contactId, mailboxId);
           break;
         case "send_whatsapp":
           result = await dispatchWhatsApp(payload, finalText, waBridge);
@@ -182,6 +185,7 @@ async function dispatchEmail(
   finalBody: string,
   partnerId: string | null,
   contactId: string | null,
+  mailboxId: string | null,
 ): Promise<DispatchResult> {
   const to = pick(payload, ["to", "recipient_email", "email", "email_address"]);
   const subject = pick(payload, ["subject", "draft_subject"]) || "(senza oggetto)";
@@ -202,6 +206,7 @@ async function dispatchEmail(
         contact_id: contactId,
         idempotency_key: buildIdempotencyKey(to, subject, sanitizedHtml),
       },
+      headers: mailboxId ? { "x-mailbox-id": mailboxId } : undefined,
       context: "approveAndDispatch.email",
     });
     if (data?.error) return { success: false, detail: data.error };

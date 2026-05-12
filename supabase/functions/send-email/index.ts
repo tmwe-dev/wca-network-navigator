@@ -7,6 +7,7 @@ import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
+import { resolveSharedMailbox } from "../_shared/resolveMailbox.ts";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -254,19 +255,44 @@ Deno.serve(async (req) => {
     const s: Record<string, string> = {};
     (settingsRows as AppSettingRow[] | null)?.forEach((row) => { if (row.value) s[row.key] = row.value; });
 
-    const smtpHost = s["smtp_host"];
-    const smtpPort = parseInt(s["smtp_port"] || "465", 10);
-    const smtpUser = s["smtp_user"];
-    const smtpPass = s["smtp_password"];
+    // Step F — opt-in shared mailbox: header x-mailbox-id sovrascrive le credenziali SMTP
+    // (e il sender) con quelle della casella condivisa. Senza header → flusso personale invariato.
+    const mailboxIdHeader = req.headers.get("x-mailbox-id");
+    const mailboxId = mailboxIdHeader && mailboxIdHeader.trim() !== "" ? mailboxIdHeader.trim() : null;
 
-    if (!smtpHost || !smtpUser || !smtpPass) {
-      return edgeError("VALIDATION_ERROR", "SMTP non configurato. Vai in Impostazioni → Email per configurarlo.");
+    let smtpHost: string;
+    let smtpPort: number;
+    let smtpUser: string;
+    let smtpPass: string;
+    let sharedSenderEmail: string | null = null;
+    let sharedReplyTo: string | null = null;
+
+    if (mailboxId) {
+      try {
+        const resolved = await resolveSharedMailbox(supabase, mailboxId);
+        smtpHost = resolved.smtp_host;
+        smtpPort = resolved.smtp_port || 465;
+        smtpUser = resolved.smtp_user;
+        smtpPass = resolved.smtp_password;
+        sharedSenderEmail = resolved.email;
+        sharedReplyTo = resolved.reply_to;
+      } catch (e) {
+        return edgeError("VALIDATION_ERROR", `Casella aziendale non disponibile: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    } else {
+      smtpHost = s["smtp_host"];
+      smtpPort = parseInt(s["smtp_port"] || "465", 10);
+      smtpUser = s["smtp_user"];
+      smtpPass = s["smtp_password"];
+      if (!smtpHost || !smtpUser || !smtpPass) {
+        return edgeError("VALIDATION_ERROR", "SMTP non configurato. Vai in Impostazioni → Email per configurarlo.");
+      }
     }
 
     // Build sender
     let senderEmail = from;
     if (!senderEmail) {
-      const senderEmailVal = s["default_sender_email"] || smtpUser;
+      const senderEmailVal = sharedSenderEmail || s["default_sender_email"] || smtpUser;
       const senderName = s["default_sender_name"];
       senderEmail = senderName ? `${senderName} <${senderEmailVal}>` : senderEmailVal;
     }
@@ -342,6 +368,9 @@ Deno.serve(async (req) => {
 
     // Resolve Reply-To: explicit > operator > commercial global > none
     let resolvedReplyTo = reply_to || null;
+    if (!resolvedReplyTo && sharedReplyTo) {
+      resolvedReplyTo = sharedReplyTo;
+    }
     if (!resolvedReplyTo && operator_id) {
       const { data: opRow } = await supabase
         .from("operators")
