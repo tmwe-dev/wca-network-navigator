@@ -75,21 +75,35 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       const user = session?.user;
       if (!user) throw new Error("no_session");
 
-      const { error } = await supabase
+      // Upsert (non solo update): se per qualche motivo la riga profile
+      // non esiste ancora — es. trigger handle_new_user fallito o utente
+      // creato prima del trigger — la creiamo on-the-fly invece di
+      // consumare un update silenzioso a 0 righe che lascia il flag
+      // onboarding_completed=false e ripresenta il wizard.
+      const profilePayload = {
+        user_id: user.id,
+        display_name: values.displayName.trim(),
+        language: values.language,
+        phone: values.phone.trim() || null,
+        whatsapp_number: values.whatsapp.trim() || null,
+        linkedin_url: values.linkedinUrl.trim() || null,
+        onboarding_completed: true,
+      };
+      const { data: upserted, error } = await supabase
         .from("profiles")
-        .update({
-          display_name: values.displayName.trim(),
-          language: values.language,
-          phone: values.phone.trim() || null,
-          whatsapp_number: values.whatsapp.trim() || null,
-          linkedin_url: values.linkedinUrl.trim() || null,
-          onboarding_completed: true,
-        })
-        .eq("user_id", user.id);
+        .upsert(profilePayload, { onConflict: "user_id" })
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!upserted) throw new Error("profile_upsert_no_row (RLS o user_id non autorizzato)");
 
       // Sync row operator (UPDATE-first per evitare conflitti su unique email).
       // Never touches is_admin — governato da Settings → Operatori.
+      // Operator sync: solo UPDATE (la riga è creata dal trigger
+      // handle_new_user al primo login). RLS operators_update consente
+      // user_id = auth.uid(). Mai INSERT qui: la policy "Admins can
+      // insert operators" richiederebbe ruolo admin e bloccherebbe il
+      // wizard di un utente normale facendo apparire un errore di salvataggio.
       const operatorEmail = (user.email ?? "").toLowerCase();
       if (operatorEmail) {
         const operatorPatch = {
@@ -98,22 +112,17 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           linkedin_profile_url: values.linkedinUrl.trim() || null,
           is_active: true,
         };
-        const { data: existing } = await supabase
+        const { error: opErr, count } = await supabase
           .from("operators")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (existing?.id) {
-          const { error: opErr } = await supabase
-            .from("operators")
-            .update(operatorPatch)
-            .eq("id", existing.id);
-          if (opErr) console.warn("[onboarding] operator update non-blocking:", describeSaveError(opErr));
-        } else {
-          const { error: opErr } = await supabase
-            .from("operators")
-            .insert({ ...operatorPatch, user_id: user.id, email: operatorEmail });
-          if (opErr) console.warn("[onboarding] operator insert non-blocking:", describeSaveError(opErr));
+          .update(operatorPatch, { count: "exact" })
+          .eq("user_id", user.id);
+        if (opErr) {
+          console.warn("[onboarding] operator update non-blocking:", describeSaveError(opErr));
+        } else if ((count ?? 0) === 0) {
+          // Nessuna riga operator esistente: il trigger non l'ha creata
+          // (probabile email duplicata su un'altra utenza). Non blocchiamo:
+          // l'operatore può essere ripristinato da Settings → Operatori.
+          console.warn("[onboarding] no operator row matched user_id; skipping (admin can fix in Settings)");
         }
       }
 
