@@ -86,6 +86,7 @@ const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ d
 const FinderApiPage = lazy(() => import("./ui/pages/FinderApiPage").then((m) => ({ default: m.FinderApiPage })));
 const FinderApiSchemaMapPage = lazy(() => import("./ui/pages/finder-api/FinderApiSchemaMapPage").then((m) => ({ default: m.FinderApiSchemaMapPage })));
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
+const EmailLabPage = lazy(() => import("./ui/pages/EmailLabPage"));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
 const E2EStatusPage = lazy(() => import("./ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
 const BrandVoicePage = lazy(() => import("./ui/pages/BrandVoicePage").then((m) => ({ default: m.BrandVoicePage })));
@@ -313,6 +314,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="ai-staff/lab" element={<Navigate to="/v2/ai-test-hub" replace />} />
           <Route path="ai-test-hub" element={guardedPage(AiTestHubPage, "AiTestHub")} />
+          <Route path="email-lab" element={guardedPage(EmailLabPage, "EmailLab")} />
           {/* Lab & Verifiche — hub unificato (scenari, e2e, diagnostica, telemetria, ext, design) */}
           <Route path="lab" element={guardedPage(LabPage, "Lab")} />
           {/* Legacy → canonical /v2/email/forge */}

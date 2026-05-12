@@ -1,114 +1,122 @@
-## Punto della situazione
+## Mappa di cosa esiste già
 
-Lo screenshot di `/v2/inbox` mostra tre problemi che si ripetono in tutte le viste email del sistema (Inbox, Funnemail, Email Intelligence, Holding, Smart Inbox):
+### Per la produzione email
+- **`/v2/email-forge`** (Lab AI semplificato): pannello config destinatario + tipo + tono + KB → chiama `generate-email` con `_debug_return_prompt=true`. Ritorna draft + system/user prompt assemblato + blocchi + journalistReview (verdict, warnings, edits, quality_score, reasoning) + context summary + tokens + latenza. Ha già "rigenera con override prompt".
+- **`improve-email`** edge function già wired in `useEmailComposerState` per migliorare una bozza esistente.
+- **`analyze-email-edit`** edge function per diff/analisi modifiche manuali sulla bozza.
+- **`journalistReview`** è incluso nella response di ogni `generate-email`/`improve-email` (verdetto + edits applicati + reasoning).
+- Limite attuale: **mostra solo l'ULTIMA versione**. Non vedi v1→v2→v3 affiancate.
 
-1. **Contrasto basso**: testo del preview, mittente secondario, date e suggerimenti vivono su `text-muted-foreground/70` su sfondo molto scuro → quasi illeggibili.
-2. **Gruppi senza colore**: il DB tiene `email_address_groups.colore` e `icon`, ma `EmailMessageList` mostra il badge gruppo con un fisso `bg-primary/15` ignorando il colore. Risultato: nessuna differenziazione visiva tra "partner", "newsletter", "fornitori", ecc.
-3. **Manca un badge "tipo contenuto"**: oggi vediamo solo "Non classificata" / "partner" generici. Non si capisce a colpo d'occhio se è una newsletter, una richiesta, un bounce, una notifica LinkedIn, un report.
-4. **Azioni nascoste**: i pulsanti "Deep Search · Azioni · Assegna gruppo" appaiono uguali per tutte le righe, non hanno gerarchia, e i tooltip ("Assegna a un gruppo") flottano in modo confuso (visibile in screenshot).
+### Per la lettura/smistamento Funnemail
+- **`classify-inbound-message`** orchestratore con stage modulari: `injection_guard` → `classified` (AI) → `scouted` → `routed` → `policy_applied` → `triage`. Ogni stage scrive in `pipeline_traces`.
+- **`/v2/pipeline-traces`**: vista live + per trace + per step. Filtra per `trace_id` e mostra timeline cronologica.
+- **`funnemail-policy-engine`**, **`funnemail-auto-route`**, **`funnemail-classify`** sono edge separate richiamate dagli stage.
+- Limite attuale: la pipeline parte da inbound REALE (trigger pg_net su `channel_messages`). Non c'è un endpoint "simula questa email finta e mostrami il viaggio".
 
-Inoltre l'utente vuole una **mappa esplicita** di cosa il sistema sa già fare intorno alle email.
+### Per i prompt — già disponibile
+- **`/v2/ai-staff/prompt-lab`**: tab Operative Prompts, Email Prompts, Personas, Capabilities, Routing, Playbooks, Journalists, Voice, KB Doctrine, System Prompt, Audit, Prompt History, Prompt Tests, **Simulator**, AI Profile.
+- **`/v2/prompt-lab/catalog`**: catalogo unificato prompt operativi versionati (versione, autore, orchestratori, input).
+- **`/v2/prompt-lab/atlas`**: atlas agenti.
+- **`/v2/prompt-lab/suggestions`** e **`/v2/prompt-lab/proposals`**: review proposte AI per migliorare i prompt.
+- **`/v2/prompt-lab/tests`** + **`/v2/ai-test-hub`**: scenari salvati in DB con assertions pass/fail (`ai_test_scenarios` + `useAiTestHub`).
+- **SimulatorTab**: dato un agente + messaggio, mostra system prompt assemblato identico a `agent-loop`, persona caricata, tool whitelist, hard guards, e (opzionale) dry-run AI con `tool_calls` proposti SENZA eseguirli.
+- **`/v2/ai-interactions-log`**: storico messaggi AI con thumbs up/down + export CSV.
+- Versioning prompt: `prompt_versions` (snapshot immutabili via trigger), `prompt_test_cases`, `prompt_test_runs`, helper `rollback_prompt_to_version()`.
 
----
-
-## Mappa attività email esistenti (cosa il sistema può già fare)
-
-### Lettura & sincronia
-- Scarico nuove email (IMAP `check-inbox`), download massivo, auto-sync, reset cursore.
-- Sincronia continua con progress, pausa notturna automatica.
-- Visualizzazione per canale (Email / WhatsApp / LinkedIn) nello stesso pannello Inbox.
-
-### Classificazione & gruppi
-- Classificazione automatica via `classify-emails-batch` + learning loop (dominio/mittente).
-- Assegnazione manuale a gruppo (icona + colore) tramite `InlineGroupAssigner`.
-- Suggerimenti AI di nuovi gruppi (`suggest-email-groups`) editabili da Prompt Lab.
-- Categorie: partner, newsletter, notifiche, automatiche, spam, archiviata, ecc.
-
-### Regole & azioni automatiche
-- `email_address_rules`: per mittente, scegli fra `mark_read`, `archive`, `hide`, `spam`, `move_to_folder` (+ folder target), con o senza retro-applicazione su storico (`apply-email-rules`, `backfill-email-rules`).
-- Cartelle IMAP: `manage-email-folders` permette move, archive, spam, delete, list_folders, create_folder direttamente sul server di posta.
-- Soft-delete UI (`hidden_by_rule`) senza toccare IMAP.
-- Bulk action toolbar (`MultiSelectBulkBar`) per applicare azione a N email selezionate.
-
-### Intelligence & risposta
-- Editorial review obbligatorio su qualsiasi email generata (`journalistReview`).
-- Generazione risposta (`generate-email`) e miglioramento (`improve-email`) via Prompt Lab.
-- Classificazione delle risposte in arrivo (`classify-email-response`) con escalation automatica del `lead_status`.
-- Autoresponder template-only via `funnemail-send-autoresponder`.
-- Funnemail claim "Lo prendo io" + realtime banner su email orfane.
-- Bounce automation (hard/soft) via `check-inbox`.
-
-### Ricerca & contesto
-- Deep Search (Sherlock Scout/Detective/Sherlock) per arricchire il mittente.
-- Apertura partner/contact drawer dal messaggio.
-- Holding pattern: chip ✈️ pulsante per contatti in pausa controllata.
-
-### Governance
-- Prompt Lab Catalog: ogni prompt operativo email è versionato, testabile, modificabile da DB.
-- AI Interaction Log con thumbs up/down su ogni messaggio AI.
-- Pipeline Traces viewer (`/v2/pipeline-traces`) per vedere passo-passo cosa fa la pipeline su una mail.
+**Risposta diretta alla tua domanda**: NO, non c'è una pagina che ti mostra in serie le bozze prodotte iterativamente dagli agenti, né una pagina che ti mostra il "viaggio" passo-passo di un'email Funnemail simulata. Hai i mattoni separati (Forge per produzione, PipelineTraces per lettura, Simulator per dry-run agente), ma manca la vista unificata "tutto davanti agli occhi".
 
 ---
 
-## Cosa propongo (ergonomia + chiarezza)
+## Proposta — nuova pagina `/v2/email-lab`
 
-### A. Leggibilità (alto impatto, basso rischio)
-- Promuovere il testo preview da `text-muted-foreground/70` a `text-foreground/85` e i meta da `/50` a `/70`.
-- Aumentare il contrasto delle date (oggi `text-muted-foreground/60`) e dei "Pag. 1 · 50 vis.".
-- Tooltip ("Assegna a un gruppo") spostati in posizione stabile sotto il pulsante e con sfondo `bg-popover` opaco (oggi sembra fluttuare staccato).
-- Risolvere lo "stato vuoto" del subject (mostrato solo "I: Candidatura spontanea") con peso e dimensione corretti.
+Una pagina con 2 tab. UI compatta, dark-friendly, riusa i componenti già esistenti.
 
-### B. Gruppi colorati riconoscibili (alto impatto)
-- `EmailMessageList`: usare `group.groupColor` come `borderLeft` sticker della riga (4px) + come `background` del badge gruppo (con fallback se colore null).
-- Badge gruppo con icona emoji + nome + pallino colore, non più "primary/15" generico.
-- Aggiungere una **legenda gruppi** collassabile in cima alla lista (chip cliccabili → filtro istantaneo per gruppo).
+### Tab 1 — "Produzione email · serial agents"
 
-### C. Badge "tipo contenuto" (nuovo)
-- Mostrare il `category` (newsletter, notifica, partner, bounce, automatica, richiesta, ecc.) come pill colorato accanto al gruppo.
-- Mappare ogni categoria a un colore semantico definito in `index.css` (no colori inline).
-- Quando la categoria è "non_classificata" mostrare azione rapida "Classifica con AI" inline, non solo il badge grigio.
+Layout verticale:
 
-### D. Pannello azioni più chiaro
-- Riorganizzare la toolbar di riga in tre cluster con separatori sottili:
-  1. **Apri/Leggi** (Apri drawer · Segna letta · Rispondi rapido)
-  2. **Organizza** (Assegna gruppo · Sposta cartella · Archivia · Spam · Nascondi)
-  3. **Approfondisci** (Deep Search · Crea regola mittente · Vai a partner)
-- Dropdown "Azioni" con sezioni etichettate invece di lista piatta.
-- Su hover, evidenziare l'intera riga (oggi cambia solo il bg del subject).
+```text
+┌────────────────────────────────────────────────────────────┐
+│  CONFIG (riuso ForgeOraclePanel)                           │
+│  destinatario · tipo · tono · KB · goal · base_proposal    │
+└────────────────────────────────────────────────────────────┘
+[ Genera bozza ]  [ Migliora bozza corrente ]  [ Reset serie ]
 
-### E. "Punto della situazione" — header inbox
-- Sostituire la riga "951 in db · pag. 1 · 50 vis." con un header informativo:
-  - N. non lette per gruppo (chip)
-  - N. in attesa di classificazione AI
-  - N. con regola pendente/da applicare
-  - Ultimo sync ed eventuale cron in pausa
-- Pulsante "Cosa può fare l'AI qui" → drawer con la mappa attività di sopra (così l'operatore scopre le funzioni esistenti).
+┌─v1 generate─┐ ┌─v2 improve─┐ ┌─v3 improve─┐ ┌─v4 override─┐
+│ subject     │→│ subject    │→│ subject    │→│ subject     │
+│ body        │ │ DIFF v1    │ │ DIFF v2    │ │ DIFF v3     │
+│ journalist  │ │ journalist │ │ journalist │ │ journalist  │
+│ model · ms  │ │ model · ms │ │ model · ms │ │ model · ms  │
+│ [prompt ▾]  │ │ [prompt ▾] │ │ [prompt ▾] │ │ [prompt ▾]  │
+└─────────────┘ └────────────┘ └────────────┘ └─────────────┘
+                                              ← scroll →
+```
 
-### F. Promp/azioni personalizzate visibili
-- Sul detail di un'email, sezione "Automatizza questo mittente" con:
-  - Anteprima della regola che verrà creata
-  - Toggle "Applica anche allo storico"
-  - Link a Prompt Lab per modificare il prompt che ha classificato questa mail
-- Dal menu Azioni, voce "Crea prompt personalizzato per questa categoria" che apre il Prompt Lab pre-compilato.
+Comportamento:
+- "Genera bozza" → invoca `useEmailForge.run()` esistente, push del risultato in `iterations: ForgeResult[]`.
+- "Migliora bozza corrente" → nuovo hook `useImproveIteration` che chiama `improve-email` passando l'ULTIMO `iterations[i]` come input + journalistReview ricevuto, push del risultato come nuova card.
+- Ogni card mostra subject, body (markdown render), badge journalist (pass/warn/block + quality_score), model + latenza + tokens, accordion "system prompt", accordion "user prompt", accordion "blocks", e — dalla v2 in poi — un toggle "DIFF" che evidenzia inline rosso/verde rispetto alla card precedente (riuso `diff-match-patch` o algoritmo word-level semplice).
+- "Reset serie" svuota `iterations`.
+- Stato 100% locale (no persistenza DB) — è un laboratorio, non production.
+
+### Tab 2 — "Smistamento Funnemail · pipeline live"
+
+Layout verticale:
+
+```text
+┌──────────── EMAIL SIMULATA ────────────────────────────────┐
+│ from:    [_______________]  to: [_____________]            │
+│ subject: [______________________________________________]  │
+│ body:    [textarea grande                              ]   │
+│          [                                              ]  │
+│ [ Simula smistamento ]                                     │
+└────────────────────────────────────────────────────────────┘
+
+┌─PIPELINE STEPS (cronologico, auto-refresh 2s)──────────────┐
+│ 1. injection_guard       ✓ 12ms   payload: {...}           │
+│ 2. ai_classification     ✓ 1.4s   prompt usato │ output AI │
+│    └─ category: newsletter · confidence: 0.92              │
+│    └─ reasoning: "Mittente automatico, link unsubscribe…"  │
+│ 3. funnemail_scout       ✓ 80ms   sender_known: true       │
+│ 4. funnemail_auto_route  ✓ 230ms  folder: Newsletter       │
+│    └─ reason: "Pattern domain match"                       │
+│ 5. policy_applied        ✓ 410ms  actions: 2 / executed: 2 │
+│    └─ archive · mark_read                                  │
+│ 6. triage_alert          skipped  no high-priority match   │
+└────────────────────────────────────────────────────────────┘
+```
+
+Comportamento:
+- L'utente compila un'email finta e clicca "Simula smistamento".
+- Il client genera un `trace_id` UUID, chiama una nuova edge function `simulate-funnemail-classify` (o `classify-inbound-message` con flag `_simulation: true` se preferiamo non aggiungere nuove edge — da decidere).
+- L'edge esegue gli stessi stage di classify-inbound-message MA: non insert in `channel_messages`, non manda autoresponder, non esegue azioni reali. Marca tutti gli stage in `pipeline_traces` con il `trace_id` fornito.
+- La UI fa polling su `pipeline_traces` filtrato per `trace_id` ogni 2s finché non vede `done` o errore, e renderizza le card stage in ordine cronologico (riusa stile `PipelineTracesPage`).
+- Per ogni stage espandibile: input payload, output payload, prompt AI (se applicabile), risposta AI (se applicabile), durata, status.
+
+### Sezione condivisa — "Strumenti già attivi sui prompt"
+
+In cima alla pagina, banner collassabile con 8 link card:
+- Prompt Lab (editor) · Prompt Catalog · Atlas · Suggestions · Proposals · Tests · Pipeline Traces · AI Interaction Log
+- Ogni card: icona + 1 riga di descrizione + link.
 
 ---
 
-## Dettagli tecnici (per sviluppo)
+## Dettagli tecnici
 
-- File da toccare per A+B+C+D: `src/components/outreach/EmailMessageList.tsx`, `src/components/outreach/EmailMessageActions.tsx`, `src/components/outreach/email/InlineGroupAssigner.tsx`, `src/v2/ui/molecules/email/MailRowChrome.tsx`, `src/hooks/useEmailAddressGroups.ts` (esporre già `groupColor` — c'è).
-- Aggiungere token semantici in `src/index.css` per categorie email (`--cat-newsletter`, `--cat-notification`, `--cat-partner`, `--cat-bounce`, `--cat-request`, `--cat-auto`).
-- Header inbox (E): nuovo organismo `src/v2/ui/organisms/inbox/InboxStatusBar.tsx` montato dentro `EmailInboxView`.
-- Drawer "Cosa può fare l'AI qui": nuovo `src/v2/ui/organisms/inbox/InboxCapabilitiesDrawer.tsx` con il contenuto della mappa attività.
-- **Niente modifiche** a `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria).
-- Nessun refactor della logica di sync, solo presentazione.
+- File principali: `src/v2/ui/pages/EmailLabPage.tsx`, sotto-componenti in `src/v2/ui/pages/email-lab/{ProductionTab.tsx, FunnemailTab.tsx, IterationCard.tsx, DiffView.tsx, ToolsBanner.tsx}`.
+- Route: `/v2/email-lab` (lazy in `routes.tsx`, registry navigation).
+- Hook nuovi: `src/v2/hooks/useEmailLabIterations.ts` (gestisce array iterations + chiamate generate/improve), `src/v2/hooks/useFunnemailSimulation.ts` (POST a edge + polling pipeline_traces).
+- Edge function nuova (Tab 2): `supabase/functions/simulate-funnemail-classify/index.ts` — wrapper read-only attorno agli stessi stage di `classify-inbound-message`, senza side-effect (no insert messaggi, no send, no policy execute), accetta payload finto e `trace_id` dal client.
+- Riuso totale: `ForgeOraclePanel`, `useEmailForge`, `pipelineTraces` DAL, `MailRowChrome` per render preview email.
+- Vincoli rispettati: niente `supabase.from()` in UI (passa via DAL `pipelineTraces` esistente), niente bypass `journalistReview` (lo MOSTRO, non lo salto), niente direct AI invoke (uso `invokeAi`/`invokeEdge` esistenti), niente `any`.
+- Stato locale (Tab 1): `useState<ForgeResult[]>` — la serie esiste solo in sessione, è un laboratorio.
 
 ---
 
-## Cosa scelgo di fare nel primo round (proposta)
+## Round (atomicità)
 
-Per rispettare l'atomicità (Vol II), spaccherei in due interventi separati:
+1. **Round A** — scaffold pagina + Tab 1 "Produzione serial" con generate/improve a catena, card affiancate, diff view, accordion prompt. ~6 file.
+2. **Round B** — Tab 2 "Smistamento" con nuova edge `simulate-funnemail-classify` (read-only) + polling pipeline_traces + render timeline. ~4 file + 1 edge function nuova.
+3. **Round C** — Banner "Strumenti già attivi sui prompt" + voce navigation + breadcrumb + memoria mem dedicata.
 
-1. **Round 1 — Leggibilità + gruppi colorati + badge categoria** (A, B, C). Cambio puramente UI/CSS, zero rischio sul flusso.
-2. **Round 2 — Pannello azioni + status bar + drawer capability map** (D, E, F). Richiede nuovi componenti.
-
-Confermi che parto dal Round 1, oppure preferisci che l'ordine sia diverso (es. prima la mappa attività)?
+Confermi che parto da Round A? Oppure preferisci che faccia prima la mappa "Strumenti già attivi" (Round C) come scoperta, e poi A e B?
