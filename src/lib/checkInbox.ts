@@ -5,10 +5,26 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("callCheckInbox");
 
-let inFlightCheckInbox: Promise<unknown> | null = null;
+const inFlightCheckInbox = new Map<string, Promise<unknown>>();
+
+function inFlightKey(mailboxId: string | null, unreadOnly: boolean): string {
+  return `${mailboxId ?? "personal"}|${unreadOnly ? "u" : "all"}`;
+}
 
 function isSkippableCheckInboxError(err: unknown): err is ApiError {
-  if (!(err instanceof ApiError)) return false;
+  // Errori di rete (FunctionsFetchError, TypeError "Failed to fetch", CORS,
+  // abort) arrivano come ApiError UNKNOWN_ERROR senza httpStatus. Vanno
+  // trattati come transient: bgSyncStart farà back-off invece di rimbalzare.
+  if (err instanceof ApiError && (err.httpStatus === undefined || err.httpStatus === null)) {
+    return true;
+  }
+  if (!(err instanceof ApiError)) {
+    // Edge-case: errore non-ApiError raw (es. TypeError di fetch) → transient.
+    if (err instanceof Error && /Failed to (fetch|send)|FunctionsFetchError|FunctionsRelayError|NetworkError/i.test(err.message)) {
+      return true;
+    }
+    return false;
+  }
 
   const body = err.details?.body as Record<string, unknown> | undefined;
   const bodyCode = typeof body?.code === "string" ? body.code : undefined;
@@ -43,16 +59,18 @@ export async function callCheckInbox(
   mailboxId?: string | null,
   opts: CallCheckInboxOptions = {},
 ): Promise<unknown> {
-  if (inFlightCheckInbox) {
-    log.warn("check-inbox already running, joining existing invocation");
-    return inFlightCheckInbox;
+  const key = inFlightKey(mailboxId ?? null, !!opts.unreadOnly);
+  const existing = inFlightCheckInbox.get(key);
+  if (existing) {
+    log.warn("check-inbox already running, joining existing invocation", { key });
+    return existing;
   }
 
-  inFlightCheckInbox = callCheckInboxOnce(mailboxId ?? null, opts).finally(() => {
-    inFlightCheckInbox = null;
+  const p = callCheckInboxOnce(mailboxId ?? null, opts).finally(() => {
+    inFlightCheckInbox.delete(key);
   });
-
-  return inFlightCheckInbox;
+  inFlightCheckInbox.set(key, p);
+  return p;
 }
 
 async function callCheckInboxOnce(
@@ -76,11 +94,14 @@ async function callCheckInboxOnce(
     // per il client. Non propaghiamo: evitiamo crash/blank screen e il
     // prossimo tick o scaricamento manuale riprenderà senza duplicare side effect.
     if (isSkippableCheckInboxError(err)) {
+      const status = err instanceof ApiError ? err.httpStatus : undefined;
+      const code = err instanceof ApiError ? (err.details?.body as Record<string, unknown> | undefined)?.code : undefined;
       log.warn("check-inbox skipped this tick", {
-        status: err.httpStatus,
-        code: (err.details?.body as Record<string, unknown> | undefined)?.code,
+        status,
+        code,
+        name: err instanceof Error ? err.name : undefined,
       });
-      return { total: 0, matched: 0, transient: true, resourceLimit: err.httpStatus === 546 };
+      return { total: 0, matched: 0, transient: true, resourceLimit: status === 546 };
     }
     throw err;
   }
