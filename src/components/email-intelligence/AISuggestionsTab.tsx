@@ -391,8 +391,10 @@ export default function AISuggestionsTab() {
         .order("email_count", { ascending: false })
         .limit(500);
 
-      if (statusFilter === "uncategorized") q = q.is("group_id", null);
-      else if (statusFilter === "categorized") q = q.not("group_id", "is", null);
+      // "uncategorized" esclude anche group_name legacy: nessun mittente
+      // già messo in un gruppo deve riapparire fra i suggerimenti.
+      if (statusFilter === "uncategorized") q = q.is("group_id", null).is("group_name", null);
+      else if (statusFilter === "categorized") q = q.or("group_id.not.is.null,group_name.not.is.null");
 
       const { data, error } = await q;
       if (error) throw error;
