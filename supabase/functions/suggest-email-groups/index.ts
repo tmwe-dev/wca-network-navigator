@@ -89,7 +89,13 @@ serve(async (req) => {
       if (requestedEmails.length > 0) {
         q = q.in("email_address", requestedEmails);
       } else {
-        q = q.is("group_id", null).gte("email_count", minEmailCount).limit(batchSize);
+        // Esclude sia i mittenti col group_id moderno sia quelli con il
+        // group_name legacy: mai riproporre un mittente già categorizzato.
+        q = q
+          .is("group_id", null)
+          .is("group_name", null)
+          .gte("email_count", minEmailCount)
+          .limit(batchSize);
       }
       return q;
     };
