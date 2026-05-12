@@ -12,6 +12,7 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { extractSenderBrand } from "./email/emailUtils";
 import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { InboxCapabilitiesSheet } from "@/v2/ui/organisms/inbox/InboxCapabilitiesSheet";
 
 function formatElapsed(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -41,6 +42,11 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
   const markAsRead = useMarkAsRead();
   const { isSyncing, progress } = useContinuousSync();
   const { data: emailCount = 0 } = useEmailCount(isSyncing);
+
+  const unreadCount = useMemo(
+    () => messages.filter((m) => m.direction === "inbound" && !m.read_at).length,
+    [messages],
+  );
 
   const inbound = useMemo(() => {
     const base = messages.filter((message) => message.direction === "inbound");
@@ -170,11 +176,19 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
           <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <Database className="h-2.5 w-2.5" />
-              <strong className="text-foreground">{emailCount.toLocaleString()}</strong> in db
+              <strong className="text-foreground/90">{emailCount.toLocaleString()}</strong> in db
             </span>
             <span className="flex items-center gap-1">
               <Mail className="h-2.5 w-2.5" />
-              pag. <strong className="text-foreground">{page + 1}</strong> · <strong className="text-foreground">{inbound.length}</strong> vis.
+              pag. <strong className="text-foreground/90">{page + 1}</strong> · <strong className="text-foreground/90">{inbound.length}</strong> vis.
+            </span>
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-primary">
+                <strong>{unreadCount}</strong> non lette
+              </span>
+            )}
+            <span className="ml-auto">
+              <InboxCapabilitiesSheet />
             </span>
           </div>
         </div>
