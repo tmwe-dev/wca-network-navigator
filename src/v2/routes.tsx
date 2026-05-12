@@ -312,30 +312,34 @@ export function V2Routes(): React.ReactElement {
           {/* AI Staff + figli */}
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
-          <Route path="ai-staff/lab" element={<Navigate to="/v2/ai-test-hub" replace />} />
-          <Route path="ai-test-hub" element={guardedPage(AiTestHubPage, "AiTestHub")} />
-          <Route path="email-lab" element={guardedPage(EmailLabPage, "EmailLab")} />
-          {/* Lab & Verifiche — hub unificato (scenari, e2e, diagnostica, telemetria, ext, design) */}
+          {/* ───── Lab & Verifiche — Hub unificato ─────
+              Sorgente tab: src/v2/config/labTabs.ts (UNA riga per tab).
+              Tutte le pagine lab/test/prompt/observability/charts vivono
+              dentro /v2/lab. I path legacy sotto reindirizzano qui. */}
           <Route path="lab" element={guardedPage(LabPage, "Lab")} />
-          {/* Legacy → canonical /v2/email/forge */}
-          <Route path="ai-staff/email-forge" element={<Navigate to="/v2/email/forge" replace />} />
-          <Route path="ai-staff/prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
-          <Route path="prompt-lab" element={<Navigate to="/v2/settings/prompt-lab" replace />} />
-          <Route path="prompt-lab/atlas" element={guardedPage(AgentAtlasPage, "AgentAtlas")} />
-          <Route path="prompt-lab/suggestions" element={guardedPage(SuggestionsReviewPage, "SuggestionsReview")} />
-          <Route path="prompt-lab/proposals" element={guardedPage(ProposalsReviewPage, "ProposalsReview")} />
-          <Route path="prompt-lab/catalog" element={guardedPage(PromptCatalogPage, "PromptCatalog")} />
-          <Route path="prompt-lab/tests" element={guardedPage(PromptTestsPage, "PromptTests")} />
-          {/* Fase 5: Prompt Reader demoted da menu principale a deep-link sotto Prompt Lab.
-              Redirect del path top-level verso il Prompt Lab; reader resta accessibile sotto settings. */}
-          <Route path="prompt-reader" element={<Navigate to="/v2/settings/prompt-reader" replace />} />
-          <Route path="settings/prompt-reader" element={guardedPage(PromptReaderPage, "PromptReader")} />
-          <Route path="ai-interactions-log" element={guardedPage(AiInteractionLogPage, "AiInteractionLog")} />
-          <Route path="pipeline-traces" element={guardedPage(PipelineTracesPage, "PipelineTraces")} />
-          <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
-          <Route path="knowledge-base" element={<Navigate to="/v2/settings/kb" replace />} />
-          <Route path="kb-supervisor" element={<Navigate to="/v2/settings/kb" replace />} />
-          <Route path="ai-lab" element={<Navigate to="/v2/ai-test-hub" replace />} />
+
+          {/* Legacy redirects → /v2/lab?group=...&tab=... */}
+          <Route path="ai-staff/lab"            element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
+          <Route path="ai-test-hub"             element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
+          <Route path="ai-lab"                  element={<Navigate to="/v2/lab?group=tests&tab=ai-lab" replace />} />
+          <Route path="email-lab"               element={<Navigate to="/v2/lab?group=tests&tab=email-lab" replace />} />
+          <Route path="ai-staff/email-forge"    element={<Navigate to="/v2/email/forge" replace />} />
+          <Route path="ai-staff/prompt-lab"     element={<Navigate to="/v2/lab?group=prompts&tab=prompt-lab" replace />} />
+          <Route path="prompt-lab"              element={<Navigate to="/v2/lab?group=prompts&tab=prompt-lab" replace />} />
+          <Route path="settings/prompt-lab"     element={<Navigate to="/v2/lab?group=prompts&tab=prompt-lab" replace />} />
+          <Route path="prompt-lab/atlas"        element={<Navigate to="/v2/lab?group=prompts&tab=prompt-atlas" replace />} />
+          <Route path="prompt-lab/suggestions"  element={<Navigate to="/v2/lab?group=prompts&tab=prompt-suggest" replace />} />
+          <Route path="prompt-lab/proposals"    element={<Navigate to="/v2/lab?group=prompts&tab=prompt-proposals" replace />} />
+          <Route path="prompt-lab/catalog"      element={<Navigate to="/v2/lab?group=prompts&tab=prompt-catalog" replace />} />
+          <Route path="prompt-lab/tests"        element={<Navigate to="/v2/lab?group=prompts&tab=prompt-tests" replace />} />
+          <Route path="prompt-reader"           element={<Navigate to="/v2/lab?group=prompts&tab=prompt-reader" replace />} />
+          <Route path="settings/prompt-reader"  element={<Navigate to="/v2/lab?group=prompts&tab=prompt-reader" replace />} />
+          <Route path="ai-interactions-log"     element={<Navigate to="/v2/lab?group=observability&tab=ai-log" replace />} />
+          <Route path="pipeline-traces"         element={<Navigate to="/v2/lab?group=observability&tab=pipeline-traces" replace />} />
+          <Route path="token-cockpit"           element={<Navigate to="/v2/lab?group=observability&tab=token-cockpit" replace />} />
+          <Route path="staff"                   element={<Navigate to="/v2/ai-staff" replace />} />
+          <Route path="knowledge-base"          element={<Navigate to="/v2/settings/kb" replace />} />
+          <Route path="kb-supervisor"           element={<Navigate to="/v2/settings/kb" replace />} />
 
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
@@ -361,13 +365,14 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
           <Route path="settings/admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
           <Route path="settings/email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
-          <Route path="settings/diagnostics" element={guardedPage(DiagnosticsPage, "Diagnostics")} />
-          <Route path="settings/telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
-          <Route path="settings/observability" element={guardedPage(ObservabilityPage, "Observability")} />
-          <Route path="settings/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
-          <Route path="settings/e2e-status" element={guardedPage(E2EStatusPage, "E2EStatus")} />
-          <Route path="settings/alert-routing" element={guardedPage(AlertRoutingPage, "AlertRouting")} />
-          <Route path="settings/brand-voice" element={guardedPage(BrandVoicePage, "BrandVoice")} />
+          {/* Legacy settings/* lab paths → /v2/lab */}
+          <Route path="settings/diagnostics"   element={<Navigate to="/v2/lab?group=observability&tab=diagnostica" replace />} />
+          <Route path="settings/telemetry"     element={<Navigate to="/v2/lab?group=observability&tab=telemetria" replace />} />
+          <Route path="settings/observability" element={<Navigate to="/v2/lab?group=observability&tab=observability" replace />} />
+          <Route path="settings/health"        element={<Navigate to="/v2/lab?group=observability&tab=health" replace />} />
+          <Route path="settings/e2e-status"    element={<Navigate to="/v2/lab?group=tests&tab=e2e" replace />} />
+          <Route path="settings/alert-routing" element={<Navigate to="/v2/lab?group=observability&tab=alert-routing" replace />} />
+          <Route path="settings/brand-voice"   element={<Navigate to="/v2/lab?group=prompts&tab=brand-voice" replace />} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />
@@ -384,10 +389,10 @@ export function V2Routes(): React.ReactElement {
           <Route path="funnemail-inbox" element={guardedPage(FunnemailInboxPage, "FunnemailInbox")} />
           <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
-          <Route path="token-cockpit" element={guardedPage(TokenCockpitPage, "TokenCockpit")} />
+          {/* token-cockpit standalone removed: moved to Lab Hub (see redirect above) */}
           <Route path="tmwe/clients" element={guardedPage(TmweClientsPage, "TmweClients")} />
           <Route path="notifications" element={guardedPage(NotificationsPage, "Notifications")} />
-          <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
+          <Route path="design-system-preview" element={<Navigate to="/v2/lab?group=design&tab=design" replace />} />
 
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />
         </Route>

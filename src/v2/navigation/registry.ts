@@ -87,32 +87,27 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
       { label: "Dashboard",            path: "/v2/dashboard" },
       { label: "KPI Dashboard",        path: "/v2/kpi" },
       { label: "Notifications",        path: "/v2/notifications" },
-      { label: "Token Cockpit",        path: "/v2/token-cockpit" },
     ],
   },
   {
-    title: "Prompt Lab Avanzato",
+    // Tutte le voci lab/prompt/observability vivono ora dentro /v2/lab.
+    // Sorgente unica: src/v2/config/labTabs.ts (UNA riga per tab).
+    title: "Lab & Verifiche (hub)",
     items: [
-      { label: "Agent Atlas",          path: "/v2/prompt-lab/atlas" },
-      { label: "Prompt Catalog",       path: "/v2/prompt-lab/catalog" },
-      { label: "Test Prompt",          path: "/v2/prompt-lab/tests" },
-      { label: "Prompt Reader",        path: "/v2/settings/prompt-reader" },
-      { label: "Proposals Review",     path: "/v2/prompt-lab/proposals" },
-      { label: "Registro Interazioni AI", path: "/v2/ai-interactions-log" },
-      { label: "Pipeline Traces",      path: "/v2/pipeline-traces" },
-      { label: "Suggestions Review",   path: "/v2/prompt-lab/suggestions" },
+      { label: "Tests",          path: "/v2/lab?group=tests" },
+      { label: "Prompts",        path: "/v2/lab?group=prompts" },
+      { label: "Observability",  path: "/v2/lab?group=observability" },
+      { label: "Design System",  path: "/v2/lab?group=design" },
     ],
   },
   {
     title: "Sistema & Admin",
     items: [
       { label: "Admin Users",          path: "/v2/settings/admin-users" },
-      { label: "Alert Routing",        path: "/v2/settings/alert-routing" },
       { label: "Email Download",       path: "/v2/settings/email-download" },
       { label: "Finder API",           path: "/v2/finder-api" },
       { label: "Finder API Catalog",   path: "/v2/finder-api/schema" },
       { label: "Guida",                path: "/v2/guida" },
-      { label: "System Health",        path: "/v2/settings/health" },
     ],
   },
 ] as const;
