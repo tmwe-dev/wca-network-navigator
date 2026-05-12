@@ -7,7 +7,7 @@
  */
 import * as React from "react";
 import { invokeAi } from "@/lib/ai/invokeAi";
-import { supabaseUntyped } from "@/lib/supabaseUntyped";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface SimulationInput {
   from: string;
@@ -68,8 +68,7 @@ export function useFunnemailSimulation(): UseFunnemailSimulationState {
   }, []);
 
   const fetchSteps = React.useCallback(async (tid: string) => {
-    const { data } = await supabaseUntyped
-      .from("pipeline_traces")
+    const { data } = await untypedFrom("pipeline_traces")
       .select("*")
       .eq("trace_id", tid)
       .order("step_order", { ascending: true });
@@ -92,17 +91,19 @@ export function useFunnemailSimulation(): UseFunnemailSimulationState {
     reset();
     setLoading(true);
     try {
-      const res = await invokeAi<Record<string, unknown>>({
-        scope: "lab",
-        context: { source: "EmailLab.FunnemailTab", route: "/v2/email-lab", mode: "simulate" },
-        body: {
-          edgeFunction: "simulate-funnemail-classify",
-          from: input.from,
-          subject: input.subject,
-          body: input.body,
-          channel: input.channel ?? "email",
+      const res = await invokeAi<Record<string, unknown>>(
+        "simulate-funnemail-classify",
+        {
+          scope: "lab",
+          context: { source: "EmailLab.FunnemailTab", route: "/v2/email-lab", mode: "simulate" },
+          body: {
+            from: input.from,
+            subject: input.subject,
+            body: input.body,
+            channel: input.channel ?? "email",
+          },
         },
-      });
+      );
       if (!mountedRef.current) return;
       const v = res as unknown as SimulationVerdict & { ok?: boolean; error?: string };
       if (v?.error) throw new Error(v.error);
