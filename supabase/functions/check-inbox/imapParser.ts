@@ -170,8 +170,33 @@ interface ImapClientLike {
   executeCommand(cmd: string): Promise<(string | Uint8Array)[]>;
 }
 
-export async function getNextUidBatch(client: ImapClientLike, lastUid: number): Promise<NextUidBatch> {
+export async function getNextUidBatch(
+  client: ImapClientLike,
+  lastUid: number,
+  unreadOnly = false,
+): Promise<NextUidBatch> {
   const minUid = Math.max(1, lastUid + 1);
+
+  // Modalità "solo non lette": salta ESEARCH MIN (poco supportato in combo
+  // con UNSEEN) e va diretto a UID SEARCH UNSEEN. Il cursore avanza solo
+  // sulle UID effettivamente unread del server.
+  if (unreadOnly) {
+    try {
+      const unseenResponse = await client.executeCommand(`UID SEARCH UNSEEN UID ${minUid}:*`);
+      const uids = parseUidSearchResponse(unseenResponse, minUid).sort((a, b) => a - b);
+      if (uids.length === 0) {
+        return { uids: [], remaining: 0, hasMore: false };
+      }
+      return {
+        uids: uids.slice(0, BATCH_SIZE),
+        remaining: Math.max(0, uids.length - BATCH_SIZE),
+        hasMore: uids.length > BATCH_SIZE,
+      };
+    } catch (unseenErr: unknown) {
+      console.warn(`[check-inbox] UID SEARCH UNSEEN failed: ${extractErrorMessage(unseenErr)}`);
+      return { uids: [], remaining: 0, hasMore: false };
+    }
+  }
 
   try {
     const esearchResponse = await client.executeCommand(`UID SEARCH RETURN (MIN COUNT) UID ${minUid}:*`);
