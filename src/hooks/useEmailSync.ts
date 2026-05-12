@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { callCheckInbox } from "@/lib/checkInbox";
 import { queryKeys } from "@/lib/queryKeys";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 
 export function useResetSync() {
   const queryClient = useQueryClient();
@@ -37,9 +38,11 @@ export function useResetSync() {
 
 export function useCheckInbox() {
   const queryClient = useQueryClient();
+  const { activeMailbox } = useActiveMailbox();
+  const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
 
   return useMutation({
-    mutationFn: callCheckInbox,
+    mutationFn: () => callCheckInbox(mailboxId),
     onSuccess: (raw) => {
       // Realtime handles list updates; only refresh count
       queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
