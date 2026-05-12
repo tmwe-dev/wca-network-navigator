@@ -368,6 +368,9 @@ Deno.serve(async (req) => {
 
     // Resolve Reply-To: explicit > operator > commercial global > none
     let resolvedReplyTo = reply_to || null;
+    if (!resolvedReplyTo && sharedReplyTo) {
+      resolvedReplyTo = sharedReplyTo;
+    }
     if (!resolvedReplyTo && operator_id) {
       const { data: opRow } = await supabase
         .from("operators")
