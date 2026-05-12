@@ -162,7 +162,11 @@ function normalizeScalar(value: string, preferHtml: boolean): string {
       current = stripMimeHeaders(current).trim();
     }
 
-    if (looksLikeBase64(current)) {
+    // Non trattare come base64 un blob che è già HTML valido: alcune email
+    // (Outlook, web client) annegano immagini inline base64 dentro l'HTML;
+    // il body complessivo ha un'altissima percentuale di char base64-leciti
+    // ma è in realtà markup. Decodificarlo produce binario illeggibile.
+    if (!HTML_TAG_PATTERN.test(current) && looksLikeBase64(current)) {
       const decoded = safeDecodeBase64(current);
       if (decoded && (HTML_TAG_PATTERN.test(decoded) || decoded.length > current.length * 0.35)) {
         current = decoded.trim();
