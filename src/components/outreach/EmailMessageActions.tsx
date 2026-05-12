@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,12 +44,21 @@ export function EmailMessageActions({ message }: { message: ChannelMessage }) {
             <MoreHorizontal className="h-3.5 w-3.5" />Azioni
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-60">
           {!message.read_at && (
-            <DropdownMenuItem onClick={() => markRead.mutate({ id: message.id, channel: message.channel, user_id: message.user_id })}>
-              <MailOpen className="h-3.5 w-3.5 mr-2" />Segna come letto
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Lettura
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => markRead.mutate({ id: message.id, channel: message.channel, user_id: message.user_id })}>
+                <MailOpen className="h-3.5 w-3.5 mr-2" />Segna come letto
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
           )}
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Organizza
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => bulk.mutate({ messages: minimal, action: "archive" })}>
             <Archive className="h-3.5 w-3.5 mr-2" />Archivia
           </DropdownMenuItem>
@@ -68,12 +77,15 @@ export function EmailMessageActions({ message }: { message: ChannelMessage }) {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuItem onClick={() => bulk.mutate({ messages: minimal, action: "hide" })}>
-            <EyeOff className="h-3.5 w-3.5 mr-2" />Nascondi
+            <EyeOff className="h-3.5 w-3.5 mr-2" />Nascondi (solo UI)
           </DropdownMenuItem>
           <DropdownMenuItem className="text-destructive" onClick={() => bulk.mutate({ messages: minimal, action: "spam" })}>
             <ShieldBan className="h-3.5 w-3.5 mr-2" />Sposta in spam
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Automatizza
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setRuleOpen(true)}>
             <Sparkles className="h-3.5 w-3.5 mr-2" />Crea regola per questo mittente
           </DropdownMenuItem>
