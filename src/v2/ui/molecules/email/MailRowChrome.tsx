@@ -34,6 +34,8 @@ export interface MailRowChromeProps {
   previewText?: string | null;
   /** Badge gruppo (assegnato o suggerito) mostrato sopra l'orario, in alto a destra. */
   groupBadge?: React.ReactNode;
+  /** Colore HEX/HSL del gruppo per il bordo sinistro identificativo della riga. */
+  groupColor?: string | null;
   /** Chip riga (gruppo, AI, decisione, status…) */
   chips?: React.ReactNode;
   /** Trailing icone/bottoni (claim, mark-read…) */
@@ -68,6 +70,7 @@ export function MailRowChrome({
   size = "md",
   previewText,
   groupBadge,
+  groupColor,
   chips,
   trailing,
   actions,
@@ -83,6 +86,11 @@ export function MailRowChrome({
         !isSelected && !isUnread && "hover:bg-muted/50",
         inHolding && "border-l-2 border-l-primary",
       )}
+      style={
+        groupColor && !inHolding
+          ? { boxShadow: `inset 4px 0 0 0 ${groupColor}` }
+          : undefined
+      }
     >
       <div className="flex w-full items-start gap-2.5">
         <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-start gap-3 text-left">
@@ -116,25 +124,25 @@ export function MailRowChrome({
                   <CompanyLogoInline email={fromAddress} size={size === "sm" ? 16 : 18} />
                   {inHolding && <Plane className="h-3.5 w-3.5 animate-pulse text-primary" />}
                 </div>
-                <p className="truncate text-xs text-muted-foreground">{secondaryLine}</p>
+                <p className="truncate text-xs text-foreground/65">{secondaryLine}</p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-0.5">
                 {groupBadge}
-                <span className="text-xs font-medium text-foreground">{formatMailListDate(date)}</span>
+                <span className="text-xs font-semibold text-foreground/85">{formatMailListDate(date)}</span>
               </div>
             </div>
 
             <p
               className={cn(
                 "truncate text-sm",
-                isUnread ? "font-medium text-foreground" : "text-muted-foreground",
+                isUnread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
               )}
             >
               {subject}
             </p>
 
             {previewText && (
-              <p className="line-clamp-2 text-xs leading-snug text-muted-foreground/85">
+              <p className="line-clamp-2 text-xs leading-snug text-foreground/70">
                 {previewText}
               </p>
             )}
