@@ -18,6 +18,7 @@ export type ChannelMessage = {
   source_type: string | null;
   source_id: string | null;
   partner_id: string | null;
+  mailbox_id: string | null;
   from_address: string | null;
   to_address: string | null;
   cc_addresses: string | null;
@@ -54,6 +55,7 @@ const MESSAGE_LIST_SELECT = [
   "source_type",
   "source_id",
   "partner_id",
+  "mailbox_id",
   "from_address",
   "to_address",
   "cc_addresses",
@@ -79,11 +81,29 @@ const MESSAGE_LIST_SELECT = [
   "references_header",
 ].join(", ");
 
-export function useChannelMessages(channel?: string, searchQuery?: string, page = 0, operatorUserId?: string) {
+export type MailboxFilter =
+  | { kind: "personal" }
+  | { kind: "shared"; id: string }
+  | null
+  | undefined;
+
+function mailboxKeyOf(mb: MailboxFilter): string | undefined {
+  if (!mb) return undefined;
+  return mb.kind === "shared" ? `shared:${mb.id}` : "personal";
+}
+
+export function useChannelMessages(
+  channel?: string,
+  searchQuery?: string,
+  page = 0,
+  operatorUserId?: string,
+  mailboxFilter?: MailboxFilter,
+) {
   const queryClient = useQueryClient();
+  const mailboxKey = mailboxKeyOf(mailboxFilter);
 
   const query = useQuery({
-    queryKey: queryKeys.channelMessages.list(channel, searchQuery, page, operatorUserId),
+    queryKey: queryKeys.channelMessages.list(channel, searchQuery, page, operatorUserId, mailboxKey),
     queryFn: async () => {
       let q = supabase
         .from("channel_messages")
@@ -99,6 +119,16 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
       // Admin filtering by specific operator
       if (operatorUserId) {
         q = q.eq("user_id", operatorUserId);
+      }
+
+      // Mailbox filter (Step "selettore casella attiva"):
+      // personal => mailbox_id IS NULL  (legacy + caselle non taggate)
+      // shared   => mailbox_id = id
+      // null/undefined => nessun filtro (vista aggregata)
+      if (mailboxFilter?.kind === "personal") {
+        q = q.is("mailbox_id", null);
+      } else if (mailboxFilter?.kind === "shared") {
+        q = q.eq("mailbox_id", mailboxFilter.id);
       }
 
       if (searchQuery && searchQuery.trim()) {

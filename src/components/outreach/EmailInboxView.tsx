@@ -9,6 +9,7 @@ import { useEmailCount } from "@/hooks/useEmailCount";
 import { EmailMessageList } from "./EmailMessageList";
 import { EmailDetailView } from "./EmailDetailView";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 import { extractSenderBrand } from "./email/emailUtils";
 import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -22,6 +23,20 @@ function formatElapsed(seconds: number): string {
 
 export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) {
   const g = useGlobalFilters();
+  const { activeMailbox } = useActiveMailbox();
+  // Filtro casella attiva: personale (mailbox_id IS NULL) o condivisa (mailbox_id = id).
+  // Se non c'è una casella attiva (es. solo personale senza shared) restiamo legacy: nessun filtro.
+  const mailboxFilter = useMemo<
+    { kind: "personal" } | { kind: "shared"; id: string } | undefined
+  >(() => {
+    if (!activeMailbox) return undefined;
+    if (activeMailbox.kind === "shared")
+      return { kind: "shared" as const, id: activeMailbox.mailbox_id };
+    return { kind: "personal" as const };
+  }, [activeMailbox]);
+  const mailboxKey = activeMailbox
+    ? `${activeMailbox.kind}:${activeMailbox.mailbox_id}`
+    : "none";
   // La search globale (sortingSearch) ha priorità su quella locale; manteniamo quella locale come fallback.
   const [localSearch, setLocalSearch] = useState("");
   const search = g.filters.sortingSearch || localSearch;
@@ -38,10 +53,22 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: messages = [], isLoading, pageSize } = useChannelMessages("email", debouncedSearch, page, operatorUserId);
+  // Reset page e selezione quando cambia la casella attiva, per evitare lista/dettaglio stale.
+  useEffect(() => {
+    setPage(0);
+    setSelectedId(null);
+  }, [mailboxKey]);
+
+  const { data: messages = [], isLoading, pageSize } = useChannelMessages(
+    "email",
+    debouncedSearch,
+    page,
+    operatorUserId,
+    mailboxFilter,
+  );
   const markAsRead = useMarkAsRead();
   const { isSyncing, progress } = useContinuousSync();
-  const { data: emailCount = 0 } = useEmailCount(isSyncing);
+  const { data: emailCount = 0 } = useEmailCount(isSyncing, mailboxFilter);
 
   const unreadCount = useMemo(
     () => messages.filter((m) => m.direction === "inbound" && !m.read_at).length,
@@ -119,7 +146,12 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
   const handleSelect = (message: ChannelMessage) => {
     setSelectedId(message.id);
     if (!message.read_at && message.direction === "inbound") {
-      markAsRead.mutate(message.id);
+      markAsRead.mutate({
+        id: message.id,
+        channel: message.channel,
+        user_id: message.user_id,
+        mailbox_id: message.mailbox_id,
+      });
     }
   };
 

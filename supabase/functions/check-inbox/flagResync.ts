@@ -52,11 +52,12 @@ export async function resyncUnreadFlags(
   supabase: SupabaseLike,
   imapExec: ImapExec,
   userId: string,
+  mailboxId: string | null = null,
 ): Promise<{ checked: number; markedRead: number }> {
   const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000)
     .toISOString();
 
-  const { data, error } = await supabase
+  let q = supabase
     .from("channel_messages")
     .select("id, imap_uid")
     .eq("user_id", userId)
@@ -64,7 +65,9 @@ export async function resyncUnreadFlags(
     .eq("direction", "inbound")
     .is("read_at", null)
     .not("imap_uid", "is", null)
-    .gte("created_at", since)
+    .gte("created_at", since);
+  q = mailboxId ? q.eq("mailbox_id", mailboxId) : q.is("mailbox_id", null);
+  const { data, error } = await q
     .order("imap_uid", { ascending: false })
     .limit(MAX_UIDS);
 

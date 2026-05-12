@@ -88,7 +88,7 @@ export function bgSyncIsRunning(): boolean {
   return running;
 }
 
-export async function bgSyncStart() {
+export async function bgSyncStart(mailboxId?: string | null) {
   if (running) return;
 
   running = true;
@@ -126,7 +126,7 @@ export async function bgSyncStart() {
       let result: { total: number; has_more?: boolean; remaining?: number; messages?: Array<Record<string, unknown>> };
 
       try {
-        result = await callCheckInbox() as typeof result;
+        result = await callCheckInbox(mailboxId ?? null) as typeof result;
         consecutiveErrors = 0;
       } catch (batchErr: unknown) {
         consecutiveErrors += 1;
