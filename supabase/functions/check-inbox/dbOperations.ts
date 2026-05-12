@@ -263,9 +263,11 @@ export async function saveMessageToDb(
   }
 
   // Checkpoint
-  await supabase.from("email_sync_state")
+  let cpQ = supabase.from("email_sync_state")
     .update({ last_uid: params.uid, last_sync_at: new Date().toISOString() })
     .eq("user_id", params.userId);
+  cpQ = params.mailboxId ? cpQ.eq("mailbox_id", params.mailboxId) : cpQ.is("mailbox_id", null);
+  await cpQ;
 
   // LOVABLE-93: Create email_address_rules entry for unknown senders
   // If sender not yet in email_address_rules, create a stub for AI suggestion
