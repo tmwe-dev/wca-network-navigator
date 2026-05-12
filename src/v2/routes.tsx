@@ -314,6 +314,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="ai-staff/lab" element={<Navigate to="/v2/ai-test-hub" replace />} />
           <Route path="ai-test-hub" element={guardedPage(AiTestHubPage, "AiTestHub")} />
+          <Route path="email-lab" element={guardedPage(EmailLabPage, "EmailLab")} />
           {/* Lab & Verifiche — hub unificato (scenari, e2e, diagnostica, telemetria, ext, design) */}
           <Route path="lab" element={guardedPage(LabPage, "Lab")} />
           {/* Legacy → canonical /v2/email/forge */}
