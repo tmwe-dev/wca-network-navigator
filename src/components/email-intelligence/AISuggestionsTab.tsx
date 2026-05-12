@@ -34,6 +34,7 @@ import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmai
 import { DeepSearchEmailBulkButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailBulkButton";
 import { ClassificationInsightsPanel } from "./ClassificationInsightsPanel";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
 
 interface AddressRow {
   id: string;
@@ -374,8 +375,14 @@ export default function AISuggestionsTab() {
     },
   });
 
+  // Mailbox-awareness: l'allowlist contiene gli indirizzi che hanno
+  // effettivamente scritto nella casella attiva. Le regole sono shared,
+  // ma qui mostriamo solo i mittenti pertinenti.
+  const { allowlist, mailboxKey } = useMailboxSenderAllowlist();
+
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: [...queryKeys.ai.suggestions, statusFilter, minEmailCount],
+    queryKey: [...queryKeys.ai.suggestions, statusFilter, minEmailCount, mailboxKey],
+    enabled: !!allowlist,
     queryFn: async () => {
       let q = supabase
         .from("email_address_rules")
@@ -389,7 +396,9 @@ export default function AISuggestionsTab() {
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []) as AddressRow[];
+      const all = (data || []) as AddressRow[];
+      if (!allowlist) return [];
+      return all.filter((r) => allowlist.has((r.email_address || "").toLowerCase()));
     },
   });
 
