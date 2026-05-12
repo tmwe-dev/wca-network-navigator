@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
     // ── Re-sync flag \Seen sulle mail locali ancora unread (best-effort) ──
     // Risolve "letta su un altro client" senza ri-scaricare nulla.
     try {
-      const resync = await resyncUnreadFlags(supabase, imapExec, userId);
+      const resync = await resyncUnreadFlags(supabase, imapExec, userId, activeMailboxId);
       if (resync.checked > 0) {
         console.log(JSON.stringify({
           fn: "check-inbox",
