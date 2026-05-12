@@ -5,9 +5,15 @@ import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
 
 /**
- * Email Cron Sync — runs every 5 minutes via pg_cron.
- * Finds all users with IMAP sync state and calls check-inbox for each.
- * Uses shared work-hours logic (CET timezone, reads from app_settings).
+ * Email Cron Sync — runs every 10 minutes via pg_cron.
+ *
+ * Mailbox-aware: itera per (user_id, mailbox_id) leggendo da `email_sync_state`
+ * e auto-iscrive le caselle CONDIVISE attive (`shared_mailboxes`) assegnando
+ * un operatore qualsiasi con accesso (`operator_mailbox_access`).
+ * Le caselle personali esistenti (mailbox_id IS NULL) restano sincronizzate.
+ *
+ * Usa shared work-hours logic (CET timezone, reads from app_settings).
+ * NON modifica `check-inbox` né le sue dipendenze.
  */
 Deno.serve(async (req: Request) => {
   const pre = corsPreflight(req);
@@ -28,7 +34,7 @@ Deno.serve(async (req: Request) => {
     jobName: "email_sync",
     enabledKey: "cron_email_sync_enabled",
     intervalKey: "cron_email_sync_interval_min",
-    defaultIntervalMin: 15,
+    defaultIntervalMin: 10,
   });
   if (guard.skip) {
     return new Response(
@@ -38,67 +44,126 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Find all users with sync state (they have IMAP configured)
-    const { data: syncUsers, error: syncErr } = await supabase
+    // ━━━ B) Auto-enroll: caselle CONDIVISE attive ━━━
+    // Per ogni shared mailbox attiva con credenziali IMAP, assicuriamo che
+    // esista almeno una riga in email_sync_state. Assegniamo come "user_id
+    // tecnico" un operatore qualsiasi con accesso (operator_mailbox_access).
+    try {
+      const { data: sharedMboxes } = await supabase
+        .from("shared_mailboxes")
+        .select("id, imap_host")
+        .eq("is_active", true)
+        .is("deleted_at", null);
+
+      for (const mbox of sharedMboxes ?? []) {
+        if (!mbox.imap_host) continue;
+        // Esiste già una riga sync_state per questa mailbox?
+        const { data: existing } = await supabase
+          .from("email_sync_state")
+          .select("user_id")
+          .eq("mailbox_id", mbox.id)
+          .limit(1)
+          .maybeSingle();
+        if (existing) continue;
+
+        // Trova un operatore con accesso
+        const { data: access } = await supabase
+          .from("operator_mailbox_access")
+          .select("operator_id")
+          .eq("shared_mailbox_id", mbox.id)
+          .limit(1)
+          .maybeSingle();
+        if (!access?.operator_id) continue;
+
+        await supabase.from("email_sync_state").upsert(
+          {
+            user_id: access.operator_id,
+            mailbox_id: mbox.id,
+            last_uid: 0,
+            last_sync_at: null,
+          },
+          { onConflict: "user_id,mailbox_id" },
+        );
+      }
+    } catch (e) {
+      console.warn("[email-cron-sync] shared mailbox auto-enroll failed:", e);
+    }
+
+    // ━━━ A) Itera per (user_id, mailbox_id) ━━━
+    const { data: syncRows, error: syncErr } = await supabase
       .from("email_sync_state")
-      .select("user_id")
+      .select("user_id, mailbox_id, last_sync_at")
       .order("last_sync_at", { ascending: true, nullsFirst: true })
-      .limit(10);
+      .limit(50);
 
     if (syncErr) throw syncErr;
-    if (!syncUsers || syncUsers.length === 0) {
-      await cronGuardLogRun(supabase, "email_sync", { processed: 0, message: "No users with IMAP configured" });
-      return new Response(JSON.stringify({ message: "No users with IMAP configured" }), {
+    if (!syncRows || syncRows.length === 0) {
+      await cronGuardLogRun(supabase, "email_sync", { processed: 0, message: "No mailboxes to sync" });
+      return new Response(JSON.stringify({ message: "No mailboxes to sync" }), {
         headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const results: { userId: string; status: string; downloaded?: number }[] = [];
+    const results: {
+      userId: string;
+      mailboxId: string | null;
+      status: string;
+      downloaded?: number;
+    }[] = [];
 
-    for (const { user_id } of syncUsers) {
+    for (const row of syncRows) {
+      const userId = row.user_id as string;
+      const mailboxId = (row.mailbox_id as string | null) ?? null;
       try {
-        // Per-user work-hours check
-        const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase, user_id);
+        const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase, userId);
         if (isOutsideWorkHours(workStartHour, workEndHour)) {
-          results.push({ userId: user_id, status: `skipped: outside work hours (${workStartHour}-${workEndHour})` });
+          results.push({
+            userId,
+            mailboxId,
+            status: `skipped: outside work hours (${workStartHour}-${workEndHour})`,
+          });
           continue;
         }
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+          "x-sync-user-id": userId,
+        };
+        if (mailboxId) headers["x-mailbox-id"] = mailboxId;
+
         const checkRes = await fetch(`${supabaseUrl}/functions/v1/check-inbox`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${serviceRoleKey}`,
-            "x-sync-user-id": user_id,
-          },
+          headers,
           body: JSON.stringify({}),
         });
 
         if (checkRes.ok) {
           const data = await checkRes.json();
           results.push({
-            userId: user_id,
+            userId,
+            mailboxId,
             status: "ok",
             downloaded: data.downloaded || 0,
           });
         } else {
-          const errText = await checkRes.text();
-          results.push({ userId: user_id, status: `error: ${checkRes.status}` });
+          results.push({ userId, mailboxId, status: `error: ${checkRes.status}` });
         }
       } catch (err: Record<string, unknown>) {
-        results.push({ userId: user_id, status: `error: ${err.message}` });
+        results.push({ userId, mailboxId, status: `error: ${err.message}` });
       }
     }
 
-    // Update last_sync_at for processed users
+    // Update last_sync_at per (user_id, mailbox_id) processato con successo
     for (const r of results) {
-      if (r.status === "ok") {
-        await supabase
-          .from("email_sync_state")
-          .update({ last_sync_at: new Date().toISOString() })
-          .eq("user_id", r.userId);
-      }
+      if (r.status !== "ok") continue;
+      let q = supabase
+        .from("email_sync_state")
+        .update({ last_sync_at: new Date().toISOString() })
+        .eq("user_id", r.userId);
+      q = r.mailboxId ? q.eq("mailbox_id", r.mailboxId) : q.is("mailbox_id", null);
+      await q;
     }
-
 
     await cronGuardLogRun(supabase, "email_sync", { processed: results.length });
     return new Response(JSON.stringify({ processed: results.length, results }), {
