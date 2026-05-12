@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 
 
 /* ── CA Certificates (same as check-inbox) ── */
@@ -181,6 +182,11 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
     if (authErr || !user) throw new Error("Unauthorized");
 
+    // Step D — opt-in shared mailbox: header x-mailbox-id (UUID di shared_mailboxes)
+    // o NULL per la casella personale (flusso legacy invariato).
+    const mailboxIdHeader = req.headers.get("x-mailbox-id");
+    const mailboxId = mailboxIdHeader && mailboxIdHeader.trim() !== "" ? mailboxIdHeader.trim() : null;
+
     const { message_id } = await req.json();
     if (!message_id || typeof message_id !== "string") {
       return new Response(JSON.stringify({ error: "message_id is required" }), {
@@ -188,13 +194,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch the message to get imap_uid and uidvalidity
-    const { data: msg, error: msgErr } = await supabase
+    // Fetch the message to get imap_uid and uidvalidity (scoped per user + mailbox).
+    let msgQuery = supabase
       .from("channel_messages")
       .select("imap_uid, uidvalidity, channel")
       .eq("id", message_id)
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    msgQuery = mailboxId
+      ? msgQuery.eq("mailbox_id", mailboxId)
+      : msgQuery.is("mailbox_id", null);
+    const { data: msg, error: msgErr } = await msgQuery.maybeSingle();
 
     if (msgErr) throw msgErr;
     if (!msg) {
@@ -209,17 +218,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get IMAP credentials
-    const imapHost = Deno.env.get("IMAP_HOST") || "";
-    const imapUser = Deno.env.get("IMAP_USER") || "";
-    const imapPassword = Deno.env.get("IMAP_PASSWORD") || "";
-    if (!imapHost || !imapUser || !imapPassword) {
-      throw new Error("IMAP credentials not configured");
-    }
+    // Get IMAP credentials (personal env legacy oppure shared via resolveMailbox).
+    const resolved = await resolveMailbox(supabase, mailboxId);
+    const imapHost = resolved.imap_host;
+    const imapUser = resolved.imap_user;
+    const imapPassword = resolved.imap_password;
 
     // Connect to IMAP
     const client = new ImapClient({
-      host: imapHost, port: 993, username: imapUser, password: imapPassword,
+      host: imapHost, port: resolved.imap_port || 993, username: imapUser, password: imapPassword,
       secure: true, connectionTimeout: 10000,
       tlsOptions: { caCerts: getCaCertsForHost(imapHost) },
     });
