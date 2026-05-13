@@ -29,6 +29,12 @@ import type {
 } from "./types";
 import { reducer, initialState } from "./reducer";
 import { escapeHtml, isValidUrl } from "./utils";
+import {
+  loadLanguageModeFromStorage,
+  saveLanguageModeToStorage,
+  resolveLanguage,
+  type LanguageMode,
+} from "@/lib/languages";
 
 const log = createLogger("EmailComposer");
 
@@ -49,6 +55,13 @@ export function useEmailComposerState() {
 
   // Last context summary returned by generate-email/improve-email — drives OracleContextPanel
   const [lastContextSummary, setLastContextSummary] = useState<OracleContextSummary | null>(null);
+
+  // Language mode (Italiano/Inglese/Auto/Specifica) — persisted in localStorage.
+  const [languageMode, setLanguageModeState] = useState<LanguageMode>(() => loadLanguageModeFromStorage());
+  const setLanguageMode = useCallback((mode: LanguageMode) => {
+    setLanguageModeState(mode);
+    saveLanguageModeToStorage(mode);
+  }, []);
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
   const isEditedAfterGeneration = ai.aiGeneratedBody && (email.htmlBody !== ai.aiGeneratedBody || email.subject !== ai.aiGeneratedSubject);
@@ -243,8 +256,13 @@ export function useEmailComposerState() {
       const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
       // LOVABLE-110: inietta learned_patterns da suggerimenti approvati
       const learnedPatterns = await buildLearnedPatterns(userId).catch(() => "");
+      // Risolvi lingua effettiva dal mode + paese del primo destinatario.
+      const resolvedLang = resolveLanguage(languageMode, {
+        countryCode: singleRecipient?.countryCode || recipients[0]?.countryCode,
+        countryName: singleRecipient?.countryName || recipients[0]?.countryName,
+      });
       const data = await invokeEdge<GenerateContentResponse>("generate-content", { body: {
-        action: "email", goal: effectiveGoal, base_proposal: baseProposal, language: "italiano",
+        action: "email", goal: effectiveGoal, base_proposal: baseProposal, language: resolvedLang.language,
         document_ids: documents.map((d) => d.id), reference_urls: referenceLinks, quality: "standard",
         activity_id: "00000000-0000-0000-0000-000000000000", standalone: true,
         partner_id: hasRealPartnerId ? singleRecipient!.partnerId : null,
