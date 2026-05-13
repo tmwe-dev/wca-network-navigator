@@ -1,11 +1,8 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import type { PartnerViewModel, EnrichmentData } from "@/types/partner-views";
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Mail, Phone, ChevronRight, User, Brain, Handshake } from "lucide-react";
+import { Mail, Phone, ChevronRight, User, Handshake } from "lucide-react";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
-import { asEnrichment } from "@/lib/partnerUtils";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
@@ -14,6 +11,7 @@ import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
 import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
 import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
+import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string }
@@ -47,8 +45,6 @@ export function PartnerListItem({
     ...services.filter((s) => SPECIALTY_SERVICES.includes(s.service_category)),
   ];
   const branchCountries = getBranchCountries(partner);
-  const enrichment = asEnrichment(partner.enrichment_data);
-  const hasDeepSearch = !!enrichment?.deep_search_at;
   const contacts: ContactItem[] = partner.partner_contacts || [];
   const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
   const contactEmail = primaryContact?.email;
@@ -178,16 +174,7 @@ export function PartnerListItem({
               <TooltipContent>Incontrato personalmente</TooltipContent>
             </Tooltip>
           )}
-          {hasDeepSearch && (
-            <Tooltip>
-              <TooltipTrigger>
-                <Brain className="w-4 h-4 text-primary drop-shadow-[0_0_3px_hsl(var(--primary)/0.4)]" />
-              </TooltipTrigger>
-              <TooltipContent>
-                Deep Search — {format(new Date(enrichment!.deep_search_at!), "d MMM yyyy", { locale: it })}
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <EnrichmentBadge partner={partner} variant="icon" />
           {sherlockLevel && (
             <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
           )}

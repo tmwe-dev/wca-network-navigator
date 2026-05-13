@@ -1,49 +1,61 @@
-## Spiegazione tasti header (destra)
+# Badge Arricchimento, Deep Search e Logo sulle card partner
 
-Stato attuale del cluster destro della top bar (`src/v2/ui/templates/LayoutHeader.tsx`):
+## Stato attuale (verificato sul DB)
 
-1. **🔔 Campanella** → `NotificationCenter`. Centro notifiche (sistema, alert, agenti). **Da mantenere**, ok.
-2. **⬇ Estensioni Chrome** → `DownloadExtensionsButton`. Apre la pagina di download delle estensioni. **Da mantenere**, ok.
-3. **🎨 Temi (icona palette)** → `ThemePicker variant="icon"`. Duplicato: i temi sono già dentro la sidebar/menu. **Da rimuovere**.
-4. **🔄 Scarica ora** → `GlobalSyncButton` (file `WhatsAppSyncButton.tsx`). Un click lancia in parallelo il fetch immediato sui 3 canali:
-   - **Email**: chiama `check-inbox` (single-flight via `callCheckInbox`) — scarica subito le nuove mail IMAP.
-   - **WhatsApp**: emette evento `wa-sync-trigger` consumato dall'auto-sync WA dell'estensione, che esegue un giro di download immediato senza resettare la cadenza programmata.
-   - **LinkedIn**: emette `li-sync-trigger`, idem per LinkedIn.
-   Funziona anche con auto-sync in pausa. Mostra spinner mentre lavora, badge verde col numero di nuovi messaggi WA quando ce ne sono, toast finale "Sincronizzazione avviata". Accanto compare il badge "scudo" `SyncGuardIndicator` (controllo tempi umani — uno solo, icon-only, già fixato prima).
-5. **👤 Operator selector** → `OperationalContextSelector`. Cambio operatore/casella attiva. Mantenuto.
-6. **⋯ Strumenti** → `HeaderToolsMenu`. Mantenuto.
-7. **✨ Sparkles** → apre `IntelliflowOpen` (IntelliFlow AI / "Secretary"). **Da rimuovere**: l'utente segnala che non funziona e Command Page copre già la stessa funzione.
+- **1.218 partner** hanno un `logo_url` salvato
+- **1.238 partner** hanno `enriched_at` valorizzato (= arricchiti)
+- **0 partner** hanno `deep_search_at` (Deep Search vero non ancora usato in produzione)
+- Il logo è già nel campo giusto, **non** è "sepolto" dentro `enrichment_data`
 
----
+## Cosa mostra oggi la card (`PartnerCard.tsx`)
 
-## Modifiche richieste (UI-only)
+- ✅ Logo (se `logo_url` valido) → fallback favicon → fallback bandiera
+- ✅ Badge "D" Deep Search (ma sblocca solo su `deep_search_at`, quindi oggi mai)
+- ✅ Badge Sherlock (se livello investigativo presente)
+- ❌ **Manca il badge "Arricchito"** — i 1.238 partner arricchiti non sono distinguibili a colpo d'occhio
+- ❌ Badge Deep Search e logo non sono coerenti tra `PartnerCard`, `PartnerListItem` e `PartnerDetailHeader`
 
-### A. Rimuovere icona Tema dalla top bar
-`src/v2/ui/templates/LayoutHeader.tsx`
-- Eliminare `<ThemePicker variant="icon" />` (riga 112) e l'import relativo (mantenere `useInitTheme`).
-- Risultato: tema gestito solo dalla sidebar (`ThemePicker` menu-row), come da richiesta.
+## Cosa farò
 
-### B. Rimuovere pulsante ✨ IntelliFlow AI
-`src/v2/ui/templates/LayoutHeader.tsx`
-- Eliminare il `<Button>` Sparkles finale (righe 122–131) e l'import `Sparkles` da lucide-react.
-- Rendere `onAiClick` opzionale nelle Props (o rimuoverlo) e aggiornare il call site in `AuthenticatedLayout.tsx` (riga 369) lasciando lo state `intelliflowOpen` ma senza più trigger dall'header (la modale resta accessibile via shortcut/Command se serve in futuro; nessun altro entry point viene toccato).
-- Nota: non rimuovo il componente IntelliFlow né lo state — solo l'entry point dalla top bar, così non rompo nulla a valle.
+### 1. Nuovo badge `EnrichmentBadge` riutilizzabile
+File nuovo: `src/v2/ui/atoms/EnrichmentBadge.tsx`
 
-### C. Mantenuti senza modifiche
-- 🔔 `NotificationCenter`
-- ⬇ `DownloadExtensionsButton`
-- 🔄 `GlobalSyncButton` + `SyncGuardIndicator` (icon-only)
-- 👤 `OperationalContextSelector`
-- ⋯ `HeaderToolsMenu`
+Componente unico che, dato un partner, decide quale badge mostrare in base alla "profondità" dell'indagine:
 
----
+| Livello | Trigger DB | Badge | Colore |
+|---|---|---|---|
+| Sherlock | `sherlock_level` esistente | "🔍 Sherlock L1/L2/L3" | viola |
+| Deep Search | `enrichment_data.deep_search_at` | "DS" + tooltip data | primary |
+| Arricchito | `enriched_at IS NOT NULL` | "✨ Arricchito" + tooltip data | emerald |
+| (nessuno) | — | nessun badge | — |
 
-## Controindicazioni / note
+Mostra il badge **più alto** disponibile, più gli altri come piccoli pallini se compresenti.
 
-- Il pulsante ✨ è l'unico entry point dell'header per IntelliFlow. Se in futuro vorrai riattivarlo, basta ripristinare il `<Button>`. Il componente sottostante resta montato, quindi nessuna regressione su Command Page o altri flussi.
-- `ThemePicker` resta usato dalla sidebar — l'import `useInitTheme()` deve rimanere in `LayoutHeader` per inizializzare il tema all'avvio.
-- Nessuna logica AI / backend / DAL toccata: intervento puramente di presentazione, atomico (Metodo Enterprise Vol II rispettato).
+### 2. Logo coerente ovunque
+Sostituisco la lettura grezza `partner.logo_url` con l'helper esistente `getEffectiveLogoUrl(partner)` (già in `src/lib/partnerUtils.ts`, fa fallback su `enrichment_data.logo_url`). Così se in futuro l'enrichment scarica un logo, viene mostrato anche se non viene copiato sul campo principale.
+
+### 3. Card aggiornate (3 punti)
+- `src/components/partners/PartnerCard.tsx` — card grid principale
+- `src/components/partners/PartnerListItem.tsx` — vista lista
+- `src/components/partners/PartnerDetailHeader.tsx` — header dettaglio
+
+In ogni file:
+- Sostituire badge "D" inline con `<EnrichmentBadge partner={partner} />`
+- Sostituire `partner.logo_url` con `getEffectiveLogoUrl(partner)`
+
+### 4. Nessuna modifica a logica/DB
+Solo lettura di campi già esistenti (`enriched_at`, `enrichment_data.deep_search_at`, `logo_url`). Nessuna migrazione, nessuna chiamata edge, nessun costo AI.
+
+## Costi
+**Zero.** È solo UI che legge dati già presenti. Nessuna chiamata AI, nessuna scrittura DB.
 
 ## File toccati
-- `src/v2/ui/templates/LayoutHeader.tsx` (rimozione 2 elementi + import)
-- `src/v2/ui/templates/AuthenticatedLayout.tsx` (rimozione prop `onAiClick` passata a header)
+- ➕ `src/v2/ui/atoms/EnrichmentBadge.tsx` (nuovo, ~60 righe)
+- ✏️ `src/components/partners/PartnerCard.tsx`
+- ✏️ `src/components/partners/PartnerListItem.tsx`
+- ✏️ `src/components/partners/PartnerDetailHeader.tsx`
+
+## Cosa NON è incluso
+- Il fix del bug "città Adelaide" sui 3.842 record → resta nel cassetto in attesa della tua approvazione separata
+- Modifiche al pipeline di enrichment a monte
+- Nuovi download logo (mostro solo quelli già presenti in DB)

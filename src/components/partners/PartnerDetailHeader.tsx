@@ -2,15 +2,14 @@ import type { PartnerViewModel } from "@/types/partner-views";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Star, StarOff, Phone, Mail, Globe, Brain,
+  Star, StarOff, Phone, Mail, Globe,
 } from "lucide-react";
 import { Plane } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag, formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
-import { getRealLogoUrl } from "@/lib/partnerUtils";
+import { getEffectiveLogoUrl } from "@/lib/partnerUtils";
 import { PARTNER_TYPE_ICONS } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
@@ -18,6 +17,7 @@ import { SocialLinks } from "@/components/partners/SocialLinks";
 import { Box } from "lucide-react";
 import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
 import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
+import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
 
  
 interface PartnerDetailHeaderProps {
@@ -37,14 +37,15 @@ export function PartnerDetailHeader({
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
   const inHolding = isInHoldingPattern(partner.lead_status as string | null | undefined);
+  const effectiveLogo = getEffectiveLogoUrl(partner);
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
       <div className="flex items-start gap-3">
         <div className="shrink-0">
-          {getRealLogoUrl(partner.logo_url as string | null) ? (
+          {effectiveLogo ? (
             <img
-              src={getRealLogoUrl(partner.logo_url as string | null)!}
+              src={effectiveLogo}
               alt={String(partner.company_name)}
               className="w-12 h-12 rounded-xl object-contain bg-muted/30 border border-border/30"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -68,16 +69,7 @@ export function PartnerDetailHeader({
                 <TooltipContent>Azienda nel circuito di attesa ({String(partner.lead_status)})</TooltipContent>
               </Tooltip>
             )}
-            {enrichment && typeof enrichment === "object" && (enrichment as {deep_search_at?: string}).deep_search_at && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Brain className="w-4 h-4 text-primary drop-shadow-[0_0_3px_hsl(var(--primary)/0.4)]" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  Deep Search — {format(new Date(String((enrichment as {deep_search_at?: string}).deep_search_at)), "d MMM yyyy", { locale: it })}
-                </TooltipContent>
-              </Tooltip>
-            )}
+            <EnrichmentBadge partner={partner} variant="pill" />
             {sherlockLevel && (
               <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
             )}
