@@ -186,7 +186,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
         try {
           const resolved = resolveLanguage(languageMode, { countryCode: c.country });
           // Se modalità "italiano" e nessuna richiesta esplicita di traduzione → no-op.
-          const shouldTranslate = perRecipient || (languageMode.kind !== "italiano" && languageMode.kind !== "auto");
+          const shouldTranslate = perRecipient || languageMode.kind !== "italiano";
           if (shouldTranslate) {
             const r = await invokeEdge<{ subject: string; body: string }>("translate-text", {
               body: {
