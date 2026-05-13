@@ -18,9 +18,11 @@ import {
 export function SyncGuardIndicator({
   channel,
   className,
+  iconOnly = false,
 }: {
   channel: GuardChannel;
   className?: string;
+  iconOnly?: boolean;
 }) {
   const [snap, setSnap] = useState<GuardSnapshot>(() => getGuardSnapshot(channel));
   const [flash, setFlash] = useState(false);
@@ -80,7 +82,7 @@ export function SyncGuardIndicator({
             aria-label={`Controllo tempi ${channel}: ${label}`}
           >
             <Icon className="w-2.5 h-2.5" />
-            <span className="whitespace-nowrap">{label}</span>
+            {!iconOnly && <span className="whitespace-nowrap">{label}</span>}
           </span>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-[260px] text-xs">
