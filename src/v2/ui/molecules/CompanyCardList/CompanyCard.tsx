@@ -32,6 +32,8 @@ export interface CompanyCardProps extends CompanyCardListCallbacks {
   company: CompanyEntity;
   /** True quando l'azienda è multi-selezionata. */
   selected?: boolean;
+  /** True quando questa è la card aperta nel pannello dettaglio (single-select). */
+  opened?: boolean;
   /** Toggle selezione (checkbox). */
   onToggleSelect?: (id: string) => void;
   /** Layout compatto (pannello stretto). */
@@ -50,6 +52,7 @@ export function CompanyCard({
   company,
   onOpenCompany,
   selected,
+  opened,
   onToggleSelect,
   compact = false,
   sherlockLevel = null,
@@ -280,13 +283,15 @@ export function CompanyCard({
     <div
       className={cn(
         "rounded-xl overflow-hidden transition-all",
-        selected && "ring-1 ring-primary/60 bg-primary/[0.05]"
+        selected && "ring-1 ring-primary/60 bg-primary/[0.05]",
+        opened && "ring-2 ring-primary/70 bg-primary/[0.07]"
       )}
     >
       <EntityRow
         tone={tone}
         countryCode={countryCode}
         selected={selected}
+        opened={opened}
         compact={compact}
         onCountryClick={onCountryClick}
         onCityClick={onCityClick}
