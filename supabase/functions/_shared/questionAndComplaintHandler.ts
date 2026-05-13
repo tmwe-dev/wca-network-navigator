@@ -232,26 +232,34 @@ export async function handleOutOfOffice(
     }
 
     try {
-      await supabase.from("activities").insert({
-        user_id: input.userId,
-        partner_id: input.partnerId,
-        source_id: input.partnerId,
-        source_type: "partner",
-        activity_type: "follow_up",
+      const dueInDays = Math.max(
+        1,
+        Math.round((followUpDate.getTime() - Date.now()) / 86400000),
+      );
+      const oooDescription = `Auto-reply rilevato. Ritorno previsto: ${returnDate.toLocaleDateString("it-IT")}. Follow-up programmato 1gg dopo il ritorno.`;
+      const outcome = await insertFollowUpActivity(supabase, {
+        userId: input.userId,
+        partnerId: input.partnerId,
         title: `Ricontatta ${input.senderName || input.senderEmail} (rientro da OOO)`,
-        description: `Auto-reply rilevato. Ritorno previsto: ${returnDate.toLocaleDateString("it-IT")}. Follow-up programmato 1gg dopo ritorno.`,
-        status: "pending",
+        classification: "auto_reply",
+        aiSummary: oooDescription,
+        senderEmail: input.senderEmail,
+        senderName: input.senderName,
+        subject: input.subject,
+        bodyPreview: input.bodyPreview,
+        messageId: input.messageId,
+        threadId: input.threadId,
         priority: "normal",
-        due_date: followUpDate.toISOString(),
-        scheduled_at: followUpDate.toISOString(),
-        source_meta: {
-          classification: "auto_reply",
-          ooo_return_date: returnDate.toISOString(),
-          pipeline: "postClassification",
-        },
+        dueInDays,
+        scheduled: true,
+        extraMeta: { ooo_return_date: returnDate.toISOString() },
       });
-      result.reminderCreated = true;
-      result.actionsExecuted.push("reminder_post_ooo");
+      if (outcome.duplicate) {
+        result.actionsExecuted.push("skip_duplicate_ooo");
+      } else if (outcome.inserted) {
+        result.reminderCreated = true;
+        result.actionsExecuted.push("reminder_post_ooo");
+      }
     } catch (e) {
       result.errors.push(`OOO reminder failed: ${e}`);
     }
