@@ -37,7 +37,7 @@ describe("STALE_TIMES", () => {
 
 describe("lazify", () => {
   it("returns a lazy component (object with $$typeof)", () => {
-    const LazyComp = lazify(() => Promise.resolve({ default: (() => null) as React.FC }));
+    const LazyComp = lazify(() => Promise.resolve({ default: (() => null) as React.ComponentType<unknown> }));
     // React.lazy returns an object with $$typeof and _payload / _init
     expect(LazyComp).toBeDefined();
     expect(LazyComp).toHaveProperty("$$typeof");
@@ -51,7 +51,7 @@ describe("lazify", () => {
         return Promise.reject(new Error("network error"));
       }
       return Promise.resolve({
-        default: (() => null) as React.FC,
+        default: (() => null) as React.ComponentType<unknown>,
       });
     };
 
