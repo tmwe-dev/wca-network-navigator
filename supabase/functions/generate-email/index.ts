@@ -281,6 +281,7 @@ serve(async (req) => {
             playbook_active: ctx.playbookActive ? "yes" : undefined,
           },
           channel: "email",
+          language: language || ctx.settings?.ai_language || undefined,
           commercial_state: {
             lead_status: (ctx.commercialState as string) || (partner as { lead_status?: string } | null)?.lead_status || "new",
             touch_count: ctx.touchCount ?? 0,
