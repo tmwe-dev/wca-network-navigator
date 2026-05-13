@@ -211,7 +211,10 @@ export async function assembleOutreachContext(
   if (!rawSnippet) intelligence.warning = "Nessun dato trovato nel DB. L'AI lavora solo con dati base.";
 
   // Settings
-  const { data: settingsRows } = await supabase.from("app_settings").select("key, value").eq("user_id", userId).like("key", "ai_%");
+  // FIX 2026-05-13: identità org-wide. Le chiavi ai_% sono UNIQUE globali in
+  // app_settings → carichiamo tutte le righe (RLS limita per operator scope).
+  void userId;
+  const { data: settingsRows } = await supabase.from("app_settings").select("key, value").like("key", "ai_%");
   const settings: Record<string, string> = {};
   (settingsRows || []).forEach((r: { key: string; value: string | null }) => { settings[r.key] = r.value || ""; });
 
