@@ -33,7 +33,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Play, Plus, Trash2, CheckCircle2, XCircle, AlertTriangle, History } from "lucide-react";
+import { Loader2, Play, Plus, Trash2, CheckCircle2, XCircle, AlertTriangle, History, Building2, Languages, BookOpen, ChevronRight } from "lucide-react";
 
 interface PromptOption { id: string; name: string }
 
@@ -472,24 +472,7 @@ export function PromptTestsTab() {
                         .filter((r) => r.test_case_id === draft.id)
                         .slice(0, 5)
                         .map((r) => (
-                          <div key={r.id} className="border rounded p-2 text-[11px] space-y-1">
-                            <div className="flex items-center gap-2">
-                              {STATUS_ICON[r.status]}
-                              <span className="font-medium">{r.status}</span>
-                              <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
-                              <span className="text-muted-foreground">· {r.duration_ms}ms</span>
-                              {r.model_used && <span className="text-muted-foreground">· {r.model_used}</span>}
-                            </div>
-                            {r.failure_reasons.length > 0 && (
-                              <div className="text-destructive text-[10px]">{r.failure_reasons.join(" · ")}</div>
-                            )}
-                            {r.ai_output && (
-                              <details className="text-[10px]">
-                                <summary className="cursor-pointer text-muted-foreground">output AI ({r.ai_output.length} ch)</summary>
-                                <pre className="mt-1 p-1.5 bg-muted/50 rounded whitespace-pre-wrap max-h-48 overflow-auto">{r.ai_output}</pre>
-                              </details>
-                            )}
-                          </div>
+                        <RunCard key={r.id} run={r} />
                         ))}
                       {(runsQuery.data ?? []).filter((r) => r.test_case_id === draft.id).length === 0 && (
                         <p className="text-[10px] text-muted-foreground">Nessun run ancora. Premi "Esegui".</p>
@@ -502,6 +485,136 @@ export function PromptTestsTab() {
           </ScrollArea>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * RunCard — Visualizzazione leggibile di un singolo run.
+ * - Header con badge stato/lingua/modello/durata/token.
+ * - Box "Identità iniettata" read-only (azienda, alias, contatto, lingua).
+ * - Output AI sempre visibile, formattato leggibile (no mono, no max-h piccola).
+ * - Sezione collassabile "Prompt costruito" (system prompt completo).
+ * - Sezione "Check eseguiti" con ✅/❌ per assertion fallite.
+ */
+function RunCard({ run }: { run: PromptTestRun }) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  const meta = (run.metadata ?? {}) as Record<string, unknown>;
+  const company = (meta.identity_company as string | null) ?? null;
+  const companyAlias = (meta.identity_company_alias as string | null) ?? null;
+  const contact = (meta.identity_contact as string | null) ?? null;
+  const language = (meta.language_used as string | null) ?? null;
+  const kbCount = (meta.kb_snippets_count as number | null) ?? null;
+  const identityLoaded = meta.identity_loaded === true;
+  const systemPrompt = (meta.system_prompt as string | null) ?? null;
+
+  const statusBadge =
+    run.status === "passed"
+      ? "bg-success/15 text-success border-success/30"
+      : run.status === "failed"
+      ? "bg-destructive/15 text-destructive border-destructive/30"
+      : run.status === "error"
+      ? "bg-warning/15 text-warning border-warning/30"
+      : "bg-muted text-muted-foreground border-border";
+
+  return (
+    <div className="border rounded-md p-3 space-y-2 bg-card">
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+        <Badge variant="outline" className={`${statusBadge} font-semibold uppercase`}>
+          {STATUS_ICON[run.status]}
+          <span className="ml-1">{run.status}</span>
+        </Badge>
+        {language && (
+          <Badge variant="outline" className="gap-1">
+            <Languages className="h-3 w-3" /> {language}
+          </Badge>
+        )}
+        {run.model_used && <Badge variant="outline">{run.model_used}</Badge>}
+        <Badge variant="outline">{run.duration_ms}ms</Badge>
+        {(run.tokens_input ?? run.tokens_output) !== null && (
+          <Badge variant="outline">
+            tok {run.tokens_input ?? "?"}→{run.tokens_output ?? "?"}
+          </Badge>
+        )}
+        {kbCount !== null && (
+          <Badge variant="outline" className="gap-1">
+            <BookOpen className="h-3 w-3" /> KB {kbCount}
+          </Badge>
+        )}
+        <span className="ml-auto text-muted-foreground">
+          {new Date(run.created_at).toLocaleString()}
+        </span>
+      </div>
+
+      {/* Identità iniettata */}
+      <div
+        className={`flex flex-wrap items-center gap-2 text-[11px] rounded px-2 py-1.5 border ${
+          identityLoaded
+            ? "bg-muted/40 border-border"
+            : "bg-destructive/10 border-destructive/30 text-destructive"
+        }`}
+      >
+        <Building2 className="h-3 w-3 shrink-0" />
+        {identityLoaded ? (
+          <>
+            <span className="font-medium">{company || "—"}</span>
+            {companyAlias && <span className="text-muted-foreground">({companyAlias})</span>}
+            <span className="text-muted-foreground">·</span>
+            <span>{contact || "—"}</span>
+          </>
+        ) : (
+          <span className="font-medium">⚠️ Nessuna identità caricata (app_settings vuoto)</span>
+        )}
+      </div>
+
+      {/* Failure reasons */}
+      {run.failure_reasons.length > 0 && (
+        <div className="space-y-0.5">
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase">
+            Check falliti
+          </div>
+          {run.failure_reasons.map((reason, i) => (
+            <div key={i} className="flex items-start gap-1.5 text-[11px] text-destructive">
+              <XCircle className="h-3 w-3 mt-0.5 shrink-0" />
+              <span className="leading-relaxed">{reason}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* AI output — sempre visibile, leggibile */}
+      {run.ai_output && (
+        <div className="space-y-0.5">
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase">
+            Output AI ({run.ai_output.length} ch)
+          </div>
+          <div className="text-sm leading-relaxed whitespace-pre-wrap rounded border bg-background/60 p-2.5 max-h-96 overflow-auto">
+            {run.ai_output}
+          </div>
+        </div>
+      )}
+
+      {/* Prompt costruito (collapsible) */}
+      {systemPrompt && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowPrompt((v) => !v)}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronRight
+              className={`h-3 w-3 transition-transform ${showPrompt ? "rotate-90" : ""}`}
+            />
+            Prompt costruito ({systemPrompt.length} ch)
+          </button>
+          {showPrompt && (
+            <pre className="mt-1 p-2 bg-muted/50 rounded text-[10px] font-mono whitespace-pre-wrap max-h-72 overflow-auto">
+              {systemPrompt}
+            </pre>
+          )}
+        </div>
+      )}
     </div>
   );
 }
