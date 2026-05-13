@@ -71,6 +71,8 @@ function BcaNotesFormatted({ text }: { text: string }) {
 interface CardProps {
   card: BusinessCardWithPartner;
   isSelected: boolean;
+  /** True quando questa card è quella aperta nel pannello dettaglio (single-select). */
+  isOpened?: boolean;
   onToggle: (id: string) => void;
   groupCompanyName: string;
   onSendEmail: (params: { email: string; name?: string; company: string }) => void;
@@ -81,13 +83,13 @@ interface CardProps {
   enableDrag?: boolean;
 }
 
-export function BcaCompactCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
+export function BcaCompactCard({ card, isSelected, isOpened, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
   const handleClick = () => {
     if (onOpenDetail) onOpenDetail(card.id);
     else onToggle(card.id);
   };
   return (
-    <div className={cn("group relative flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all", isSelected ? "bg-primary/[0.06]" : "hover:bg-muted/20")} onClick={handleClick}>
+    <div className={cn("group relative flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all border-l-2", isOpened ? "bg-primary/[0.10] border-primary" : isSelected ? "bg-primary/[0.06] border-transparent" : "border-transparent hover:bg-muted/20")} onClick={handleClick}>
       {enableDrag && (
         <button
           type="button"
@@ -121,7 +123,7 @@ export function BcaCompactCard({ card, isSelected, onToggle, groupCompanyName, o
   );
 }
 
-export function BcaGridCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
+export function BcaGridCard({ card, isSelected, isOpened, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
   const handleClick = () => {
     if (onOpenDetail) onOpenDetail(card.id);
     else onToggle(card.id);
@@ -130,7 +132,7 @@ export function BcaGridCard({ card, isSelected, onToggle, groupCompanyName, onSe
     <div
       className={cn(
         "group relative rounded-lg border p-3 transition-all duration-150 hover:shadow-sm cursor-pointer",
-        isSelected ? "border-primary/40 bg-primary/[0.06] shadow-sm" : "border-border/40 bg-card/30 hover:border-border/60",
+        isOpened ? "border-primary ring-2 ring-primary/60 bg-primary/[0.08] shadow-sm" : isSelected ? "border-primary/40 bg-primary/[0.06] shadow-sm" : "border-border/40 bg-card/30 hover:border-border/60",
       )}
       onClick={handleClick}
     >
@@ -173,13 +175,13 @@ export function BcaGridCard({ card, isSelected, onToggle, groupCompanyName, onSe
   );
 }
 
-export function BcaExpandedCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
+export function BcaExpandedCard({ card, isSelected, isOpened, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
   const handleClick = () => {
     if (onOpenDetail) onOpenDetail(card.id);
     else onToggle(card.id);
   };
   return (
-    <div className={cn("group relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isSelected ? "border-primary/40 bg-primary/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={handleClick}>
+    <div className={cn("group relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isOpened ? "border-primary ring-2 ring-primary/60 bg-primary/[0.08]" : isSelected ? "border-primary/40 bg-primary/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={handleClick}>
       {enableDrag && (
         <button
           type="button"
