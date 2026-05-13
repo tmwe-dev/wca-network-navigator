@@ -113,6 +113,3 @@ export function useHasSiblingRisk(partnerId: string | null | undefined, contactI
   });
   return rows.length > 0;
 }
-
-// re-export so consumers don't need to add a separate import
-import { useQuery } from "@tanstack/react-query";
