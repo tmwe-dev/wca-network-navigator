@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { supabase } from "@/integrations/supabase/client";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
@@ -271,21 +271,37 @@ export default function ComposerCanvas({
       return;
     }
     setBatchSending(true);
+    // SSOT v3.9.56: il batch NON invia direttamente — accoda in
+    // ai_pending_actions (editorial review hard a valle in useApproveAndDispatch).
     let okCount = 0;
     let failCount = 0;
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) {
+      setBatchSending(false);
+      toast.error("Sessione non valida");
+      return;
+    }
     for (const d of sendable) {
-      try {
-        await invokeEdge("send-email", {
-          body: { to: d.contactEmail, subject: d.subject, html: d.body },
-          context: "composer:send-batch",
-        });
-        okCount++;
-      } catch {
-        failCount++;
-      }
+      const { error } = await supabase.from("ai_pending_actions").insert({
+        user_id: userId,
+        action_type: "send_email",
+        action_payload: {
+          to: d.contactEmail,
+          subject: d.subject,
+          html: d.body,
+        } as never,
+        suggested_content: d.body,
+        email_address: d.contactEmail,
+        reasoning: "Batch composer: in attesa di approvazione umana.",
+        confidence: 0.9,
+        source: "composer:send-batch",
+        status: "pending",
+      });
+      if (error) failCount++; else okCount++;
     }
     setBatchSending(false);
-    if (okCount > 0) toast.success(`${okCount} email inviate${failCount > 0 ? ` · ${failCount} fallite` : ""}`);
+    if (okCount > 0) toast.success(`${okCount} email in coda di approvazione${failCount > 0 ? ` · ${failCount} fallite` : ""}`);
     if (okCount === sendable.length) onClose();
   }, [isBatch, batchDrafts, onClose]);
 
