@@ -6,7 +6,8 @@ const mockLimit = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
-import { findDownloadJobs, getDownloadJob, _findActiveJobs } from "@/data/downloadJobs";
+import { findDownloadJobs, getDownloadJob, findActiveJobs as _findActiveJobs } from "@/data/downloadJobs";
+void _findActiveJobs;
 describe("DAL — downloadJobs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
