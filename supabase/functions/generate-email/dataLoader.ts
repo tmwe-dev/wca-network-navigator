@@ -36,7 +36,6 @@ export async function loadPartnerMetadata(
     supabase
       .from("app_settings")
       .select("key, value")
-      .eq("user_id", userId)
       .like("key", "ai_%"),
     isPartnerSource && quality === "premium"
       ? supabase
