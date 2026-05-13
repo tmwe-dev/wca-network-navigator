@@ -33,6 +33,7 @@ import {
   type DomainHandlerInput,
 } from "./domainHandler.ts";
 import { suggestGroupForSender } from "./senderGrouping.ts";
+import { checkInternalOrSelf } from "./internalSenderGuard.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -91,6 +92,12 @@ export interface ClassificationInput {
   oooReturnDate?: string;
   emailAddressRule?: EmailAddressRule;
   domain?: ClassificationDomain;
+  /** ID del messaggio inbound — usato per dedup e per agganciare l'activity alla mail. */
+  messageId?: string;
+  /** Thread/conversation id, opzionale. */
+  threadId?: string;
+  /** Anteprima testuale del corpo email per popolare l'activity. */
+  bodyPreview?: string;
 }
 
 export interface PostClassificationResult {
@@ -117,6 +124,18 @@ export async function runPostClassificationPipeline(
   };
 
   try {
+    // ── Guardia 0: sender interno o self-partner → short-circuit ──
+    const internalReason = await checkInternalOrSelf(
+      supabase,
+      input.userId,
+      input.senderEmail,
+      input.partnerId ?? null,
+    );
+    if (internalReason) {
+      result.actionsExecuted.push(`skip_${internalReason}`);
+      return result;
+    }
+
     // Load email_address_rules for sender
     const addressRule = await loadEmailAddressRules(supabase, input.userId, input.senderEmail);
 
@@ -184,6 +203,9 @@ export async function runPostClassificationPipeline(
         urgency: enrichedInput.urgency,
         sentiment: enrichedInput.sentiment,
         emailAddressRule: enrichedInput.emailAddressRule,
+        messageId: enrichedInput.messageId,
+        threadId: enrichedInput.threadId,
+        bodyPreview: enrichedInput.bodyPreview,
       };
 
       switch (input.category) {
