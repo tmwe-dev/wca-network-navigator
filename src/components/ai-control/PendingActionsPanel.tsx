@@ -29,6 +29,39 @@ import { SiblingRiskBadge, useHasSiblingRisk } from "@/components/ai-control/Sib
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("PendingActionsPanel");
+
+/**
+ * Bottone Approva con Same-Company Sibling Guard.
+ * Disabilita l'approvazione se esiste rischio sibling e non è stata
+ * data conferma esplicita tramite il SiblingRiskBadge.
+ */
+function ApproveGuardedButton({
+  partnerId, contactId, confirmed, label, className, onApprove, isSendAction,
+}: {
+  readonly partnerId: string | null;
+  readonly contactId: string | null;
+  readonly confirmed: boolean;
+  readonly label: string;
+  readonly className: string;
+  readonly onApprove: () => void;
+  readonly isSendAction: boolean;
+}) {
+  const hasRisk = useHasSiblingRisk(partnerId, contactId) && isSendAction;
+  const blocked = hasRisk && !confirmed;
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className={className}
+      disabled={blocked}
+      title={blocked ? "Spunta la conferma rischio sibling per approvare" : undefined}
+      onClick={onApprove}
+    >
+      <CheckCircle className="h-3.5 w-3.5" />{label}
+    </Button>
+  );
+}
+
 const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: string }> = {
   send_email: { icon: Mail, color: "text-blue-400 bg-blue-400/10", label: "Invia Email" },
   send_whatsapp: { icon: Mail, color: "text-green-400 bg-green-400/10", label: "WhatsApp" },
