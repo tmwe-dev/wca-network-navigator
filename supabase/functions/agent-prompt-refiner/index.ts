@@ -22,6 +22,17 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
+  // Auth: accept either JWT or x-cron-secret for cron invocations
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const headerSecret = req.headers.get("x-cron-secret");
+  const authHeader = req.headers.get("Authorization");
+  if (!(cronSecret && headerSecret === cronSecret) && !authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ error: "UNAUTHORIZED", message: "Bearer token or cron secret required" }),
+      { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } },
+    );
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useSystemHealth, type HealthCheck } from "@/hooks/useSystemHealth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Database, Shield, HardDrive, BrainCircuit, RefreshCw } from "lucide-react";
+import { Activity, Database, Shield, HardDrive, BrainCircuit, RefreshCw, FlaskConical, Sparkles, Mail, Clock, Timer } from "lucide-react";
 import { AlertConfigPanel } from "./AlertConfigPanel";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
@@ -11,6 +11,11 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
   auth: <Shield className="h-4 w-4" />,
   storage: <HardDrive className="h-4 w-4" />,
   ai_gateway: <BrainCircuit className="h-4 w-4" />,
+  prompt_test_runner: <FlaskConical className="h-4 w-4" />,
+  prompt_refiner: <Sparkles className="h-4 w-4" />,
+  funnemail_classifier: <Mail className="h-4 w-4" />,
+  pending_actions_stuck: <Clock className="h-4 w-4" />,
+  cron_jobs: <Timer className="h-4 w-4" />,
 };
 
 function getHistory(): HealthCheck[] {
@@ -56,7 +61,7 @@ export function SystemHealthDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {data && Object.entries(data.checks).map(([service, status]) => (
           <Card key={service}>
             <CardHeader className="pb-2">
