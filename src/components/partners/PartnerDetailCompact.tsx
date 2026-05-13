@@ -32,8 +32,6 @@ import { EnrichmentCard } from "@/components/partners/EnrichmentCard";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { ActivityList } from "@/components/partners/ActivityList";
 import { t } from "@/components/download/theme";
-import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
-
 import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
@@ -60,7 +58,6 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const logAction = useLogAction();
   const [deepSearching, setDeepSearching] = useState(false);
   const [waSending, setWaSending] = useState<string | null>(null);
-  const { sendWhatsApp, isAvailable: waAvailable } = useWhatsAppExtensionBridge();
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since ?? null);
@@ -141,36 +138,36 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const handleSendWhatsApp = useCallback(async (contact: Record<string, any>) => {
     const phone = contact.mobile || contact.direct_phone;
     if (!phone) return;
-    if (!waAvailable) {
-      toast.error("Estensione WhatsApp non connessa. Apri WhatsApp Web e ricarica.");
-      return;
-    }
     setWaSending(contact.id);
     try {
-      // Clean phone number
+      // SSOT v3.9.56: niente bridge call diretta. Apriamo Inbox V2 con il
+      // contatto pre-aperto; l'invio reale segue la pipeline approval+review.
       const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
-      const result = await sendWhatsApp(cleanPhone, "");
-      if (result?.success) {
-        toast.success(`Chat WhatsApp aperta con ${contact.name}`);
-        // Log activity through unified pipeline
-        logAction.mutate({
-          channel: "whatsapp",
-          sourceType: "partner",
-          sourceId: partner.id,
-          to: contact.mobile || contact.direct_phone || "",
-          partnerId: partner.id,
-          contactId: contact.id,
-          title: `WhatsApp a ${contact.name} (${partner.company_name})`,
-        });
-      } else {
-        toast.error(`Contatto non trovato su WhatsApp: ${result?.error || "Errore sconosciuto"}`);
-      }
+      navigate("/v2/inbox", {
+        state: {
+          openWhatsAppPhone: cleanPhone,
+          openWhatsAppContactName: contact.name ?? null,
+          openWhatsAppCompany: partner.company_name ?? null,
+          openWhatsAppPartnerId: partner.id,
+          openWhatsAppContactId: contact.id ?? null,
+        },
+      });
+      toast.success(`Chat WhatsApp aperta con ${contact.name}`);
+      logAction.mutate({
+        channel: "whatsapp",
+        sourceType: "partner",
+        sourceId: partner.id,
+        to: contact.mobile || contact.direct_phone || "",
+        partnerId: partner.id,
+        contactId: contact.id,
+        title: `WhatsApp a ${contact.name} (${partner.company_name})`,
+      });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Errore invio WhatsApp");
     } finally {
       setWaSending(null);
     }
-  }, [partner, waAvailable, sendWhatsApp, logAction]);
+  }, [partner, navigate, logAction]);
    const _transportServices = services.filter((s: { service_category: string }) => TRANSPORT_SERVICES.includes(s.service_category));
    const _specialtyServices = services.filter((s: { service_category: string }) => !TRANSPORT_SERVICES.includes(s.service_category));
 
