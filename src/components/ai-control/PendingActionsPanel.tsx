@@ -438,28 +438,30 @@ export function PendingActionsPanel() {
                               >
                                 <RotateCcw className="h-3.5 w-3.5" />Rigenera Draft
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10"
-                                onClick={() => approveMutation.mutate({ id: action.id })}
-                              >
-                                <CheckCircle className="h-3.5 w-3.5" />Approva come è
-                              </Button>
+                              <ApproveGuardedButton
+                                partnerId={action.partner_id ?? null}
+                                contactId={action.contact_id ?? null}
+                                confirmed={!!confirmedRisk[action.id]}
+                                label="Approva come è"
+                                className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                                isSendAction={true}
+                                onApprove={() => approveMutation.mutate({ id: action.id })}
+                              />
                             </>
                           )}
                         {/* For non-draft actions, show standard approve */}
                         {!((action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") &&
                           (getJsonField<string>(action.action_payload, "draft_subject") !== undefined ||
                             getJsonField<string>(action.action_payload, "draft_body") !== undefined)) && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10"
-                            onClick={() => approveMutation.mutate({ id: action.id })}
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />Approva
-                          </Button>
+                          <ApproveGuardedButton
+                            partnerId={action.partner_id ?? null}
+                            contactId={action.contact_id ?? null}
+                            confirmed={!!confirmedRisk[action.id]}
+                            label="Approva"
+                            className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                            isSendAction={["send_email","send_whatsapp","send_linkedin"].includes(action.action_type)}
+                            onApprove={() => approveMutation.mutate({ id: action.id })}
+                          />
                         )}
                         <Button
                           size="sm"
