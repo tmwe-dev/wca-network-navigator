@@ -86,6 +86,7 @@ serve(async (req) => {
       channel = "email", contact_name, contact_email, company_name,
       country_code = "", language, goal, base_proposal, quality: rawQuality,
       linkedin_profile, email_type_id, email_type_prompt, email_type_structure, oracle_tone,
+      dry_run = false,
     } = await req.json();
 
     const ch = (["email", "linkedin", "whatsapp", "sms"].includes(channel) ? channel : "email") as Channel;
@@ -105,7 +106,9 @@ serve(async (req) => {
     }
 
     // ── Cadence check: rispettiamo i tempi e i canali? ──
-    if (ch === "email" || ch === "linkedin" || ch === "whatsapp") {
+    // Bypass in dry_run (es. AI Lab Test Suite): generiamo il messaggio senza
+    // bloccare per regole di cadenza commerciale. Nessun side-effect reale.
+    if (!dry_run && (ch === "email" || ch === "linkedin" || ch === "whatsapp")) {
       const lastContactDate = ctx.daysSinceLastContact != null && ctx.daysSinceLastContact > 0
         ? new Date(Date.now() - ctx.daysSinceLastContact * 86400000).toISOString()
         : null;
