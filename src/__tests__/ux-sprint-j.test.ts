@@ -48,7 +48,12 @@ describe("ErrorBoundary", () => {
 
   it("shows custom fallback when provided", () => {
     const fallback = React.createElement("div", null, "custom fallback");
-    render(React.createElement(ErrorBoundary, { fallback }, React.createElement(ThrowingChild, { shouldThrow: true })));
+    render(
+      React.createElement(
+        ErrorBoundary,
+        { fallback, children: React.createElement(ThrowingChild, { shouldThrow: true }) },
+      ),
+    );
     expect(screen.getByText("custom fallback")).toBeTruthy();
   });
 

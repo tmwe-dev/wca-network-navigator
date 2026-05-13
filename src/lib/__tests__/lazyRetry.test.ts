@@ -26,7 +26,7 @@ describe("lazyRetry", () => {
     // Instead, just call the factory wrapper that lazy wraps:
     // We can access the internal init function
     const payload = (LazyComp as unknown as Record<string, unknown>)._payload;
-    const init = (LazyComp as unknown as Record<string, unknown>)._init;
+    const init = (LazyComp as unknown as Record<string, (p: unknown) => unknown>)._init;
 
     // Call init to trigger the factory — this starts the promise chain
     try {

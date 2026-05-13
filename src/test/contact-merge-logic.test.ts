@@ -470,7 +470,7 @@ describe("Contact Merge Logic", () => {
       };
 
       for (const choice of fieldChoices) {
-        (merged as Record<string, unknown>)[choice.fieldName] = choice.keepValue;
+        (merged as unknown as Record<string, unknown>)[choice.fieldName] = choice.keepValue;
       }
 
       expect(merged.email).toBe("john.doe@example.com"); // Chosen

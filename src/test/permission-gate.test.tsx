@@ -185,7 +185,6 @@ describe("PermissionGate Component", () => {
     });
 
     it("should update when permission changes", () => {
-      const { rerender } = vi.mocked(useHasPermission);
 
       vi.mocked(useHasPermission).mockReturnValue({
         hasPermission: false,

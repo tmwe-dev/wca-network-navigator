@@ -70,8 +70,22 @@ const mockNotification2: Notification = {
  * Every method returns the same object so .select().eq().order().range() etc. all work.
  * The `terminal` value is the promise-resolved result at the end of the chain.
  */
-function buildChain(terminal: unknown) {
-  const chain: Record<string, unknown> = {};
+type MockFn = ReturnType<typeof vi.fn>;
+type Chain = {
+  select: MockFn;
+  insert: MockFn;
+  update: MockFn;
+  delete: MockFn;
+  upsert: MockFn;
+  eq: MockFn;
+  lt: MockFn;
+  order: MockFn;
+  range: MockFn;
+  single: MockFn;
+  then: (resolve: ((value: unknown) => unknown) | null | undefined, reject?: ((reason: unknown) => unknown) | null | undefined) => Promise<unknown>;
+};
+function buildChain(terminal: unknown): Chain {
+  const chain = {} as Chain;
   const self = () => chain;
   chain.select = vi.fn().mockImplementation(self);
   chain.insert = vi.fn().mockImplementation(self);
@@ -84,7 +98,7 @@ function buildChain(terminal: unknown) {
   chain.range = vi.fn().mockImplementation(self);
   chain.single = vi.fn().mockResolvedValue(terminal);
   // Make the chain itself thenable so `await query` works on intermediate steps
-  chain.then = (resolve: unknown, reject: unknown) => Promise.resolve(terminal).then(resolve, reject);
+  chain.then = (resolve, reject) => Promise.resolve(terminal).then(resolve, reject);
   return chain;
 }
 
