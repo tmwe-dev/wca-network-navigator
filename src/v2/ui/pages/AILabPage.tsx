@@ -269,10 +269,14 @@ export function AILab() {
       if (!token) return { id: scenario.id, status: "fail", issues: ["❌ Non autenticato"], score: 0 };
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${scenario.endpoint}`;
+      // AI Lab è una test suite: nessun side-effect reale, salta i guard di cadenza commerciale.
+      const payload = scenario.endpoint === "generate-outreach"
+        ? { ...scenario.payload, dry_run: true }
+        : scenario.payload;
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(scenario.payload),
+        body: JSON.stringify(payload),
       });
 
       if (!resp.ok) {
