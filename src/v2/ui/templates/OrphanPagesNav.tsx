@@ -44,7 +44,7 @@ export function OrphanPagesNav({ onNavigate }: Props): React.ReactElement {
                 {group.title}
               </div>
               <div className="space-y-0.5">
-                {group.items.map((item) => {
+                {(group.items ?? []).map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
                     <button
@@ -62,6 +62,33 @@ export function OrphanPagesNav({ onNavigate }: Props): React.ReactElement {
                     </button>
                   );
                 })}
+                {(group.subGroups ?? []).map((sg) => (
+                  <div key={sg.title} className="mt-1.5">
+                    <div className="px-3 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      {sg.title}
+                    </div>
+                    <div className="space-y-0.5 border-l border-border/40 ml-3 pl-1">
+                      {sg.items.map((item) => {
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <button
+                            key={item.path}
+                            type="button"
+                            onClick={() => handleClick(item.path)}
+                            className={cn(
+                              "flex w-full items-center rounded-md px-3 py-1.5 text-xs transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
