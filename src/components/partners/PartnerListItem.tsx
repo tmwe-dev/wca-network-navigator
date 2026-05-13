@@ -1,5 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import type { PartnerViewModel, EnrichmentData } from "@/types/partner-views";
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mail, Phone, ChevronRight, User, Handshake } from "lucide-react";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
