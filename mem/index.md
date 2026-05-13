@@ -29,3 +29,4 @@
 - [Cron Kill-Switch](mem://features/cron-kill-switch) — system_flags.cron_paused + _shared/cronGate.ts + StatusPill toggle "Trasmissioni AI"; adottato in prompt-test-runner (job 57), retrofit pendente su altri 12 cron
 - [Pipeline Traces Viewer](mem://features/pipeline-traces-viewer) — Tabella pipeline_traces + helper _shared/pipelineTrace.ts + pagina /v2/pipeline-traces (live/per-trace/per-step). Trace_id = message_id. Wireup: classify-inbound-message + funnemail-auto-route.
 - [Lab Hub Config-Driven](mem://architecture/lab-hub-config-driven) — /v2/lab unico hub con tutti i tool di test/prompt/observability/charts; SSOT src/v2/config/labTabs.ts (una riga per tab), 22 tab in 4 group, legacy paths reindirizzati
+- [Email Send SSOT](mem://architecture/email-send-ssot-enforcement) — Nessun invokeEdge('send-email') diretto in UI: tutto passa da useEnqueueAction → ai_pending_actions → useApproveAndDispatch. Eccezioni: GeneralSettings test, funnemail-send-autoresponder.
