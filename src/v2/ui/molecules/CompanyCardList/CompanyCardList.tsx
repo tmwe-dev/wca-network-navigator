@@ -21,6 +21,8 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
   estimateRowSize?: number;
   /** IDs delle aziende selezionate (multi-select). */
   selectedIds?: Set<string>;
+  /** ID dell'azienda aperta nel pannello dettaglio (single-select). */
+  openedId?: string | null;
   /** Callback toggle selezione. Se assente, niente checkbox. */
   onToggleSelect?: (id: string) => void;
   /** Click bandiera nella card → filtra per paese. */
@@ -39,6 +41,7 @@ export function CompanyCardList({
   estimateRowSize = ROW_HEIGHT,
   onOpenCompany,
   selectedIds,
+  openedId,
   onToggleSelect,
   onCountryClick,
   onCityClick,
@@ -137,6 +140,7 @@ export function CompanyCardList({
                   company={company}
                   onOpenCompany={onOpenCompany}
                   selected={selectedIds?.has(company.id) ?? false}
+                  opened={openedId === company.id}
                   onToggleSelect={onToggleSelect}
                   compact={compact}
                   sherlockLevel={sherlockLevels[company.id]?.level ?? null}

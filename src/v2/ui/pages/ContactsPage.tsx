@@ -166,6 +166,7 @@ export function ContactsPage() {
         searchPlaceholder="Cerca contatto, azienda, città…"
         onOpenContact={handleOpenContact}
         detailSlot={detail}
+        openedId={selectedContact?.id ?? null}
         onBulkAddToCockpit={handleBulkAddToCockpit}
         onBulkCreateCampaign={handleBulkCampaign}
         onBulkChangeOrigin={handleBulkChangeOrigin}

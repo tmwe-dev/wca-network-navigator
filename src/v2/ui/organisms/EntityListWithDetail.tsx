@@ -42,6 +42,8 @@ export interface EntityListWithDetailProps {
   searchPlaceholder?: string;
   /** Slot dettaglio singolo. null/undefined = nessuna selezione. */
   detailSlot?: React.ReactNode | null;
+  /** ID dell'azienda aperta nel pannello dettaglio (per evidenziare la card sorgente). */
+  openedId?: string | null;
   /** Callback apertura azienda (click sul body). */
   onOpenCompany?: (c: CompanyEntity) => void;
   /** Callback apertura contatto (click su sub-card). */
@@ -75,6 +77,7 @@ export function EntityListWithDetail({
   globalChips,
   searchPlaceholder,
   detailSlot,
+  openedId,
   onOpenCompany,
   onOpenContact,
   onBulkAddToCockpit,
@@ -367,6 +370,7 @@ export function EntityListWithDetail({
           isLoading={isLoading}
           emptyMessage={emptyMessage}
           selectedIds={selection.selectedIds}
+          openedId={openedId}
           onToggleSelect={selection.toggle}
           onOpenCompany={onOpenCompany}
           onCountryClick={handleCountryClick}

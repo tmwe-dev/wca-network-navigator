@@ -77,6 +77,8 @@ export interface EntityRowProps {
   /** Click sulla città (col 4) → filtra per città. Quando undefined, niente click. */
   onCityClick?: (city: string) => void;
   selected?: boolean;
+  /** True quando questa card è quella aperta nel pannello dettaglio (single-select). */
+  opened?: boolean;
   className?: string;
   /**
    * Layout compatto a 2 righe (per pannelli stretti < ~520px).
@@ -103,6 +105,7 @@ export function EntityRow({
   onCountryClick,
   onCityClick,
   selected,
+  opened,
   className,
   compact = false,
 }: EntityRowProps): React.ReactElement {
@@ -123,6 +126,7 @@ export function EntityRow({
           : "grid-cols-[44px_56px_minmax(0,1fr)_200px_96px]",
         TONE_BORDER[tone],
         selected && "ring-1 ring-primary/40 bg-primary/[0.04]",
+        opened && "ring-2 ring-primary/70 border-primary/60 bg-primary/[0.07] shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]",
         onClick && "cursor-pointer",
         className
       )}

@@ -303,6 +303,7 @@ export default function BCAUnifiedHub() {
                             key={card.id}
                             card={card}
                             isSelected={selectedBca.has(card.id)}
+                            isOpened={detailCardId === card.id}
                             onToggle={toggleBca}
                             onOpenDetail={(id) => setDetailCardId(id)}
                             enableDrag
@@ -319,6 +320,7 @@ export default function BCAUnifiedHub() {
                             key={card.id}
                             card={card}
                             isSelected={selectedBca.has(card.id)}
+                            isOpened={detailCardId === card.id}
                             onToggle={toggleBca}
                             onOpenDetail={(id) => setDetailCardId(id)}
                             enableDrag
@@ -335,6 +337,7 @@ export default function BCAUnifiedHub() {
                             key={card.id}
                             card={card}
                             isSelected={selectedBca.has(card.id)}
+                            isOpened={detailCardId === card.id}
                             onToggle={toggleBca}
                             onOpenDetail={(id) => setDetailCardId(id)}
                             enableDrag
