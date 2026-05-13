@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
         sharedReplyTo = resolved.reply_to;
       } catch (e) {
         if (e instanceof MailboxAccessDenied) {
-          return edgeError("AUTH_FORBIDDEN", `Non sei autorizzato a usare questa casella aziendale (${mailboxId}).`);
+          return edgeError("AUTH_INVALID", `Non sei autorizzato a usare questa casella aziendale (${mailboxId}).`);
         }
         return edgeError("VALIDATION_ERROR", `Casella aziendale non disponibile: ${e instanceof Error ? e.message : String(e)}`);
       }
