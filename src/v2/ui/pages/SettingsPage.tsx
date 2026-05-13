@@ -63,7 +63,7 @@ function DevelopmentPagesPanel() {
               {group.title}
             </div>
             <div className="space-y-1">
-              {group.items.map((item) => (
+              {(group.items ?? []).map((item) => (
                 <button
                   key={item.path}
                   type="button"
@@ -73,6 +73,26 @@ function DevelopmentPagesPanel() {
                   <span>{item.label}</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{item.path}</span>
                 </button>
+              ))}
+              {(group.subGroups ?? []).map((sg) => (
+                <div key={sg.title} className="mt-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1 px-1">
+                    {sg.title}
+                  </div>
+                  <div className="space-y-1 border-l border-border/50 pl-2">
+                    {sg.items.map((item) => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        onClick={() => navigate(item.path)}
+                        className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs text-foreground hover:bg-accent/60 transition-colors"
+                      >
+                        <span>{item.label}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{item.path}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
