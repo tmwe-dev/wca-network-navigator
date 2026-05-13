@@ -8,6 +8,7 @@ import { Plane } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag, formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { getEffectiveLogoUrl } from "@/lib/partnerUtils";
 import { PARTNER_TYPE_ICONS } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
