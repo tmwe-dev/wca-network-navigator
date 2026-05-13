@@ -11,11 +11,30 @@ CRM con intelligenza artificiale per il freight forwarding globale.
 - Three.js per visualizzazioni 3D
 - Tailwind CSS + shadcn/ui
 
-## Setup
+## Quick Start
 
-1. `npm install`
-2. Copia `.env.example` in `.env` e configura le variabili
-3. `npm run dev`
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your Supabase URL, anon key, and AI provider keys
+
+# 3. Start development server
+npm run dev
+
+# 4. Run tests
+npm run test
+
+# 5. Type check
+npm run typecheck
+```
+
+**Prerequisites:** Node.js 18+, npm 9+, a Supabase project with Edge Functions enabled.
+
+For architecture details see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+For operational procedures see [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## Struttura
 
@@ -43,30 +62,35 @@ e2e/               — Test End-to-End (Playwright)
 ## Funzionalità Principali
 
 ### CRM & Pipeline
+
 - Pipeline Kanban con drag-and-drop
 - Lead scoring AI automatico
 - Gestione partner con contatti multipli
 - Business card scanner con OCR
 
 ### Outreach Engine
+
 - Missioni con cadenza automatica (email, WhatsApp, LinkedIn)
 - A/B testing email con significatività statistica
 - Template dinamici con variabili contestuali
 - Holding pattern per contatti in attesa
 
 ### Email Intelligence
+
 - Classificazione AI delle email in arrivo
 - Gestione sender e regole per indirizzo
 - Thread tracking con message-id/references
 - Oracle AI per suggerimenti di risposta
 
 ### Sistema di Memoria Hydra
+
 - 3 livelli di memoria (L1 working / L2 session / L3 long-term)
 - Embedding pgvector 1536-dim per ricerca semantica
 - Promozione automatica tra livelli
 - Knowledge Base con RAG
 
 ### AI Agents
+
 - 47 tool AI per agenti conversazionali
 - Agenti vocali con ElevenLabs
 - AI Arena con ContactCard 3D
@@ -74,11 +98,13 @@ e2e/               — Test End-to-End (Playwright)
 - Decision log con audit trail
 
 ### Multi-canale
+
 - Email (IMAP/SMTP)
 - WhatsApp (estrazione AI)
 - LinkedIn (estrazione profilo AI)
 
 ### Analytics & Monitoring
+
 - Dashboard con metriche real-time
 - AI Lab per testing scenari
 - Telemetria e diagnostica
@@ -86,14 +112,14 @@ e2e/               — Test End-to-End (Playwright)
 
 ## Comandi
 
-| Comando | Descrizione |
-|---------|-------------|
-| `npm run dev` | Avvia il server di sviluppo |
-| `npm run build` | Build di produzione |
-| `npm run test` | Esegui test unitari |
-| `npm run test:ci` | Test con coverage |
-| `npm run lint` | Linting ESLint |
-| `npm run typecheck` | Type checking TypeScript |
+| Comando             | Descrizione                 |
+| ------------------- | --------------------------- |
+| `npm run dev`       | Avvia il server di sviluppo |
+| `npm run build`     | Build di produzione         |
+| `npm run test`      | Esegui test unitari         |
+| `npm run test:ci`   | Test con coverage           |
+| `npm run lint`      | Linting ESLint              |
+| `npm run typecheck` | Type checking TypeScript    |
 
 ## Testing
 

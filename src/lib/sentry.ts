@@ -1,3 +1,5 @@
+import React from "react";
+
 /**
  * Sentry integration module — Lazy-loaded to avoid 410KB in critical path.
  *
@@ -37,9 +39,9 @@ export async function initSentry() {
     ],
     tracesSampleRate: 0.1,
     replaysSessionSampleRate: 0,
-    replaysOnErrorSampleRate: 0.5,
+    replaysOnErrorSampleRate: 1.0,
     beforeSend(event) {
-      if (event.exception?.values?.some(v => v.type === "ChunkLoadError")) return null;
+      if (event.exception?.values?.some((v) => v.type === "ChunkLoadError")) return null;
       return event;
     },
     beforeBreadcrumb(breadcrumb) {
@@ -80,3 +82,39 @@ export const Sentry = {
   /** ErrorBoundary must be loaded synchronously for App.tsx — use GlobalErrorBoundary instead */
   ErrorBoundary: null as unknown,
 };
+
+/**
+ * Sprint H — React Error Boundary wrapper powered by Sentry.
+ * Falls back to a generic error UI when the SDK has not loaded yet.
+ *
+ * Uses React.createElement to stay in a .ts file (no JSX).
+ */
+export function SentryErrorBoundary({
+  children,
+  fallback,
+}: {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}): React.ReactElement {
+  if (_Sentry) {
+    const SentryEB = _Sentry.ErrorBoundary;
+    return React.createElement(
+      SentryEB,
+      { fallback: fallback ?? React.createElement(DefaultErrorFallback, null) },
+      children,
+    );
+  }
+
+  // SDK not yet loaded — render children directly (errors bubble to window.onerror).
+  return React.createElement(React.Fragment, null, children);
+}
+
+/** Minimal fallback UI shown when an error boundary catches. */
+function DefaultErrorFallback(): React.ReactElement {
+  return React.createElement(
+    "div",
+    { style: { padding: 32, textAlign: "center" as const } },
+    React.createElement("h2", null, "Something went wrong"),
+    React.createElement("p", null, "The error has been reported. Please reload the page."),
+  );
+}

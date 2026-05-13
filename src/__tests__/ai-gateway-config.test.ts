@@ -252,8 +252,8 @@ describe("aiGatewayConfig", () => {
     it("all models used in MODEL_MAP should be in ALLOWED_MODELS or empty provider", () => {
       const providersWithMappings = ["openai", "anthropic", "google", "grok", "qwen"];
 
-      providersWithMappings.forEach((_provider) => {
-        Object.keys(MODEL_MAP[provider as ProviderKey]).forEach((sourceModel) => {
+      providersWithMappings.forEach((p) => {
+        Object.keys(MODEL_MAP[p as ProviderKey]).forEach((sourceModel) => {
           expect(ALLOWED_MODELS.has(sourceModel)).toBe(true);
         });
       });
