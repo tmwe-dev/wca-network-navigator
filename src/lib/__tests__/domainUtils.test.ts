@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-describe("costTracker", () => {
+describe("domainUtils", () => {
   it("module loads", async () => {
-    const mod = await import("@/lib/api/costTracker");
+    const mod = await import("@/lib/domainUtils");
     expect(mod).toBeDefined();
   });
 });

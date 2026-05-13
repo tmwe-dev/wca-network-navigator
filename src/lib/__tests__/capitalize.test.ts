@@ -1,20 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { capitalizeFirst } from "@/lib/capitalize";
-
-describe("capitalizeFirst", () => {
-  it("capitalizes first letter of lowercase string", () => {
-    expect(capitalizeFirst("hello")).toBe("Hello");
+import { capitalize } from "@/lib/capitalize";
+describe("capitalize", () => {
+  it("capitalizes first letter", () => {
+    expect(capitalize("hello")).toBe("Hello");
   });
-
-  it("leaves already capitalized string unchanged", () => {
-    expect(capitalizeFirst("Hello")).toBe("Hello");
+  it("handles empty string", () => {
+    expect(capitalize("")).toBe("");
   });
-
-  it("returns empty string for empty input", () => {
-    expect(capitalizeFirst("")).toBe("");
+  it("handles single char", () => {
+    expect(capitalize("a")).toBe("A");
   });
-
-  it("handles single character", () => {
-    expect(capitalizeFirst("a")).toBe("A");
+  it("preserves rest of string", () => {
+    expect(capitalize("hELLO")).toBe("HELLO");
   });
 });

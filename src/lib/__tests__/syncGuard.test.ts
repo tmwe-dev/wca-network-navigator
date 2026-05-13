@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-describe("costTracker", () => {
+describe("syncGuard", () => {
   it("module loads", async () => {
-    const mod = await import("@/lib/api/costTracker");
+    const mod = await import("@/lib/syncGuard");
     expect(mod).toBeDefined();
   });
 });
