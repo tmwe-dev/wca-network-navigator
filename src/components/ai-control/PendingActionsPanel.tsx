@@ -24,6 +24,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
+import { SiblingRiskBadge, useHasSiblingRisk } from "@/components/ai-control/SiblingRiskBadge";
 
 
 import { createLogger } from "@/lib/log";
@@ -62,6 +63,8 @@ export function PendingActionsPanel() {
   const [draftEditId, setDraftEditId] = useState<string | null>(null);
   const [editedDraftSubject, setEditedDraftSubject] = useState("");
   const [editedDraftBody, setEditedDraftBody] = useState("");
+  // Same-Company Sibling Guard: doppia conferma esplicita per id azione
+  const [confirmedRisk, setConfirmedRisk] = useState<Record<string, boolean>>({});
 
   const { data: actions = [], isLoading } = useQuery({
     queryKey: queryKeys.ai.pendingActions,
