@@ -1,8 +1,9 @@
 /**
- * Tool: send-email — Diretto (non composer). Richiede approvazione esplicita.
- * Backed by edge `send-email`. Per email assistite usa compose-email.
+ * Tool: send-email — Diretto (non composer). SSOT v3.9.56:
+ * NON invia direttamente all'edge `send-email`; enqueue in `ai_pending_actions`
+ * per approvazione manuale nel cockpit. Per email assistite usa compose-email.
  */
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 function extractTo(prompt: string): string | null {
@@ -55,26 +56,40 @@ export const sendEmailDirectTool: Tool = {
       };
     }
 
-    const res = await invokeEdge<{ success?: boolean; messageId?: string; error?: string }>(
-      "send-email",
-      {
-        body: {
-          to: String(p.to),
-          subject: String(p.subject),
-          html: String(p.body).replace(/\n/g, "<br/>"),
-          text: String(p.body),
-          partner_id: p.partner_id ?? null,
-          contact_id: p.contact_id ?? null,
-        },
-        context: "command:send-email-direct",
-      },
-    );
-
+    const { data: sess } = await supabase.auth.getSession();
+    const userId = sess?.session?.user?.id;
+    if (!userId) {
+      return { kind: "result", title: "Sessione non valida", message: "Effettua nuovamente il login.", meta: { count: 0, sourceLabel: "command" } };
+    }
+    const html = String(p.body).replace(/\n/g, "<br/>");
+    const { data, error } = await supabase.from("ai_pending_actions").insert({
+      user_id: userId,
+      action_type: "send_email",
+      action_payload: {
+        to: String(p.to),
+        subject: String(p.subject),
+        html,
+        body: String(p.body),
+        partner_id: p.partner_id ?? null,
+        contact_id: p.contact_id ?? null,
+      } as never,
+      partner_id: (p.partner_id as string | null) ?? null,
+      contact_id: (p.contact_id as string | null) ?? null,
+      email_address: String(p.to),
+      suggested_content: String(p.body),
+      reasoning: "Command tool send-email-direct: in attesa di approvazione.",
+      confidence: 1.0,
+      source: "command:send-email-direct",
+      status: "pending",
+    } as never).select("id").maybeSingle();
+    if (error) {
+      return { kind: "result", title: "Errore in coda", message: error.message, meta: { count: 0, sourceLabel: "command" } };
+    }
     return {
       kind: "result",
-      title: res?.error ? "Email non inviata" : "Email inviata",
-      message: res?.error ?? `Inviata a ${String(p.to)}${res?.messageId ? ` (id: ${res.messageId})` : ""}.`,
-      meta: { count: 1, sourceLabel: "Edge · send-email" },
+      title: "📥 Email in coda di approvazione",
+      message: `Apri AI Control per approvare l'invio a ${String(p.to)}${data?.id ? ` (id: ${data.id})` : ""}.`,
+      meta: { count: 1, sourceLabel: "ai_pending_actions" },
     };
   },
 };
