@@ -1,61 +1,47 @@
-# Badge Arricchimento, Deep Search e Logo sulle card partner
+# Fix Prompt Lab Tests: identità azienda, KB, lingua + UI leggibile
 
-## Stato attuale (verificato sul DB)
+## Problema rilevato in lab
+1. L'AI nei test non sa chi è: manca `Transport Management Srl` / `TMWE` / `Luigi Tagliaferri`.
+2. L'AI non rispetta la lingua richiesta (frasi generiche in IT anche con prompt EN/DE).
+3. Manca iniezione `kb_entries` (168 entry di doctrine).
+4. Output dei test illeggibile (mono `<pre>` dentro `<details>` con `max-h-48`).
 
-- **1.218 partner** hanno un `logo_url` salvato
-- **1.238 partner** hanno `enriched_at` valorizzato (= arricchiti)
-- **0 partner** hanno `deep_search_at` (Deep Search vero non ancora usato in produzione)
-- Il logo è già nel campo giusto, **non** è "sepolto" dentro `enrichment_data`
+Causa root: `prompt-test-runner/index.ts` costruisce il system prompt **senza caricare** `app_settings` né `kb_entries`, a differenza di `generate-email`/`generate-outreach`.
 
-## Cosa mostra oggi la card (`PartnerCard.tsx`)
+## Cosa cambia
 
-- ✅ Logo (se `logo_url` valido) → fallback favicon → fallback bandiera
-- ✅ Badge "D" Deep Search (ma sblocca solo su `deep_search_at`, quindi oggi mai)
-- ✅ Badge Sherlock (se livello investigativo presente)
-- ❌ **Manca il badge "Arricchito"** — i 1.238 partner arricchiti non sono distinguibili a colpo d'occhio
-- ❌ Badge Deep Search e logo non sono coerenti tra `PartnerCard`, `PartnerListItem` e `PartnerDetailHeader`
+### 1. Backend — `supabase/functions/prompt-test-runner/index.ts`
+- `loadSenderIdentity(supabase)` → SELECT `app_settings` (singleton) campi: `ai_company_name`, `ai_company_alias`, `ai_contact_name`, `ai_contact_role`, `ai_contact_phone`, `ai_signature`, `ai_language`, `ai_style_instructions`, `ai_sector_focus`, `ai_business_goals`, `ai_network_context`, `ai_knowledge_base`.
+- `loadDoctrineSnippets(supabase, { maxChars: 6000 })` → SELECT `kb_entries` priority desc, cap caratteri.
+- Estensione `buildPromptText()` con sezioni in ordine fisso:
+  - `## Identità mittente` (azienda/alias/contatto/ruolo/firma/telefono/settore/network/business goals)
+  - `## Lingua di output` (priorità: `payload.language` > `identity.ai_language` > `italiano`) con istruzione esplicita "Rispondi SEMPRE in {lingua}"
+  - `## Stile e tono` (`ai_style_instructions`)
+  - `## Conoscenza di dominio` (KB azienda + estratto `kb_entries`)
+  - poi prompt operativo + input test
+- Telemetria nel record `prompt_test_runs`: `identity_loaded: boolean`, `kb_snippets_count: number`, `language_used: string` (extra in `metadata` JSONB se non c'è colonna dedicata — nessuna migrazione).
+- Nessuna modifica a `generate-email`/`generate-outreach`.
 
-## Cosa farò
+### 2. UI — `src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx`
+- Output sempre visibile (no `<details>` collassato di default per il messaggio AI).
+- Tipografia: `text-sm leading-relaxed whitespace-pre-wrap` per testo, mono solo per JSON.
+- Header riga risultato con badge: stato (passed/failed), severità, modello, durata ms, token, lingua usata.
+- Blocco "Identità iniettata" read-only (azienda, alias, contatto, lingua).
+- Sezione collassabile "Prompt costruito" (full system prompt).
+- Sezione "Check eseguiti" con ✅/❌ per assertion.
+- Nessuna nuova logica di business: solo formattazione e ricomposizione layout.
 
-### 1. Nuovo badge `EnrichmentBadge` riutilizzabile
-File nuovo: `src/v2/ui/atoms/EnrichmentBadge.tsx`
-
-Componente unico che, dato un partner, decide quale badge mostrare in base alla "profondità" dell'indagine:
-
-| Livello | Trigger DB | Badge | Colore |
-|---|---|---|---|
-| Sherlock | `sherlock_level` esistente | "🔍 Sherlock L1/L2/L3" | viola |
-| Deep Search | `enrichment_data.deep_search_at` | "DS" + tooltip data | primary |
-| Arricchito | `enriched_at IS NOT NULL` | "✨ Arricchito" + tooltip data | emerald |
-| (nessuno) | — | nessun badge | — |
-
-Mostra il badge **più alto** disponibile, più gli altri come piccoli pallini se compresenti.
-
-### 2. Logo coerente ovunque
-Sostituisco la lettura grezza `partner.logo_url` con l'helper esistente `getEffectiveLogoUrl(partner)` (già in `src/lib/partnerUtils.ts`, fa fallback su `enrichment_data.logo_url`). Così se in futuro l'enrichment scarica un logo, viene mostrato anche se non viene copiato sul campo principale.
-
-### 3. Card aggiornate (3 punti)
-- `src/components/partners/PartnerCard.tsx` — card grid principale
-- `src/components/partners/PartnerListItem.tsx` — vista lista
-- `src/components/partners/PartnerDetailHeader.tsx` — header dettaglio
-
-In ogni file:
-- Sostituire badge "D" inline con `<EnrichmentBadge partner={partner} />`
-- Sostituire `partner.logo_url` con `getEffectiveLogoUrl(partner)`
-
-### 4. Nessuna modifica a logica/DB
-Solo lettura di campi già esistenti (`enriched_at`, `enrichment_data.deep_search_at`, `logo_url`). Nessuna migrazione, nessuna chiamata edge, nessun costo AI.
-
-## Costi
-**Zero.** È solo UI che legge dati già presenti. Nessuna chiamata AI, nessuna scrittura DB.
+### 3. Verifica
+- Run manuale di un test esistente: l'output deve contenere `TMWE` o `Transport Management` e firma `Luigi Tagliaferri`.
+- Test con `language: "english"` nel payload: output in inglese.
+- Nuovo test case di regressione (assertion: contains `Transport Management` + lingua corretta).
 
 ## File toccati
-- ➕ `src/v2/ui/atoms/EnrichmentBadge.tsx` (nuovo, ~60 righe)
-- ✏️ `src/components/partners/PartnerCard.tsx`
-- ✏️ `src/components/partners/PartnerListItem.tsx`
-- ✏️ `src/components/partners/PartnerDetailHeader.tsx`
+- `supabase/functions/prompt-test-runner/index.ts` (backend)
+- `src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx` (UI)
 
-## Cosa NON è incluso
-- Il fix del bug "città Adelaide" sui 3.842 record → resta nel cassetto in attesa della tua approvazione separata
-- Modifiche al pipeline di enrichment a monte
-- Nuovi download logo (mostro solo quelli già presenti in DB)
+## Fuori scope
+- Migrazioni DB
+- Modifiche a `generate-email`, `generate-outreach`, `agent-execute`
+- Cambio schema `prompt_test_runs` (uso `metadata` JSONB esistente)
+- Refactor del Prompt Lab oltre il tab Tests
