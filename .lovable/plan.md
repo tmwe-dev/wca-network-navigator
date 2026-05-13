@@ -1,50 +1,49 @@
-## Obiettivo
+## Spiegazione tasti header (destra)
 
-Aggiungere un controllo globale che permette all'utente di regolare l'**intensità del colore del testo** in tutta la piattaforma:
-- in tema chiaro → quanto "nero" è il testo (dal grigio al nero pieno)
-- in tema scuro → quanto "bianco" è il testo (dal grigio al bianco pieno)
+Stato attuale del cluster destro della top bar (`src/v2/ui/templates/LayoutHeader.tsx`):
 
-## Cosa farò
+1. **🔔 Campanella** → `NotificationCenter`. Centro notifiche (sistema, alert, agenti). **Da mantenere**, ok.
+2. **⬇ Estensioni Chrome** → `DownloadExtensionsButton`. Apre la pagina di download delle estensioni. **Da mantenere**, ok.
+3. **🎨 Temi (icona palette)** → `ThemePicker variant="icon"`. Duplicato: i temi sono già dentro la sidebar/menu. **Da rimuovere**.
+4. **🔄 Scarica ora** → `GlobalSyncButton` (file `WhatsAppSyncButton.tsx`). Un click lancia in parallelo il fetch immediato sui 3 canali:
+   - **Email**: chiama `check-inbox` (single-flight via `callCheckInbox`) — scarica subito le nuove mail IMAP.
+   - **WhatsApp**: emette evento `wa-sync-trigger` consumato dall'auto-sync WA dell'estensione, che esegue un giro di download immediato senza resettare la cadenza programmata.
+   - **LinkedIn**: emette `li-sync-trigger`, idem per LinkedIn.
+   Funziona anche con auto-sync in pausa. Mostra spinner mentre lavora, badge verde col numero di nuovi messaggi WA quando ce ne sono, toast finale "Sincronizzazione avviata". Accanto compare il badge "scudo" `SyncGuardIndicator` (controllo tempi umani — uno solo, icon-only, già fixato prima).
+5. **👤 Operator selector** → `OperationalContextSelector`. Cambio operatore/casella attiva. Mantenuto.
+6. **⋯ Strumenti** → `HeaderToolsMenu`. Mantenuto.
+7. **✨ Sparkles** → apre `IntelliflowOpen` (IntelliFlow AI / "Secretary"). **Da rimuovere**: l'utente segnala che non funziona e Command Page copre già la stessa funzione.
 
-### 1. Provider globale `TextIntensityProvider`
-Nuovo file `src/providers/TextIntensityProvider.tsx`:
-- legge/salva il valore in `localStorage` (chiave `text-intensity`)
-- valori discreti: `soft` · `normal` · `strong` · `max` (4 step)
-- applica una CSS variable `--text-intensity` sul `<html>` che modula la luminosità di `--foreground`, `--card-foreground`, `--popover-foreground`, `--accent-foreground`
-- montato in `App.tsx` come singleton
+---
 
-### 2. Token CSS dinamici (`src/index.css`)
-- aggiungo `--fg-l` (lightness target) override per ciascuno step:
-  - light theme: `max=0%`, `strong=8%`, `normal=15%` (default attuale), `soft=28%`
-  - dark theme: `max=100%`, `strong=96%`, `normal=88%`, `soft=72%`
-- ridefinisco `--foreground` (e i fg correlati) per usare la lightness pilotata dallo step, lasciando invariato hue/saturation di ciascun tema (default, ocean, sunset, ecc.)
-- nessuna modifica al colore di sfondo, primary, badge, link
+## Modifiche richieste (UI-only)
 
-### 3. UI di controllo
-Aggiungo un piccolo **toggle a 4 step** (Aa▁ · Aa▂ · Aa▃ · Aa▄) in due punti:
-- nel **menu utente in topbar** (accesso rapido da ovunque)
-- nella **pagina Impostazioni → Aspetto** (`src/v2/ui/pages/SettingsPage.tsx`), come riga dedicata "Intensità testo" con anteprima live
+### A. Rimuovere icona Tema dalla top bar
+`src/v2/ui/templates/LayoutHeader.tsx`
+- Eliminare `<ThemePicker variant="icon" />` (riga 112) e l'import relativo (mantenere `useInitTheme`).
+- Risultato: tema gestito solo dalla sidebar (`ThemePicker` menu-row), come da richiesta.
 
-Componente unico riutilizzabile: `src/v2/ui/molecules/TextIntensityToggle.tsx`.
+### B. Rimuovere pulsante ✨ IntelliFlow AI
+`src/v2/ui/templates/LayoutHeader.tsx`
+- Eliminare il `<Button>` Sparkles finale (righe 122–131) e l'import `Sparkles` da lucide-react.
+- Rendere `onAiClick` opzionale nelle Props (o rimuoverlo) e aggiornare il call site in `AuthenticatedLayout.tsx` (riga 369) lasciando lo state `intelliflowOpen` ma senza più trigger dall'header (la modale resta accessibile via shortcut/Command se serve in futuro; nessun altro entry point viene toccato).
+- Nota: non rimuovo il componente IntelliFlow né lo state — solo l'entry point dalla top bar, così non rompo nulla a valle.
 
-### 4. Persistenza e applicazione iniziale
-- inline script in `index.html` che legge `localStorage` e applica subito `data-text-intensity` su `<html>` per evitare flash
-- il provider sincronizza eventuali cambi in altre tab via `storage` event
+### C. Mantenuti senza modifiche
+- 🔔 `NotificationCenter`
+- ⬇ `DownloadExtensionsButton`
+- 🔄 `GlobalSyncButton` + `SyncGuardIndicator` (icon-only)
+- 👤 `OperationalContextSelector`
+- ⋯ `HeaderToolsMenu`
 
-## Dettagli tecnici
+---
 
-- nessun "any": tipo `TextIntensity = "soft" | "normal" | "strong" | "max"`
-- nessuna nuova dipendenza
-- nessuna modifica a logica di business, edge function, DB
-- compatibile con tutti i temi esistenti (light, dark, ocean, sunset, ecc.) perché agisce solo sulla `lightness` HSL del foreground
-- default = `normal` (= comportamento attuale, zero regressione visiva)
+## Controindicazioni / note
+
+- Il pulsante ✨ è l'unico entry point dell'header per IntelliFlow. Se in futuro vorrai riattivarlo, basta ripristinare il `<Button>`. Il componente sottostante resta montato, quindi nessuna regressione su Command Page o altri flussi.
+- `ThemePicker` resta usato dalla sidebar — l'import `useInitTheme()` deve rimanere in `LayoutHeader` per inizializzare il tema all'avvio.
+- Nessuna logica AI / backend / DAL toccata: intervento puramente di presentazione, atomico (Metodo Enterprise Vol II rispettato).
 
 ## File toccati
-
-- nuovo: `src/providers/TextIntensityProvider.tsx`
-- nuovo: `src/v2/ui/molecules/TextIntensityToggle.tsx`
-- modificato: `src/index.css` (variabili lightness per step, override `--foreground` derivato)
-- modificato: `src/App.tsx` (montaggio provider)
-- modificato: `index.html` (script anti-flash)
-- modificato: `src/v2/ui/pages/SettingsPage.tsx` (riga "Intensità testo")
-- modificato: topbar utente (aggiunta del toggle compatto)
+- `src/v2/ui/templates/LayoutHeader.tsx` (rimozione 2 elementi + import)
+- `src/v2/ui/templates/AuthenticatedLayout.tsx` (rimozione prop `onAiClick` passata a header)

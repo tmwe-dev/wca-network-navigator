@@ -21,8 +21,8 @@ import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
 import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { NavMenuPopover } from "./NavMenuPopover";
-import { Menu, Sparkles } from "lucide-react";
-import { ThemePicker, useInitTheme } from "@/v2/ui/theme/ThemePicker";
+import { Menu } from "lucide-react";
+import { useInitTheme } from "@/v2/ui/theme/ThemePicker";
 
 interface OutreachQueue {
   pendingCount: number;
@@ -43,7 +43,7 @@ interface Props {
   /** @deprecated Sidebar laterale rimossa: il bottone ☰ ora apre il NavMenuPopover globale. Mantenuto per compatibilità con i call site. */
   onToggleSidebar?: () => void;
   onOpenCommandPalette: () => void;
-  onAiClick: () => void;
+  onAiClick?: () => void;
   onAddContact: () => void;
   onAgentDash: () => void;
   onTestExt: () => void;
@@ -64,6 +64,9 @@ export function LayoutHeader({
   // onOpenCommandPalette è raggiungibile via ⌘K (registrato in AuthenticatedLayout);
   // non occupa più spazio fisso nella barra.
   void onOpenCommandPalette;
+  // onAiClick non è più esposto in header (IntelliFlow rimosso). Mantenuto in props
+  // per retrocompatibilità con i call site; consumato altrove o ignorato.
+  void onAiClick;
   const { pathname } = useLocation();
   useInitTheme();
 
@@ -88,7 +91,7 @@ export function LayoutHeader({
         </NavMenuPopover>
 
         <StatusPill
-          onAiClick={onAiClick}
+          onAiClick={onAiClick ?? (() => {})}
           outreachQueue={outreachQueue}
           globalSync={globalSync}
         />
@@ -109,7 +112,6 @@ export function LayoutHeader({
       <div className="flex items-center gap-0.5 shrink-0">
         <NotificationCenter />
         <DownloadExtensionsButton />
-        <ThemePicker variant="icon" />
         <WhatsAppSyncButton />
         <OperationalContextSelector />
         <HeaderToolsMenu
@@ -119,16 +121,6 @@ export function LayoutHeader({
           isDark={isDark}
           onToggleTheme={onToggleTheme}
         />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors"
-          onClick={onAiClick}
-          aria-label="IntelliFlow AI"
-          title="IntelliFlow AI · ⌘J"
-        >
-          <Sparkles className="h-4 w-4" />
-        </Button>
       </div>
     </header>
   );
