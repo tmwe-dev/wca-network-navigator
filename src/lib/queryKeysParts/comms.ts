@@ -74,6 +74,7 @@ export const commsKeys = {
     jobsOutreach: (filters?: unknown) => ["campaign-jobs-outreach", filters] as const,
     analytics: (filters?: unknown) => ["campaign-analytics", filters] as const,
   },
+  funnemailEvalBatchRuns: ["funnemail-eval-batch-runs"] as const,
   funnemailInbox: {
     root: ["funnemail-inbox"] as const,
     folders: ["funnemail-inbox", "folders"] as const,

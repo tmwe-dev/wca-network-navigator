@@ -56,6 +56,26 @@ export async function createFunnemailEvalCase(payload: {
   if (error) throw error;
 }
 
+export interface EvalBatchRun {
+  id: string;
+  run_at: string;
+  dataset_size: number;
+  passed_count: number;
+  failed_count: number;
+  accuracy: number | null;
+  prompt_version_id: string | null;
+  created_at: string;
+}
+
+export async function fetchEvalBatchRuns(): Promise<EvalBatchRun[]> {
+  const { data, error } = await untypedFrom("funnemail_eval_batch_runs")
+    .select("id, run_at, dataset_size, passed_count, failed_count, accuracy, prompt_version_id, created_at")
+    .order("run_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as unknown as EvalBatchRun[];
+}
+
 export async function runFunnemailEval(input: { case_id?: string; tags?: string[]; all?: boolean }): Promise<{ ok: boolean; total?: number; pass_rate?: number; runs?: Array<Record<string, unknown>> }> {
   const { data, error } = await supabase.functions.invoke("run-funnemail-eval", { body: input });
   if (error) throw error;
