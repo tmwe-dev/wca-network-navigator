@@ -226,9 +226,13 @@ Tono mittente: ${input.original_inbound?.sentiment || "N/A"}
   ].filter(Boolean).join("\n");
 
   const senderCompanyName = companyProfile?.company_name || "(azienda mittente non configurata)";
+  const languageDirective = input.language
+    ? `\n\n## LINGUA OUTPUT (NON NEGOZIABILE)\nIl messaggio DEVE essere scritto interamente in **${input.language}**.\nSe il draft è in lingua diversa o mischia lingue → verdict "block" + warning di tipo "language_mismatch" con upstream_fix che indica la lingua corretta. NON tradurre tu: segnala e blocca.`
+    : "";
   return `Sei il CAPOREDATTORE FINALE per "${senderCompanyName}".
 
 REGOLA IDENTITÀ (NON NEGOZIABILE): il messaggio deve risultare inviato da "${senderCompanyName}". Se il testo cita o firma a nome di un'altra azienda/network/alleanza come MITTENTE → verdict "block" + correzione in upstream_fix.
+${languageDirective}
 
 ## RUOLO (confini precisi)
 
