@@ -12,10 +12,10 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
-// LOVABLE-93: useTrackActivity rimosso — send-email edge esegue postSendPipeline
+import { useEnqueueAction } from "@/hooks/useEnqueueAction";
+// SSOT v3.9.56: tutti gli invii email passano da ai_pending_actions → approvazione manuale
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
@@ -55,10 +55,11 @@ export default function EmailCanvas({
 }: EmailCanvasProps) {
   const { generate, isGenerating } = useEmailGenerator();
   const { data: settings } = useAppSettings();
+  const { enqueue, enqueuing } = useEnqueueAction();
   const [editMode, setEditMode] = useState(false);
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const sending = enqueuing;
   // LOVABLE-93: tracking gestito da postSendPipeline dentro send-email edge
   const partnerId = activity?.partner_id || null;
   const sourceType = activity?.source_type || "partner";
@@ -124,16 +125,21 @@ export default function EmailCanvas({
       toast({ title: "Invio singolo non consentito", description: "Rilevati più destinatari. Usa il flusso bulk (Outreach → In Uscita).", variant: "destructive" });
       return;
     }
-    setSending(true);
-    try {
-      const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
-      const data = await invokeEdge<Record<string, unknown>>("send-email", { body: { to: recipients[0], subject: displaySubject, html: sanitizedHtml }, context: "EmailCanvas.send_email" });
-      if (data?.error) throw new Error(String(data.error));
-      toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
-      // LOVABLE-93: tracking gestito da postSendPipeline dentro send-email edge
-    } catch (err: unknown) {
-      toast({ title: "Errore invio", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-    } finally { setSending(false); }
+    const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
+    const res = await enqueue({
+      action_type: "send_email",
+      payload: { to: recipients[0], subject: displaySubject, html: sanitizedHtml, body: displayBody },
+      partner_id: activity?.partner_id ?? null,
+      contact_id: activity?.selected_contact_id ?? null,
+      email_address: recipients[0],
+      suggested_content: displayBody,
+      reasoning: "Email generata da EmailCanvas, in attesa di approvazione manuale.",
+      source: "EmailCanvas",
+      decision_origin: "user_manual",
+    });
+    if (!res.ok) {
+      toast({ title: "Errore in coda", description: res.error || "", variant: "destructive" });
+    }
   };
 
   const partner = activity?.partners;

@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Send } from "lucide-react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
-// LOVABLE-93: useTrackActivity rimosso — send-email edge esegue postSendPipeline
+import { useEnqueueAction } from "@/hooks/useEnqueueAction";
+// SSOT v3.9.56: invio email passa da ai_pending_actions → approvazione manuale
 
 interface SendEmailDialogProps {
   open: boolean;
@@ -26,25 +26,29 @@ export function SendEmailDialog({
 }: SendEmailDialogProps) {
   const [subject, setSubject] = useState(`Contatto da ${companyName}`);
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const { enqueue, enqueuing } = useEnqueueAction();
+  const sending = enqueuing;
   const handleSend = async () => {
     if (!body.trim()) {
       toast.error("Scrivi un messaggio prima di inviare");
       return;
     }
-    setSending(true);
-    try {
-      const html = body.replace(/\n/g, "<br/>");
-      const data = await invokeEdge<Record<string, unknown>>("send-email", { body: { to: recipientEmail, subject, html, partner_id: partnerId }, context: "SendEmailDialog.send_email" });
-      if (data?.error) throw new Error(String(data.error));
-      toast.success(`Email inviata a ${recipientEmail}`);
-      // LOVABLE-93: tracking gestito da postSendPipeline dentro send-email edge
+    const html = body.replace(/\n/g, "<br/>");
+    const res = await enqueue({
+      action_type: "send_email",
+      payload: { to: recipientEmail, subject, html, body, partner_id: partnerId },
+      partner_id: partnerId,
+      email_address: recipientEmail,
+      suggested_content: body,
+      reasoning: `Email manuale da SendEmailDialog a ${recipientName}.`,
+      source: "SendEmailDialog",
+      decision_origin: "user_manual",
+    });
+    if (res.ok) {
       onOpenChange(false);
       setBody("");
-    } catch (e: unknown) {
-      toast.error((e instanceof Error ? e.message : null) || "Errore nell'invio dell'email");
-    } finally {
-      setSending(false);
+    } else {
+      toast.error(res.error || "Errore in coda");
     }
   };
 

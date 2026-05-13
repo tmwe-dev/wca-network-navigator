@@ -1,14 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
-import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
-import { createLogger } from "@/lib/log";
-import { updatePartner } from "@/data/partners";
-import { createInteraction } from "@/data/interactions";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
-
-const log = createLogger("useSortingJobs");
 
 type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
 type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
@@ -126,49 +120,40 @@ export function useSendJob() {
       if (!email) throw new Error("Nessuna email per questo contatto");
       if (!job.email_subject || !job.email_body) throw new Error("Subject o body mancante");
 
-      const data = await invokeEdge<{ error?: string }>("send-email", {
-        body: {
+      // SSOT v3.9.56: enqueue in ai_pending_actions; dispatch reale via useApproveAndDispatch.
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Sessione non valida");
+
+      const { error } = await supabase.from("ai_pending_actions").insert({
+        user_id: userId,
+        action_type: "send_email",
+        action_payload: {
           to: email,
           subject: job.email_subject,
           html: job.email_body,
+          body: job.email_body,
           partner_id: job.partner_id,
-        },
-        context: "useSortingJobs.sendEmail",
-      });
-      if (data?.error) throw new Error(data.error);
-
-      const now = new Date().toISOString();
-      // Update activity status
-      const { error } = await supabase
-        .from("activities")
-        .update({
-          status: "completed",
-          sent_at: now,
-          completed_at: now,
-        } satisfies ActivityUpdate)
-        .eq("id", job.id);
+          contact_id: job.selected_contact_id,
+          activity_id: job.id,
+        } as never,
+        partner_id: job.partner_id,
+        contact_id: job.selected_contact_id,
+        email_address: email,
+        suggested_content: job.email_body,
+        reasoning: "Sorting job: email pronta, in attesa di approvazione.",
+        confidence: 1.0,
+        source: "useSortingJobs.useSendJob",
+        status: "pending",
+      } as never);
       if (error) throw error;
-
-      // Update partner lead_status and last_interaction_at
-      if (job.partner_id) {
-        // Conditional update: only escalate if currently "new" → "first_touch_sent"
-        await updatePartner(job.partner_id, { lead_status: "first_touch_sent", last_interaction_at: now });
-
-        // Create interaction record
-        await createInteraction({
-          partner_id: job.partner_id,
-          interaction_type: "email",
-          subject: job.email_subject || "Email inviata",
-          notes: `Inviata a ${email}`,
-        });
-      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
       qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
       qc.invalidateQueries({ queryKey: queryKeys.activities.workedToday });
       qc.invalidateQueries({ queryKey: queryKeys.partners.all });
-      toast.success("Email inviata");
+      toast.success("📥 Email in coda di approvazione");
     },
     onError: (err: Error) => toast.error(err.message),
   });

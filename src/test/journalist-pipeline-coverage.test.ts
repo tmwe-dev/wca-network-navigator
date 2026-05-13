@@ -79,7 +79,9 @@ describe("Editorial Layer — pipeline coverage", () => {
     for (const f of orchestrators) {
       const src = read(f);
       // tutti i body diretti a send-email DEVONO contenere partner_id
-      const sendEmailFetch = src.match(/send-email[^]*?\}\s*\)/g) || [];
+      // Match solo POST/invoke verso send-email (non stringhe di log come "send-email failed").
+      const sendEmailFetch =
+        src.match(/(?:functions\/v1\/send-email|invokeEdge[^)]*"send-email"|invoke\([^)]*"send-email"|fetch[^)]*send-email)[^]*?\}\s*\)/g) || [];
       expect(sendEmailFetch.length).toBeGreaterThan(0);
       for (const block of sendEmailFetch) {
         expect(block, `partner_id mancante in ${f}`).toMatch(/partner_id/);
