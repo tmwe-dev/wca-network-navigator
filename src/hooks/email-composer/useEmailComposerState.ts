@@ -285,7 +285,7 @@ export function useEmailComposerState() {
     } catch (err: unknown) {
       toast.error("Errore generazione AI: " + (err instanceof Error ? err.message : "Sconosciuto"));
     } finally { dispatch({ type: "SET_AI_GENERATING", payload: false }); }
-  }, [goal, baseProposal, documents, referenceLinks, recipients, recipientsWithEmail]);
+  }, [goal, baseProposal, documents, referenceLinks, recipients, recipientsWithEmail, languageMode]);
 
   // ── AI Improve ──
   const handleAIImprove = useCallback(async (config: OracleConfig) => {
@@ -479,5 +479,6 @@ export function useEmailComposerState() {
     handleInsertImage, closeLearningDialog, handleSendAndSave,
     closeQueueMonitor, buildFinalHtml,
     lastContextSummary,
+    languageMode, setLanguageMode,
   };
 }
