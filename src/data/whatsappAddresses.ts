@@ -24,7 +24,7 @@ export interface WhatsAppAddressRow {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  linked_partner?: { id: string; name: string | null } | null;
+  linked_partner?: { id: string; company_name: string | null } | null;
 }
 
 export async function listWhatsAppAddresses(opts: {
@@ -33,7 +33,7 @@ export async function listWhatsAppAddresses(opts: {
 } = {}): Promise<WhatsAppAddressRow[]> {
   const limit = opts.limit ?? 500;
   let q = untypedFrom("whatsapp_addresses")
-    .select("*, linked_partner:partners(id,name)")
+    .select("*, linked_partner:partners(id,company_name)")
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(limit);
   if (opts.search && opts.search.trim().length >= 2) {

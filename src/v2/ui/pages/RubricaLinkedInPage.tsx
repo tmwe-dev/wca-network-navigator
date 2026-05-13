@@ -78,7 +78,7 @@ export function RubricaLinkedInPage(): React.ReactElement {
                         to={`/v2/explore/network?partner=${r.linked_partner_id}`}
                         className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs hover:bg-primary/20"
                       >
-                        {r.linked_partner.name ?? "Partner"}
+                        {r.linked_partner.company_name ?? "Partner"}
                       </Link>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
