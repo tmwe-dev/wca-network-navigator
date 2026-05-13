@@ -132,7 +132,7 @@ export function BcaGridCard({ card, isSelected, isOpened, onToggle, groupCompany
     <div
       className={cn(
         "group relative rounded-lg border p-3 transition-all duration-150 hover:shadow-sm cursor-pointer",
-        isOpened ? "border-primary ring-2 ring-primary/60 bg-primary/[0.08] shadow-sm" : isSelected ? "border-primary/40 bg-primary/[0.06] shadow-sm" : "border-border/40 bg-card/30 hover:border-border/60",
+        isOpened ? "border-primary ring-1 ring-primary/50 bg-primary/[0.08] shadow-sm" : isSelected ? "border-primary/40 bg-primary/[0.06] shadow-sm" : "border-border/40 bg-card/30 hover:border-border/60",
       )}
       onClick={handleClick}
     >
@@ -181,7 +181,7 @@ export function BcaExpandedCard({ card, isSelected, isOpened, onToggle, groupCom
     else onToggle(card.id);
   };
   return (
-    <div className={cn("group relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isOpened ? "border-primary ring-2 ring-primary/60 bg-primary/[0.08]" : isSelected ? "border-primary/40 bg-primary/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={handleClick}>
+    <div className={cn("group relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isOpened ? "border-primary ring-1 ring-primary/50 bg-primary/[0.08]" : isSelected ? "border-primary/40 bg-primary/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={handleClick}>
       {enableDrag && (
         <button
           type="button"

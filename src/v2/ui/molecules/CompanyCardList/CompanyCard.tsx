@@ -284,7 +284,7 @@ export function CompanyCard({
       className={cn(
         "rounded-xl overflow-hidden transition-all",
         selected && "ring-1 ring-primary/60 bg-primary/[0.05]",
-        opened && "ring-2 ring-primary/70 bg-primary/[0.07]"
+        opened && "ring-1 ring-primary/60 bg-primary/[0.07]"
       )}
     >
       <EntityRow
