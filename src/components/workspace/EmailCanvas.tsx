@@ -12,10 +12,10 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
-// LOVABLE-93: useTrackActivity rimosso — send-email edge esegue postSendPipeline
+import { useEnqueueAction } from "@/hooks/useEnqueueAction";
+// SSOT v3.9.56: tutti gli invii email passano da ai_pending_actions → approvazione manuale
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
