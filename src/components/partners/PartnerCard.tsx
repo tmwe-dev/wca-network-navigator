@@ -22,6 +22,8 @@ import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
 import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
+import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
+import { getEffectiveLogoUrl } from "@/lib/partnerUtils";
 function cleanPhoneForWhatsApp(phone: string): string {
   return phone.replace(/[\s\-\(\)\+]/g, "").replace(/^00/, "");
 }
@@ -48,6 +50,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
     ? partner.website!.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
     : null;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
+  const effectiveLogo = getEffectiveLogoUrl(partner);
 
   return (
     <Card
@@ -69,8 +72,8 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Header: logo + info */}
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-11 h-11 rounded-lg bg-muted/50 border flex items-center justify-center overflow-hidden">
-            {partner.logo_url && !logoError ? (
-              <OptimizedImage src={partner.logo_url} alt="" className="w-8 h-8 object-contain" onError={() => setLogoError(true)} />
+            {effectiveLogo && !logoError ? (
+              <OptimizedImage src={effectiveLogo} alt="" className="w-8 h-8 object-contain" onError={() => setLogoError(true)} />
             ) : hasWebsite && !faviconError ? (
               <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} alt="" className="w-8 h-8 object-contain" onError={() => setFaviconError(true)} />
             ) : (
@@ -129,14 +132,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
               {yearsM} yrs
             </span>
           )}
-          {!!(partner.enrichment_data as Record<string, unknown> | undefined)?.deep_search_at && (
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
-              </TooltipTrigger>
-              <TooltipContent>Deep Search – {new Date(String((partner.enrichment_data as Record<string, unknown>)?.deep_search_at)).toLocaleDateString("it-IT")}</TooltipContent>
-            </Tooltip>
-          )}
+          <EnrichmentBadge partner={partner} variant="pill" />
           {sherlockLevel && (
             <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
           )}
