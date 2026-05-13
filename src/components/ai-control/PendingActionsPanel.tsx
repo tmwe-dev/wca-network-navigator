@@ -264,6 +264,16 @@ export function PendingActionsPanel() {
                     </button>
                   )}
 
+                  {/* Same-Company Sibling Guard: rosso + doppia conferma per le azioni di invio */}
+                  {(action.action_type === "send_email" || action.action_type === "send_whatsapp" || action.action_type === "send_linkedin") && (
+                    <SiblingRiskBadge
+                      partnerId={action.partner_id}
+                      contactId={action.contact_id}
+                      confirmed={!!confirmedRisk[action.id]}
+                      onConfirmedChange={(c) => setConfirmedRisk((prev) => ({ ...prev, [action.id]: c }))}
+                    />
+                  )}
+
                   {/* LOVABLE-93: Draft editor section for email-like actions */}
                   {(action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") &&
                     draftEditId === action.id ? (
