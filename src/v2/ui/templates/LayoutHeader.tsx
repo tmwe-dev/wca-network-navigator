@@ -22,7 +22,7 @@ import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { NavMenuPopover } from "./NavMenuPopover";
 import { Menu } from "lucide-react";
-import { ThemePicker, useInitTheme } from "@/v2/ui/theme/ThemePicker";
+import { useInitTheme } from "@/v2/ui/theme/ThemePicker";
 
 interface OutreachQueue {
   pendingCount: number;
