@@ -9,7 +9,7 @@ import { queryKeys } from "@/lib/queryKeys";
 describe("queryKeys integrity", () => {
   it("should have CRM keys", () => {
     expect(queryKeys).toHaveProperty("partners");
-    expect(queryKeys).toHaveProperty("partnerDetail");
+    expect(queryKeys).toHaveProperty("partner");
   });
 
   it("should have comms keys", () => {

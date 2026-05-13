@@ -3,7 +3,12 @@ import { waitFor } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const mockIsNull = vi.fn();
-const mockEqDir = vi.fn().mockReturnValue({ is: (...a: unknown[]) => { mockIsNull(...a); return { count: 3, error: null }; } });
+const mockEqDir = vi.fn().mockReturnValue({
+  is: (...a: unknown[]) => {
+    mockIsNull(...a);
+    return { count: 3, error: null };
+  },
+});
 const mockEqChan = vi.fn().mockReturnValue({ eq: mockEqDir });
 const mockIn = vi.fn().mockReturnValue({ count: 7, error: null });
 
@@ -16,6 +21,11 @@ vi.mock("@/integrations/supabase/client", () => ({
         return { eq: mockEqChan };
       },
     }),
+    channel: () => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+    }),
+    removeChannel: vi.fn(),
   },
 }));
 
@@ -43,7 +53,13 @@ describe("useUnreadCounts", () => {
     expect(typeof data.circuito).toBe("number");
   });
   it("handles error gracefully", async () => {
-    mockEqChan.mockReturnValueOnce({ eq: () => ({ is: () => { throw new Error("DB down"); } }) });
+    mockEqChan.mockReturnValueOnce({
+      eq: () => ({
+        is: () => {
+          throw new Error("DB down");
+        },
+      }),
+    });
     const { result } = renderHookWithProviders(() => useUnreadCounts());
     await waitFor(() => expect(result.current.error).not.toBeNull());
   });

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { cn } from "@/lib/utils";
 import {
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
+  /* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   ACTIVITY_TYPE_ICONS,
   ACTIVITY_TYPE_LABELS,
   STATUS_LABELS,
@@ -82,6 +82,6 @@ describe("activityConstants", () => {
 
 describe("whatsappExtensionZip constants", () => {
   it("esporta versione richiesta", () => {
-    expect(WHATSAPP_EXTENSION_REQUIRED_VERSION).toBe("5.10.10");
+    expect(WHATSAPP_EXTENSION_REQUIRED_VERSION).toBe("5.10.19");
   });
 });

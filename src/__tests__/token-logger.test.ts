@@ -1,18 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Mock the Deno-style esm.sh import used by the source file
+vi.mock("https://esm.sh/@supabase/supabase-js@2.39.3", () => ({}));
+
 // Import the pure functions from the source
 import {
   formatTokenCount,
   getFunctionDisplayName,
   getMaxTokensForFunction,
-} from "../../../supabase/functions/_shared/tokenLogger";
+} from "../../supabase/functions/_shared/tokenLogger";
 
 // Mock SupabaseClient type for tests
 type MockSupabaseClient = {
   from: (table: string) => {
     select: (fields: string) => {
-      eq: (field: string, value: string) => {
-        eq?: (field: string, value: string) => {
+      eq: (
+        field: string,
+        value: string,
+      ) => {
+        eq?: (
+          field: string,
+          value: string,
+        ) => {
           maybeSingle: () => Promise<{ data: { value: string } | null; error: null | Error }>;
         };
         maybeSingle?: () => Promise<{ data: { value: string } | null; error: null | Error }>;
@@ -77,9 +86,7 @@ describe("tokenLogger", () => {
     });
 
     it("should return mapped name for generate_outreach", () => {
-      expect(getFunctionDisplayName("generate_outreach")).toBe(
-        "Genera Outreach"
-      );
+      expect(getFunctionDisplayName("generate_outreach")).toBe("Genera Outreach");
     });
 
     it("should return mapped name for improve_email", () => {
@@ -115,13 +122,7 @@ describe("tokenLogger", () => {
     });
 
     it("all mapped values should be non-empty strings", () => {
-      const functions = [
-        "generate_email",
-        "generate_outreach",
-        "improve_email",
-        "classify_email",
-        "ai_assistant",
-      ];
+      const functions = ["generate_email", "generate_outreach", "improve_email", "classify_email", "ai_assistant"];
       functions.forEach((fn) => {
         const display = getFunctionDisplayName(fn);
         expect(display).toBeTruthy();
@@ -131,15 +132,14 @@ describe("tokenLogger", () => {
   });
 
   describe("getMaxTokensForFunction", () => {
-    let mockSupabase: MockSupabaseClient;
+    let _mockSupabase: MockSupabaseClient;
 
     beforeEach(() => {
-      // Create a mock Supabase client
-      mockSupabase = {
-        from: vi.fn((table: string) => ({
+      _mockSupabase = {
+        from: vi.fn((_table: string) => ({
           select: vi.fn(() => ({
-            eq: vi.fn((field: string, value: string) => ({
-              eq: vi.fn((field: string, value: string) => ({
+            eq: vi.fn((_field: string, _value: string) => ({
+              eq: vi.fn((_field: string, _value: string) => ({
                 maybeSingle: vi.fn(),
               })),
               maybeSingle: vi.fn(),
@@ -149,190 +149,120 @@ describe("tokenLogger", () => {
       } as unknown as MockSupabaseClient;
     });
 
-    it("should return default value when no setting is found", async () => {
-      const mockChain = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+    /** Build a mock supabase that chains: from().select().eq().eq().maybeSingle() */
+    function buildMockSupabase(maybeSingleResult: unknown) {
+      const mockMaybeSingle = vi.fn().mockResolvedValue(maybeSingleResult);
+      const mockEq2 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
       const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
+      return { from: mockFrom } as unknown as MockSupabaseClient;
+    }
 
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+    it("should return default value when no setting is found", async () => {
+      const supabase = buildMockSupabase({ data: null, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase,
+        supabase as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(result).toBe(4096);
     });
 
     it("should return setting value when found", async () => {
-      const mockChain = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { value: "2048" },
-          error: null,
-        }),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+      const supabase = buildMockSupabase({ data: { value: "2048" }, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase,
+        supabase as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(result).toBe(2048);
     });
 
     it("should return default value when setting value is invalid", async () => {
-      const mockChain = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { value: "not-a-number" },
-          error: null,
-        }),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+      const supabase = buildMockSupabase({ data: { value: "not-a-number" }, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase,
+        supabase as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(result).toBe(4096);
     });
 
     it("should return default value when setting value is zero or negative", async () => {
-      const mockChainZero = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { value: "0" },
-          error: null,
-        }),
-      };
-
-      const mockEqZero = vi.fn().mockReturnValue(mockChainZero);
-      const mockSelectZero = vi.fn().mockReturnValue({ eq: mockEqZero });
-      const mockFromZero = vi.fn().mockReturnValue({ select: mockSelectZero });
-
-      const supabaseZero = { from: mockFromZero } as unknown as MockSupabaseClient;
+      const supabaseZero = buildMockSupabase({ data: { value: "0" }, error: null });
 
       const resultZero = await getMaxTokensForFunction(
-        supabaseZero,
+        supabaseZero as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(resultZero).toBe(4096);
 
       // Test negative
-      const mockChainNeg = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { value: "-100" },
-          error: null,
-        }),
-      };
-
-      const mockEqNeg = vi.fn().mockReturnValue(mockChainNeg);
-      const mockSelectNeg = vi.fn().mockReturnValue({ eq: mockEqNeg });
-      const mockFromNeg = vi.fn().mockReturnValue({ select: mockSelectNeg });
-
-      const supabaseNeg = { from: mockFromNeg } as unknown as MockSupabaseClient;
+      const supabaseNeg = buildMockSupabase({ data: { value: "-100" }, error: null });
 
       const resultNeg = await getMaxTokensForFunction(
-        supabaseNeg,
+        supabaseNeg as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(resultNeg).toBe(4096);
     });
 
     it("should handle query errors gracefully", async () => {
-      const mockChain = {
-        maybeSingle: vi
-          .fn()
-          .mockResolvedValue({ data: null, error: new Error("Query failed") }),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+      const supabase = buildMockSupabase({ data: null, error: new Error("Query failed") });
 
       const result = await getMaxTokensForFunction(
-        supabase,
+        supabase as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(result).toBe(4096);
     });
 
     it("should handle promise rejections gracefully", async () => {
-      const mockChain = {
-        maybeSingle: vi
-          .fn()
-          .mockRejectedValue(new Error("Network error")),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+      // Build a mock where maybeSingle rejects
+      const mockMaybeSingle = vi.fn().mockRejectedValue(new Error("Network error"));
+      const mockEq2 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
       const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
       const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
 
       const result = await getMaxTokensForFunction(
-        supabase,
+        supabase as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(result).toBe(4096);
     });
 
     it("should return number type always", async () => {
-      const mockChain = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { value: "8192" },
-          error: null,
-        }),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+      const supabase = buildMockSupabase({ data: { value: "8192" }, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase,
+        supabase as unknown,
         "user-123",
         "ai_max_tokens_generate_email",
-        4096
+        4096,
       );
 
       expect(typeof result).toBe("number");
@@ -340,18 +270,7 @@ describe("tokenLogger", () => {
     });
 
     it("should work with different setting keys", async () => {
-      const mockChain = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { value: "1024" },
-          error: null,
-        }),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+      const supabase = buildMockSupabase({ data: { value: "1024" }, error: null });
 
       const keys = [
         "ai_max_tokens_generate_email",
@@ -362,38 +281,22 @@ describe("tokenLogger", () => {
       ];
 
       for (const key of keys) {
-        const result = await getMaxTokensForFunction(
-          supabase,
-          "user-123",
-          key,
-          4096
-        );
+        const result = await getMaxTokensForFunction(supabase as unknown, "user-123", key, 4096);
         expect(result).toBe(1024);
       }
     });
 
     it("should work with different default values", async () => {
-      const mockChain = {
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      };
-
-      const mockEq = vi.fn().mockReturnValue(mockChain);
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+      const supabase = buildMockSupabase({ data: null, error: null });
 
       const defaults = [512, 1024, 2048, 4096, 8192];
 
       for (const defaultVal of defaults) {
         const result = await getMaxTokensForFunction(
-          supabase,
+          supabase as unknown,
           "user-123",
           "ai_max_tokens_generate_email",
-          defaultVal
+          defaultVal,
         );
         expect(result).toBe(defaultVal);
       }
@@ -409,24 +312,13 @@ describe("tokenLogger", () => {
       ];
 
       for (const testCase of testCases) {
-        const mockChain = {
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: { value: testCase.value },
-            error: null,
-          }),
-        };
-
-        const mockEq = vi.fn().mockReturnValue(mockChain);
-        const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-        const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-        const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+        const supabase = buildMockSupabase({ data: { value: testCase.value }, error: null });
 
         const result = await getMaxTokensForFunction(
-          supabase,
+          supabase as unknown,
           "user-123",
           "ai_max_tokens_generate_email",
-          4096
+          4096,
         );
 
         expect(result).toBe(testCase.expected);

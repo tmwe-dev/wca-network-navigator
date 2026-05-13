@@ -1,37 +1,76 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-const mockSelect = vi.fn();
-const mockUpdate = vi.fn();
-const mockEq = vi.fn();
-const mockOrder1 = vi.fn();
-const mockOrder2 = vi.fn();
-const mockLimit = vi.fn();
+import { describe, it, expect, vi } from "vitest";
+
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
-vi.mock("@/data/partnerBusy", () => ({ emitBusyPartnersChanged: vi.fn() }));
-import { findPendingOutreachItems, updateOutreachItem } from "@/data/outreachQueue";
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+}));
+vi.mock("@/v2/hooks/useBusyPartners", () => ({
+  emitBusyPartnersChanged: vi.fn(),
+}));
+
+import { findPendingOutreachItems, updateOutreachItem, getOutreachItemField } from "@/data/outreachQueue";
+
+function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
+  const c: Record<string, unknown> = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.eq = vi.fn().mockReturnValue(c);
+  c.order = vi.fn().mockReturnValue(c);
+  c.limit = vi.fn().mockReturnValue(c);
+  c.update = vi.fn().mockReturnValue(c);
+  c.single = vi.fn().mockResolvedValue(terminal);
+  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  return c;
+}
+
 describe("DAL — outreachQueue", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // findPendingOutreachItems: select→eq("status","pending")→order→order→limit
-    mockLimit.mockResolvedValue({ data: [], error: null });
-    mockOrder2.mockReturnValue({ limit: mockLimit });
-    mockOrder1.mockReturnValue({ order: mockOrder2 });
-    mockEq.mockReturnValue({ order: mockOrder1 });
-    mockSelect.mockReturnValue({ eq: mockEq });
-    mockFrom.mockReturnValue({ select: mockSelect, update: mockUpdate });
-    mockUpdate.mockReturnValue({ eq: mockEq });
-    mockEq.mockResolvedValue({ error: null });
+  describe("findPendingOutreachItems", () => {
+    it("returns pending items", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "o1" }], error: null }));
+      const result = await findPendingOutreachItems(5);
+      expect(mockFrom).toHaveBeenCalledWith("outreach_queue");
+      expect(result).toHaveLength(1);
+    });
+
+    it("returns empty when none", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: null }));
+      const result = await findPendingOutreachItems();
+      expect(result).toEqual([]);
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: { message: "fail" } }));
+      await expect(findPendingOutreachItems()).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("finds pending items", async () => {
-    mockLimit.mockResolvedValue({ data: [{ id: "o1" }], error: null });
-    const r = await findPendingOutreachItems(5);
-    expect(r).toHaveLength(1);
+
+  describe("updateOutreachItem", () => {
+    it("updates an item", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await updateOutreachItem("o1", { status: "sent" });
+      expect(mockFrom).toHaveBeenCalledWith("outreach_queue");
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ error: { message: "fail" } }));
+      await expect(updateOutreachItem("o1", {})).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("returns empty when none", async () => {
-    const r = await findPendingOutreachItems();
-    expect(r).toEqual([]);
-  });
-  it("updates an item", async () => {
-    await expect(updateOutreachItem("o1", { status: "sent" })).resolves.not.toThrow();
+
+  describe("getOutreachItemField", () => {
+    it("returns field value", async () => {
+      const c = chain();
+      (c.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { subject: "Test" }, error: null });
+      mockFrom.mockReturnValue(c);
+      const result = await getOutreachItemField("o1", "subject");
+      expect(result).toEqual({ subject: "Test" });
+    });
+
+    it("throws on error", async () => {
+      const c = chain();
+      (c.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: { message: "fail" } });
+      mockFrom.mockReturnValue(c);
+      await expect(getOutreachItemField("o1", "subject")).rejects.toEqual({ message: "fail" });
+    });
   });
 });

@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockInsertPageEvent = vi.fn().mockResolvedValue(undefined);
-const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
+const mockGetSession = vi.fn().mockResolvedValue({
+  data: { session: { user: { id: "user-123" } } },
+  error: null,
+});
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getUser: () => mockGetUser() },
+    auth: { getSession: () => mockGetSession() },
   },
 }));
 
@@ -15,11 +18,21 @@ vi.mock("@/data/telemetry", () => ({
 
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({
-    debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   }),
 }));
 
-import { trackPage, trackEvent, trackEntityOpen, trackAction, withTelemetry, resetTelemetryUser } from "@/lib/telemetry";
+import {
+  trackPage,
+  trackEvent,
+  trackEntityOpen,
+  trackAction,
+  withTelemetry,
+  resetTelemetryUser,
+} from "@/lib/telemetry";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -87,7 +100,9 @@ describe("withTelemetry", () => {
 
   it("tracks failed async function and re-throws", async () => {
     await expect(
-      withTelemetry("failOp", async () => { throw new Error("boom"); })
+      withTelemetry("failOp", async () => {
+        throw new Error("boom");
+      }),
     ).rejects.toThrow("boom");
     await vi.waitFor(() => expect(mockInsertPageEvent).toHaveBeenCalled());
     const p = mockInsertPageEvent.mock.calls[0][0];

@@ -64,10 +64,19 @@ describe("invokeEdge", () => {
     [500, "SERVER_ERROR"],
     [503, "SERVER_ERROR"],
   ] as const)("mappa status %i → %s", async (status, expectedCode) => {
-    invokeMock.mockResolvedValueOnce({
+    // 503 triggers retry logic (up to 2 retries = 3 total attempts), so mock all 3
+    const errorPayload = {
       data: null,
       error: { message: "boom", context: { status }, name: "FunctionsHttpError" },
-    });
+    };
+    if (status === 503) {
+      invokeMock
+        .mockResolvedValueOnce(errorPayload)
+        .mockResolvedValueOnce(errorPayload)
+        .mockResolvedValueOnce(errorPayload);
+    } else {
+      invokeMock.mockResolvedValueOnce(errorPayload);
+    }
     try {
       await invokeEdge("my-fn", { context: "ctxB" });
       throw new Error("expected throw");
@@ -107,10 +116,10 @@ describe("invokeEdge", () => {
   });
 
   it("estrae body strutturato dal Response del FunctionsHttpError", async () => {
-    const fakeResponse = new Response(
-      JSON.stringify({ error: "no_email", partner_name: "Acme Srl" }),
-      { status: 422, headers: { "Content-Type": "application/json" } }
-    );
+    const fakeResponse = new Response(JSON.stringify({ error: "no_email", partner_name: "Acme Srl" }), {
+      status: 422,
+      headers: { "Content-Type": "application/json" },
+    });
     invokeMock.mockResolvedValueOnce({
       data: null,
       error: { message: "boom", context: fakeResponse, name: "FunctionsHttpError" },

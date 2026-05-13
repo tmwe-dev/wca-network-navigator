@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 
 // Helper to get all query keys from queryKeys object
-function getAllQueryKeys(obj: Record<string, unknown>, path: string[] = []): string[][] {
+function _getAllQueryKeys(obj: Record<string, unknown>, path: string[] = []): string[][] {
   const keys: string[][] = [];
 
   for (const [key, value] of Object.entries(obj)) {
@@ -15,10 +15,7 @@ function getAllQueryKeys(obj: Record<string, unknown>, path: string[] = []): str
     if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
       // This is a query key array
       keys.push(value as string[]);
-    } else if (
-      typeof value === "function" ||
-      (typeof value === "object" && value !== null && !Array.isArray(value))
-    ) {
+    } else if (typeof value === "function" || (typeof value === "object" && value !== null && !Array.isArray(value))) {
       // Recurse into nested objects
       if (typeof value === "object" && !Array.isArray(value)) {
         keys.push(...getAllQueryKeys(value as Record<string, unknown>, currentPath));
@@ -141,12 +138,7 @@ describe("Query Keys Integrity", () => {
 
   describe("No Query Key Collisions", () => {
     it("should have unique query keys across modules", () => {
-      const dealsKeys = [
-        "deals-list",
-        "deals",
-        "deals-by-stage",
-        "deal-stats",
-      ];
+      const dealsKeys = ["deals-list", "deals", "deals-by-stage", "deal-stats"];
       const notificationKeys = ["notifications", "notifications-unread-count"];
       const combined = [...dealsKeys, ...notificationKeys];
 
@@ -180,7 +172,7 @@ describe("Query Keys Integrity", () => {
 
     it("should not collide between all() and specific getters", () => {
       const partnersAll = testQueryKeys.partners.all;
-      const partnersFiltered = testQueryKeys.partners.filtered()[0];
+      const partnersFiltered = testQueryKeys.partners.filtered();
 
       expect(partnersAll[0]).toBe("partners");
       expect(partnersFiltered[0]).toBe("partners");
@@ -190,11 +182,7 @@ describe("Query Keys Integrity", () => {
 
     it("should use consistent naming conventions", () => {
       // Check all keys follow pattern
-      const keys = [
-        testQueryKeys.dealsList[0],
-        testQueryKeys.calendar[0],
-        testQueryKeys.notifications.unreadCount[0],
-      ];
+      const keys = [testQueryKeys.dealsList[0], testQueryKeys.calendar[0], testQueryKeys.notifications.unreadCount[0]];
 
       for (const key of keys) {
         expect(typeof key).toBe("string");
@@ -256,9 +244,7 @@ describe("Query Keys Integrity", () => {
     });
 
     it("should not conflict with notification keys", () => {
-      expect(testQueryKeys.calendar[0]).not.toBe(
-        testQueryKeys.notifications.unreadCount[0]
-      );
+      expect(testQueryKeys.calendar[0]).not.toBe(testQueryKeys.notifications.unreadCount[0]);
     });
   });
 
@@ -484,17 +470,14 @@ describe("Query Keys Integrity", () => {
       ];
 
       for (const key of sampleKeys) {
-        expect(key).toMatch(/^[a-z\-]+$/); // Lowercase and hyphens only
+        expect(key).toMatch(/^[a-z-]+$/); // Lowercase and hyphens only
       }
     });
 
     it("should support hierarchical query invalidation", () => {
       // Parent key should match child keys
       const parent = "deals";
-      const childKeys = [
-        testQueryKeys.deals.all[0],
-        testQueryKeys.deals.byStage[0],
-      ];
+      const childKeys = [testQueryKeys.deals.all[0], testQueryKeys.deals.byStage[0]];
 
       expect(childKeys[0]).toContain(parent);
       expect(childKeys[1]).toContain(parent);

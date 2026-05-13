@@ -1,4 +1,26 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// ─── Mock fns ──────────────────────────────────────────
+const _mockSelect = vi.fn();
+const _mockInsert = vi.fn();
+const _mockUpdate = vi.fn();
+const _mockDelete = vi.fn();
+const _mockUpsert = vi.fn();
+const _mockEq = vi.fn();
+const _mockLt = vi.fn();
+const _mockOrder = vi.fn();
+const _mockRange = vi.fn();
+const _mockSingle = vi.fn();
+const mockFrom = vi.fn();
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+}));
+
+vi.mock("@/lib/log", () => ({
+  createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+}));
+
 import {
   listNotifications,
   getUnreadCount,
@@ -11,29 +33,10 @@ import {
   getPushSubscriptions,
   deletePushSubscription,
   type Notification,
-  type NotificationFilters,
+  type NotificationFilters as _NotificationFilters,
 } from "@/data/notifications";
 
-// Mock supabase client
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      upsert: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      range: vi.fn().mockReturnThis(),
-      single: vi.fn(),
-      maybeSingle: vi.fn(),
-    })),
-  },
-}));
-
-import { supabase } from "@/integrations/supabase/client";
+// ─── Fixtures ──────────────────────────────────────────
 
 const mockNotification: Notification = {
   id: "notif-1",
@@ -60,152 +63,100 @@ const mockNotification2: Notification = {
   read: true,
 };
 
+// ─── Helpers ───────────────────────────────────────────
+
+/**
+ * Build a full chainable query object.
+ * Every method returns the same object so .select().eq().order().range() etc. all work.
+ * The `terminal` value is the promise-resolved result at the end of the chain.
+ */
+function buildChain(terminal: unknown) {
+  const chain: Record<string, unknown> = {};
+  const self = () => chain;
+  chain.select = vi.fn().mockImplementation(self);
+  chain.insert = vi.fn().mockImplementation(self);
+  chain.update = vi.fn().mockImplementation(self);
+  chain.delete = vi.fn().mockImplementation(self);
+  chain.upsert = vi.fn().mockImplementation(self);
+  chain.eq = vi.fn().mockImplementation(self);
+  chain.lt = vi.fn().mockImplementation(self);
+  chain.order = vi.fn().mockImplementation(self);
+  chain.range = vi.fn().mockImplementation(self);
+  chain.single = vi.fn().mockResolvedValue(terminal);
+  // Make the chain itself thenable so `await query` works on intermediate steps
+  chain.then = (resolve: unknown, reject: unknown) => Promise.resolve(terminal).then(resolve, reject);
+  return chain;
+}
+
+// ─── Tests ─────────────────────────────────────────────
+
 describe("Notifications Data Layer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  // ── listNotifications ──────────────────────────────
+
   describe("listNotifications", () => {
     it("should fetch notifications with default filters", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockEqFn.order).mockReturnValueOnce({
-        range: vi.fn().mockResolvedValueOnce({
-          data: [mockNotification, mockNotification2],
-          error: null,
-        }),
-      } as any);
+      const chain = buildChain({ data: [mockNotification, mockNotification2], error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await listNotifications("user-1");
 
       expect(result).toEqual([mockNotification, mockNotification2]);
-      expect(supabase.from).toHaveBeenCalledWith("notifications");
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(chain.select).toHaveBeenCalledWith("*");
+      expect(chain.eq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(chain.order).toHaveBeenCalledWith("created_at", { ascending: false });
+      expect(chain.range).toHaveBeenCalledWith(0, 19);
     });
 
     it("should apply unreadOnly filter", async () => {
-      const filters: NotificationFilters = { unreadOnly: true };
-      const eqCalls: any[] = [];
+      const chain = buildChain({ data: [mockNotification], error: null });
+      mockFrom.mockReturnValue(chain);
 
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+      const result = await listNotifications("user-1", { unreadOnly: true });
 
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("*");
-      vi.mocked(mockSelectFn.eq).mockImplementation((key, value) => {
-        eqCalls.push({ key, value });
-        return {
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          range: vi
-            .fn()
-            .mockResolvedValueOnce({ data: [mockNotification], error: null }),
-        } as any;
-      });
-
-      await listNotifications("user-1", filters);
-
-      expect(eqCalls.some((call) => call.key === "read" && call.value === false)).toBe(
-        true
-      );
+      expect(result).toEqual([mockNotification]);
+      // eq should be called for user_id AND read=false
+      const eqCalls = chain.eq.mock.calls;
+      expect(eqCalls).toContainEqual(["user_id", "user-1"]);
+      expect(eqCalls).toContainEqual(["read", false]);
     });
 
     it("should filter by notification type", async () => {
-      const filters: NotificationFilters = { type: "deal_stage_change" };
-      const eqCalls: any[] = [];
+      const chain = buildChain({ data: [mockNotification], error: null });
+      mockFrom.mockReturnValue(chain);
 
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+      await listNotifications("user-1", { type: "deal_stage_change" });
 
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("*");
-      vi.mocked(mockSelectFn.eq).mockImplementation((key, value) => {
-        eqCalls.push({ key, value });
-        return {
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          range: vi
-            .fn()
-            .mockResolvedValueOnce({ data: [mockNotification], error: null }),
-        } as any;
-      });
-
-      await listNotifications("user-1", filters);
-
-      expect(eqCalls.some((call) => call.key === "type")).toBe(true);
+      const eqCalls = chain.eq.mock.calls;
+      expect(eqCalls).toContainEqual(["type", "deal_stage_change"]);
     });
 
     it("should filter by priority", async () => {
-      const filters: NotificationFilters = { priority: "urgent" };
-      const eqCalls: any[] = [];
+      const chain = buildChain({ data: [], error: null });
+      mockFrom.mockReturnValue(chain);
 
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+      await listNotifications("user-1", { priority: "urgent" });
 
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("*");
-      vi.mocked(mockSelectFn.eq).mockImplementation((key, value) => {
-        eqCalls.push({ key, value });
-        return {
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          range: vi.fn().mockResolvedValueOnce({ data: [], error: null }),
-        } as any;
-      });
-
-      await listNotifications("user-1", filters);
-
-      expect(eqCalls.some((call) => call.key === "priority")).toBe(true);
+      const eqCalls = chain.eq.mock.calls;
+      expect(eqCalls).toContainEqual(["priority", "urgent"]);
     });
 
     it("should apply pagination with limit and offset", async () => {
-      const filters: NotificationFilters = { limit: 10, offset: 20 };
+      const chain = buildChain({ data: [], error: null });
+      mockFrom.mockReturnValue(chain);
 
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+      await listNotifications("user-1", { limit: 10, offset: 20 });
 
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      const mockRangeFn = vi.fn().mockResolvedValueOnce({
-        data: [],
-        error: null,
-      });
-      vi.mocked(mockEqFn.order).mockReturnValueOnce({
-        range: mockRangeFn,
-      } as any);
-
-      await listNotifications("user-1", filters);
-
-      expect(mockRangeFn).toHaveBeenCalledWith(20, 29);
+      expect(chain.range).toHaveBeenCalledWith(20, 29);
     });
 
     it("should handle errors gracefully and return empty array", async () => {
-      const mockError = new Error("Query failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockEqFn.order).mockReturnValueOnce({
-        range: vi.fn().mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ data: null, error: { message: "Query failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await listNotifications("user-1");
 
@@ -213,48 +164,26 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── getUnreadCount ─────────────────────────────────
+
   describe("getUnreadCount", () => {
     it("should return count of unread and undismissed notifications", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("id", {
-        count: "exact",
-        head: true,
-      });
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockResolvedValueOnce({ count: 5, error: null }),
-      } as any);
+      const chain = buildChain({ count: 5, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await getUnreadCount("user-1");
 
       expect(result).toBe(5);
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(chain.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+      expect(chain.eq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(chain.eq).toHaveBeenCalledWith("read", false);
+      expect(chain.eq).toHaveBeenCalledWith("dismissed", false);
     });
 
     it("should return 0 on error", async () => {
-      const mockError = new Error("Count query failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("id", {
-        count: "exact",
-        head: true,
-      });
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockResolvedValueOnce({ count: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ count: null, error: { message: "Count query failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await getUnreadCount("user-1");
 
@@ -262,22 +191,8 @@ describe("Notifications Data Layer", () => {
     });
 
     it("should return 0 when count is null", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("notifications").select("id", {
-        count: "exact",
-        head: true,
-      });
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockResolvedValueOnce({ count: null, error: null }),
-      } as any);
+      const chain = buildChain({ count: null, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await getUnreadCount("user-1");
 
@@ -285,47 +200,28 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── markAsRead ─────────────────────────────────────
+
   describe("markAsRead", () => {
     it("should mark notification as read", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("notifications").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockUpdateFn.eq)("id", "notif-1");
-      vi.mocked(mockEqFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({
-          data: { ...mockNotification, read: true },
-          error: null,
-        }),
-      } as any);
+      const readNotif = { ...mockNotification, read: true };
+      const chain = buildChain({ data: readNotif, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await markAsRead("notif-1");
 
+      expect(result).toEqual(readNotif);
       expect(result?.read).toBe(true);
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(chain.update).toHaveBeenCalledWith({ read: true });
+      expect(chain.eq).toHaveBeenCalledWith("id", "notif-1");
+      expect(chain.select).toHaveBeenCalled();
+      expect(chain.single).toHaveBeenCalled();
     });
 
     it("should return null on error", async () => {
-      const mockError = new Error("Update failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("notifications").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockUpdateFn.eq)("id", "notif-1");
-      vi.mocked(mockEqFn.select).mockReturnValueOnce({
-        single: vi
-          .fn()
-          .mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ data: null, error: { message: "Update failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await markAsRead("notif-1");
 
@@ -333,32 +229,25 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── markAllAsRead ──────────────────────────────────
+
   describe("markAllAsRead", () => {
     it("should mark all notifications as read for user", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("notifications").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockResolvedValueOnce({ count: 3, error: null }),
-      } as any);
+      const chain = buildChain({ error: null, count: 3 });
+      mockFrom.mockReturnValue(chain);
 
       const result = await markAllAsRead("user-1");
 
       expect(result).toBe(3);
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(chain.update).toHaveBeenCalledWith({ read: true });
+      expect(chain.eq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(chain.eq).toHaveBeenCalledWith("read", false);
     });
 
     it("should return 0 on error", async () => {
-      const mockError = new Error("Batch update failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("notifications").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockResolvedValueOnce({ count: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ count: null, error: { message: "Batch update failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await markAllAsRead("user-1");
 
@@ -366,47 +255,26 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── dismissNotification ────────────────────────────
+
   describe("dismissNotification", () => {
     it("should dismiss notification", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("notifications").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockUpdateFn.eq)("id", "notif-1");
-      vi.mocked(mockEqFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({
-          data: { ...mockNotification, dismissed: true },
-          error: null,
-        }),
-      } as any);
+      const dismissed = { ...mockNotification, dismissed: true };
+      const chain = buildChain({ data: dismissed, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await dismissNotification("notif-1");
 
+      expect(result).toEqual(dismissed);
       expect(result?.dismissed).toBe(true);
+      expect(chain.update).toHaveBeenCalledWith({ dismissed: true });
+      expect(chain.eq).toHaveBeenCalledWith("id", "notif-1");
+      expect(chain.single).toHaveBeenCalled();
     });
 
     it("should return null on error", async () => {
-      const mockError = new Error("Dismiss failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("notifications").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockUpdateFn.eq)("id", "notif-1");
-      vi.mocked(mockEqFn.select).mockReturnValueOnce({
-        single: vi
-          .fn()
-          .mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ data: null, error: { message: "Dismiss failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await dismissNotification("notif-1");
 
@@ -414,16 +282,12 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── createNotification ─────────────────────────────
+
   describe("createNotification", () => {
     it("should create notification with required fields", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        insert: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockInsertFn = vi.mocked(supabase.from)("notifications").insert([]);
-      vi.mocked(mockInsertFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: mockNotification, error: null }),
-      } as any);
+      const chain = buildChain({ data: mockNotification, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await createNotification("user-1", {
         title: "New Deal Update",
@@ -431,47 +295,28 @@ describe("Notifications Data Layer", () => {
       });
 
       expect(result).toEqual(mockNotification);
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(chain.insert).toHaveBeenCalled();
+      expect(chain.select).toHaveBeenCalled();
+      expect(chain.single).toHaveBeenCalled();
     });
 
     it("should set default priority to normal if not provided", async () => {
-      const insertCapture: any[] = [];
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        insert: vi.fn((data) => {
-          insertCapture.push(data);
-          return {
-            select: vi.fn().mockReturnThis(),
-          };
-        }),
-      } as any);
-
-      const mockInsertFn = vi.mocked(supabase.from)("notifications").insert([]);
-      vi.mocked(mockInsertFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: mockNotification, error: null }),
-      } as any);
+      const chain = buildChain({ data: mockNotification, error: null });
+      mockFrom.mockReturnValue(chain);
 
       await createNotification("user-1", {
         title: "Test",
         type: "reminder",
       });
 
-      expect(insertCapture[0][0].priority).toBe("normal");
+      const insertArg = chain.insert.mock.calls[0][0];
+      expect(insertArg[0].priority).toBe("normal");
     });
 
     it("should include provided optional fields", async () => {
-      const insertCapture: any[] = [];
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        insert: vi.fn((data) => {
-          insertCapture.push(data);
-          return {
-            select: vi.fn().mockReturnThis(),
-          };
-        }),
-      } as any);
-
-      const mockInsertFn = vi.mocked(supabase.from)("notifications").insert([]);
-      vi.mocked(mockInsertFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: mockNotification, error: null }),
-      } as any);
+      const chain = buildChain({ data: mockNotification, error: null });
+      mockFrom.mockReturnValue(chain);
 
       await createNotification("user-1", {
         title: "Test",
@@ -484,22 +329,18 @@ describe("Notifications Data Layer", () => {
         metadata: { stage: "closed" },
       });
 
-      expect(insertCapture[0][0].body).toBe("Test body");
-      expect(insertCapture[0][0].action_url).toBe("/deals/1");
+      const insertArg = chain.insert.mock.calls[0][0];
+      expect(insertArg[0].body).toBe("Test body");
+      expect(insertArg[0].action_url).toBe("/deals/1");
+      expect(insertArg[0].entity_type).toBe("deal");
+      expect(insertArg[0].entity_id).toBe("deal-1");
+      expect(insertArg[0].metadata).toEqual({ stage: "closed" });
+      expect(insertArg[0].priority).toBe("urgent");
     });
 
     it("should return null on error", async () => {
-      const mockError = new Error("Insert failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        insert: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockInsertFn = vi.mocked(supabase.from)("notifications").insert([]);
-      vi.mocked(mockInsertFn.select).mockReturnValueOnce({
-        single: vi
-          .fn()
-          .mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ data: null, error: { message: "Insert failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await createNotification("user-1", {
         title: "Test",
@@ -510,65 +351,40 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── deleteOldNotifications ─────────────────────────
+
   describe("deleteOldNotifications", () => {
     it("should delete old dismissed notifications", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockDeleteFn = vi.mocked(supabase.from)("notifications").delete();
-      vi.mocked(mockDeleteFn.eq).mockReturnValueOnce({
-        lt: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockDeleteFn.eq)("user_id", "user-1");
-      vi.mocked(mockEqFn.lt).mockReturnValueOnce({
-        eq: vi.fn().mockResolvedValueOnce({ count: 2, error: null }),
-      } as any);
+      const chain = buildChain({ count: 2, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await deleteOldNotifications("user-1", 30);
 
       expect(result).toBe(2);
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(chain.delete).toHaveBeenCalled();
+      expect(chain.eq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(chain.eq).toHaveBeenCalledWith("dismissed", true);
+      expect(chain.lt).toHaveBeenCalled();
     });
 
     it("should use default days value of 30", async () => {
-      const ltCalls: any[] = [];
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockDeleteFn = vi.mocked(supabase.from)("notifications").delete();
-      vi.mocked(mockDeleteFn.eq).mockReturnValueOnce({
-        lt: vi.fn((key, date) => {
-          ltCalls.push({ key, date });
-          return {
-            eq: vi.fn().mockResolvedValueOnce({ count: 0, error: null }),
-          };
-        }),
-      } as any);
+      const chain = buildChain({ count: 0, error: null });
+      mockFrom.mockReturnValue(chain);
 
       await deleteOldNotifications("user-1");
 
-      expect(ltCalls.length).toBeGreaterThan(0);
+      // lt should have been called with created_at and a date string
+      expect(chain.lt).toHaveBeenCalled();
+      const ltCall = chain.lt.mock.calls[0];
+      expect(ltCall[0]).toBe("created_at");
+      // The date should be approximately 30 days ago (ISO string)
+      expect(typeof ltCall[1]).toBe("string");
     });
 
     it("should return 0 on error", async () => {
-      const mockError = new Error("Delete failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockDeleteFn = vi.mocked(supabase.from)("notifications").delete();
-      vi.mocked(mockDeleteFn.eq).mockReturnValueOnce({
-        lt: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockDeleteFn.eq)("user_id", "user-1");
-      vi.mocked(mockEqFn.lt).mockReturnValueOnce({
-        eq: vi
-          .fn()
-          .mockResolvedValueOnce({ count: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ count: null, error: { message: "Delete failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await deleteOldNotifications("user-1", 30);
 
@@ -576,85 +392,51 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── savePushSubscription ───────────────────────────
+
   describe("savePushSubscription", () => {
+    const mockSubscription = {
+      endpoint: "https://example.com/push",
+      keys: {
+        p256dh: "test-p256dh",
+        auth: "test-auth",
+      },
+    };
+
     it("should save push subscription", async () => {
-      const mockSubscription = {
-        endpoint: "https://example.com/push",
-        keys: {
-          p256dh: "test-p256dh",
-          auth: "test-auth",
-        },
+      const savedSub = {
+        id: "sub-1",
+        user_id: "user-1",
+        endpoint: mockSubscription.endpoint,
+        p256dh: mockSubscription.keys.p256dh,
+        auth_key: mockSubscription.keys.auth,
+        created_at: "2024-01-15T10:00:00Z",
       };
-
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        upsert: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpsertFn = vi.mocked(supabase.from)("push_subscriptions").upsert([]);
-      vi.mocked(mockUpsertFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({
-          data: {
-            id: "sub-1",
-            user_id: "user-1",
-            endpoint: mockSubscription.endpoint,
-            p256dh: mockSubscription.keys.p256dh,
-            auth_key: mockSubscription.keys.auth,
-          },
-          error: null,
-        }),
-      } as any);
+      const chain = buildChain({ data: savedSub, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await savePushSubscription("user-1", mockSubscription);
 
       expect(result?.endpoint).toBe(mockSubscription.endpoint);
+      expect(mockFrom).toHaveBeenCalledWith("push_subscriptions");
+      expect(chain.upsert).toHaveBeenCalled();
+      expect(chain.select).toHaveBeenCalled();
+      expect(chain.single).toHaveBeenCalled();
     });
 
     it("should include user agent if provided", async () => {
-      const insertCapture: any[] = [];
-      const mockSubscription = {
-        endpoint: "https://example.com/push",
-        keys: { p256dh: "test", auth: "test" },
-      };
-
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        upsert: vi.fn((data) => {
-          insertCapture.push(data);
-          return {
-            select: vi.fn().mockReturnThis(),
-          };
-        }),
-      } as any);
-
-      const mockUpsertFn = vi.mocked(supabase.from)("push_subscriptions").upsert([]);
-      vi.mocked(mockUpsertFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({
-          data: { id: "sub-1", user_id: "user-1" },
-          error: null,
-        }),
-      } as any);
+      const chain = buildChain({ data: { id: "sub-1", user_id: "user-1" }, error: null });
+      mockFrom.mockReturnValue(chain);
 
       await savePushSubscription("user-1", mockSubscription, "Mozilla/5.0");
 
-      expect(insertCapture[0][0].user_agent).toBe("Mozilla/5.0");
+      const upsertArg = chain.upsert.mock.calls[0][0];
+      expect(upsertArg[0].user_agent).toBe("Mozilla/5.0");
     });
 
     it("should return null on error", async () => {
-      const mockError = new Error("Upsert failed");
-      const mockSubscription = {
-        endpoint: "https://example.com/push",
-        keys: { p256dh: "test", auth: "test" },
-      };
-
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        upsert: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpsertFn = vi.mocked(supabase.from)("push_subscriptions").upsert([]);
-      vi.mocked(mockUpsertFn.select).mockReturnValueOnce({
-        single: vi
-          .fn()
-          .mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
+      const chain = buildChain({ data: null, error: { message: "Upsert failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await savePushSubscription("user-1", mockSubscription);
 
@@ -662,43 +444,35 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── getPushSubscriptions ───────────────────────────
+
   describe("getPushSubscriptions", () => {
     it("should fetch push subscriptions for user", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("push_subscriptions").select("*");
-      vi.mocked(mockSelectFn.eq).mockResolvedValueOnce({
-        data: [
-          {
-            id: "sub-1",
-            user_id: "user-1",
-            endpoint: "https://example.com/push",
-            p256dh: "test",
-            auth_key: "test",
-          },
-        ],
-        error: null,
-      });
+      const subs = [
+        {
+          id: "sub-1",
+          user_id: "user-1",
+          endpoint: "https://example.com/push",
+          p256dh: "test",
+          auth_key: "test",
+          created_at: "2024-01-15T10:00:00Z",
+        },
+      ];
+      const chain = buildChain({ data: subs, error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await getPushSubscriptions("user-1");
 
       expect(result.length).toBe(1);
       expect(result[0].endpoint).toBe("https://example.com/push");
+      expect(mockFrom).toHaveBeenCalledWith("push_subscriptions");
+      expect(chain.select).toHaveBeenCalledWith("*");
+      expect(chain.eq).toHaveBeenCalledWith("user_id", "user-1");
     });
 
     it("should return empty array on error", async () => {
-      const mockError = new Error("Query failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("push_subscriptions").select("*");
-      vi.mocked(mockSelectFn.eq).mockResolvedValueOnce({
-        data: null,
-        error: mockError,
-      });
+      const chain = buildChain({ data: null, error: { message: "Query failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await getPushSubscriptions("user-1");
 
@@ -706,28 +480,24 @@ describe("Notifications Data Layer", () => {
     });
   });
 
+  // ── deletePushSubscription ─────────────────────────
+
   describe("deletePushSubscription", () => {
     it("should delete push subscription by endpoint", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockDeleteFn = vi.mocked(supabase.from)("push_subscriptions").delete();
-      vi.mocked(mockDeleteFn.eq).mockResolvedValueOnce({ error: null });
+      const chain = buildChain({ error: null });
+      mockFrom.mockReturnValue(chain);
 
       const result = await deletePushSubscription("https://example.com/push");
 
       expect(result).toBe(true);
+      expect(mockFrom).toHaveBeenCalledWith("push_subscriptions");
+      expect(chain.delete).toHaveBeenCalled();
+      expect(chain.eq).toHaveBeenCalledWith("endpoint", "https://example.com/push");
     });
 
     it("should return false on error", async () => {
-      const mockError = new Error("Delete failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockDeleteFn = vi.mocked(supabase.from)("push_subscriptions").delete();
-      vi.mocked(mockDeleteFn.eq).mockResolvedValueOnce({ error: mockError });
+      const chain = buildChain({ error: { message: "Delete failed" } });
+      mockFrom.mockReturnValue(chain);
 
       const result = await deletePushSubscription("https://example.com/push");
 

@@ -1,37 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
 const mockSelect = vi.fn();
 const mockEq = vi.fn();
-const mockInsert = vi.fn();
-const mockDelete = vi.fn();
 const mockFrom = vi.fn();
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (...a: unknown[]) => mockFrom(...a) },
 }));
-import { fetchClientAssignments, createClientAssignment, deleteClientAssignment } from "@/data/clientAssignments";
+
+import { findClientAssignmentsByUser } from "@/data/clientAssignments";
 
 describe("DAL — clientAssignments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect, insert: mockInsert, delete: mockDelete });
+    mockFrom.mockReturnValue({ select: mockSelect });
     mockSelect.mockReturnValue({ eq: mockEq });
-    mockEq.mockReturnValue({ eq: mockEq });
-    mockSelect.mockResolvedValue({ data: [], error: null });
-    mockInsert.mockResolvedValue({ error: null });
-    mockDelete.mockReturnValue({ eq: mockEq });
-    mockEq.mockResolvedValue({ error: null });
+    mockEq.mockResolvedValue({ data: [], error: null });
   });
-  it("fetches assignments", async () => {
-    const a = [{ id: "a1", client_id: "c1" }];
-    mockSelect.mockResolvedValue({ data: a, error: null });
-    const result = await fetchClientAssignments();
-    expect(result).toEqual(a);
-  });
-  it("creates assignment", async () => {
-    await createClientAssignment({ client_id: "c1", user_id: "u1" } as never);
-    expect(mockInsert).toHaveBeenCalled();
-  });
-  it("deletes assignment", async () => {
-    await deleteClientAssignment("a1");
-    expect(mockDelete).toHaveBeenCalled();
+
+  describe("findClientAssignmentsByUser", () => {
+    it("returns assignments for user", async () => {
+      const assignments = [{ agent_id: "a1" }];
+      mockEq.mockResolvedValue({ data: assignments, error: null });
+      const result = await findClientAssignmentsByUser("u1");
+      expect(mockFrom).toHaveBeenCalledWith("client_assignments");
+      expect(result).toEqual(assignments);
+    });
+
+    it("returns empty on null data", async () => {
+      mockEq.mockResolvedValue({ data: null, error: null });
+      const result = await findClientAssignmentsByUser("u1");
+      expect(result).toEqual([]);
+    });
+
+    it("throws on error", async () => {
+      mockEq.mockResolvedValue({ data: null, error: { message: "fail" } });
+      await expect(findClientAssignmentsByUser("u1")).rejects.toEqual({ message: "fail" });
+    });
   });
 });

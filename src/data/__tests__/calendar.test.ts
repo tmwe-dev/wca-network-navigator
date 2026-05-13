@@ -1,88 +1,120 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockGte = vi.fn();
-const mockLte = vi.fn();
-const mockOrder = vi.fn();
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
-const mockMaybeSingle = vi.fn();
-const mockUntypedFrom = vi.fn();
+const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: unknown[]) => mockUntypedFrom(...a),
+  untypedFrom: (...a: unknown[]) => mockFrom(...a),
 }));
 vi.mock("@/lib/queryKeys", () => ({
-  queryKeys: { v2: { calendar: { events: ["calendar-events"] } } },
+  queryKeys: { calendar: "calendar" },
 }));
 
-import { fetchCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getCalendarEventById } from "@/data/calendar";
+import {
+  listEvents,
+  getEvent,
+  createEvent,
+  deleteEvent,
+  getUpcomingEvents,
+  getEventsForPartner,
+} from "@/data/calendar";
+
+function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
+  const c: Record<string, unknown> = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.eq = vi.fn().mockReturnValue(c);
+  c.gte = vi.fn().mockReturnValue(c);
+  c.lte = vi.fn().mockReturnValue(c);
+  c.order = vi.fn().mockReturnValue(c);
+  c.limit = vi.fn().mockReturnValue(c);
+  c.single = vi.fn().mockResolvedValue(terminal);
+  c.maybeSingle = vi.fn().mockResolvedValue(terminal);
+  c.insert = vi.fn().mockReturnValue(c);
+  c.update = vi.fn().mockReturnValue(c);
+  c.delete = vi.fn().mockReturnValue(c);
+  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  return c;
+}
 
 describe("DAL — calendar", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUntypedFrom.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      update: mockUpdate,
-      delete: mockDelete,
-    });
-    mockSelect.mockReturnValue({ eq: mockEq, gte: mockGte });
-    mockGte.mockReturnValue({ lte: mockLte });
-    mockLte.mockReturnValue({ order: mockOrder });
-    mockOrder.mockResolvedValue({ data: [], error: null });
-    mockEq.mockReturnValue({ maybeSingle: mockMaybeSingle, eq: mockEq });
-    mockInsert.mockReturnValue({ select: mockSelect });
-    mockUpdate.mockReturnValue({ eq: mockEq });
-    mockDelete.mockReturnValue({ eq: mockEq });
-  });
-
-  describe("fetchCalendarEvents", () => {
+  describe("listEvents", () => {
     it("returns events for date range", async () => {
-      const events = [{ id: "e1", title: "Meeting" }];
-      mockOrder.mockResolvedValue({ data: events, error: null });
-      const result = await fetchCalendarEvents("2026-01-01", "2026-01-31");
-      expect(mockUntypedFrom).toHaveBeenCalledWith("calendar_events");
-      expect(result).toEqual(events);
-    });
-
-    it("returns empty on null data", async () => {
-      mockOrder.mockResolvedValue({ data: null, error: null });
-      const result = await fetchCalendarEvents("2026-01-01", "2026-01-31");
-      expect(result).toEqual([]);
+      mockFrom.mockReturnValue(chain({ data: [{ id: "e1" }], error: null }));
+      const result = await listEvents("u1", "2026-01-01", "2026-01-31");
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(result).toEqual([{ id: "e1" }]);
     });
 
     it("throws on error", async () => {
-      mockOrder.mockResolvedValue({ data: null, error: { message: "fail" } });
-      await expect(fetchCalendarEvents("a", "b")).rejects.toEqual({ message: "fail" });
+      mockFrom.mockReturnValue(chain({ data: null, error: { message: "fail" } }));
+      await expect(listEvents("u1", "a", "b")).rejects.toEqual({ message: "fail" });
     });
   });
 
-  describe("getCalendarEventById", () => {
-    it("returns event or null", async () => {
-      const event = { id: "e1", title: "Call" };
-      mockMaybeSingle.mockResolvedValue({ data: event, error: null });
-      const result = await getCalendarEventById("e1");
-      expect(result).toEqual(event);
+  describe("getEvent", () => {
+    it("returns single event", async () => {
+      const c = chain({ data: { id: "e1" }, error: null });
+      mockFrom.mockReturnValue(c);
+      const result = await getEvent("e1");
+      expect(result).toEqual({ id: "e1" });
+    });
+
+    it("returns null when not found", async () => {
+      const c = chain();
+      (c.single as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: null,
+        error: { code: "PGRST116", message: "not found" },
+      });
+      mockFrom.mockReturnValue(c);
+      const result = await getEvent("e99");
+      expect(result).toBeNull();
     });
   });
 
-  describe("createCalendarEvent", () => {
+  describe("createEvent", () => {
     it("inserts and returns event", async () => {
-      mockMaybeSingle.mockResolvedValue({ data: { id: "new" }, error: null });
-      mockSelect.mockReturnValue({ maybeSingle: mockMaybeSingle });
-      const result = await createCalendarEvent({ title: "New", event_type: "meeting", start_at: "2026-01-01", color: "#fff", reminder_minutes: 15, status: "scheduled" } as never);
-      expect(mockInsert).toHaveBeenCalled();
+      const c = chain();
+      (c.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "new" }, error: null });
+      mockFrom.mockReturnValue(c);
+      const result = await createEvent({
+        user_id: "u1",
+        title: "New",
+        event_type: "meeting",
+        start_at: "2026-01-01",
+        all_day: false,
+        color: "#fff",
+        reminder_minutes: 15,
+        status: "scheduled",
+      } as never);
+      expect(result).toEqual({ id: "new" });
     });
   });
 
-  describe("deleteCalendarEvent", () => {
+  describe("deleteEvent", () => {
     it("deletes by id", async () => {
-      mockEq.mockResolvedValue({ error: null });
-      await deleteCalendarEvent("e1");
-      expect(mockUntypedFrom).toHaveBeenCalledWith("calendar_events");
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await deleteEvent("e1");
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ error: { message: "fail" } }));
+      await expect(deleteEvent("e1")).rejects.toEqual({ message: "fail" });
+    });
+  });
+
+  describe("getUpcomingEvents", () => {
+    it("returns upcoming events", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "e1" }], error: null }));
+      const result = await getUpcomingEvents("u1");
+      expect(result).toEqual([{ id: "e1" }]);
+    });
+  });
+
+  describe("getEventsForPartner", () => {
+    it("returns events for partner", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "e2" }], error: null }));
+      const result = await getEventsForPartner("p1");
+      expect(result).toEqual([{ id: "e2" }]);
     });
   });
 });

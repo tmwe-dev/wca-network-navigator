@@ -1,4 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// Mock the limitsEnabled check to return true so checkBudget actually enforces
+vi.mock("@/lib/log", () => ({
+  createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+}));
+
+// Stub import.meta.env to enable limits
+vi.stubEnv("VITE_AI_USAGE_LIMITS_ENABLED", "true");
+
 import { checkBudget, trackCost, getSessionStats, resetSession, configureCostTracker } from "@/lib/api/costTracker";
 import { isApiError } from "@/lib/api/apiError";
 
@@ -29,7 +38,9 @@ describe("costTracker", () => {
   it("throws RATE_LIMITED when hard limit exceeded", () => {
     trackCost("fn", 200);
     expect(() => checkBudget()).toThrow();
-    try { checkBudget(); } catch (e) {
+    try {
+      checkBudget();
+    } catch (e) {
       expect(isApiError(e)).toBe(true);
       expect((e as any).code).toBe("RATE_LIMITED");
     }

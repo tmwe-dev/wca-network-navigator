@@ -3,20 +3,25 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
-vi.mock("@/integrations/supabase/client", () => ({
 /* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
+const mockFrom = vi.fn();
+vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getUser: vi.fn() },
-    from: vi.fn(),
+    auth: { getSession: vi.fn() },
+    from: (...a: unknown[]) => mockFrom(...a),
   },
 }));
 vi.mock("@/data/partners", () => ({
   getPartnersByLeadStatus: vi.fn(),
+  getPartnersByLeadStatusFromView: vi.fn(),
+}));
+vi.mock("@/data/channelMessages", () => ({
+  getUnifiedInboxStats: vi.fn(),
 }));
 
 import { useHoldingMessages } from "../useHoldingMessages";
 import { supabase } from "@/integrations/supabase/client";
-import { getPartnersByLeadStatus } from "@/data/partners";
+import { getPartnersByLeadStatusFromView } from "@/data/partners";
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -25,49 +30,52 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 const mockUser = { id: "user-1" };
 
+function mockSession(user: unknown) {
+  return { data: { session: user ? { user } : null }, error: null };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(supabase.from).mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
-      }),
-    }),
-  } as any);
+  // Default: imported_contacts returns empty
+  const mockIn = vi.fn().mockResolvedValue({ data: [], error: null });
+  const mockEq2 = vi.fn().mockReturnValue({ in: mockIn });
+  const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
+  const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
+  mockFrom.mockReturnValue({ select: mockSelect });
 });
 
 describe("useHoldingMessages", () => {
   it("returns empty array when user not authenticated", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: null }, error: null } as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as any);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual([]);
   });
 
   it("fetches holding messages for email channel", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
-    vi.mocked(getPartnersByLeadStatus).mockResolvedValue([]);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(getPartnersByLeadStatusFromView).mockResolvedValue([]);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(getPartnersByLeadStatus).toHaveBeenCalled();
+    expect(getPartnersByLeadStatusFromView).toHaveBeenCalled();
   });
 
   it("uses correct query key per channel", () => {
-    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as any);
     renderHook(() => useHoldingMessages("whatsapp"), { wrapper });
     // just ensure it doesn't throw
   });
 
   it("exposes loading state", () => {
-    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as any);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });
 
   it("handles partner fetch with statuses", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
-    vi.mocked(getPartnersByLeadStatus).mockResolvedValue([
-      { id: "p1", company_name: "Test Co", email: "test@test.com", lead_status: "contacted" },
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(getPartnersByLeadStatusFromView).mockResolvedValue([
+      { partner_id: "p1", company_name: "Test Co", email: "test@test.com", lead_status: "contacted" },
     ] as any);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));

@@ -1,16 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 const channelMock = {
   on: vi.fn().mockReturnThis(),
   subscribe: vi.fn().mockReturnThis(),
 };
 const removeChannel = vi.fn();
-const getUser = vi.fn().mockResolvedValue({ data: { user: { id: "user-123" } } });
+const getSession = vi.fn().mockResolvedValue({
+  data: { session: { user: { id: "user-123" } } },
+  error: null,
+});
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getUser: () => getUser() },
+    auth: { getSession: (...a: any[]) => getSession(...a) },
     channel: vi.fn(() => channelMock),
     removeChannel: (c: unknown) => removeChannel(c),
   },
@@ -32,7 +36,7 @@ describe("useCommandRealtime", () => {
     await waitFor(() => {
       expect(supabase.channel).toHaveBeenCalledWith("command_live");
     });
-    // 5 .on() chained calls → download_jobs, outreach_queue, agent_action_log, mission_actions, campaign_jobs
+    // 5 .on() chained calls: download_jobs, outreach_queue, agent_action_log, mission_actions, campaign_jobs
     expect(channelMock.on).toHaveBeenCalledTimes(5);
     expect(channelMock.subscribe).toHaveBeenCalledTimes(1);
   });
@@ -52,7 +56,7 @@ describe("useCommandRealtime", () => {
   });
 
   it("does not subscribe when there is no authenticated user", async () => {
-    getUser.mockResolvedValueOnce({ data: { user: null } });
+    getSession.mockResolvedValueOnce({ data: { session: null }, error: null });
     (supabase.channel as unknown as ReturnType<typeof vi.fn>).mockClear();
     renderHook(() => useCommandRealtime());
     await new Promise((r) => setTimeout(r, 30));

@@ -1,54 +1,99 @@
-/**
- * DAL — emailCampaigns module tests
- */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
-const mockSelect = vi.fn();
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockEq = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (...a: unknown[]) => mockFrom(...a) },
 }));
+vi.mock("@/v2/hooks/useBusyPartners", () => ({
+  emitBusyPartnersChanged: vi.fn(),
+}));
 
-import { findCampaignQueueItems, countPendingCampaignEmails } from "@/data/emailCampaigns";
+import {
+  findCampaignQueueItems,
+  countPendingCampaignEmails,
+  updateEmailDraft,
+  getEmailDraftField,
+  countEmailDrafts,
+} from "@/data/emailCampaigns";
+
+function chain(terminal: { data?: unknown; error?: unknown; count?: unknown } = { data: [], error: null }) {
+  const c: Record<string, unknown> = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.eq = vi.fn().mockReturnValue(c);
+  c.order = vi.fn().mockReturnValue(c);
+  c.limit = vi.fn().mockReturnValue(c);
+  c.in = vi.fn().mockReturnValue(c);
+  c.insert = vi.fn().mockResolvedValue({ error: terminal.error ?? null });
+  c.update = vi.fn().mockReturnValue(c);
+  c.single = vi.fn().mockResolvedValue(terminal);
+  c.maybeSingle = vi.fn().mockResolvedValue(terminal);
+  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  return c;
+}
 
 describe("DAL — emailCampaigns", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect, insert: mockInsert, update: mockUpdate });
-    mockSelect.mockReturnValue({ eq: mockEq, count: 0, error: null });
-    mockEq.mockResolvedValue({ data: [], error: null });
-  });
-
   describe("findCampaignQueueItems", () => {
     it("returns queue items for draft", async () => {
-      const items = [{ id: "q1", draft_id: "d1" }];
-      mockEq.mockResolvedValue({ data: items, error: null });
+      mockFrom.mockReturnValue(chain({ data: [{ id: "q1" }], error: null }));
       const result = await findCampaignQueueItems("d1");
-      expect(mockFrom).toHaveBeenCalledWith("campaign_queue");
-      expect(result).toEqual(items);
+      expect(mockFrom).toHaveBeenCalledWith("email_campaign_queue");
+      expect(result).toEqual([{ id: "q1" }]);
     });
 
     it("throws on error", async () => {
-      mockEq.mockResolvedValue({ data: null, error: { message: "fail" } });
+      mockFrom.mockReturnValue(chain({ data: null, error: { message: "fail" } }));
       await expect(findCampaignQueueItems("d1")).rejects.toEqual({ message: "fail" });
     });
   });
 
   describe("countPendingCampaignEmails", () => {
     it("returns count", async () => {
-      mockSelect.mockReturnValue({ count: 25, error: null });
+      mockFrom.mockReturnValue(chain({ count: 25, error: null }));
       const result = await countPendingCampaignEmails();
       expect(result).toBe(25);
     });
 
     it("returns 0 when null", async () => {
-      mockSelect.mockReturnValue({ count: null, error: null });
+      mockFrom.mockReturnValue(chain({ count: null, error: null }));
       const result = await countPendingCampaignEmails();
       expect(result).toBe(0);
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ count: null, error: { message: "fail" } }));
+      await expect(countPendingCampaignEmails()).rejects.toEqual({ message: "fail" });
+    });
+  });
+
+  describe("updateEmailDraft", () => {
+    it("updates draft", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await updateEmailDraft("d1", { subject: "new" });
+      expect(mockFrom).toHaveBeenCalledWith("email_drafts");
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ error: { message: "fail" } }));
+      await expect(updateEmailDraft("d1", {})).rejects.toEqual({ message: "fail" });
+    });
+  });
+
+  describe("getEmailDraftField", () => {
+    it("returns field data", async () => {
+      const c = chain();
+      (c.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { subject: "Test" }, error: null });
+      mockFrom.mockReturnValue(c);
+      const result = await getEmailDraftField("d1", "subject");
+      expect(result).toEqual({ subject: "Test" });
+    });
+  });
+
+  describe("countEmailDrafts", () => {
+    it("returns draft count", async () => {
+      mockFrom.mockReturnValue(chain({ count: 10, error: null }));
+      const result = await countEmailDrafts();
+      expect(result).toBe(10);
     });
   });
 });

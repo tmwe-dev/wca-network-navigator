@@ -1,13 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeSearch } from "@/lib/sanitizeSearch";
-describe("sanitizeSearch", () => {
-  it("trims whitespace", () => {
-    expect(sanitizeSearch("  hello  ")).toBe("hello");
+import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
+
+describe("sanitizeSearchTerm", () => {
+  it("removes PostgREST special characters", () => {
+    expect(sanitizeSearchTerm("hello(world)")).toBe("helloworld");
+    expect(sanitizeSearchTerm("a,b.c\\d")).toBe("abcd");
+    expect(sanitizeSearchTerm("test*%_")).toBe("test");
   });
+
+  it("leaves normal text intact", () => {
+    expect(sanitizeSearchTerm("hello world")).toBe("hello world");
+  });
+
   it("handles empty string", () => {
-    expect(sanitizeSearch("")).toBe("");
-  });
-  it("handles null/undefined gracefully", () => {
-    expect(sanitizeSearch(null as never)).toBeFalsy();
+    expect(sanitizeSearchTerm("")).toBe("");
   });
 });

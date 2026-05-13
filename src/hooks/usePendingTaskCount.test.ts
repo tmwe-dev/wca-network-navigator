@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 const mockIn = vi.fn().mockReturnValue({ count: 5, error: null });
 const mockEq = vi.fn().mockReturnValue({ in: mockIn });
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
@@ -10,7 +11,10 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({ select: (...a: unknown[]) => mockSelect(...a) }),
     auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "test-user" } } }),
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { user: { id: "test-user" } } },
+        error: null,
+      }),
     },
     channel: () => ({
       on: vi.fn().mockReturnThis(),
@@ -31,7 +35,10 @@ describe("usePendingTaskCount", () => {
   });
   it("returns 0 when no user", async () => {
     const { supabase } = await import("@/integrations/supabase/client");
-    (supabase.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { user: null } });
+    (supabase.auth.getSession as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    });
     const { result } = renderHookWithProviders(() => usePendingTaskCount());
     await waitFor(() => expect(result.current).toBe(0));
   });
@@ -48,7 +55,7 @@ describe("usePendingTaskCount", () => {
   });
   it("sets up realtime subscription on mount", async () => {
     const mod = await import("@/integrations/supabase/client");
-    const channelSpy = vi.spyOn(mod.supabase, "channel");
+    const channelSpy = vi.spyOn(mod.supabase, "channel" as any);
     renderHookWithProviders(() => usePendingTaskCount());
     expect(channelSpy).toHaveBeenCalledWith("pending-tasks-badge");
     channelSpy.mockRestore();

@@ -10,28 +10,15 @@ import {
 } from "@/data/tokenUsage";
 
 // Mock supabase client
-vi.mock("@/integrations/supabase/client", () => {
-  const mockFrom = vi.fn();
-  const mockSelect = vi.fn();
-  const mockEq = vi.fn();
-  const mockIn = vi.fn();
-  const mockGte = vi.fn();
-  const mockMaybeSingle = vi.fn();
+const mockFrom = vi.fn();
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+}));
+vi.mock("@/lib/log", () => ({
+  createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+}));
 
-  return {
-    supabase: {
-      from: mockFrom,
-    },
-    mockFrom,
-    mockSelect,
-    mockEq,
-    mockIn,
-    mockGte,
-    mockMaybeSingle,
-  };
-});
-
-import { supabase } from "@/integrations/supabase/client";
+// supabase.from calls are intercepted by mockFrom
 
 describe("Token Usage Functions", () => {
   beforeEach(() => {
@@ -44,11 +31,7 @@ describe("Token Usage Functions", () => {
 
   describe("getTodayUsage", () => {
     it("should sum tokens used today", async () => {
-      const mockData = [
-        { total_tokens: 100 },
-        { total_tokens: 200 },
-        { total_tokens: 150 },
-      ];
+      const mockData = [{ total_tokens: 100 }, { total_tokens: 200 }, { total_tokens: 150 }];
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
@@ -56,12 +39,12 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTodayUsage("user123");
 
       expect(result).toBe(450);
-      expect(supabase.from).toHaveBeenCalledWith("ai_token_usage");
+      expect(mockFrom).toHaveBeenCalledWith("ai_token_usage");
       expect(mockChain.eq).toHaveBeenCalledWith("user_id", "user123");
     });
 
@@ -72,7 +55,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTodayUsage("user123");
 
@@ -86,7 +69,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTodayUsage("user123");
 
@@ -94,30 +77,22 @@ describe("Token Usage Functions", () => {
     });
 
     it("should log error and return 0 on database error", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         gte: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTodayUsage("user123");
 
       expect(result).toBe(0);
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
+      // Error is logged via createLogger, not console.error
     });
 
     it("should handle null total_tokens values", async () => {
-      const mockData = [
-        { total_tokens: 100 },
-        { total_tokens: null },
-        { total_tokens: 50 },
-      ];
+      const mockData = [{ total_tokens: 100 }, { total_tokens: null }, { total_tokens: 50 }];
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
@@ -125,7 +100,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTodayUsage("user123");
 
@@ -135,11 +110,7 @@ describe("Token Usage Functions", () => {
 
   describe("getMonthUsage", () => {
     it("should sum tokens used this month", async () => {
-      const mockData = [
-        { total_tokens: 1000 },
-        { total_tokens: 2000 },
-        { total_tokens: 500 },
-      ];
+      const mockData = [{ total_tokens: 1000 }, { total_tokens: 2000 }, { total_tokens: 500 }];
 
       const mockChain = {
         select: vi.fn().mockReturnThis(),
@@ -147,12 +118,12 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getMonthUsage("user123");
 
       expect(result).toBe(3500);
-      expect(supabase.from).toHaveBeenCalledWith("ai_token_usage");
+      expect(mockFrom).toHaveBeenCalledWith("ai_token_usage");
       expect(mockChain.eq).toHaveBeenCalledWith("user_id", "user123");
     });
 
@@ -163,7 +134,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getMonthUsage("user123");
 
@@ -171,22 +142,18 @@ describe("Token Usage Functions", () => {
     });
 
     it("should log error and return 0 on database error", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         gte: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getMonthUsage("user123");
 
       expect(result).toBe(0);
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
+      // Error is logged via createLogger, not console.error
     });
   });
 
@@ -205,7 +172,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getUsageByFunction("user123", 7);
 
@@ -224,7 +191,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       await getUsageByFunction("user123", 30);
 
@@ -238,7 +205,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getUsageByFunction("user123");
 
@@ -246,22 +213,18 @@ describe("Token Usage Functions", () => {
     });
 
     it("should log error and return empty object on database error", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         gte: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getUsageByFunction("user123");
 
       expect(result).toEqual({});
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
+      // Error is logged via createLogger, not console.error
     });
 
     it("should handle null total_tokens values", async () => {
@@ -277,7 +240,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getUsageByFunction("user123");
 
@@ -302,7 +265,7 @@ describe("Token Usage Functions", () => {
         in: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTokenSettings("user123");
 
@@ -311,7 +274,7 @@ describe("Token Usage Functions", () => {
         ai_monthly_token_limit: "100000",
         ai_rate_limit_per_minute: "10",
       });
-      expect(supabase.from).toHaveBeenCalledWith("app_settings");
+      expect(mockFrom).toHaveBeenCalledWith("app_settings");
       expect(mockChain.eq).toHaveBeenCalledWith("user_id", "user123");
     });
 
@@ -322,7 +285,7 @@ describe("Token Usage Functions", () => {
         in: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTokenSettings("user123");
 
@@ -341,7 +304,7 @@ describe("Token Usage Functions", () => {
         in: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTokenSettings("user123");
 
@@ -352,43 +315,38 @@ describe("Token Usage Functions", () => {
     });
 
     it("should log error and return empty object on database error", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockChain as any);
+      mockFrom.mockReturnValue(mockChain as unknown);
 
       const result = await getTokenSettings("user123");
 
       expect(result).toEqual({});
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
+      // Error is logged via createLogger, not console.error
     });
   });
 
   describe("updateTokenSetting", () => {
     it("should update existing setting", async () => {
+      // Check chain: .select("id").eq("key",k).eq("user_id",u).maybeSingle()
       const mockChainCheck = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: { id: "s1" }, error: null }),
       };
 
+      // Update chain: .update({value}).eq("key",k).eq("user_id",u)
+      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
+      const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
       const mockChainUpdate = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnValue({ eq: mockEq1 }),
       };
 
-      mockChainUpdate.eq.mockResolvedValue({ error: null });
-
-      vi.mocked(supabase.from)
-        .mockReturnValueOnce(mockChainCheck as any)
-        .mockReturnValueOnce(mockChainUpdate as any);
+      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainUpdate as unknown);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).resolves.not.toThrow();
       expect(mockChainUpdate.update).toHaveBeenCalledWith({ value: "5000" });
@@ -405,9 +363,7 @@ describe("Token Usage Functions", () => {
         insert: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      vi.mocked(supabase.from)
-        .mockReturnValueOnce(mockChainCheck as any)
-        .mockReturnValueOnce(mockChainInsert as any);
+      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainInsert as unknown);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).resolves.not.toThrow();
       expect(mockChainInsert.insert).toHaveBeenCalledWith({
@@ -426,14 +382,13 @@ describe("Token Usage Functions", () => {
         maybeSingle: vi.fn().mockResolvedValue({ data: { id: "s1" }, error: null }),
       };
 
+      const mockEq2 = vi.fn().mockResolvedValue({ error: dbError });
+      const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
       const mockChainUpdate = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: dbError }),
+        update: vi.fn().mockReturnValue({ eq: mockEq1 }),
       };
 
-      vi.mocked(supabase.from)
-        .mockReturnValueOnce(mockChainCheck as any)
-        .mockReturnValueOnce(mockChainUpdate as any);
+      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainUpdate as unknown);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).rejects.toThrow("Update failed");
     });
@@ -451,9 +406,7 @@ describe("Token Usage Functions", () => {
         insert: vi.fn().mockResolvedValue({ error: dbError }),
       };
 
-      vi.mocked(supabase.from)
-        .mockReturnValueOnce(mockChainCheck as any)
-        .mockReturnValueOnce(mockChainInsert as any);
+      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainInsert as unknown);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).rejects.toThrow("Insert failed");
     });

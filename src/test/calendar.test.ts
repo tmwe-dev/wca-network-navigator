@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   listEvents,
   getEvent,
@@ -13,28 +13,28 @@ import {
   type CalendarEvent,
 } from "@/data/calendar";
 
-// Mock supabase client
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      lte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      single: vi.fn(),
-      maybeSingle: vi.fn(),
-    })),
-  },
+// ─── Mock fns ──────────────────────────────────────────
+const mockSelect = vi.fn();
+const mockInsert = vi.fn();
+const mockUpdate = vi.fn();
+const mockDelete = vi.fn();
+const mockEq = vi.fn();
+const mockGte = vi.fn();
+const mockLte = vi.fn();
+const mockOrder = vi.fn();
+const mockLimit = vi.fn();
+const mockSingle = vi.fn();
+const mockFrom = vi.fn();
+
+vi.mock("@/lib/supabaseUntyped", () => ({
+  untypedFrom: (...a: unknown[]) => mockFrom(...a),
 }));
 
-import { supabase } from "@/integrations/supabase/client";
+vi.mock("@/lib/log", () => ({
+  createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+}));
 
+// ─── Fixtures ──────────────────────────────────────────
 const mockCalendarEvent: CalendarEvent = {
   id: "event-1",
   user_id: "user-1",
@@ -65,61 +65,40 @@ const mockCalendarEvent2: CalendarEvent = {
   start_at: "2024-01-16T14:00:00Z",
 };
 
+// ─── Tests ─────────────────────────────────────────────
 describe("Calendar Data Layer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  // ── listEvents ───────────────────────────────────────
+  // Chain: untypedFrom("calendar_events").select("*").eq("user_id", userId).gte("start_at", from).lte("start_at", to).order("start_at", { ascending: true })
   describe("listEvents", () => {
-    it("should fetch events in date range for user", async () => {
-      const mockFromFn = vi.fn().mockReturnThis();
-      const mockSelectFn = vi.fn().mockReturnThis();
-      const mockEqFn = vi.fn().mockReturnThis();
-      const mockGteFn = vi.fn().mockReturnThis();
-      const mockLteFn = vi.fn().mockReturnThis();
-      const mockOrderFn = vi.fn().mockResolvedValueOnce({
-        data: [mockCalendarEvent, mockCalendarEvent2],
-        error: null,
-      });
+    function setupListChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ gte: mockGte });
+      mockGte.mockReturnValue({ lte: mockLte });
+      mockLte.mockReturnValue({ order: mockOrder });
+      mockOrder.mockResolvedValue(resolvedValue);
+    }
 
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: mockSelectFn,
-      } as any);
-      mockSelectFn.mockReturnValueOnce({ eq: mockEqFn } as any);
-      mockEqFn.mockReturnValueOnce({ gte: mockGteFn } as any);
-      mockGteFn.mockReturnValueOnce({ lte: mockLteFn } as any);
-      mockLteFn.mockReturnValueOnce({ order: mockOrderFn } as any);
+    it("should fetch events in date range for user", async () => {
+      setupListChain({ data: [mockCalendarEvent, mockCalendarEvent2], error: null });
 
       const result = await listEvents("user-1", "2024-01-01", "2024-01-31");
 
       expect(result).toEqual([mockCalendarEvent, mockCalendarEvent2]);
-      expect(supabase.from).toHaveBeenCalledWith("calendar_events");
-      expect(mockSelectFn).toHaveBeenCalledWith("*");
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockSelect).toHaveBeenCalledWith("*");
+      expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(mockGte).toHaveBeenCalledWith("start_at", "2024-01-01");
+      expect(mockLte).toHaveBeenCalledWith("start_at", "2024-01-31");
+      expect(mockOrder).toHaveBeenCalledWith("start_at", { ascending: true });
     });
 
     it("should handle empty results", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-      const mockQuery = vi.mocked(supabase.from)("calendar_events" as any);
-      vi.mocked(mockQuery.select).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events" as any).select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        gte: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockEqFn.gte).mockReturnValueOnce({
-        lte: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockGteFn = vi.mocked(mockEqFn.gte)("start_at", "2024-01-01");
-      vi.mocked(mockGteFn.lte).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: [], error: null }),
-      } as any);
+      setupListChain({ data: [], error: null });
 
       const result = await listEvents("user-1", "2024-01-01", "2024-01-31");
 
@@ -128,57 +107,35 @@ describe("Calendar Data Layer", () => {
 
     it("should throw error on database failure", async () => {
       const mockError = new Error("Database error");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+      setupListChain({ data: null, error: mockError });
 
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events" as any).select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        gte: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockEqFn.gte).mockReturnValueOnce({
-        lte: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockGteFn = vi.mocked(mockEqFn.gte)("start_at", "2024-01-01");
-      vi.mocked(mockGteFn.lte).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
-
-      await expect(listEvents("user-1", "2024-01-01", "2024-01-31")).rejects.toThrow(
-        "Database error"
-      );
+      await expect(listEvents("user-1", "2024-01-01", "2024-01-31")).rejects.toThrow("Database error");
     });
   });
 
+  // ── getEvent ─────────────────────────────────────────
+  // Chain: untypedFrom("calendar_events").select("*").eq("id", id).single()
   describe("getEvent", () => {
-    it("should fetch single event by ID", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+    function setupGetChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ single: mockSingle });
+      mockSingle.mockResolvedValue(resolvedValue);
+    }
 
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events" as any).select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: mockCalendarEvent, error: null }),
-      } as any);
+    it("should fetch single event by ID", async () => {
+      setupGetChain({ data: mockCalendarEvent, error: null });
 
       const result = await getEvent("event-1");
 
       expect(result).toEqual(mockCalendarEvent);
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockSelect).toHaveBeenCalledWith("*");
+      expect(mockEq).toHaveBeenCalledWith("id", "event-1");
     });
 
     it("should return null for non-existent event", async () => {
-      const notFoundError = { code: "PGRST116" };
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: null, error: notFoundError }),
-      } as any);
+      setupGetChain({ data: null, error: { code: "PGRST116" } });
 
       const result = await getEvent("non-existent");
 
@@ -187,300 +144,253 @@ describe("Calendar Data Layer", () => {
 
     it("should throw error on database failure", async () => {
       const mockError = new Error("Query error");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
+      setupGetChain({ data: null, error: mockError });
 
       await expect(getEvent("event-1")).rejects.toThrow("Query error");
     });
   });
 
+  // ── createEvent ──────────────────────────────────────
+  // Chain: untypedFrom("calendar_events").insert(event).select().single()
   describe("createEvent", () => {
-    it("should create new event successfully", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        insert: vi.fn().mockReturnThis(),
-      } as any);
+    function setupCreateChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ insert: mockInsert });
+      mockInsert.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ single: mockSingle });
+      mockSingle.mockResolvedValue(resolvedValue);
+    }
 
-      const mockInsertFn = vi.mocked(supabase.from)("calendar_events").insert([]);
-      vi.mocked(mockInsertFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: mockCalendarEvent, error: null }),
-      } as any);
+    it("should create new event successfully", async () => {
+      setupCreateChain({ data: mockCalendarEvent, error: null });
 
       const result = await createEvent({
         user_id: "user-1",
         title: "Team Meeting",
+        description: "Weekly sync",
         event_type: "meeting",
         start_at: "2024-01-15T10:00:00Z",
+        end_at: "2024-01-15T11:00:00Z",
+        all_day: false,
+        partner_id: "partner-1",
+        contact_id: "contact-1",
+        deal_id: "deal-1",
+        location: "Conference Room A",
+        color: "#FF5733",
+        recurrence: "weekly",
+        reminder_minutes: 15,
+        status: "scheduled",
+        metadata: null,
       });
 
       expect(result).toEqual(mockCalendarEvent);
-      expect(supabase.from).toHaveBeenCalledWith("calendar_events");
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
     });
 
     it("should throw error on insert failure", async () => {
       const mockError = new Error("Insert failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        insert: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockInsertFn = vi.mocked(supabase.from)("calendar_events").insert([]);
-      vi.mocked(mockInsertFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
+      setupCreateChain({ data: null, error: mockError });
 
       await expect(
         createEvent({
           user_id: "user-1",
           title: "Meeting",
+          description: null,
           event_type: "meeting",
           start_at: "2024-01-15T10:00:00Z",
-        })
+          end_at: null,
+          all_day: false,
+          partner_id: null,
+          contact_id: null,
+          deal_id: null,
+          location: null,
+          color: "#FF5733",
+          recurrence: "none",
+          reminder_minutes: 15,
+          status: "scheduled",
+          metadata: null,
+        }),
       ).rejects.toThrow("Insert failed");
     });
   });
 
+  // ── updateEvent ──────────────────────────────────────
+  // Chain: untypedFrom("calendar_events").update({...}).eq("id", id).select().single()
   describe("updateEvent", () => {
+    function setupUpdateChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ update: mockUpdate });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ single: mockSingle });
+      mockSingle.mockResolvedValue(resolvedValue);
+    }
+
     it("should update event successfully", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("calendar_events").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockUpdateFn.eq)("id", "event-1");
-      vi.mocked(mockEqFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({
-          data: { ...mockCalendarEvent, title: "Updated Meeting" },
-          error: null,
-        }),
-      } as any);
+      setupUpdateChain({
+        data: { ...mockCalendarEvent, title: "Updated Meeting" },
+        error: null,
+      });
 
       const result = await updateEvent("event-1", { title: "Updated Meeting" });
 
       expect(result.title).toBe("Updated Meeting");
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockEq).toHaveBeenCalledWith("id", "event-1");
     });
 
     it("should include updated_at timestamp", async () => {
-      const updateCapture: any = {};
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn((data) => {
-          Object.assign(updateCapture, data);
-          return {
-            eq: vi.fn().mockReturnThis(),
-          };
-        }),
-      } as any);
-
-      const mockUpdateFn = vi.mocked(supabase.from)("calendar_events").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockUpdateFn.eq)("id", "event-1");
-      vi.mocked(mockEqFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: mockCalendarEvent, error: null }),
-      } as any);
+      setupUpdateChain({ data: mockCalendarEvent, error: null });
 
       await updateEvent("event-1", { title: "Updated" });
 
-      expect(updateCapture.updated_at).toBeDefined();
+      // The update call should include an updated_at field
+      const updateArg = mockUpdate.mock.calls[0][0];
+      expect(updateArg.updated_at).toBeDefined();
+      expect(updateArg.title).toBe("Updated");
     });
 
     it("should throw error on update failure", async () => {
       const mockError = new Error("Update failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-      } as any);
+      setupUpdateChain({ data: null, error: mockError });
 
-      const mockUpdateFn = vi.mocked(supabase.from)("calendar_events").update({});
-      vi.mocked(mockUpdateFn.eq).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockEqFn = vi.mocked(mockUpdateFn.eq)("id", "event-1");
-      vi.mocked(mockEqFn.select).mockReturnValueOnce({
-        single: vi.fn().mockResolvedValueOnce({ data: null, error: mockError }),
-      } as any);
-
-      await expect(updateEvent("event-1", { title: "Updated" })).rejects.toThrow(
-        "Update failed"
-      );
+      await expect(updateEvent("event-1", { title: "Updated" })).rejects.toThrow("Update failed");
     });
   });
 
+  // ── deleteEvent ──────────────────────────────────────
+  // Chain: untypedFrom("calendar_events").delete().eq("id", id)
   describe("deleteEvent", () => {
-    it("should delete event successfully", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-      } as any);
+    function setupDeleteChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ delete: mockDelete });
+      mockDelete.mockReturnValue({ eq: mockEq });
+      mockEq.mockResolvedValue(resolvedValue);
+    }
 
-      const mockDeleteFn = vi.mocked(supabase.from)("calendar_events").delete();
-      vi.mocked(mockDeleteFn.eq).mockResolvedValueOnce({ data: null, error: null });
+    it("should delete event successfully", async () => {
+      setupDeleteChain({ data: null, error: null });
 
       await expect(deleteEvent("event-1")).resolves.toBeUndefined();
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockEq).toHaveBeenCalledWith("id", "event-1");
     });
 
     it("should throw error on delete failure", async () => {
       const mockError = new Error("Delete failed");
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockDeleteFn = vi.mocked(supabase.from)("calendar_events").delete();
-      vi.mocked(mockDeleteFn.eq).mockResolvedValueOnce({ data: null, error: mockError });
+      setupDeleteChain({ data: null, error: mockError });
 
       await expect(deleteEvent("event-1")).rejects.toThrow("Delete failed");
     });
   });
 
+  // ── getUpcomingEvents ────────────────────────────────
+  // Chain: untypedFrom("calendar_events").select("*").eq("user_id", userId).eq("status", "scheduled").gte("start_at", now).order("start_at", { ascending: true }).limit(limit)
   describe("getUpcomingEvents", () => {
+    const mockEq2 = vi.fn();
+    const mockEq3 = vi.fn();
+
+    function setupUpcomingChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ eq: mockEq2 });
+      mockEq2.mockReturnValue({ gte: mockGte });
+      mockGte.mockReturnValue({ order: mockOrder });
+      mockOrder.mockReturnValue({ limit: mockLimit });
+      mockLimit.mockResolvedValue(resolvedValue);
+    }
+
+    beforeEach(() => {
+      mockEq2.mockReset();
+      mockEq3.mockReset();
+    });
+
     it("should fetch upcoming scheduled events", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        gte: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSecondEqFn = vi.mocked(mockFirstEqFn.eq)("status", "scheduled");
-      vi.mocked(mockSecondEqFn.gte).mockReturnValueOnce({
-        order: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockGteFn = vi.mocked(mockSecondEqFn.gte)("start_at", expect.any(String));
-      vi.mocked(mockGteFn.order).mockReturnValueOnce({
-        limit: vi.fn().mockResolvedValueOnce({ data: [mockCalendarEvent], error: null }),
-      } as any);
+      setupUpcomingChain({ data: [mockCalendarEvent], error: null });
 
       const result = await getUpcomingEvents("user-1", 5);
 
       expect(result).toEqual([mockCalendarEvent]);
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(mockEq2).toHaveBeenCalledWith("status", "scheduled");
+      expect(mockGte).toHaveBeenCalledWith("start_at", expect.any(String));
+      expect(mockOrder).toHaveBeenCalledWith("start_at", { ascending: true });
+      expect(mockLimit).toHaveBeenCalledWith(5);
     });
 
     it("should respect limit parameter", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        gte: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSecondEqFn = vi.mocked(mockFirstEqFn.eq)("status", "scheduled");
-      vi.mocked(mockSecondEqFn.gte).mockReturnValueOnce({
-        order: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockGteFn = vi.mocked(mockSecondEqFn.gte)("start_at", expect.any(String));
-      const mockOrderFn = vi.mocked(mockGteFn.order)("start_at", { ascending: true });
-      vi.mocked(mockOrderFn.limit).mockResolvedValueOnce({ data: [], error: null });
+      setupUpcomingChain({ data: [], error: null });
 
       await getUpcomingEvents("user-1", 10);
 
-      expect(mockOrderFn.limit).toHaveBeenCalledWith(10);
+      expect(mockLimit).toHaveBeenCalledWith(10);
     });
 
     it("should filter by scheduled status only", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      const mockEqCall = vi.fn().mockReturnThis();
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: mockEqCall,
-      } as any);
+      setupUpcomingChain({ data: [], error: null });
 
       await getUpcomingEvents("user-1", 5);
 
-      expect(mockEqCall).toHaveBeenCalledWith("status", "scheduled");
+      expect(mockEq2).toHaveBeenCalledWith("status", "scheduled");
     });
   });
 
+  // ── getEventsForPartner ──────────────────────────────
+  // Chain: untypedFrom("calendar_events").select("*").eq("partner_id", partnerId).eq("status", "scheduled").order("start_at", { ascending: true })
   describe("getEventsForPartner", () => {
+    const mockEq2 = vi.fn();
+
+    function setupPartnerChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ eq: mockEq2 });
+      mockEq2.mockReturnValue({ order: mockOrder });
+      mockOrder.mockResolvedValue(resolvedValue);
+    }
+
+    beforeEach(() => {
+      mockEq2.mockReset();
+    });
+
     it("should fetch events for specific partner", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("partner_id", "partner-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: [mockCalendarEvent], error: null }),
-      } as any);
+      setupPartnerChain({ data: [mockCalendarEvent], error: null });
 
       const result = await getEventsForPartner("partner-1");
 
       expect(result).toEqual([mockCalendarEvent]);
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockEq).toHaveBeenCalledWith("partner_id", "partner-1");
     });
 
     it("should filter by scheduled status for partner events", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      const statusEqFn = vi.fn().mockReturnThis();
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: statusEqFn,
-      } as any);
+      setupPartnerChain({ data: [mockCalendarEvent], error: null });
 
       await getEventsForPartner("partner-1");
 
-      expect(statusEqFn).toHaveBeenCalledWith("status", "scheduled");
+      expect(mockEq2).toHaveBeenCalledWith("status", "scheduled");
     });
   });
 
+  // ── getEventsForDeal ─────────────────────────────────
+  // Chain: untypedFrom("calendar_events").select("*").eq("deal_id", dealId).order("start_at", { ascending: true })
   describe("getEventsForDeal", () => {
-    it("should fetch events for specific deal", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+    function setupDealChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ order: mockOrder });
+      mockOrder.mockResolvedValue(resolvedValue);
+    }
 
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: [mockCalendarEvent], error: null }),
-      } as any);
+    it("should fetch events for specific deal", async () => {
+      setupDealChain({ data: [mockCalendarEvent], error: null });
 
       const result = await getEventsForDeal("deal-1");
 
       expect(result).toEqual([mockCalendarEvent]);
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockEq).toHaveBeenCalledWith("deal_id", "deal-1");
     });
 
     it("should return empty array on no results", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: [], error: null }),
-      } as any);
+      setupDealChain({ data: [], error: null });
 
       const result = await getEventsForDeal("deal-1");
 
@@ -488,72 +398,67 @@ describe("Calendar Data Layer", () => {
     });
   });
 
+  // ── getEventsForContact ──────────────────────────────
+  // Chain: untypedFrom("calendar_events").select("*").eq("contact_id", contactId).order("start_at", { ascending: true })
   describe("getEventsForContact", () => {
-    it("should fetch events for specific contact", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
+    function setupContactChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ order: mockOrder });
+      mockOrder.mockResolvedValue(resolvedValue);
+    }
 
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: [mockCalendarEvent], error: null }),
-      } as any);
+    it("should fetch events for specific contact", async () => {
+      setupContactChain({ data: [mockCalendarEvent], error: null });
 
       const result = await getEventsForContact("contact-1");
 
       expect(result).toEqual([mockCalendarEvent]);
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockEq).toHaveBeenCalledWith("contact_id", "contact-1");
     });
   });
 
+  // ── getEventsByType ──────────────────────────────────
+  // Chain: untypedFrom("calendar_events").select("*").eq("user_id", userId).eq("event_type", eventType).eq("status", "scheduled").order("start_at", { ascending: true })
   describe("getEventsByType", () => {
+    const mockEq2 = vi.fn();
+    const mockEq3 = vi.fn();
+
+    function setupTypeChain(resolvedValue: { data: unknown; error: unknown }) {
+      mockFrom.mockReturnValue({ select: mockSelect });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ eq: mockEq2 });
+      mockEq2.mockReturnValue({ eq: mockEq3 });
+      mockEq3.mockReturnValue({ order: mockOrder });
+      mockOrder.mockResolvedValue(resolvedValue);
+    }
+
+    beforeEach(() => {
+      mockEq2.mockReset();
+      mockEq3.mockReset();
+    });
+
     it("should fetch events filtered by type", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSecondEqFn = vi.mocked(mockFirstEqFn.eq)("event_type", "meeting");
-      vi.mocked(mockSecondEqFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: [mockCalendarEvent], error: null }),
-      } as any);
+      setupTypeChain({ data: [mockCalendarEvent], error: null });
 
       const result = await getEventsByType("user-1", "meeting");
 
       expect(result).toEqual([mockCalendarEvent]);
+      expect(mockFrom).toHaveBeenCalledWith("calendar_events");
+      expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(mockEq2).toHaveBeenCalledWith("event_type", "meeting");
+      expect(mockEq3).toHaveBeenCalledWith("status", "scheduled");
+      expect(mockOrder).toHaveBeenCalledWith("start_at", { ascending: true });
     });
 
     it("should handle different event types", async () => {
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
-      vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockFirstEqFn = vi.mocked(mockSelectFn.eq)("user_id", "user-1");
-      vi.mocked(mockFirstEqFn.eq).mockReturnValueOnce({
-        eq: vi.fn().mockReturnThis(),
-      } as any);
-
-      const mockSecondEqFn = vi.mocked(mockFirstEqFn.eq)("event_type", "call");
-      vi.mocked(mockSecondEqFn.eq).mockReturnValueOnce({
-        order: vi.fn().mockResolvedValueOnce({ data: [mockCalendarEvent2], error: null }),
-      } as any);
+      setupTypeChain({ data: [mockCalendarEvent2], error: null });
 
       const result = await getEventsByType("user-1", "call");
 
       expect(result[0].event_type).toBe("call");
+      expect(mockEq2).toHaveBeenCalledWith("event_type", "call");
     });
   });
 });

@@ -1,34 +1,79 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
-const mockLimit = vi.fn();
+import { describe, it, expect, vi } from "vitest";
+
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
-import { listPipelineTraces, getTraceTimeline } from "@/data/pipelineTraces";
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+}));
+
+import {
+  listPipelineTraces,
+  getTraceTimeline,
+  listDistinctEntityTypes,
+  listDistinctStepNames,
+} from "@/data/pipelineTraces";
+
+function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
+  const c: Record<string, unknown> = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.eq = vi.fn().mockReturnValue(c);
+  c.gte = vi.fn().mockReturnValue(c);
+  c.lte = vi.fn().mockReturnValue(c);
+  c.or = vi.fn().mockReturnValue(c);
+  c.order = vi.fn().mockReturnValue(c);
+  c.limit = vi.fn().mockReturnValue(c);
+  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  return c;
+}
+
 describe("DAL — pipelineTraces", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect });
-    mockSelect.mockReturnValue({ eq: mockEq, order: mockOrder });
-    mockEq.mockReturnValue({ order: mockOrder });
-    mockOrder.mockReturnValue({ limit: mockLimit });
-    mockLimit.mockResolvedValue({ data: [], error: null });
+  describe("listPipelineTraces", () => {
+    it("returns traces", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "t1" }], error: null }));
+      const result = await listPipelineTraces();
+      expect(mockFrom).toHaveBeenCalledWith("pipeline_traces");
+      expect(result).toEqual([{ id: "t1" }]);
+    });
+
+    it("returns empty on null data", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: null }));
+      const result = await listPipelineTraces();
+      expect(result).toEqual([]);
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: { message: "fail" } }));
+      await expect(listPipelineTraces()).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("lists traces", async () => {
-    const traces = [{ id: "t1", status: "success" }];
-    mockLimit.mockResolvedValue({ data: traces, error: null });
-    const r = await listPipelineTraces();
-    expect(r).toEqual(traces);
+
+  describe("getTraceTimeline", () => {
+    it("returns timeline for trace", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "t1", step_order: 1 }], error: null }));
+      const result = await getTraceTimeline("trace-1");
+      expect(result).toEqual([{ id: "t1", step_order: 1 }]);
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: { message: "fail" } }));
+      await expect(getTraceTimeline("x")).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("gets trace timeline", async () => {
-    mockOrder.mockResolvedValue({ data: [{ id: "t1" }], error: null });
-    const r = await getTraceTimeline("t1");
-    expect(mockFrom).toHaveBeenCalledWith("pipeline_traces");
-    expect(r).toBeDefined();
+
+  describe("listDistinctEntityTypes", () => {
+    it("returns distinct types", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ entity_type: "email" }, { entity_type: "contact" }], error: null }));
+      const result = await listDistinctEntityTypes();
+      expect(result).toContain("email");
+      expect(result).toContain("contact");
+    });
   });
-  it("throws on error", async () => {
-    mockLimit.mockResolvedValue({ data: null, error: { message: "fail" } });
-    await expect(listPipelineTraces()).rejects.toEqual({ message: "fail" });
+
+  describe("listDistinctStepNames", () => {
+    it("returns distinct step names", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ step_name: "classify" }, { step_name: "route" }], error: null }));
+      const result = await listDistinctStepNames();
+      expect(result).toContain("classify");
+    });
   });
 });

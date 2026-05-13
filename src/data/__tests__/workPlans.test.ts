@@ -1,40 +1,98 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-const mockSelect = vi.fn();
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
-const mockLimit = vi.fn();
+import { describe, it, expect, vi } from "vitest";
+
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
-import { findWorkPlans, createWorkPlan, updateWorkPlan, deleteWorkPlan } from "@/data/workPlans";
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+}));
+
+import { findWorkPlans, createWorkPlan, updateWorkPlan, deleteWorkPlan, findActiveWorkPlans } from "@/data/workPlans";
+
+function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
+  const c: Record<string, unknown> = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.eq = vi.fn().mockReturnValue(c);
+  c.order = vi.fn().mockReturnValue(c);
+  c.limit = vi.fn().mockReturnValue(c);
+  c.in = vi.fn().mockReturnValue(c);
+  c.contains = vi.fn().mockReturnValue(c);
+  c.insert = vi.fn().mockReturnValue(c);
+  c.update = vi.fn().mockReturnValue(c);
+  c.delete = vi.fn().mockReturnValue(c);
+  c.single = vi.fn().mockResolvedValue(terminal);
+  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  return c;
+}
+
 describe("DAL — workPlans", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete });
-    mockSelect.mockReturnValue({ eq: mockEq });
-    mockEq.mockReturnValue({ order: mockOrder, eq: mockEq });
-    mockOrder.mockReturnValue({ limit: mockLimit });
-    mockLimit.mockResolvedValue({ data: [], error: null });
-    mockInsert.mockResolvedValue({ error: null });
-    mockUpdate.mockReturnValue({ eq: mockEq });
-    mockDelete.mockReturnValue({ eq: mockEq });
-    mockEq.mockResolvedValue({ data: [], error: null });
+  describe("findWorkPlans", () => {
+    it("returns work plans for user", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "w1" }], error: null }));
+      const result = await findWorkPlans("u1");
+      expect(mockFrom).toHaveBeenCalledWith("ai_work_plans");
+      expect(result).toEqual([{ id: "w1" }]);
+    });
+
+    it("returns empty on null data", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: null }));
+      const result = await findWorkPlans("u1");
+      expect(result).toEqual([]);
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: { message: "fail" } }));
+      await expect(findWorkPlans("u1")).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("finds work plans for user", async () => {
-    const plans = [{ id: "w1", title: "test" }];
-    mockLimit.mockResolvedValue({ data: plans, error: null });
-    const _r = await findWorkPlans("u1");
-    expect(mockFrom).toHaveBeenCalledWith("work_plans");
+
+  describe("createWorkPlan", () => {
+    it("inserts and returns plan", async () => {
+      const c = chain();
+      (c.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "w1" }, error: null });
+      mockFrom.mockReturnValue(c);
+      const result = await createWorkPlan({ user_id: "u1", title: "new" } as never);
+      expect(result).toEqual({ id: "w1" });
+    });
+
+    it("throws on error", async () => {
+      const c = chain();
+      (c.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: { message: "fail" } });
+      mockFrom.mockReturnValue(c);
+      await expect(createWorkPlan({ user_id: "u1" } as never)).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("creates a work plan", async () => {
-    await expect(createWorkPlan({ user_id: "u1", title: "new" } as never)).resolves.not.toThrow();
+
+  describe("updateWorkPlan", () => {
+    it("updates a plan", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await updateWorkPlan("w1", { status: "done" });
+      expect(mockFrom).toHaveBeenCalledWith("ai_work_plans");
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ error: { message: "fail" } }));
+      await expect(updateWorkPlan("w1", {})).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("updates a work plan", async () => {
-    await expect(updateWorkPlan("w1", { status: "done" })).resolves.not.toThrow();
+
+  describe("deleteWorkPlan", () => {
+    it("deletes a plan", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await deleteWorkPlan("w1");
+      expect(mockFrom).toHaveBeenCalledWith("ai_work_plans");
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ error: { message: "fail" } }));
+      await expect(deleteWorkPlan("w1")).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("deletes a work plan", async () => {
-    await expect(deleteWorkPlan("w1")).resolves.not.toThrow();
+
+  describe("findActiveWorkPlans", () => {
+    it("returns active plans", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "w1", status: "running" }], error: null }));
+      const result = await findActiveWorkPlans("u1");
+      expect(result).toEqual([{ id: "w1", status: "running" }]);
+    });
   });
 });

@@ -1,51 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
-const mockLimit = vi.fn();
 const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockFrom = vi.fn();
+const mockDelete = vi.fn();
+const mockEq = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: {
+    from: () => ({
+      insert: mockInsert,
+      delete: () => ({
+        eq: (...args: unknown[]) => {
+          mockEq(...args);
+          return mockDelete();
+        },
+      }),
+    }),
+  },
 }));
 
-import { fetchMemoryEntries, createMemoryEntry, updateMemoryEntry } from "@/data/aiMemory";
+import { createMemory, deleteMemory } from "@/data/aiMemory";
 
 describe("DAL — aiMemory extended", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect, insert: mockInsert, update: mockUpdate });
-    mockSelect.mockReturnValue({ eq: mockEq, order: mockOrder });
-    mockEq.mockReturnValue({ order: mockOrder, eq: mockEq });
-    mockOrder.mockReturnValue({ limit: mockLimit });
-    mockLimit.mockResolvedValue({ data: [], error: null });
-    mockInsert.mockResolvedValue({ data: null, error: null });
-    mockUpdate.mockReturnValue({ eq: mockEq });
-  });
+  beforeEach(() => vi.clearAllMocks());
 
-  describe("fetchMemoryEntries", () => {
-    it("returns memory entries for user", async () => {
-      const entries = [{ id: "m1", key: "test", value: "val" }];
-      mockLimit.mockResolvedValue({ data: entries, error: null });
-      const result = await fetchMemoryEntries("user-1");
-      expect(mockFrom).toHaveBeenCalledWith("ai_memory");
-      expect(result).toEqual(entries);
-    });
-
-    it("returns empty array on null data", async () => {
-      mockLimit.mockResolvedValue({ data: null, error: null });
-      const result = await fetchMemoryEntries("user-1");
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe("createMemoryEntry", () => {
+  describe("createMemory", () => {
     it("inserts new entry", async () => {
-      await createMemoryEntry({ key: "pref", value: "dark", user_id: "u1" } as never);
+      mockInsert.mockResolvedValue({ error: null });
+      await createMemory({ user_id: "u1", content: "test", memory_type: "fact" });
       expect(mockInsert).toHaveBeenCalled();
+    });
+
+    it("throws on insert error", async () => {
+      mockInsert.mockResolvedValue({ error: { message: "duplicate" } });
+      await expect(createMemory({ user_id: "u1", content: "dup" })).rejects.toEqual({ message: "duplicate" });
+    });
+  });
+
+  describe("deleteMemory", () => {
+    it("deletes by id", async () => {
+      mockDelete.mockResolvedValue({ error: null });
+      await deleteMemory("mem-1");
+      expect(mockEq).toHaveBeenCalledWith("id", "mem-1");
+    });
+
+    it("throws on delete error", async () => {
+      mockDelete.mockResolvedValue({ error: { message: "not found" } });
+      await expect(deleteMemory("bad-id")).rejects.toEqual({ message: "not found" });
     });
   });
 });

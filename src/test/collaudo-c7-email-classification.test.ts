@@ -12,14 +12,16 @@
  * IMPORTA CODICE REALE: src/lib/emailClassification.ts
  */
 import { describe, it, expect } from "vitest";
-import { parseClassificationResponse, type ClassificationResult } from "@/lib/emailClassification";
+import {
+  parseClassificationResponse,
+  type ClassificationResult as _ClassificationResult,
+} from "@/lib/emailClassification";
 
 // ══════════════════════════════════════════════════════════
 // TEST 1: Parsing base — JSON pulito
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C3 — parseClassificationResponse Basic", () => {
-
   const VALID_JSON = JSON.stringify({
     category: "interested",
     confidence: 0.92,
@@ -58,7 +60,6 @@ describe("Collaudo C3 — parseClassificationResponse Basic", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C3 — Markdown Fence Handling", () => {
-
   it("C3.P4 — strips ```json fences", () => {
     const raw = '```json\n{"category":"spam","confidence":0.99}\n```';
     const result = parseClassificationResponse(raw);
@@ -84,7 +85,6 @@ describe("Collaudo C3 — Markdown Fence Handling", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C3 — Input Sanitization", () => {
-
   it("C3.S1 — invalid category falls back to 'uncategorized'", () => {
     const raw = JSON.stringify({ category: "hacking_attempt", confidence: 0.5 });
     const result = parseClassificationResponse(raw);
@@ -168,7 +168,6 @@ describe("Collaudo C3 — Input Sanitization", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C3 — Error Handling", () => {
-
   it("C3.E1 — null input throws", () => {
     expect(() => parseClassificationResponse(null)).toThrow("Empty AI response");
   });
@@ -194,8 +193,15 @@ describe("Collaudo C3 — Error Handling", () => {
 
   it("C3.E5 — all 9 valid categories are accepted", () => {
     const validCats = [
-      "interested", "not_interested", "request_info", "meeting_request",
-      "complaint", "follow_up", "auto_reply", "spam", "uncategorized",
+      "interested",
+      "not_interested",
+      "request_info",
+      "meeting_request",
+      "complaint",
+      "follow_up",
+      "auto_reply",
+      "spam",
+      "uncategorized",
     ];
     for (const cat of validCats) {
       const raw = JSON.stringify({ category: cat });
@@ -210,11 +216,10 @@ describe("Collaudo C3 — Error Handling", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C3+C7 — Classification → Escalation Chain", () => {
-
   // This tests the full chain: AI response → parse → escalation decision
   // Simulates what classify-email-response actually does
 
-  it("C3+7.1 — positive interested email escalates contacted partner", async () => {
+  it("C3+7.1 — positive interested email escalates first_touch_sent partner", async () => {
     const aiResponse = JSON.stringify({
       category: "interested",
       confidence: 0.92,
@@ -233,11 +238,11 @@ describe("Collaudo C3+C7 — Classification → Escalation Chain", () => {
 
     // Import dynamically to verify the chain works
     const { computeEscalation } = await import("@/lib/leadEscalation");
-    const newStatus = computeEscalation(parsed.category, parsed.sentiment, "contacted");
-    expect(newStatus).toBe("in_progress");
+    const newStatus = computeEscalation(parsed.category, parsed.sentiment, "first_touch_sent");
+    expect(newStatus).toBe("engaged");
   });
 
-  it("C3+7.2 — not_interested email with high confidence downgrades", async () => {
+  it("C3+7.2 — not_interested email with high confidence downgrades from first_touch_sent", async () => {
     const aiResponse = JSON.stringify({
       category: "not_interested",
       confidence: 0.88,
@@ -246,14 +251,14 @@ describe("Collaudo C3+C7 — Classification → Escalation Chain", () => {
       ai_summary: "Partner explicitly declined",
       keywords: ["decline"],
       detected_patterns: ["rejection"],
-      action_suggested: "Mark as lost",
+      action_suggested: "Mark as archived",
       reasoning: "Clear rejection",
     });
 
     const parsed = parseClassificationResponse(aiResponse);
     const { computeDowngrade } = await import("@/lib/leadEscalation");
-    const newStatus = computeDowngrade(parsed.category, parsed.confidence, "contacted");
-    expect(newStatus).toBe("lost");
+    const newStatus = computeDowngrade(parsed.category, parsed.confidence, "first_touch_sent");
+    expect(newStatus).toBe("archived");
   });
 
   it("C3+7.3 — spam email does NOT trigger any state change", async () => {
@@ -271,8 +276,8 @@ describe("Collaudo C3+C7 — Classification → Escalation Chain", () => {
 
     const parsed = parseClassificationResponse(aiResponse);
     const { computeEscalation, computeDowngrade } = await import("@/lib/leadEscalation");
-    const escalation = computeEscalation(parsed.category, parsed.sentiment, "contacted");
-    const downgrade = computeDowngrade(parsed.category, parsed.confidence, "contacted");
+    const escalation = computeEscalation(parsed.category, parsed.sentiment, "first_touch_sent");
+    const downgrade = computeDowngrade(parsed.category, parsed.confidence, "first_touch_sent");
     expect(escalation).toBeNull();
     expect(downgrade).toBeNull();
   });

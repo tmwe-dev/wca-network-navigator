@@ -21,12 +21,12 @@ function formatTokenCount(count: number): string {
 
 // ─── Budget Threshold Checking ───────────────────────
 
-interface TokenBudget {
+interface _TokenBudget {
   daily: number;
   monthly: number;
 }
 
-interface TokenUsage {
+interface _TokenUsage {
   today: number;
   month: number;
 }
@@ -206,7 +206,7 @@ describe("Token Budget Enforcement", () => {
       expect(calculatePercentage(1, 100000)).toBe(0);
       expect(calculatePercentage(100, 1000000)).toBe(0);
       expect(calculatePercentage(500, 1000000)).toBe(0);
-      expect(calculatePercentage(501, 1000000)).toBe(1);
+      expect(calculatePercentage(5001, 1000000)).toBe(1);
     });
 
     it("should handle very large numbers", () => {
@@ -219,7 +219,7 @@ describe("Token Budget Enforcement", () => {
 
   describe("Daily vs Monthly Limits", () => {
     it("should allow same daily budget if within monthly", () => {
-      const dailyBudget = 50000;
+      const _dailyBudget = 50000;
       const monthlyBudget = 1000000;
 
       // Using full daily budget 20 times should be within monthly
@@ -230,7 +230,7 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should enforce both daily and monthly limits independently", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       const monthlyBudget = 1000000;
 
       const dailyUsage = 85000; // 85% of daily
@@ -241,7 +241,7 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should warn about daily limit even if monthly is safe", () => {
-      const dailyBudget = 50000;
+      const _dailyBudget = 50000;
       const monthlyBudget = 1000000;
 
       const dailyUsage = 45000; // 90% of daily
@@ -252,7 +252,7 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should warn about monthly limit even if daily is safe", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       const monthlyBudget = 500000;
 
       const dailyUsage = 50000; // 50% of daily
@@ -267,7 +267,7 @@ describe("Token Budget Enforcement", () => {
 
   describe("Practical Budget Scenarios", () => {
     it("should handle typical user daily usage", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       const dailyUsage = 45000;
 
       const percentage = calculatePercentage(dailyUsage, dailyBudget);
@@ -278,7 +278,7 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should warn when approaching daily limit", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       const dailyUsage = 87000;
 
       const percentage = calculatePercentage(dailyUsage, dailyBudget);
@@ -289,7 +289,7 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should block when exceeding daily limit", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       const dailyUsage = 105000;
 
       const percentage = calculatePercentage(dailyUsage, dailyBudget);
@@ -328,7 +328,7 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should format budget displays correctly", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       const monthlyBudget = 1000000;
       const dailyUsage = 85000;
       const monthlyUsage = 500000;
@@ -365,7 +365,7 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should calculate days remaining with average usage", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       const monthlyBudget = 1000000;
       const daysElapsed = 10;
       const tokensUsed = 400000;
@@ -417,7 +417,7 @@ describe("Token Budget Enforcement", () => {
 
   describe("Budget Integration", () => {
     it("should track complete daily cycle", () => {
-      const dailyBudget = 100000;
+      const _dailyBudget = 100000;
       let dailyUsage = 0;
 
       const transactions = [20000, 30000, 25000, 20000]; // 4 transactions
@@ -433,8 +433,8 @@ describe("Token Budget Enforcement", () => {
     });
 
     it("should prevent overspending within same cycle", () => {
-      const dailyBudget = 100000;
-      let dailyUsage = 95000;
+      const _dailyBudget = 100000;
+      const dailyUsage = 95000;
 
       // Trying to use more than remaining
       const nextRequest = 10000;

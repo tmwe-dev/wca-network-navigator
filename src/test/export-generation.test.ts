@@ -23,7 +23,7 @@ function convertToCSV(headers: string[], rows: Record<string, unknown>[]): strin
 
 // ─── Data Formatting ────────────────────────────────────
 
-interface ExportRow {
+interface _ExportRow {
   id: string;
   name: string;
   email: string | null;
@@ -290,7 +290,7 @@ describe("Export Generation", () => {
 
       const formatted = rows.map((r) => ({
         ...r,
-        country: (r.country as string || "").toUpperCase(),
+        country: ((r.country as string) || "").toUpperCase(),
       }));
 
       expect(formatted[0].country).toBe("IT");
@@ -305,7 +305,7 @@ describe("Export Generation", () => {
 
       const formatted = rows.map((r) => ({
         ...r,
-        name: (r.name as string || "").trim(),
+        name: ((r.name as string) || "").trim(),
       }));
 
       expect(formatted[0].name).toBe("John Doe");
@@ -351,9 +351,7 @@ describe("Export Generation", () => {
 
     it("should handle rows with empty strings", () => {
       const headers = ["id", "name", "email"];
-      const rows = [
-        { id: "", name: "", email: "" },
-      ];
+      const rows = [{ id: "", name: "", email: "" }];
 
       const csv = convertToCSV(headers, rows);
       const lines = csv.split("\n");
@@ -410,7 +408,7 @@ describe("Export Generation", () => {
 
       const csv = convertToCSV(headers, rows);
       const lines = csv.split("\n");
-      expect(lines[1]).toBe("c1,John Doe,,, Acme");
+      expect(lines[1]).toBe("c1,John Doe,,,Acme");
     });
 
     it("should export contacts with special characters", () => {
@@ -424,7 +422,8 @@ describe("Export Generation", () => {
       ];
 
       const csv = convertToCSV(headers, rows);
-      expect(csv).toContain('Smith, "Johnny"');
+      // CSV escapes: the name contains comma and quotes, so it gets wrapped and quotes doubled
+      expect(csv).toContain('"Smith, ""Johnny"""');
     });
   });
 
@@ -452,7 +451,7 @@ describe("Export Generation", () => {
       const headers = ["id", "title", "amount"];
       const rows = [
         { id: "d1", title: "Deal 1", amount: 50000 },
-        { id: "d2", title: "Deal 2", amount: 75000.50 },
+        { id: "d2", title: "Deal 2", amount: 75000.5 },
       ];
 
       const csv = convertToCSV(headers, rows);
@@ -496,9 +495,7 @@ describe("Export Generation", () => {
 
     it("should escape subject lines with special chars", () => {
       const headers = ["id", "subject"];
-      const rows = [
-        { id: "e1", subject: 'RE: "Contract Review", Urgent' },
-      ];
+      const rows = [{ id: "e1", subject: 'RE: "Contract Review", Urgent' }];
 
       const csv = convertToCSV(headers, rows);
       expect(csv).toContain('"');
@@ -506,12 +503,10 @@ describe("Export Generation", () => {
 
     it("should handle multiline email bodies", () => {
       const headers = ["id", "body"];
-      const rows = [
-        { id: "e1", body: "Line 1\nLine 2\nLine 3" },
-      ];
+      const rows = [{ id: "e1", body: "Line 1\nLine 2\nLine 3" }];
 
       const csv = convertToCSV(headers, rows);
-      expect(csv).toContain('\n');
+      expect(csv).toContain("\n");
     });
   });
 
@@ -543,9 +538,7 @@ describe("Export Generation", () => {
       const allColumns = ["id", "name", "email", "phone", "company"];
       const selectedColumns = ["id", "name", "email"];
 
-      const filtered = allColumns.filter((c) =>
-        selectedColumns.includes(c)
-      );
+      const filtered = allColumns.filter((c) => selectedColumns.includes(c));
 
       expect(filtered).toEqual(["id", "name", "email"]);
     });

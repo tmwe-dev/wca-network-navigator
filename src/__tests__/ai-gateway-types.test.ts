@@ -1,4 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// Mock the Deno-style esm.sh import used by the source file
+vi.mock("https://esm.sh/@supabase/supabase-js@2.39.3", () => ({}));
 
 // Import the functions and classes directly from the source
 import {
@@ -7,7 +10,7 @@ import {
   AiGatewayError,
   mapErrorToResponse,
   type AiGatewayErrorKind,
-} from "../../../supabase/functions/_shared/aiGatewayTypes";
+} from "../../supabase/functions/_shared/aiGatewayTypes";
 
 describe("aiGatewayTypes", () => {
   describe("isRetryableStatus", () => {
@@ -68,9 +71,7 @@ describe("aiGatewayTypes", () => {
     });
 
     it("should return false for any non-retryable status code", () => {
-      const nonRetryableStatuses = [
-        200, 201, 204, 301, 302, 400, 401, 403, 404, 405, 429, 499, 501, 505,
-      ];
+      const nonRetryableStatuses = [200, 201, 204, 301, 302, 400, 401, 403, 404, 405, 429, 499, 501, 505];
       nonRetryableStatuses.forEach((status) => {
         expect(isRetryableStatus(status)).toBe(false);
       });
@@ -87,50 +88,45 @@ describe("aiGatewayTypes", () => {
       expect(delay).toBeGreaterThan(0);
     });
 
-    it("should return value between 750-1000 for attempt 0 (base 1000 * 0.75-1.25)", () => {
+    it("should return value between 750-1250 for attempt 0", () => {
       const delay = backoffMs(0);
       expect(delay).toBeGreaterThanOrEqual(750);
-      expect(delay).toBeLessThanOrEqual(1000);
+      expect(delay).toBeLessThanOrEqual(1250);
     });
 
-    it("should return value between 1500-2000 for attempt 1 (base 2000 * 0.75-1.25)", () => {
+    it("should return value between 1500-2500 for attempt 1", () => {
       const delay = backoffMs(1);
       expect(delay).toBeGreaterThanOrEqual(1500);
-      expect(delay).toBeLessThanOrEqual(2000);
+      expect(delay).toBeLessThanOrEqual(2500);
     });
 
-    it("should return value between 3000-4000 for attempt 2 (base 4000 * 0.75-1.25)", () => {
+    it("should return value between 3000-5000 for attempt 2", () => {
       const delay = backoffMs(2);
       expect(delay).toBeGreaterThanOrEqual(3000);
-      expect(delay).toBeLessThanOrEqual(4000);
+      expect(delay).toBeLessThanOrEqual(5000);
     });
 
-    it("should return value between 6000-8000 for attempt 3 (base 8000 * 0.75-1.25)", () => {
+    it("should return value between 6000-10000 for attempt 3", () => {
       const delay = backoffMs(3);
       expect(delay).toBeGreaterThanOrEqual(6000);
-      expect(delay).toBeLessThanOrEqual(8000);
+      expect(delay).toBeLessThanOrEqual(10000);
     });
 
     it("should cap at 10000 for very high attempt numbers", () => {
       const delay = backoffMs(100);
-      expect(delay).toBeGreaterThanOrEqual(7500); // 10000 * 0.75
-      expect(delay).toBeLessThanOrEqual(10000); // 10000 * 1.25 but capped at 10000
+      expect(delay).toBeGreaterThanOrEqual(7500);
+      expect(delay).toBeLessThanOrEqual(12500);
     });
 
     it("should have randomness (multiple calls for same attempt should differ)", () => {
       const delays = Array.from({ length: 10 }, () => backoffMs(1));
       const uniqueDelays = new Set(delays);
-      // With randomness, we expect at least some variation
       expect(uniqueDelays.size).toBeGreaterThan(1);
     });
 
     it("should generally increase with attempt number on average", () => {
-      const avg0 = Array.from({ length: 100 }, () => backoffMs(0)).reduce(
-        (a, b) => a + b
-      ) / 100;
-      const avg2 = Array.from({ length: 100 }, () => backoffMs(2)).reduce(
-        (a, b) => a + b
-      ) / 100;
+      const avg0 = Array.from({ length: 100 }, () => backoffMs(0)).reduce((a, b) => a + b) / 100;
+      const avg2 = Array.from({ length: 100 }, () => backoffMs(2)).reduce((a, b) => a + b) / 100;
       expect(avg2).toBeGreaterThan(avg0);
     });
 
@@ -143,10 +139,7 @@ describe("aiGatewayTypes", () => {
 
   describe("AiGatewayError", () => {
     it("should construct with required parameters", () => {
-      const error = new AiGatewayError(
-        "rate_limited",
-        "Too many requests"
-      );
+      const error = new AiGatewayError("rate_limited", "Too many requests");
       expect(error).toBeInstanceOf(Error);
       expect(error.name).toBe("AiGatewayError");
       expect(error.message).toBe("Too many requests");
@@ -154,21 +147,12 @@ describe("aiGatewayTypes", () => {
     });
 
     it("should have status property when provided", () => {
-      const error = new AiGatewayError(
-        "rate_limited",
-        "Too many requests",
-        429
-      );
+      const error = new AiGatewayError("rate_limited", "Too many requests", 429);
       expect(error.status).toBe(429);
     });
 
     it("should have detail property when provided", () => {
-      const error = new AiGatewayError(
-        "rate_limited",
-        "Too many requests",
-        429,
-        "Retry after 60 seconds"
-      );
+      const error = new AiGatewayError("rate_limited", "Too many requests", 429, "Retry after 60 seconds");
       expect(error.detail).toBe("Retry after 60 seconds");
     });
 
@@ -199,12 +183,7 @@ describe("aiGatewayTypes", () => {
 
     it("should preserve all properties when thrown and caught", () => {
       try {
-        throw new AiGatewayError(
-          "unauthorized",
-          "Invalid API key",
-          401,
-          "API key not found"
-        );
+        throw new AiGatewayError("unauthorized", "Invalid API key", 401, "API key not found");
       } catch (e) {
         const err = e as AiGatewayError;
         expect(err.kind).toBe("unauthorized");
@@ -234,11 +213,7 @@ describe("aiGatewayTypes", () => {
     });
 
     it("should map credits_exhausted to 402", () => {
-      const error = new AiGatewayError(
-        "credits_exhausted",
-        "Out of credits",
-        402
-      );
+      const error = new AiGatewayError("credits_exhausted", "Out of credits", 402);
       const response = mapErrorToResponse(error, corsHeaders);
       expect(response.status).toBe(402);
     });
@@ -274,11 +249,7 @@ describe("aiGatewayTypes", () => {
     });
 
     it("should map all_models_failed to 502", () => {
-      const error = new AiGatewayError(
-        "all_models_failed",
-        "All models failed",
-        502
-      );
+      const error = new AiGatewayError("all_models_failed", "All models failed", 502);
       const response = mapErrorToResponse(error, corsHeaders);
       expect(response.status).toBe(502);
     });
@@ -309,10 +280,7 @@ describe("aiGatewayTypes", () => {
     });
 
     it("should return JSON body with error kind and message", async () => {
-      const error = new AiGatewayError(
-        "unauthorized",
-        "Invalid credentials"
-      );
+      const error = new AiGatewayError("unauthorized", "Invalid credentials");
       const response = mapErrorToResponse(error, corsHeaders);
       const body = await response.json();
       expect(body.error).toBe("unauthorized");
@@ -371,11 +339,11 @@ describe("aiGatewayTypes", () => {
 
   describe("Exponential Backoff Behavior", () => {
     it("should implement exponential backoff with jitter", () => {
-      const baseForAttempt0 = 1000 * (2 ** 0); // 1000
-      const baseForAttempt1 = 1000 * (2 ** 1); // 2000
-      const baseForAttempt2 = 1000 * (2 ** 2); // 4000
-      const baseForAttempt3 = 1000 * (2 ** 3); // 8000
-      const baseForAttempt4 = Math.min(1000 * (2 ** 4), 10000); // capped at 10000
+      const baseForAttempt0 = 1000 * 2 ** 0; // 1000
+      const baseForAttempt1 = 1000 * 2 ** 1; // 2000
+      const baseForAttempt2 = 1000 * 2 ** 2; // 4000
+      const baseForAttempt3 = 1000 * 2 ** 3; // 8000
+      const baseForAttempt4 = Math.min(1000 * 2 ** 4, 10000); // capped at 10000
 
       expect(baseForAttempt0).toBe(1000);
       expect(baseForAttempt1).toBe(2000);

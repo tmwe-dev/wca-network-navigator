@@ -1,30 +1,55 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
+import { describe, it, expect, vi } from "vitest";
+
 const mockFrom = vi.fn();
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (...a: unknown[]) => mockFrom(...a) },
 }));
-import { fetchPlaybooks } from "@/data/commercialPlaybooks";
+
+import { findCommercialPlaybooks, updateCommercialPlaybook } from "@/data/commercialPlaybooks";
+
+function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
+  const c: Record<string, unknown> = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.eq = vi.fn().mockReturnValue(c);
+  c.order = vi.fn().mockReturnValue(c);
+  c.limit = vi.fn().mockReturnValue(c);
+  c.update = vi.fn().mockReturnValue(c);
+  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  return c;
+}
 
 describe("DAL — commercialPlaybooks", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect });
-    mockSelect.mockReturnValue({ order: mockOrder, eq: mockEq });
-    mockOrder.mockResolvedValue({ data: [], error: null });
-    mockEq.mockReturnValue({ order: mockOrder });
+  describe("findCommercialPlaybooks", () => {
+    it("returns playbooks for user", async () => {
+      mockFrom.mockReturnValue(chain({ data: [{ id: "p1", name: "Cold Outreach" }], error: null }));
+      const result = await findCommercialPlaybooks("u1");
+      expect(mockFrom).toHaveBeenCalledWith("commercial_playbooks");
+      expect(result).toEqual([{ id: "p1", name: "Cold Outreach" }]);
+    });
+
+    it("returns empty on null data", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: null }));
+      const result = await findCommercialPlaybooks("u1");
+      expect(result).toEqual([]);
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ data: null, error: { message: "fail" } }));
+      await expect(findCommercialPlaybooks("u1")).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("returns playbooks", async () => {
-    const pbs = [{ id: "p1", name: "Cold Outreach" }];
-    mockOrder.mockResolvedValue({ data: pbs, error: null });
-    const result = await fetchPlaybooks();
-    expect(result).toEqual(pbs);
-  });
-  it("returns empty on null", async () => {
-    mockOrder.mockResolvedValue({ data: null, error: null });
-    const result = await fetchPlaybooks();
-    expect(result).toEqual([]);
+
+  describe("updateCommercialPlaybook", () => {
+    it("updates playbook", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await updateCommercialPlaybook("p1", { name: "Updated" });
+      expect(mockFrom).toHaveBeenCalledWith("commercial_playbooks");
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ error: { message: "fail" } }));
+      await expect(updateCommercialPlaybook("p1", {})).rejects.toEqual({ message: "fail" });
+    });
   });
 });

@@ -1,32 +1,87 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
+import { describe, it, expect, vi } from "vitest";
+
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
-import { findPendingOutreach, findSentOutreach, findScheduledOutreach } from "@/data/outreachPipeline";
+const mockGetSession = vi.fn();
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: (...a: unknown[]) => mockFrom(...a),
+    auth: { getSession: () => mockGetSession() },
+  },
+}));
+
+import {
+  findPendingOutreach,
+  findSentOutreach,
+  updateActivitySchedule,
+  cancelActivity,
+  cancelMissionAction,
+} from "@/data/outreachPipeline";
+
+function chain(terminal: { data?: unknown; error?: unknown; count?: unknown } = { data: [], error: null }) {
+  const c: Record<string, unknown> = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.eq = vi.fn().mockReturnValue(c);
+  c.in = vi.fn().mockReturnValue(c);
+  c.gt = vi.fn().mockReturnValue(c);
+  c.gte = vi.fn().mockReturnValue(c);
+  c.order = vi.fn().mockReturnValue(c);
+  c.limit = vi.fn().mockReturnValue(c);
+  c.update = vi.fn().mockReturnValue(c);
+  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  return c;
+}
+
 describe("DAL — outreachPipeline", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect });
-    mockSelect.mockReturnValue({ eq: mockEq, order: mockOrder });
-    mockEq.mockReturnValue({ order: mockOrder });
-    mockOrder.mockResolvedValue({ data: [], error: null });
+  describe("findPendingOutreach", () => {
+    it("returns empty when no session", async () => {
+      mockGetSession.mockResolvedValue({ data: { session: null } });
+      const result = await findPendingOutreach();
+      expect(result).toEqual({ activities: [], missionActions: [], pendingActions: [] });
+    });
+
+    it("returns results when authenticated", async () => {
+      mockGetSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+      mockFrom.mockReturnValue(chain({ data: [], error: null }));
+      const result = await findPendingOutreach();
+      expect(result).toHaveProperty("activities");
+      expect(result).toHaveProperty("missionActions");
+      expect(result).toHaveProperty("pendingActions");
+    });
   });
-  it("finds pending outreach", async () => {
-    const items = [{ id: "o1" }];
-    mockOrder.mockResolvedValue({ data: items, error: null });
-    const r = await findPendingOutreach();
-    expect(r).toEqual(items);
+
+  describe("findSentOutreach", () => {
+    it("returns empty when no session", async () => {
+      mockGetSession.mockResolvedValue({ data: { session: null } });
+      const result = await findSentOutreach();
+      expect(result).toEqual({ activities: [], missionActions: [] });
+    });
   });
-  it("finds sent outreach", async () => {
-    mockOrder.mockResolvedValue({ data: [{ id: "o2" }], error: null });
-    const r = await findSentOutreach();
-    expect(r).toBeDefined();
+
+  describe("updateActivitySchedule", () => {
+    it("updates scheduled_at", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await updateActivitySchedule("a1", "2026-06-01T10:00:00Z");
+      expect(mockFrom).toHaveBeenCalledWith("activities");
+    });
+
+    it("throws on error", async () => {
+      mockFrom.mockReturnValue(chain({ error: { message: "fail" } }));
+      await expect(updateActivitySchedule("a1", "x")).rejects.toEqual({ message: "fail" });
+    });
   });
-  it("finds scheduled outreach", async () => {
-    mockOrder.mockResolvedValue({ data: [], error: null });
-    const r = await findScheduledOutreach();
-    expect(r).toEqual([]);
+
+  describe("cancelActivity", () => {
+    it("cancels activity", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await cancelActivity("a1");
+    });
+  });
+
+  describe("cancelMissionAction", () => {
+    it("cancels mission action", async () => {
+      mockFrom.mockReturnValue(chain({ error: null }));
+      await cancelMissionAction("m1");
+    });
   });
 });
