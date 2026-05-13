@@ -39,6 +39,7 @@ export interface PromptTestRun {
   duration_ms: number;
   trigger_source: string | null;
   created_at: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface PromptVersion {

@@ -500,6 +500,7 @@ Deno.serve(async (req) => {
           tokens_input: null,
           tokens_output: null,
           duration_ms: 0,
+          metadata: {},
         });
         continue;
       }
