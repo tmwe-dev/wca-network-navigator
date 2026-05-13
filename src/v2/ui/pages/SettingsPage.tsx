@@ -24,6 +24,7 @@ import TimingSettings from "@/components/settings/TimingSettings";
 import AdminUsers from "@/components/settings/AdminUsersPanel";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
+import { TextIntensityToggle } from "@/v2/ui/molecules/TextIntensityToggle";
 import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { BackupExportTab } from "@/components/settings/BackupExportTab";
@@ -162,6 +163,16 @@ export function SettingsPage() {
                 </div>
                 <div className="float-panel p-5">
                   <LanguageSwitcher />
+                </div>
+                <div className="float-panel p-5 space-y-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">Intensità testo</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Regola la gradazione del nero (tema chiaro) o del bianco (tema scuro) applicata
+                      al testo in tutta la piattaforma.
+                    </p>
+                  </div>
+                  <TextIntensityToggle />
                 </div>
               </div>
             )}

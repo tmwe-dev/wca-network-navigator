@@ -949,3 +949,50 @@ html, body {
     box-shadow: 0 0 0 2px hsl(var(--gold) / 0.3), 0 0 0 4px hsl(var(--gold) / 0.1);
   }
 }
+
+/* =========================================================================
+ * Text Intensity (gradazione globale del colore testo)
+ * Pilotata da [data-text-intensity] su <html>. Default: normal (no override).
+ * Agisce solo sui token di FOREGROUND per non alterare sfondi/colori brand.
+ * ========================================================================= */
+@layer base {
+  /* LIGHT — più "nero" verso max */
+  html[data-text-intensity="soft"]:not(.dark) {
+    --foreground: 222 30% 32%;
+    --card-foreground: 222 30% 32%;
+    --popover-foreground: 222 30% 32%;
+    --muted-foreground: 220 9% 56%;
+  }
+  html[data-text-intensity="strong"]:not(.dark) {
+    --foreground: 222 60% 7%;
+    --card-foreground: 222 60% 7%;
+    --popover-foreground: 222 60% 7%;
+    --muted-foreground: 220 12% 36%;
+  }
+  html[data-text-intensity="max"]:not(.dark) {
+    --foreground: 0 0% 0%;
+    --card-foreground: 0 0% 0%;
+    --popover-foreground: 0 0% 0%;
+    --muted-foreground: 0 0% 25%;
+  }
+
+  /* DARK — più "bianco" verso max */
+  html[data-text-intensity="soft"].dark {
+    --foreground: 210 25% 78%;
+    --card-foreground: 210 25% 78%;
+    --popover-foreground: 210 25% 78%;
+    --muted-foreground: 260 15% 65%;
+  }
+  html[data-text-intensity="strong"].dark {
+    --foreground: 210 40% 99%;
+    --card-foreground: 210 40% 99%;
+    --popover-foreground: 210 40% 99%;
+    --muted-foreground: 260 22% 85%;
+  }
+  html[data-text-intensity="max"].dark {
+    --foreground: 0 0% 100%;
+    --card-foreground: 0 0% 100%;
+    --popover-foreground: 0 0% 100%;
+    --muted-foreground: 0 0% 92%;
+  }
+}

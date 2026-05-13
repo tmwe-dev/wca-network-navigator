@@ -26,6 +26,16 @@
 
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <script>
+      // Anti-flash: applica intensità testo prima del primo render
+      try {
+        var v = localStorage.getItem("text-intensity") || "normal";
+        if (["soft","normal","strong","max"].indexOf(v) === -1) v = "normal";
+        document.documentElement.setAttribute("data-text-intensity", v);
+      } catch (e) {
+        document.documentElement.setAttribute("data-text-intensity", "normal");
+      }
+    </script>
   </head>
 
   <body>
