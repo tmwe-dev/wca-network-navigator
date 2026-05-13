@@ -31,6 +31,14 @@ import { queryKeys } from "@/lib/queryKeys";
 import { Input } from "@/components/ui/input";
 import { createCampaignDraftQueue } from "@/data/emailCampaigns";
 import DOMPurify from "dompurify";
+import { EmailLanguagePicker } from "@/components/email/EmailLanguagePicker";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import {
+  loadLanguageModeFromStorage,
+  saveLanguageModeToStorage,
+  resolveLanguage,
+  type LanguageMode,
+} from "@/lib/languages";
 
 const log = createLogger("BulkActionMenu");
 
@@ -60,6 +68,9 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  const [languageMode, setLanguageModeState] = useState<LanguageMode>(() => loadLanguageModeFromStorage());
+  const setLanguageMode = (m: LanguageMode) => { setLanguageModeState(m); saveLanguageModeToStorage(m); };
+  const [translatePerRecipient, setTranslatePerRecipient] = useState(false);
 
   const eligibleEmailContacts = selectedContacts.filter(c => !!c.email && /@/.test(c.email));
 
@@ -167,12 +178,38 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
           ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
         },
       );
-      const recipients = eligibleEmailContacts.map(c => ({
-        partner_id: c.partnerId || c.sourceId,
-        email: c.email,
-        name: c.name,
-        subject: emailSubject,
-        html: safeHtml,
+      // Risolvi lingua per ogni destinatario (se modalità auto/per-recipient).
+      const perRecipient = translatePerRecipient || languageMode.kind === "auto";
+      const recipients = await Promise.all(eligibleEmailContacts.map(async (c) => {
+        let subject = emailSubject;
+        let html = safeHtml;
+        try {
+          const resolved = resolveLanguage(languageMode, { countryCode: c.country });
+          // Se modalità "italiano" e nessuna richiesta esplicita di traduzione → no-op.
+          const shouldTranslate = perRecipient || languageMode.kind !== "italiano";
+          if (shouldTranslate) {
+            const r = await invokeEdge<{ subject: string; body: string }>("translate-text", {
+              body: {
+                subject: emailSubject,
+                body: safeHtml,
+                targetLanguage: resolved.language,
+                sourceLanguage: "italiano",
+              },
+              context: "BulkActionMenu.translate",
+            });
+            if (r?.subject) subject = r.subject;
+            if (r?.body) html = r.body;
+          }
+        } catch (e) {
+          log.warn("translate failed, fallback to original", { error: e instanceof Error ? e.message : String(e) });
+        }
+        return {
+          partner_id: c.partnerId || c.sourceId,
+          email: c.email,
+          name: c.name,
+          subject,
+          html,
+        };
       }));
       const { queued } = await createCampaignDraftQueue({
         userId: user.id,
@@ -326,6 +363,24 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
               placeholder="Corpo dell'email..."
               className="min-h-[160px] text-sm"
             />
+            <div className="flex flex-col gap-2 pt-1 border-t border-border/40">
+              <EmailLanguagePicker
+                value={languageMode}
+                onChange={setLanguageMode}
+                disabled={isProcessing}
+                compact
+              />
+              <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={translatePerRecipient || languageMode.kind === "auto"}
+                  disabled={languageMode.kind === "auto" || isProcessing}
+                  onChange={(e) => setTranslatePerRecipient(e.target.checked)}
+                  className="h-3 w-3"
+                />
+                Traduci per ogni destinatario (lingua del paese, fallback inglese)
+              </label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setEmailOpen(false)}>Annulla</Button>

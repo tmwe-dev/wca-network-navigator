@@ -13,6 +13,7 @@ import { useEmailComposerState } from "@/hooks/email-composer";
 import { EmailToolbar } from "@/components/email/EmailToolbar";
 import { EmailAIPanelSlim } from "@/components/email/EmailAIPanelSlim";
 import { EmailTemplateSelector } from "@/components/email/EmailTemplateSelector";
+import { EmailLanguagePicker } from "@/components/email/EmailLanguagePicker";
 import { RecipientHeroCard } from "@/v2/ui/organisms/RecipientHeroCard";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -113,6 +114,18 @@ export function EmailComposerPage() {
                 <Mail className="w-4 h-4 text-primary shrink-0" />
                 <Input value={email.subject} onChange={(e) => c.setSubject(e.target.value)}
                   placeholder="Oggetto della email..." className="h-8 text-sm font-medium flex-1" />
+              </div>
+              <div className="mb-2">
+                <EmailLanguagePicker
+                  value={c.languageMode}
+                  onChange={c.setLanguageMode}
+                  recipientContext={{
+                    countryCode: c.recipients[0]?.countryCode,
+                    countryName: c.recipients[0]?.countryName,
+                  }}
+                  disabled={ai.aiGenerating || ai.aiImproving}
+                  compact
+                />
               </div>
 
               <EmailToolbar
