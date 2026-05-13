@@ -24,9 +24,11 @@ import {
   logAiInteraction,
   listAiInteractions,
   listFeedbackForInteractions,
-  _upsertFeedback,
-  _deleteFeedback,
+  upsertFeedback as _upsertFeedback,
+  deleteFeedback as _deleteFeedback,
 } from "@/data/aiInteractionLog";
+void _upsertFeedback;
+void _deleteFeedback;
 
 describe("DAL — aiInteractionLog", () => {
   beforeEach(() => {

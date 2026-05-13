@@ -18,7 +18,7 @@ function _getAllQueryKeys(obj: Record<string, unknown>, path: string[] = []): st
     } else if (typeof value === "function" || (typeof value === "object" && value !== null && !Array.isArray(value))) {
       // Recurse into nested objects
       if (typeof value === "object" && !Array.isArray(value)) {
-        keys.push(...getAllQueryKeys(value as Record<string, unknown>, currentPath));
+        keys.push(..._getAllQueryKeys(value as Record<string, unknown>, currentPath));
       }
     }
   }
