@@ -18,6 +18,12 @@
 
     <meta name="theme-color" content="#0f172a" />
 
+    <!-- Sprint Hardening 2026-05-13: CSP enforcing per la SPA. frame-ancestors permissivo per Lovable preview iframes. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://*.supabase.co https://*.lovable.app https://*.lovable.dev; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.lovable.app https://*.lovable.dev https://ai.gateway.lovable.dev https://fonts.googleapis.com https://fonts.gstatic.com; frame-ancestors 'self' https://*.lovable.app https://*.lovable.dev; base-uri 'self'; form-action 'self'; object-src 'none'"
+    />
+
     <!-- DNS prefetch for external services -->
     <link rel="dns-prefetch" href="https://zrbditqddhjkutzjycgi.supabase.co" />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
