@@ -16,6 +16,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -89,15 +90,11 @@ serve(async (req) => {
     );
   }
 
-  // Lightweight JWT presence check — the gateway already validates the JWT
-  // signature; here we only refuse anonymous traffic.
+  // Hard auth check: verifica crittografica del JWT (con verify_jwt=false il
+  // gateway non lo valida, quindi DOBBIAMO farlo qui).
+  const auth = await requireAuth(req, cors);
+  if (isAuthError(auth)) return auth;
   const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return new Response(
-      JSON.stringify({ error: "Authorization mancante" }),
-      { status: 401, headers: { ...cors, "Content-Type": "application/json" } },
-    );
-  }
 
   try {
     const resp = await fetch(
@@ -125,8 +122,7 @@ serve(async (req) => {
     }
 
     // Mint bridge_token per autenticare il client tool ask_brain → command-ask-brain
-    const userId = extractUserIdFromJwt(authHeader);
-    const bridgeToken = userId ? await mintBridgeToken(userId) : null;
+    const bridgeToken = await mintBridgeToken(auth.userId);
 
     return new Response(JSON.stringify({ token, agentId, bridge_token: bridgeToken }), {
       status: 200,

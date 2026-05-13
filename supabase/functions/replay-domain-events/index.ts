@@ -24,6 +24,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { eventBus, createEvent } from "../_shared/domainEvents.ts";
 import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
@@ -273,6 +274,31 @@ serve(async (req: Request) => {
       JSON.stringify({ error: "Method not allowed" }),
       { status: 405, headers: { "Content-Type": "application/json" } },
     );
+  }
+
+  // Auth: cron secret OR admin JWT
+  const cronSecret = Deno.env.get("REPLAY_EVENTS_CRON_SECRET") ?? Deno.env.get("SCHEDULER_CRON_SECRET");
+  const headerSecret = req.headers.get("x-cron-secret");
+  const cronAuthorized = !!cronSecret && headerSecret === cronSecret;
+
+  if (!cronAuthorized) {
+    const auth = await requireAuth(req, { "Content-Type": "application/json" });
+    if (isAuthError(auth)) return auth;
+    const adminCheck = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+    const { data: isAdmin } = await adminCheck.rpc("has_role", {
+      _user_id: auth.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: "FORBIDDEN", message: "Admin role or cron secret required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      );
+    }
   }
 
   const result = await replayDomainEvents();

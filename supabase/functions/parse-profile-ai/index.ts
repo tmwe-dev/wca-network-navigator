@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -11,6 +12,10 @@ Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
+    // Auth: solo utenti autenticati possono parsare profili
+    const auth = await requireAuth(req, dynCors);
+    if (isAuthError(auth)) return auth;
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
       return new Response(
