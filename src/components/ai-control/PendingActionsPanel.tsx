@@ -335,16 +335,18 @@ export function PendingActionsPanel() {
                         </div>
                       )}
                       <div className="flex items-center gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          className="h-7 text-xs gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-                          onClick={() => {
+                        <ApproveGuardedButton
+                          partnerId={action.partner_id ?? null}
+                          contactId={action.contact_id ?? null}
+                          confirmed={!!confirmedRisk[action.id]}
+                          label="Approva Modificato"
+                          className="h-7 text-xs gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                          isSendAction={true}
+                          onApprove={() => {
                             approveMutation.mutate({ id: action.id, draftSubject: editedDraftSubject, draftBody: editedDraftBody });
                             setDraftEditId(null);
                           }}
-                        >
-                          <CheckCircle className="h-3.5 w-3.5" />Approva Modificato
-                        </Button>
+                        />
                         <Button
                           size="sm"
                           variant="ghost"
