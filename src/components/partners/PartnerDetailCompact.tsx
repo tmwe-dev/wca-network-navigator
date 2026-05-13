@@ -38,6 +38,7 @@ import { PartnerContactActionMenu } from "@/components/partners/PartnerContactAc
 import { queryKeys } from "@/lib/queryKeys";
 import { UnifiedSmartActions } from "@/components/shared/entity-panel/UnifiedSmartActions";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires?: string | null }
@@ -58,6 +59,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const logAction = useLogAction();
   const [deepSearching, setDeepSearching] = useState(false);
   const [waSending, setWaSending] = useState<string | null>(null);
+  const { isAvailable: waAvailable } = useWhatsAppExtensionBridge();
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since ?? null);
