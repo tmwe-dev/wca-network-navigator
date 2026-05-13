@@ -1,122 +1,81 @@
 ## Obiettivo
-Tre giri di audit (dati → prompt → canale/output) con test virtuali su ogni nodo della pipeline email, per chiudere i buchi che oggi fanno produrre email senza identità TMWE, senza KB e in lingua sbagliata.
 
-## Risultati già emersi dall'esplorazione (anteprima)
+Permettere all'operatore di scegliere la lingua di ogni email (singola e bulk) tra:
+- **Italiano** (default attuale)
+- **Inglese** (fallback sicuro)
+- **Lingua del contatto** (auto: usa lingua del paese/nome solo se rilevazione affidabile, altrimenti fallback automatico a inglese)
+- **Lingua specifica** (selettore con tutte le lingue del mondo, ISO 639-1)
 
-I nodi critici sono allineati così:
+La traduzione/generazione viene fatta dall'AI esistente (`generate-content` → `generate-email` / `generate-outreach`) che già rispetta `payload.language` come priorità #1 (fix del 13/05).
 
-```
-UI hook (useEmailGenerator / useOutreachGenerator)
-   → generate-content (router)
-      → generate-email | generate-outreach | improve-email
-         ├── contextAssembler (app_settings, kb_entries, deep_search, history)
-         ├── operativePromptsLoader (Prompt Lab)
-         ├── calligrafiaInjector (KB "calligrafia")
-         ├── promptBuilder → aiChat (LLM)
-         └── journalistReviewLayer (revisione obbligatoria)
-   → prompt-test-runner (Prompt Lab → test di regressione)
-```
+## Architettura
 
-DB:
-- `app_settings`: 4 user_id distinti, l'identità TMWE (Transport Management Srl, Luigi Tagliaferri, lingua "inglese", KB aziendale ricca) vive SOLO sotto `user_id = c8aadbed-1f47-4c74-90dd-dccf44b87a16`.
-- `kb_entries`: 47 entry user A, 109 entry user B, 58 entry "system" (`user_id IS NULL`). L'utente TMWE ha 0 entry proprie e si appoggia al pool system.
-- `operative_prompts`: 136 attive ma SEMPRE con `user_id` valorizzato; nessuna riga "system".
+### 1. Nuovo modulo lingue — `src/lib/languages.ts`
+- Lista completa lingue ISO 639-1 (~180 voci) con `code`, `nameIt`, `nameNative`, `englishName`.
+- Mappa `countryCode → primaryLanguage` (riuso/estensione di `getLanguageHint` lato edge, replicata client-side leggera).
+- Funzione `resolveAutoLanguage({ countryCode, contactName, confidence }) → { language, source: 'detected'|'fallback_en', confidence }`. Regola Codex: se `confidence < 0.7` o paese sconosciuto → `english`.
 
-## Difetti già confermati (no fix in questo plan, vengono validati e poi sistemati durante l'esecuzione)
+### 2. Componente UI condiviso — `src/components/email/EmailLanguagePicker.tsx`
+- Toggle a 4 opzioni: 🇮🇹 Italiano · 🇬🇧 Inglese · 🌍 Auto (lingua contatto) · ⚙️ Specifica…
+- "Specifica" apre Combobox cercabile con tutte le lingue.
+- Mostra badge informativo quando "Auto" → `Rilevata: francese (FR)` o `Fallback: inglese (paese sconosciuto)`.
+- Persiste ultima scelta dell'operatore in `localStorage` (`email.preferredLanguage`).
 
-1. **Silos per `user_id`**:
-   - `prompt-test-runner` (`loadDoctrineSnippets`) filtra `kb_entries` con `eq("user_id", userId)` → ignora le 58 righe system. `generate-email` invece usa `or(user_id.eq.X, user_id.is.null)`. Asimmetria → la lab "non vede" la KB.
-   - `loadSenderIdentity` carica `app_settings` solo dell'utente chiamante. Se chi lancia il test non è l'owner TMWE, identità vuota → "non sa chi siamo".
-   - `operativePromptsLoader` filtra `eq("user_id", userId)` senza fallback a prompt system → utenti senza Prompt Lab non ricevono nulla.
+### 3. Integrazione — flussi singoli
+- **`useEmailComposerState`** (riga 247): rimuovere hard-coded `language: "italiano"`, leggere da nuovo state `composer.email.language` controllato dal picker.
+- **`ForgeOraclePanel`** (riga 46) e **`useEmailForge`**: stesso pattern, picker accanto al goal.
+- **`useOutreachGenerator`** / **`useEmailGenerator`**: già accettano `language?: string`, niente da cambiare nelle signature.
+- **Composer Email V2** (`useEmailComposerV2`): aggiungere campo `language` allo state.
 
-2. **Lingua**:
-   - `generate-email`/`generate-outreach`: `effectiveLanguage = language || detected.language` (da `country_code`). `settings.ai_language` (es. "inglese") NON è fallback. Se la UI non passa `language`, vince il country detector → output in lingua sbagliata.
-   - `prompt-test-runner` invece rispetta `payload > identity > italiano`. Comportamento divergente fra produzione e lab.
+### 4. Integrazione — flusso bulk
+- **`BulkActionMenu`** dialog "Invia email": aggiungere `EmailLanguagePicker` e checkbox "Traduci per ogni destinatario".
+  - Modalità **statica** (default): tutti ricevono lo stesso testo nella lingua scelta.
+  - Modalità **per destinatario** (auto/traduci): per ciascuno chiama `generate-content?action=translate` (nuovo edge function leggero) oppure usa direttamente `generate-email` con `language` risolta da `resolveAutoLanguage(contact.country, contact.name)`. Costo mostrato in anteprima.
+- Nuovo edge function **`translate-text`** (`supabase/functions/translate-text/index.ts`):
+  - Input: `{ text, subject, targetLanguage, sourceLanguage? }`.
+  - Usa `google/gemini-3-flash-preview` via Lovable AI Gateway, prompt: "Traduci preservando tono e formattazione HTML, niente note".
+  - Output: `{ subject, body, detected_source_language }`.
+  - Verifica JWT + rate limit standard.
+  - Usato sia da bulk sia da pulsante "Traduci ora" nel composer singolo.
 
-3. **KB/operative_prompts non condivisi**:
-   - Manca un meccanismo "org-wide". Tutto è per-utente. La doctrine TMWE (KB e Prompt Lab) andrebbe replicata o resa condivisa via `user_id IS NULL` + RLS.
+### 5. Tooling Command Page
+- **`composeEmail/pipeline.ts`** + `singleDraft.ts` + `batchDrafts.ts` (riga 63 `language: "it"`): rendere parametrico, default da `localStorage` o "auto".
+- **`sendEmailDirectTool`**: aggiunge `language` opzionale in payload (no traduzione, l'utente fornisce già il testo).
 
-4. **Journalist review**:
-   - `journalistReviewLayer` è obbligatorio in `generate-email`, ma va verificato che riceva `language` e che blocchi output fuori lingua.
+### 6. Edge functions (server)
+- Nessuna modifica a `generate-email` / `generate-outreach` (già rispettano `payload.language`).
+- Estendere `_shared/getLanguageHint` con la mappa completa paese→lingua (oggi parziale).
+- `journalistReviewLayer`: già supporta `language_mismatch`, riceverà la lingua corretta dal payload.
 
-5. **Deep search**:
-   - `assembleContextBlocks` carica enrichment/deep search solo se `deep_search` viene passato dalla UI; il test runner non lo invoca affatto. Sherlock e WCA risultano "skipped" nei test.
+### 7. Test
+- Unit: `resolveAutoLanguage` (coverage paesi ambigui → fallback en, paesi forti → lingua locale).
+- Edge: `translate-text` test Deno con mock gateway.
+- E2E light: `e2e/outreach-flow.spec.ts` aggiungere step "cambia lingua → genera → verifica `language_used` nel debug".
 
-## Piano in 3 giri
+## Files to create
+- `src/lib/languages.ts`
+- `src/components/email/EmailLanguagePicker.tsx`
+- `supabase/functions/translate-text/index.ts`
+- `src/__tests__/resolve-auto-language.test.ts`
 
-### Giro 1 — Audit dei dati e degli accessi (lettura)
+## Files to edit
+- `src/hooks/email-composer/useEmailComposerState.ts` (rimuove hard-code "italiano")
+- `src/hooks/email-composer/types.ts` (aggiunge `language` allo state)
+- `src/v2/hooks/useEmailComposerV2.ts`
+- `src/v2/hooks/useEmailForge.ts`
+- `src/v2/ui/pages/email-forge/ForgeOraclePanel.tsx`
+- `src/components/cockpit/BulkActionMenu.tsx` (picker + traduzione per destinatario)
+- `src/v2/ui/pages/command/tools/composeEmail/{pipeline,singleDraft,batchDrafts}.ts`
+- `supabase/functions/_shared/getLanguageHint.ts` (mappa estesa)
 
-Per ciascun nodo, query mirate (no modifiche) per fotografare lo stato:
+## Verifica finale
+1. Composer singolo: cambio lingua → generate → `_debug.language_used` corrisponde.
+2. Bulk + "Auto": 5 contatti (IT, FR, DE, JP, US-india-name) → IT/FR/DE/EN/EN (india senza certezza → EN).
+3. Bulk + "Specifica giapponese": tutte le 5 email tradotte in JP.
+4. Memoria: ricarica pagina → ultima scelta lingua ripristinata.
 
-- `app_settings` per i 4 user_id: completezza dei 16 campi `ai_*` chiave (company, contact, role, signature, language, KB).
-- `kb_entries`: distribuzione per `user_id` × `category` × `is_active`; quante entry "system" davvero arrivano nei loader di prod e di lab.
-- `operative_prompts`: per ogni `user_id`, quanti prompt per scope (`email`, `email-quality`, `outreach`, `whatsapp`, `linkedin`, `general`) e quanti `OBBLIGATORIA`.
-- `prompt_test_cases`: a quale `prompt_id` puntano e a quale `user_id` corrisponde quel prompt → mappare il "delta TMWE".
-
-Output del giro 1: tabella in `docs/audit/email-pipeline-3pass-2026-05-13.md` con righe rosse/gialle/verdi per ogni nodo.
-
-### Giro 2 — Audit dei prompt (assembly statico)
-
-Per ogni edge function della pipeline (`generate-email`, `generate-outreach`, `improve-email`, `prompt-test-runner`, `journalistReviewLayer`):
-
-- Estrarre il `system prompt` finale che VERREBBE costruito per il `user_id` TMWE e per un user_id "vuoto", senza chiamare l'LLM (dry run via codice condiviso).
-- Verificare presenza di:
-  - identità mittente (company_name, contact_name, role, signature),
-  - blocco KB doctrine,
-  - blocco Prompt Lab (operative_prompts),
-  - blocco calligrafia,
-  - vincolo di lingua,
-  - editorial review pre-flight.
-- Confrontare prompt-test-runner vs generate-email: i due devono produrre lo stesso "starter" (identità + lingua + KB + Prompt Lab) altrimenti il lab mente.
-
-Output del giro 2: diff strutturato dei system prompt + lista delle sezioni mancanti per nodo.
-
-### Giro 3 — Test end-to-end live (con AI)
-
-Esecuzione reale via `supabase--curl_edge_functions` come utente loggato (TMWE) e come utente "vuoto" per dimostrare il delta:
-
-| # | Funzione | Scenario | Cosa verifico |
-|---|---|---|---|
-| T1 | `prompt-test-runner` | prompt "Scrittore commerciale da bestseller" TMWE | Identità "Transport Management Srl"/"Luigi" presente nell'output, lingua = `inglese` |
-| T2 | `prompt-test-runner` | stesso prompt, payload `language: "italiano"` | Override rispettato |
-| T3 | `generate-content` action `outreach` | `country_code=DE`, no `language` | Lingua attesa: tedesco. Verifico che NON sovrascriva `ai_language` se l'identità lo richiede esplicitamente (potenziale bug da decidere) |
-| T4 | `generate-content` action `email` | partner reale TMWE, `quality=premium` | KB sezioni > 0, `operativePromptsApplied` ≥ 1, signature presente, journalist `pass`/`pass_with_edits` |
-| T5 | `generate-content` action `email` | partner senza contatto | atteso 422 `no_contact` |
-| T6 | `generate-content` action `outreach` | canale `whatsapp` lead cold | atteso blocco da WhatsApp Message Gate (gate hard) |
-| T7 | `generate-content` action `outreach` | canale `linkedin` | output ≤ 5 frasi, niente "book a meeting" |
-| T8 | `improve-email` | bozza con superlativi vuoti | Quality Gate la corregge / blocca |
-| T9 | `generate-content` action `email` | utente "vuoto" (no app_settings, no KB) | DEVE fallire o segnalare warning espliciti, NON inventare identità |
-
-I prompt costruiti, le sezioni KB usate, i nomi dei Prompt Lab applicati, la lingua finale e l'esito journalist vengono salvati come artifact in `/mnt/documents/email-audit-2026-05-13/` (un file per test).
-
-## Fix che propongo a valle dell'audit (verranno proposti separatamente, non eseguiti qui)
-
-1. Allineare `prompt-test-runner.loadDoctrineSnippets` al pattern `or(user_id.eq.X, user_id.is.null)` di `kbAssembler` per leggere anche la doctrine system.
-2. In `operativePromptsLoader`, aggiungere fallback `user_id IS NULL` e/o copia org-wide (preservando la priorità per-user).
-3. In `generate-email`/`generate-outreach`, ordine lingua: `payload.language` > `settings.ai_language` > `getLanguageHint(country_code)` > `italiano`. Coerente con la lab.
-4. In `journalistReviewLayer`, hard-check sulla lingua dell'output rispetto alla lingua dichiarata; se diverge → `block` con motivo.
-5. Pubblicare la doctrine TMWE come `kb_entries` con `user_id = NULL` (system) o creare una tabella `org_settings` cross-utente, così ogni operatore TMWE eredita l'identità unica.
-6. Nel `_debug` di outreach/email aggiungere `identity_loaded`, `kb_user_scope`, `operative_prompts_user_scope`, `language_source` per rendere visibile il bug in console invece di scoprirlo a valle.
-7. Esporre nel Prompt Lab UI il "delta tra utenti": quante entry KB / prompt operativi ho rispetto all'owner TMWE.
-
-## File coinvolti (solo lettura nel piano, modifica eventualmente in fase fix)
-
-- `supabase/functions/_shared/operativePromptsLoader.ts`
-- `supabase/functions/_shared/journalistReviewLayer.ts`
-- `supabase/functions/generate-email/{index,contextAssembler,kbAndPlaybookAssembler,kbAssembler,promptBuilder}.ts`
-- `supabase/functions/generate-outreach/index.ts`
-- `supabase/functions/improve-email/index.ts`
-- `supabase/functions/prompt-test-runner/index.ts`
-- `src/hooks/useEmailGenerator.ts`, `src/hooks/useOutreachGenerator.ts`
-
-## Deliverable
-
-- `docs/audit/email-pipeline-3pass-2026-05-13.md`: tabella dei 3 giri con verde/giallo/rosso per nodo.
-- `/mnt/documents/email-audit-2026-05-13/T*.json` e `.md`: prompt costruiti + risposte AI + esito journalist per i 9 test.
-- Lista ordinata di fix con rischio/impatto, pronta per essere approvata e implementata in un secondo round.
-
-## Fuori scope
-
-- Modifiche a `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria).
-- Riscrittura del journalist o cambi di schema DB: solo proposta, non esecuzione.
-- Tutto ciò che non è nel flusso "produzione email" (campagne, IMAP sync, agenti vocali).
+## Note operative
+- Nessun cambiamento DB richiesto (lingua passa via payload).
+- Nessuna nuova dipendenza npm.
+- Editorial review (`journalistReview`) resta obbligatorio e ora intercetta drift di lingua.
+- Il default rimane "Italiano" per non rompere flussi esistenti finché l'operatore non sceglie.
