@@ -227,6 +227,9 @@ export class EmailProcessManager {
       channel: ctx.channel,
       oooReturnDate: ctx.oooReturnDate,
       domain: ctx.domain,
+      messageId: ctx.messageId,
+      threadId: ctx.threadId,
+      bodyPreview: ctx.bodyPreview,
     };
 
     const pipelineResult = await runPostClassificationPipeline(
