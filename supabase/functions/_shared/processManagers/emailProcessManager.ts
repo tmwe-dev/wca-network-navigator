@@ -68,6 +68,8 @@ export interface EmailClassificationContext {
   domain?: ClassificationDomain;
   channel?: "email" | "whatsapp" | "linkedin";
   oooReturnDate?: string;
+  threadId?: string;
+  bodyPreview?: string;
 }
 
 export interface EmailProcessManagerResult {
@@ -227,6 +229,9 @@ export class EmailProcessManager {
       channel: ctx.channel,
       oooReturnDate: ctx.oooReturnDate,
       domain: ctx.domain,
+      messageId: ctx.messageId,
+      threadId: ctx.threadId,
+      bodyPreview: ctx.bodyPreview,
     };
 
     const pipelineResult = await runPostClassificationPipeline(

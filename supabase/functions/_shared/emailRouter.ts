@@ -5,6 +5,7 @@
 
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 import { generateReplyDraft, enrichActionPayload, type EmailAddressRule } from "./classificationRules.ts";
+import { insertFollowUpActivity } from "./activityInsertHelper.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -29,6 +30,9 @@ export interface RouterInput {
   urgency?: number;
   sentiment?: string;
   emailAddressRule?: EmailAddressRule;
+  messageId?: string;
+  threadId?: string;
+  bodyPreview?: string;
 }
 
 /**
@@ -150,26 +154,29 @@ export async function handleInterested(
   if (input.partnerId) {
     const days = input.category === "meeting_request" ? 1 : 2;
     try {
-      await supabase.from("activities").insert({
-        user_id: input.userId,
-        partner_id: input.partnerId,
-        source_id: input.partnerId,
-        source_type: "partner",
-        activity_type: "follow_up",
+      const outcome = await insertFollowUpActivity(supabase, {
+        userId: input.userId,
+        partnerId: input.partnerId,
         title: `Rispondi a ${input.senderName || input.senderEmail} (${input.category})`,
-        description: input.aiSummary || `Partner ha risposto con interesse. Azione richiesta.`,
-        status: "pending",
+        classification: input.category,
+        aiSummary: input.aiSummary,
+        senderEmail: input.senderEmail,
+        senderName: input.senderName,
+        subject: input.subject,
+        bodyPreview: input.bodyPreview,
+        messageId: input.messageId,
+        threadId: input.threadId,
         priority: input.category === "meeting_request" ? "critical" : "high",
-        due_date: new Date(Date.now() + days * 86400000).toISOString(),
-        scheduled_at: new Date(Date.now() + days * 86400000).toISOString(),
-        source_meta: {
-          classification: input.category,
-          confidence: input.confidence,
-          pipeline: "postClassification",
-        },
+        dueInDays: days,
+        scheduled: true,
+        extraMeta: { confidence: input.confidence },
       });
-      result.reminderCreated = true;
-      result.actionsExecuted.push(`reminder_T+${days}`);
+      if (outcome.duplicate) {
+        result.actionsExecuted.push("skip_duplicate_reminder");
+      } else if (outcome.inserted) {
+        result.reminderCreated = true;
+        result.actionsExecuted.push(`reminder_T+${days}`);
+      }
     } catch (e) {
       result.errors.push(`Reminder failed: ${e}`);
     }
@@ -312,24 +319,27 @@ export async function handleFollowUp(
 
   if (input.partnerId) {
     try {
-      await supabase.from("activities").insert({
-        user_id: input.userId,
-        partner_id: input.partnerId,
-        source_id: input.partnerId,
-        source_type: "partner",
-        activity_type: "follow_up",
+      const outcome = await insertFollowUpActivity(supabase, {
+        userId: input.userId,
+        partnerId: input.partnerId,
         title: `Follow-up da ${input.senderName || input.senderEmail}`,
-        description: input.aiSummary || "Il partner ha fatto follow-up. Rispondi per mantenere momentum.",
-        status: "pending",
+        classification: "follow_up",
+        aiSummary: input.aiSummary,
+        senderEmail: input.senderEmail,
+        senderName: input.senderName,
+        subject: input.subject,
+        bodyPreview: input.bodyPreview,
+        messageId: input.messageId,
+        threadId: input.threadId,
         priority: "normal",
-        due_date: new Date(Date.now() + 2 * 86400000).toISOString(),
-        source_meta: {
-          classification: "follow_up",
-          pipeline: "postClassification",
-        },
+        dueInDays: 2,
       });
-      result.reminderCreated = true;
-      result.actionsExecuted.push("reminder_follow_up_T+2");
+      if (outcome.duplicate) {
+        result.actionsExecuted.push("skip_duplicate_follow_up");
+      } else if (outcome.inserted) {
+        result.reminderCreated = true;
+        result.actionsExecuted.push("reminder_follow_up_T+2");
+      }
     } catch (e) {
       result.errors.push(`Follow-up reminder failed: ${e}`);
     }

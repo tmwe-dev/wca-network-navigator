@@ -32,6 +32,7 @@ export async function runEmailProcessManager(
       urgency: result.urgency || undefined,
       sentiment: result.sentiment || undefined,
       channel: (body.channel as "email" | "whatsapp" | "linkedin") || "email",
+      bodyPreview: (body.body_text || "").slice(0, 600) || undefined,
     });
     return pmResult.pipelineResult;
   } catch (pcErr) {
