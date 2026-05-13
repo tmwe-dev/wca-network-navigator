@@ -16,8 +16,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
+      - run: npm run typecheck:strict
       - run: npx eslint . --max-warnings 0
+      - run: npm run debt:check
+      - run: npm run audit:security
 
   test:
     runs-on: ubuntu-latest
