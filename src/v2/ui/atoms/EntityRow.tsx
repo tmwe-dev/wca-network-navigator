@@ -77,6 +77,8 @@ export interface EntityRowProps {
   /** Click sulla città (col 4) → filtra per città. Quando undefined, niente click. */
   onCityClick?: (city: string) => void;
   selected?: boolean;
+  /** True quando questa card è quella aperta nel pannello dettaglio (single-select). */
+  opened?: boolean;
   className?: string;
   /**
    * Layout compatto a 2 righe (per pannelli stretti < ~520px).
