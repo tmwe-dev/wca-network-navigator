@@ -153,7 +153,7 @@ export function NavMenuPopover({
                     </button>
                     {isGroupOpen && (
                       <div className="ml-5 mt-0.5 mb-1 flex flex-col border-l border-white/10 pl-2">
-                        {group.items.map((item) => {
+                        {(group.items ?? []).map((item) => {
                           const isActive = currentPath === item.path;
                           return (
                             <button
@@ -172,6 +172,34 @@ export function NavMenuPopover({
                             </button>
                           );
                         })}
+                        {(group.subGroups ?? []).map((sg) => (
+                          <div key={sg.title} className="mt-1">
+                            <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                              {sg.title}
+                            </div>
+                            <div className="ml-2 flex flex-col border-l border-white/10 pl-2">
+                              {sg.items.map((item) => {
+                                const isActive = currentPath === item.path;
+                                return (
+                                  <button
+                                    key={item.path}
+                                    type="button"
+                                    onClick={() => handleSelect(item.path)}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={
+                                      "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
+                                      (isActive
+                                        ? "bg-primary/15 text-primary font-semibold"
+                                        : "text-foreground/75 hover:bg-white/5 hover:text-foreground")
+                                    }
+                                  >
+                                    {item.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, MessageCircle, Linkedin,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, MessageCircle, Linkedin, Target, FlaskConical,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -32,12 +32,14 @@ export interface NavGroupDef {
 /** The canonical destinations — flat list (no titled group). */
 export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.command",            path: "/v2/command",            icon: <Command className="h-4 w-4" />,  pinned: true, pinOrder: 1 },
+  { labelKey: "nav.missioni",           path: "/v2/agents/autopilot",   icon: <Target className="h-4 w-4" />,   pinned: true, pinOrder: 1.5 },
   { labelKey: "nav.explore",            path: "/v2/explore/network",    icon: <Search className="h-4 w-4" />,   pinned: true, pinOrder: 2 },
   { labelKey: "nav.cestinone",          path: "/v2/cestinone",          icon: <Trash2 className="h-4 w-4" />,   pinned: true, pinOrder: 4, badge: "NEW" },
   { labelKey: "nav.cockpit",            path: "/v2/cockpit",            icon: <Rocket className="h-4 w-4" />,   pinned: true, pinOrder: 5 },
   { labelKey: "nav.inbox",              path: "/v2/inbox",              icon: <Inbox className="h-4 w-4" />,    pinned: true, pinOrder: 5.1 },
   { labelKey: "nav.email",              path: "/v2/email",              icon: <Mail className="h-4 w-4" />,     pinned: true, pinOrder: 5.2 },
   { labelKey: "nav.agenda",             path: "/v2/agenda",             icon: <CalendarDays className="h-4 w-4" />, pinned: true, pinOrder: 6 },
+  { labelKey: "nav.lab",                path: "/v2/lab",                icon: <FlaskConical className="h-4 w-4" />, pinned: true, pinOrder: 6.5 },
   { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 7 },
   { labelKey: "nav.funnemail_inbox",    path: "/v2/funnemail-inbox",    icon: <Sparkles className="h-4 w-4" />, pinned: true, pinOrder: 7.5, badge: "NEW" },
   { labelKey: "nav.rubrica_whatsapp",   path: "/v2/rubrica/whatsapp",   icon: <MessageCircle className="h-4 w-4" />, pinned: true, pinOrder: 7.7, badge: "NEW" },

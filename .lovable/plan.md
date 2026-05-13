@@ -1,81 +1,124 @@
-## Obiettivo
 
-Permettere all'operatore di scegliere la lingua di ogni email (singola e bulk) tra:
-- **Italiano** (default attuale)
-- **Inglese** (fallback sicuro)
-- **Lingua del contatto** (auto: usa lingua del paese/nome solo se rilevazione affidabile, altrimenti fallback automatico a inglese)
-- **Lingua specifica** (selettore con tutte le lingue del mondo, ISO 639-1)
+# Riorganizzazione Navigazione V2
 
-La traduzione/generazione viene fatta dall'AI esistente (`generate-content` → `generate-email` / `generate-outreach`) che già rispetta `payload.language` come priorità #1 (fix del 13/05).
+Solo modifiche alla navigazione. Zero cambi a logica, edge functions, DB, prompt o componenti pagina.
 
-## Architettura
+## Modifiche richieste
 
-### 1. Nuovo modulo lingue — `src/lib/languages.ts`
-- Lista completa lingue ISO 639-1 (~180 voci) con `code`, `nameIt`, `nameNative`, `englishName`.
-- Mappa `countryCode → primaryLanguage` (riuso/estensione di `getLanguageHint` lato edge, replicata client-side leggera).
-- Funzione `resolveAutoLanguage({ countryCode, contactName, confidence }) → { language, source: 'detected'|'fallback_en', confidence }`. Regola Codex: se `confidence < 0.7` o paese sconosciuto → `english`.
+### 1. Menu principale (top nav) — `src/v2/ui/templates/navConfig.tsx`
 
-### 2. Componente UI condiviso — `src/components/email/EmailLanguagePicker.tsx`
-- Toggle a 4 opzioni: 🇮🇹 Italiano · 🇬🇧 Inglese · 🌍 Auto (lingua contatto) · ⚙️ Specifica…
-- "Specifica" apre Combobox cercabile con tutte le lingue.
-- Mostra badge informativo quando "Auto" → `Rilevata: francese (FR)` o `Fallback: inglese (paese sconosciuto)`.
-- Persiste ultima scelta dell'operatore in `localStorage` (`email.preferredLanguage`).
+Aggiunte 2 nuove voci pinned in alto:
 
-### 3. Integrazione — flussi singoli
-- **`useEmailComposerState`** (riga 247): rimuovere hard-coded `language: "italiano"`, leggere da nuovo state `composer.email.language` controllato dal picker.
-- **`ForgeOraclePanel`** (riga 46) e **`useEmailForge`**: stesso pattern, picker accanto al goal.
-- **`useOutreachGenerator`** / **`useEmailGenerator`**: già accettano `language?: string`, niente da cambiare nelle signature.
-- **Composer Email V2** (`useEmailComposerV2`): aggiungere campo `language` allo state.
+| Posizione | Voce | Path | Icon | Note |
+|-----------|------|------|------|------|
+| 1.5 | **Missioni** | `/v2/agents/autopilot` | Target | Subito dopo Command |
+| 6.5 | **Lab & Verifiche** | `/v2/lab` | FlaskConical | Subito dopo Agenda |
 
-### 4. Integrazione — flusso bulk
-- **`BulkActionMenu`** dialog "Invia email": aggiungere `EmailLanguagePicker` e checkbox "Traduci per ogni destinatario".
-  - Modalità **statica** (default): tutti ricevono lo stesso testo nella lingua scelta.
-  - Modalità **per destinatario** (auto/traduci): per ciascuno chiama `generate-content?action=translate` (nuovo edge function leggero) oppure usa direttamente `generate-email` con `language` risolta da `resolveAutoLanguage(contact.country, contact.name)`. Costo mostrato in anteprima.
-- Nuovo edge function **`translate-text`** (`supabase/functions/translate-text/index.ts`):
-  - Input: `{ text, subject, targetLanguage, sourceLanguage? }`.
-  - Usa `google/gemini-3-flash-preview` via Lovable AI Gateway, prompt: "Traduci preservando tono e formattazione HTML, niente note".
-  - Output: `{ subject, body, detected_source_language }`.
-  - Verifica JWT + rate limit standard.
-  - Usato sia da bulk sia da pulsante "Traduci ora" nel composer singolo.
+Le altre 13 voci canoniche restano invariate (Command, Explore, Cestinone, Cockpit, Inbox, Email, Agenda, Email Intelligence, Funnemail, Rubrica WA/LI, Intelligence, Config).
 
-### 5. Tooling Command Page
-- **`composeEmail/pipeline.ts`** + `singleDraft.ts` + `batchDrafts.ts` (riga 63 `language: "it"`): rendere parametrico, default da `localStorage` o "auto".
-- **`sendEmailDirectTool`**: aggiunge `language` opzionale in payload (no traduzione, l'utente fornisce già il testo).
+### 2. Secondary nav — `src/v2/navigation/registry.ts`
 
-### 6. Edge functions (server)
-- Nessuna modifica a `generate-email` / `generate-outreach` (già rispettano `payload.language`).
-- Estendere `_shared/getLanguageHint` con la mappa completa paese→lingua (oggi parziale).
-- `journalistReviewLayer`: già supporta `language_mismatch`, riceverà la lingua corretta dal payload.
+#### 2a. Estensione tipo per supportare sotto-gruppi (subfolders)
 
-### 7. Test
-- Unit: `resolveAutoLanguage` (coverage paesi ambigui → fallback en, paesi forti → lingua locale).
-- Edge: `translate-text` test Deno con mock gateway.
-- E2E light: `e2e/outreach-flow.spec.ts` aggiungere step "cambia lingua → genera → verifica `language_used` nel debug".
+```ts
+interface SecondaryNavSubGroup {
+  readonly title: string;
+  readonly items: readonly SecondaryNavItem[];
+}
+interface SecondaryNavGroup {
+  readonly title: string;
+  readonly items?: readonly SecondaryNavItem[];
+  readonly subGroups?: readonly SecondaryNavSubGroup[];   // NEW
+}
+```
 
-## Files to create
-- `src/lib/languages.ts`
-- `src/components/email/EmailLanguagePicker.tsx`
-- `supabase/functions/translate-text/index.ts`
-- `src/__tests__/resolve-auto-language.test.ts`
+UI consumer (`OrphanPagesNav`, `NavMenuPopover`, `SettingsPage` Development tab) renderizzano i `subGroups` come accordion annidato dentro l'accordion del gruppo padre — stessa estetica della sidebar dello screenshot.
 
-## Files to edit
-- `src/hooks/email-composer/useEmailComposerState.ts` (rimuove hard-code "italiano")
-- `src/hooks/email-composer/types.ts` (aggiunge `language` allo state)
-- `src/v2/hooks/useEmailComposerV2.ts`
-- `src/v2/hooks/useEmailForge.ts`
-- `src/v2/ui/pages/email-forge/ForgeOraclePanel.tsx`
-- `src/components/cockpit/BulkActionMenu.tsx` (picker + traduzione per destinatario)
-- `src/v2/ui/pages/command/tools/composeEmail/{pipeline,singleDraft,batchDrafts}.ts`
-- `supabase/functions/_shared/getLanguageHint.ts` (mappa estesa)
+#### 2b. Nuovo layout dei gruppi
 
-## Verifica finale
-1. Composer singolo: cambio lingua → generate → `_debug.language_used` corrisponde.
-2. Bulk + "Auto": 5 contatti (IT, FR, DE, JP, US-india-name) → IT/FR/DE/EN/EN (india senza certezza → EN).
-3. Bulk + "Specifica giapponese": tutte le 5 email tradotte in JP.
-4. Memoria: ricarica pagina → ultima scelta lingua ripristinata.
+```text
+📂 Acquisizione & Ricerca         (invariato)
+   • Acquisizione Partner / Prospects / RA Explorer / RA Scraping / Research / Sorting
 
-## Note operative
-- Nessun cambiamento DB richiesto (lingua passa via payload).
-- Nessuna nuova dipendenza npm.
-- Editorial review (`journalistReview`) resta obbligatorio e ora intercetta drift di lingua.
-- Il default rimane "Italiano" per non rompere flussi esistenti finché l'operatore non sceglie.
+📂 Agenti & Missioni              (RIORGANIZZATO con sub-folders)
+   ├ Agenti
+   │  • AI Staff Hub              ← spostato qui (era in "AI Staff")
+   │  • Agent Capabilities
+   │  • Agent Tasks
+   │  • Editor Persona
+   ├ Missioni
+   │  • Missioni Autopilot
+   │  • Mission Builder
+   │  • AI Arena 3D               ← spostato qui (era in "AI Staff")
+
+📂 AI Staff                        ← RIMOSSO (svuotato)
+   • KB Supervisor → spostato in "Lab & Verifiche (hub)"
+   • Lab & Verifiche → ora è top-nav (resta anche qui in subgroup "Hub")
+
+📂 Email & Comunicazione          (RIDOTTO)
+   • Funnemail Sorting
+   (Email Forge spostato in Lab & Verifiche)
+
+📂 Agenda & Pipeline              (RINOMINATO da "Calendario & Campagne", ESPANSO)
+   • Calendar (deep-link)         ← già qui
+   • Campaign Jobs                ← già qui
+   (entrambi confermati sotto Agenda come richiesto)
+
+📂 Cockpit & Analytics            (INVARIATO)
+   • AI Control Center / Analytics / Dashboard / KPI / Notifications
+
+📂 Lab & Verifiche (hub)          (ESPANSO)
+   ├ Hub
+   │  • Lab & Verifiche (apri /v2/lab)
+   │  • Tests / Prompts / Observability / Design (deep-link gruppi)
+   ├ Test specifici
+   │  • Email Forge               ← spostato qui
+   │  • KB Supervisor             ← spostato qui
+
+📂 Sistema & Admin                (invariato)
+   • Admin Users / Email Download / Finder API / Finder API Catalog / Guida
+```
+
+### 3. i18n
+Aggiungere chiavi mancanti in `src/i18n/`:
+- `nav.missioni` → "Missioni"
+- `nav.lab` → "Lab & Verifiche"
+
+### 4. MobileBottomNav
+Nessun cambio richiesto (Lab & Missioni accessibili dal menu, non dal dock mobile).
+
+---
+
+## File toccati
+
+| File | Modifica |
+|------|----------|
+| `src/v2/ui/templates/navConfig.tsx` | +2 voci pinned (Missioni, Lab & Verifiche) |
+| `src/v2/navigation/registry.ts` | Estensione tipo `subGroups` + nuovo layout gruppi |
+| `src/v2/ui/templates/OrphanPagesNav.tsx` | Render ricorsivo sub-groups |
+| `src/v2/ui/templates/NavMenuPopover.tsx` | Render ricorsivo sub-groups |
+| `src/v2/ui/pages/SettingsPage.tsx` (tab Development) | Render ricorsivo sub-groups |
+| `src/i18n/it.ts` + altre lingue | 2 chiavi nuove |
+
+---
+
+## Acceptance
+
+1. In alto al menu, dopo "Command", appare **Missioni**. Cliccandolo si apre `/v2/agents/autopilot`.
+2. In alto al menu, dopo "Agenda", appare **Lab & Verifiche**. Cliccandolo si apre `/v2/lab`.
+3. Aprendo "Development" → "Agenti & Missioni" si vedono 2 sotto-cartelle: **Agenti** (con AI Staff Hub dentro) e **Missioni** (con AI Arena 3D + Mission Builder + Autopilot).
+4. Il gruppo "AI Staff" non esiste più nel menu Development.
+5. **KB Supervisor** è scomparso da AI Staff e si trova ora in "Lab & Verifiche (hub)" → "Test specifici".
+6. **Email Forge** è scomparso da "Email & Comunicazione" e si trova in "Lab & Verifiche (hub)" → "Test specifici".
+7. **Calendar** e **Campaign Jobs** restano nel gruppo "Agenda & Pipeline" (rinominato).
+8. Nessuna rotta cambia. Nessuna pagina viene rinominata o spostata di percorso. Solo struttura del menu.
+
+---
+
+## Out of scope (esplicitamente non toccati)
+
+- Pagine reali: nessun componente di pagina viene modificato
+- Routing (`src/v2/routes.tsx`): nessuna rotta aggiunta/spostata
+- Logica AI, edge functions, DB
+- Cockpit & Analytics: invariato come richiesto
+- Lab Hub interno (`labTabs.ts`): non modifico le 22 tab già lì

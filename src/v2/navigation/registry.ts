@@ -23,16 +23,28 @@ export interface SecondaryNavItem {
   readonly hidden?: boolean;
 }
 
-export interface SecondaryNavGroup {
+export interface SecondaryNavSubGroup {
   readonly title: string;
   readonly items: readonly SecondaryNavItem[];
+}
+
+export interface SecondaryNavGroup {
+  readonly title: string;
+  /** Voci dirette del gruppo (mutuamente esclusivo con `subGroups`, oppure mostrate sopra di essi). */
+  readonly items?: readonly SecondaryNavItem[];
+  /** Sotto-cartelle annidate (accordion-in-accordion). */
+  readonly subGroups?: readonly SecondaryNavSubGroup[];
 }
 
 /**
  * SECONDARY_NAV — pagine dev/orfane, non nel menu principale ma scopribili
  * via popover, sezione "Tutte le pagine" e tab Development di Settings.
  *
- * Ordine: alfabetico dentro ogni gruppo, gruppi in ordine logico.
+ * 2026-05-13: introdotti subGroups (sotto-cartelle).
+ *  - "AI Staff" rimosso: AI Staff Hub e AI Arena 3D spostati dentro
+ *    "Agenti & Missioni"; KB Supervisor spostato in "Lab & Verifiche (hub)".
+ *  - "Email Forge" spostato in "Lab & Verifiche (hub)".
+ *  - "Calendario & Campagne" rinominato in "Agenda & Pipeline".
  */
 export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   {
@@ -48,32 +60,34 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   },
   {
     title: "Agenti & Missioni",
-    items: [
-      { label: "Agent Capabilities",   path: "/v2/agents/capabilities" },
-      { label: "Agent Tasks",          path: "/v2/agents/tasks" },
-      { label: "Editor Persona",       path: "/v2/agents/persona" },
-      { label: "Mission Builder",      path: "/v2/agents/missions" },
-      { label: "Missioni Autopilot",   path: "/v2/agents/autopilot" },
-    ],
-  },
-  {
-    title: "AI Staff",
-    items: [
-      { label: "AI Arena 3D",          path: "/v2/ai-arena" },
-      { label: "Lab & Verifiche",      path: "/v2/lab" },
-      { label: "AI Staff Hub",         path: "/v2/ai-staff" },
-      { label: "KB Supervisor",        path: "/v2/ai-staff/kb-supervisor" },
+    subGroups: [
+      {
+        title: "Agenti",
+        items: [
+          { label: "AI Staff Hub",         path: "/v2/ai-staff" },
+          { label: "Agent Capabilities",   path: "/v2/agents/capabilities" },
+          { label: "Agent Tasks",          path: "/v2/agents/tasks" },
+          { label: "Editor Persona",       path: "/v2/agents/persona" },
+        ],
+      },
+      {
+        title: "Missioni",
+        items: [
+          { label: "Missioni Autopilot",   path: "/v2/agents/autopilot" },
+          { label: "Mission Builder",      path: "/v2/agents/missions" },
+          { label: "AI Arena 3D",          path: "/v2/ai-arena" },
+        ],
+      },
     ],
   },
   {
     title: "Email & Comunicazione",
     items: [
-      { label: "Email Forge (Lab AI)", path: "/v2/email/forge" },
       { label: "Funnemail Sorting",    path: "/v2/funnemail-inbox/sorting" },
     ],
   },
   {
-    title: "Calendario & Campagne",
+    title: "Agenda & Pipeline",
     items: [
       { label: "Calendar (deep-link)", path: "/v2/calendar" },
       { label: "Campaign Jobs",        path: "/v2/campaigns/jobs" },
@@ -93,11 +107,24 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
     // Tutte le voci lab/prompt/observability vivono ora dentro /v2/lab.
     // Sorgente unica: src/v2/config/labTabs.ts (UNA riga per tab).
     title: "Lab & Verifiche (hub)",
-    items: [
-      { label: "Tests",          path: "/v2/lab?group=tests" },
-      { label: "Prompts",        path: "/v2/lab?group=prompts" },
-      { label: "Observability",  path: "/v2/lab?group=observability" },
-      { label: "Design System",  path: "/v2/lab?group=design" },
+    subGroups: [
+      {
+        title: "Hub",
+        items: [
+          { label: "Apri Lab & Verifiche", path: "/v2/lab" },
+          { label: "Tests",                path: "/v2/lab?group=tests" },
+          { label: "Prompts",              path: "/v2/lab?group=prompts" },
+          { label: "Observability",        path: "/v2/lab?group=observability" },
+          { label: "Design System",        path: "/v2/lab?group=design" },
+        ],
+      },
+      {
+        title: "Test specifici",
+        items: [
+          { label: "Email Forge (Lab AI)", path: "/v2/email/forge" },
+          { label: "KB Supervisor",        path: "/v2/ai-staff/kb-supervisor" },
+        ],
+      },
     ],
   },
   {
@@ -115,9 +142,10 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
 /**
  * Vista appiattita: tutti i path secondari (per validazione/test smoke).
  */
-export const SECONDARY_NAV_PATHS: readonly string[] = SECONDARY_NAV.flatMap(
-  (g) => g.items.map((i) => i.path),
-);
+export const SECONDARY_NAV_PATHS: readonly string[] = SECONDARY_NAV.flatMap((g) => [
+  ...(g.items ?? []).map((i) => i.path),
+  ...(g.subGroups ?? []).flatMap((sg) => sg.items.map((i) => i.path)),
+]);
 
 /**
  * Helper: trova il gruppo cui appartiene un path (per evidenziare il gruppo
@@ -126,7 +154,8 @@ export const SECONDARY_NAV_PATHS: readonly string[] = SECONDARY_NAV.flatMap(
 export function findSecondaryNavGroup(path: string | null | undefined): string | null {
   if (!path) return null;
   for (const g of SECONDARY_NAV) {
-    if (g.items.some((i) => i.path === path)) return g.title;
+    if ((g.items ?? []).some((i) => i.path === path)) return g.title;
+    if ((g.subGroups ?? []).some((sg) => sg.items.some((i) => i.path === path))) return g.title;
   }
   return null;
 }
