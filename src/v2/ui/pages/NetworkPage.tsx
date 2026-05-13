@@ -175,6 +175,7 @@ export function NetworkPage(): React.ReactElement {
             />
           ) : null
         }
+        openedId={selectedPartnerId}
         onBulkAddToCockpit={handleBulkAddToCockpit}
         onBulkDeepSearch={handleBulkDeepSearch}
         onBulkCreateCampaign={handleBulkCampaign}
