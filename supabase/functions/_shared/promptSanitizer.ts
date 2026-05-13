@@ -245,8 +245,8 @@ export function sanitizeForPrompt(
   // 3) Neutralizza eventuali marker di fence sentinel (evita confusione col wrap)
   if (text.includes(FENCE_OPEN_PREFIX) || text.includes(FENCE_SUFFIX)) {
     text = text
-      .replaceAll(FENCE_OPEN_PREFIX, "<<<U­NTRUSTED") // soft-hyphen invisibile
-      .replaceAll(FENCE_SUFFIX, ">­>>");
+      .split(FENCE_OPEN_PREFIX).join("<<<U­NTRUSTED") // soft-hyphen invisibile
+      .split(FENCE_SUFFIX).join(">­>>");
     modified = true;
   }
 
