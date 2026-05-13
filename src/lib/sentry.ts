@@ -98,9 +98,10 @@ export function SentryErrorBoundary({
 }): React.ReactElement {
   if (_Sentry) {
     const SentryEB = _Sentry.ErrorBoundary;
+    const fb = (fallback ?? React.createElement(DefaultErrorFallback, null)) as React.ReactElement;
     return React.createElement(
       SentryEB,
-      { fallback: fallback ?? React.createElement(DefaultErrorFallback, null) },
+      { fallback: fb },
       children,
     );
   }

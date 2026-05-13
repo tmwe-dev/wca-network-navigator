@@ -4,6 +4,10 @@
  * ripetuti sulla stessa istanza. Leggero, zero dipendenze DB.
  */
 
+// Deno typings — l'edge function gira su Deno Deploy; il typecheck dell'app
+// non carica @types/deno, dichiariamo qui solo l'API che usiamo.
+declare const Deno: { env: { get(key: string): string | undefined } };
+
 interface TokenBucket {
   tokens: number;
   lastRefill: number;
