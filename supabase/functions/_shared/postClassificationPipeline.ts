@@ -232,6 +232,9 @@ export async function runPostClassificationPipeline(
             urgency: enrichedInput.urgency,
             sentiment: enrichedInput.sentiment,
             emailAddressRule: enrichedInput.emailAddressRule,
+            messageId: enrichedInput.messageId,
+            threadId: enrichedInput.threadId,
+            bodyPreview: enrichedInput.bodyPreview,
           };
           await handleOutOfOffice(supabase, oooInput, result);
           break;
@@ -275,6 +278,9 @@ export async function runPostClassificationPipeline(
             urgency: enrichedInput.urgency,
             sentiment: enrichedInput.sentiment,
             emailAddressRule: enrichedInput.emailAddressRule,
+            messageId: enrichedInput.messageId,
+            threadId: enrichedInput.threadId,
+            bodyPreview: enrichedInput.bodyPreview,
           };
           await handleQuestion(supabase, questionInput, result);
           break;
@@ -293,6 +299,9 @@ export async function runPostClassificationPipeline(
             urgency: enrichedInput.urgency,
             sentiment: enrichedInput.sentiment,
             emailAddressRule: enrichedInput.emailAddressRule,
+            messageId: enrichedInput.messageId,
+            threadId: enrichedInput.threadId,
+            bodyPreview: enrichedInput.bodyPreview,
           };
           await handleComplaint(supabase, complaintInput, result);
           break;
