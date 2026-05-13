@@ -77,10 +77,14 @@ async function loadSenderIdentity(
   admin: ReturnType<typeof createClient>,
   userId: string,
 ): Promise<Identity> {
+  // FIX 2026-05-13: identity org-wide. `app_settings.key` ha vincolo UNIQUE
+  // globale → ogni chiave AI esiste in 1 sola riga. Il filtro `eq(user_id)`
+  // nascondeva l'identità TMWE agli altri operatori. Carichiamo tutte le
+  // chiavi `ai_%` (RLS già limita per operator scope).
+  void userId;
   const { data } = await admin
     .from("app_settings")
     .select("key, value")
-    .eq("user_id", userId)
     .like("key", "ai_%");
   const out: Identity = {};
   ((data as { key: string; value: string | null }[] | null) ?? []).forEach((r) => {
@@ -97,7 +101,7 @@ async function loadDoctrineSnippets(
   const { data } = await admin
     .from("kb_entries")
     .select("title, content, category, priority")
-    .eq("user_id", userId)
+    .or(`user_id.eq.${userId},user_id.is.null`)
     .eq("is_active", true)
     .is("deleted_at", null)
     .order("priority", { ascending: false })
