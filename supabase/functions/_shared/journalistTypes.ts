@@ -97,6 +97,12 @@ export interface JournalistReviewInput {
     classification?: string;
     sentiment?: string;
   };
+  /**
+   * Lingua di output attesa (es. "italiano", "english", "deutsch").
+   * Se presente, il caporedattore segnala/blocca testi scritti in lingua diversa.
+   * Backward compat: opzionale → callers che non la passano mantengono il comportamento attuale.
+   */
+  language?: string;
 }
 
 export interface JournalistWarning {
@@ -108,7 +114,8 @@ export interface JournalistWarning {
     | "fake_urgency"
     | "flattery"
     | "channel_mismatch"
-    | "type_history_conflict";
+    | "type_history_conflict"
+    | "language_mismatch";
   description: string;
   severity: "info" | "warning" | "blocking";
   upstream_fix?: string;
