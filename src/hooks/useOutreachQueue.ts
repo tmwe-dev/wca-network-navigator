@@ -3,11 +3,6 @@
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeEdge } from "@/lib/api/invokeEdge";
-import { isApiError } from "@/lib/api/apiError";
-import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
-import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
-import { useLogAction, type LogActionChannel } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
 import { findPendingOutreachItems, updateOutreachItem, getOutreachItemField } from "@/data/outreachQueue";
@@ -37,17 +32,12 @@ const CHANNEL_DELAYS: Record<string, number> = {
   sms: 3000,
 };
 
-// LOVABLE-93: channelToActivityType rimosso, ora usa LogActionChannel direttamente
-
 export function useOutreachQueue() {
   const [pendingCount, setPendingCount] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [paused, setPaused] = useState(false);
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
-  const wa = useWhatsAppExtensionBridge();
-  const li = useLinkedInExtensionBridge();
-  const logAction = useLogAction();
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
@@ -64,71 +54,63 @@ export function useOutreachQueue() {
     }
   };
 
-  const trackQueueItem = useCallback((item: QueueItem, channel: string) => {
-    // LOVABLE-93: Per email, la pipeline è già eseguita da send-email edge.
-    // Per whatsapp/linkedin, usiamo log-action edge function.
-    if (channel === "email") return; // pipeline già copre tutto
-    logAction.mutate({
-      channel: channel as LogActionChannel,
-      sourceType: "imported_contact",
-      sourceId: item.created_by || crypto.randomUUID(),
-      to: item.recipient_email || item.recipient_phone || item.recipient_linkedin_url || "",
-      title: `${item.recipient_name || item.recipient_email || item.recipient_phone || "contatto"} — Queue auto`,
-      subject: item.subject || undefined,
-      body: item.body,
-      source: "batch",
-    });
-  }, [logAction]);
-
   const processItem = useCallback(async (item: QueueItem): Promise<boolean> => {
     await updateStatus(item.id, "processing");
     await incrementAttempts(item.id);
 
     try {
-      switch (item.channel) {
-        case "whatsapp": {
-          if (!wa.isAvailable) { await updateStatus(item.id, "failed", "Estensione WhatsApp non disponibile"); return false; }
-          if (!wa.isAuthenticated) { await updateStatus(item.id, "pending", "WhatsApp Web non autenticato"); return false; }
-          const phone = item.recipient_phone?.replace(/[^0-9+]/g, "").replace(/^\+/, "") || "";
-          if (!phone) { await updateStatus(item.id, "failed", "Numero telefono mancante"); return false; }
-          const res = await wa.sendWhatsApp(phone, item.body);
-          if (res.success) { await updateStatus(item.id, "sent"); trackQueueItem(item, "whatsapp"); toast({ title: "✅ WhatsApp inviato", description: `A: ${item.recipient_name || phone}` }); return true; }
-          await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", res.error);
-          return false;
-        }
-        case "linkedin": {
-          if (!li.isAvailable) { await updateStatus(item.id, "failed", "Estensione LinkedIn non disponibile"); return false; }
-          const profileUrl = item.recipient_linkedin_url || "";
-          if (!profileUrl) { await updateStatus(item.id, "failed", "URL profilo LinkedIn mancante"); return false; }
-          let liRes = await li.sendDirectMessage(profileUrl, item.body);
-          if (!liRes.success && liRes.error?.includes("context invalidated")) {
-            await new Promise(r => setTimeout(r, 2000));
-            liRes = await li.sendDirectMessage(profileUrl, item.body);
-          }
-          if (liRes.success) { await updateStatus(item.id, "sent"); trackQueueItem(item, "linkedin"); toast({ title: "✅ LinkedIn inviato", description: `A: ${item.recipient_name || "contatto"}` }); return true; }
-          await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", liRes.error);
-          return false;
-        }
-        case "email": {
-          try {
-            await invokeEdge("send-email", { body: { to: item.recipient_email, subject: item.subject || "(nessun oggetto)", html: item.body }, context: "useOutreachQueue.email" });
-          } catch (err) {
-            const msg = isApiError(err) ? err.message : (err instanceof Error ? err.message : String(err));
-            log.error("queue email send failed", { error: msg, to: item.recipient_email });
-            await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
-            return false;
-          }
-          await updateStatus(item.id, "sent"); trackQueueItem(item, "email"); toast({ title: "✅ Email inviata", description: `A: ${item.recipient_email}` }); return true;
-        }
-        default: await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`); return false;
+      // SSOT v3.9.56: ogni invio (WA/LI/Email) DEVE passare da
+      // ai_pending_actions → useApproveAndDispatch (editorial review hard).
+      // La coda outreach NON invia più direttamente: trasferisce l'item
+      // alla coda di approvazione umana.
+      const supportedChannels = ["whatsapp", "linkedin", "email"];
+      if (!supportedChannels.includes(item.channel)) {
+        await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`);
+        return false;
       }
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id ?? item.created_by;
+      if (!userId) {
+        await updateStatus(item.id, "failed", "Sessione utente assente");
+        return false;
+      }
+      const actionType =
+        item.channel === "whatsapp" ? "send_whatsapp" :
+        item.channel === "linkedin" ? "send_linkedin" :
+        "send_email";
+      const payload: Record<string, unknown> = {
+        recipient: item.recipient_email || item.recipient_phone || item.recipient_linkedin_url,
+        message_text: item.body,
+        subject: item.subject || undefined,
+        contact_name: item.recipient_name,
+        outreach_queue_id: item.id,
+      };
+      const { error } = await supabase.from("ai_pending_actions").insert({
+        user_id: userId,
+        action_type: actionType,
+        action_payload: payload as never,
+        suggested_content: item.body,
+        email_address: item.recipient_email ?? null,
+        reasoning: `Trasferito da outreach_queue (${item.channel}). In attesa di approvazione umana.`,
+        confidence: 0.85,
+        source: "outreach_queue",
+        status: "pending",
+      });
+      if (error) {
+        log.error("queue transfer failed", { error: error.message, channel: item.channel, id: item.id });
+        await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", error.message);
+        return false;
+      }
+      await updateStatus(item.id, "transferred");
+      toast({ title: "📥 Messaggio in coda di approvazione", description: `${item.channel.toUpperCase()} → ${item.recipient_name || item.recipient_email || item.recipient_phone}` });
+      return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error("queue processItem failed", { error: msg, channel: item.channel, id: item.id });
       await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
       return false;
     }
-  }, [wa, li, trackQueueItem]);
+  }, []);
 
   const processQueue = useCallback(async () => {
     if (processingRef.current || pausedRef.current) return;
