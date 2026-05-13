@@ -22,6 +22,7 @@ import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { AuthLifecycle } from "@/providers/AuthLifecycle";
+import { TextIntensityProvider } from "@/providers/TextIntensityProvider";
 import { TraceConsole } from "@/v2/observability/TraceConsole";
 import { traceCollector } from "@/v2/observability/traceCollector";
 import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
@@ -114,6 +115,7 @@ const App = () => (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <AuthLifecycle />
+        <TextIntensityProvider>
         <InboundNotificationsProvider>
           <ContactDrawerProvider>
             <TooltipProvider>
@@ -167,6 +169,7 @@ const App = () => (
           </TooltipProvider>
           </ContactDrawerProvider>
         </InboundNotificationsProvider>
+        </TextIntensityProvider>
       </QueryClientProvider>
     </AuthProvider>
   </GlobalErrorBoundary>
