@@ -32,8 +32,8 @@ src/
 └── v2/            — Componenti e pagine evolute (v2 UI)
 
 supabase/
-├── functions/     — 77 Edge Functions in Deno
-├── migrations/    — Migrazioni database SQL
+├── functions/     — 149 Edge Functions in Deno
+├── migrations/    — 385 migrazioni database SQL
 └── config.toml    — Configurazione progetto
 
 docs/              — Documentazione tecnica
@@ -97,9 +97,9 @@ e2e/               — Test End-to-End (Playwright)
 
 ## Testing
 
-- **Unit test**: Vitest con jsdom, 183+ file test, 1500+ test case
-- **E2E test**: Playwright con 32 spec
-- **Coverage**: Soglie minime configurate in `vitest.config.ts`
+- **Unit test**: Vitest con jsdom, 219+ file test
+- **E2E test**: Playwright con data-testid selectors
+- **Coverage**: Soglie minime in `vitest.config.ts` (statements 35%, branches 25%, functions 30%, lines 35%)
 - **CI/CD**: GitHub Actions con lint → type-check → test → build → e2e
 
 ## Sicurezza
@@ -113,12 +113,14 @@ e2e/               — Test End-to-End (Playwright)
 
 ## Documentazione
 
+- `docs/ARCHITECTURE.md` — Architettura, moduli, invarianti di sistema
+- `docs/EDGE-FUNCTIONS.md` — Template, shared modules, cron, categorie funzioni
+- `docs/RUNBOOK.md` — Guida operativa: cosa fare se un health check e rosso
 - `docs/API.md` — Referenza completa Edge Functions
-- `docs/ARCHITECTURE.md` — Architettura e moduli
 - `docs/DEVELOPMENT.md` — Guida sviluppo
-- `docs/EDGE-FUNCTIONS.md` — Template e protocolli backend
-- `docs/MANUALE_AGENTI_AI.md` — Guida agenti AI
+- `docs/MANUALE_AGENTI_AI.md` — Guida agenti AI (8 personas)
 - `docs/GUIDA_CONFIG_11LABS.md` — Configurazione ElevenLabs
+- `docs/audit/sprint-completi.md` — Registro sprint 72K→100K completati
 
 ## Licenza
 

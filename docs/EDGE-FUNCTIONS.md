@@ -80,6 +80,29 @@ Deno.serve(async (req) => {
 6. Keep files under 200 LOC — extract to shared modules
 7. Use `edgeError()` for consistent error response format
 
+## Cron Functions
+
+| Function | Schedule | Purpose |
+|----------|----------|---------|
+| `dispatch-integrity-check` | Daily 03:15 UTC | Verifies coherence between channel_messages, activities, and partner touches |
+| `agent-prompt-refiner` | Weekly Mon 04:00 UTC | AI-driven prompt improvement suggestions |
+| `ai-test-runner` | Daily 03:00 UTC | Runs prompt test suites and records results |
+| `funnemail-eval-runner` | Weekly Mon 05:00 UTC | Evaluates classify-inbound-message against 50 annotated test cases |
+
+All cron functions authenticate via `x-cron-secret` from Vault (never hardcoded).
+
+## Key Function Categories
+
+**AI Orchestration** (20+): agent-execute, agent-loop, agent-simulate, agent-autonomous-cycle, agent-autopilot-worker, agent-task-drainer, agentic-decide, ai-gateway-micro, ai-assistant, ai-deep-search-helper
+
+**Email Pipeline** (15+): check-inbox, classify-inbound-message, classify-email-response, generate-email, improve-email, send-email, analyze-email-edit, apply-email-rules, funnemail-eval-runner
+
+**Enrichment** (10+): enrich-partner, batch-enrichment-worker, calculate-partner-quality, calculate-lead-scores, analyze-partner, scrape-wca-member
+
+**Prompt Lab** (5): agent-prompt-refiner, ai-test-runner, prompt-test-evaluator, ai-arena-suggest
+
+**Monitoring** (5): ai-tracking-healthcheck, ai-monitor, dispatch-integrity-check, alert-router
+
 ## Deploy
 
-Edge Functions deploy automatically via Lovable when changes are pushed.
+Edge Functions deploy automatically via Lovable when changes are pushed to GitHub. Manual deploy via `supabase functions deploy <name>`.
