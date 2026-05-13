@@ -8981,6 +8981,8 @@ export type Database = {
       }
       partner_contacts: {
         Row: {
+          auto_held_at: string | null
+          auto_held_reason: string | null
           contact_alias: string | null
           created_at: string | null
           deleted_at: string | null
@@ -8992,11 +8994,14 @@ export type Database = {
           mobile: string | null
           name: string
           operator_id: string | null
+          parent_contact_id: string | null
           partner_id: string
           title: string | null
           user_id: string | null
         }
         Insert: {
+          auto_held_at?: string | null
+          auto_held_reason?: string | null
           contact_alias?: string | null
           created_at?: string | null
           deleted_at?: string | null
@@ -9008,11 +9013,14 @@ export type Database = {
           mobile?: string | null
           name: string
           operator_id?: string | null
+          parent_contact_id?: string | null
           partner_id: string
           title?: string | null
           user_id?: string | null
         }
         Update: {
+          auto_held_at?: string | null
+          auto_held_reason?: string | null
           contact_alias?: string | null
           created_at?: string | null
           deleted_at?: string | null
@@ -9024,6 +9032,7 @@ export type Database = {
           mobile?: string | null
           name?: string
           operator_id?: string | null
+          parent_contact_id?: string | null
           partner_id?: string
           title?: string | null
           user_id?: string | null
@@ -9034,6 +9043,13 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_contacts_parent_contact_id_fkey"
+            columns: ["parent_contact_id"]
+            isOneToOne: false
+            referencedRelation: "partner_contacts"
             referencedColumns: ["id"]
           },
           {
@@ -12702,6 +12718,10 @@ export type Database = {
         Returns: Json
       }
       ai_introspect_schema: { Args: { table_names: string[] }; Returns: Json }
+      apply_sibling_holding: {
+        Args: { _parent_contact_id: string }
+        Returns: number
+      }
       check_channel_rate_limit: {
         Args: { _channel: string; _user_id: string }
         Returns: Json
@@ -12712,6 +12732,22 @@ export type Database = {
           count: number
           group_id: string
           group_name: string
+        }[]
+      }
+      check_sibling_risk: {
+        Args: {
+          _contact_id?: string
+          _partner_id: string
+          _window_days?: number
+        }
+        Returns: {
+          channel: string
+          last_outbound_at: string
+          same_company: boolean
+          sibling_company_name: string
+          sibling_contact_id: string
+          sibling_contact_name: string
+          sibling_partner_id: string
         }[]
       }
       claim_pending_action: { Args: { _action_id: string }; Returns: boolean }
@@ -13057,6 +13093,7 @@ export type Database = {
           merged_rows: number
         }[]
       }
+      normalize_company_name: { Args: { name: string }; Returns: string }
       prompt_lab_cron_status: {
         Args: never
         Returns: {
