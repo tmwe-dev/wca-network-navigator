@@ -68,6 +68,8 @@ export interface EmailClassificationContext {
   domain?: ClassificationDomain;
   channel?: "email" | "whatsapp" | "linkedin";
   oooReturnDate?: string;
+  threadId?: string;
+  bodyPreview?: string;
 }
 
 export interface EmailProcessManagerResult {
