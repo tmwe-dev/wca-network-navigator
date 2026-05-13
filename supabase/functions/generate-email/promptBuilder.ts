@@ -129,7 +129,9 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
 `;
 
   const detected = getLanguageHint(partner.country_code);
-  const effectiveLanguage = language || detected.language;
+  // FIX 2026-05-13: priorità lingua = payload > settings.ai_language > paese > italiano.
+  // Prima `settings.ai_language` veniva ignorato a favore del codice paese.
+  const effectiveLanguage = language || settings.ai_language || detected.language;
 
   // Email type structure block
   const emailTypeStructureBlock = (email_type_prompt || email_type_structure) ? `
