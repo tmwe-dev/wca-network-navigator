@@ -115,8 +115,11 @@ export function GlobalSyncButton(): React.ReactElement {
           </span>
         )}
       </Button>
-      {waConnected && <SyncGuardIndicator channel="whatsapp" />}
-      {liConnected && <SyncGuardIndicator channel="linkedin" />}
+      {waConnected ? (
+        <SyncGuardIndicator channel="whatsapp" iconOnly />
+      ) : liConnected ? (
+        <SyncGuardIndicator channel="linkedin" iconOnly />
+      ) : null}
     </div>
   );
 }
