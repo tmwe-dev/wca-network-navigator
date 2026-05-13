@@ -8,6 +8,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { resolveSharedMailbox } from "../_shared/resolveMailbox.ts";
+import { assertMailboxAccessible, MailboxAccessDenied } from "../_shared/mailboxAccessGuard.ts";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -269,6 +270,11 @@ Deno.serve(async (req) => {
 
     if (mailboxId) {
       try {
+        // Audit P0.3 (2026-05-13) — guard server-side: l'utente DEVE essere
+        // admin oppure avere una riga in operator_mailbox_access per questa
+        // mailbox. Senza guard chiunque autenticato poteva spoofare la casella
+        // condivisa passando solo l'header x-mailbox-id.
+        await assertMailboxAccessible(authClient, mailboxId);
         const resolved = await resolveSharedMailbox(supabase, mailboxId);
         smtpHost = resolved.smtp_host;
         smtpPort = resolved.smtp_port || 465;
@@ -277,6 +283,9 @@ Deno.serve(async (req) => {
         sharedSenderEmail = resolved.email;
         sharedReplyTo = resolved.reply_to;
       } catch (e) {
+        if (e instanceof MailboxAccessDenied) {
+          return edgeError("AUTH_FORBIDDEN", `Non sei autorizzato a usare questa casella aziendale (${mailboxId}).`);
+        }
         return edgeError("VALIDATION_ERROR", `Casella aziendale non disponibile: ${e instanceof Error ? e.message : String(e)}`);
       }
     } else {
