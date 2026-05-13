@@ -158,7 +158,7 @@ describe("usePushNotifications Hook", () => {
       });
 
       expect(granted).toBe(true);
-      expect((global.Notification as Record<string, unknown>).requestPermission).toHaveBeenCalled();
+      expect((global.Notification as unknown as Record<string, unknown>).requestPermission).toHaveBeenCalled();
     });
 
     it("should set hasPermission state when granted", async () => {
@@ -247,7 +247,7 @@ describe("usePushNotifications Hook", () => {
     });
 
     it("should return false if user not authenticated", async () => {
-      mockUseAuth.mockReturnValue({ user: null });
+      mockUseAuth.mockReturnValue({ user: null } as never);
 
       const { result } = renderHook(() => usePushNotifications());
 
@@ -363,7 +363,7 @@ describe("usePushNotifications Hook", () => {
 
   describe("Options", () => {
     it("should respect enabled option", () => {
-      mockUseAuth.mockReturnValue({ user: null });
+      mockUseAuth.mockReturnValue({ user: null } as never);
       const { result } = renderHook(() => usePushNotifications({ enabled: false }));
       expect(result.current).toBeDefined();
     });
