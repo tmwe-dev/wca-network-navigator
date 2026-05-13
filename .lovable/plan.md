@@ -1,73 +1,77 @@
-## Audit completo dei tasti di sincronizzazione email
 
-### Mappa dei tasti (pagina `/v2/inbox` → `InArrivoTab` → `EmailToolbar`)
+## Cosa c'è in agenda di booking@tmwe.it (oggi)
 
-| Tasto | Hook | Cosa fa | Stato |
-|---|---|---|---|
-| **Scarica nuove** | `useCheckInbox` → `callCheckInbox(mailboxId)` | 1 batch, scansione completa (legge tutto) | ⚠️ funziona ma scansiona anche le lette |
-| **Download non lette** | `useContinuousSync` → `bgSyncStart(mailboxId, {unreadOnly:true})` | loop continuo, solo unread, header `x-unread-only:1` | ❌ **ROTTO** (CORS) |
-| **Stop** | `bgSyncStop()` | flag `abortSync = true` | ✅ |
-| **Auto** | `useEmailAutoSync` | timer 2 min → `callCheckInbox()` | ✅ |
-| **Reset cursore** | `useResetSync` → UPDATE `email_sync_state` | azzera last_uid | ✅ |
+13 azioni `pending`, **tutte** create oggi 12/05 dalla `postClassificationPipeline`, **tutte** sullo stesso partner `c126c50f… = "Transport Management srl"` e **tutte** generate da email arrivate da `sara.triassi@tmwe.it` (e altri colleghi interni `@tmwe.it`).
 
-### Problema #1 — CAUSA PRINCIPALE del fallimento "Download non lette"
+Cinque problemi reali trovati sui dati:
 
-I log console mostrano una raffica di `FunctionsFetchError` con `status: undefined` su `check-inbox`. Gli edge function logs mostrano che la funzione **esegue il boot ma non completa mai la response** per quelle chiamate (nessun metric line dopo il `booted`).
+1. **La tua azienda è registrata come partner.**
+   `partners.id c126c50f…` è "Transport Management srl" con `email = booking@tmwe.it`, `wca_id 112839`, `country IT`. In `partner_contacts` ci sono `booking@tmwe.it`, `sara.triassi@tmwe.it`, `elizabeth.feria@tmwe.it`, `pasquale.arianna@tmwe.it`. È stato auto-creato dallo scraping WCA e non è mai stato escluso.
 
-Diagnosi: in `src/lib/checkInbox.ts` la chiamata aggiunge l'header `x-unread-only: 1` quando `bgSyncStart` parte in modalità unread. Ma in `supabase/functions/_shared/cors.ts` (riga 43), `Access-Control-Allow-Headers` elenca:
+2. **Le email interne (collega → collega) vengono trattate come "lead in risposta".**
+   Quando arriva una mail da `sara.triassi@tmwe.it` nella casella `booking@tmwe.it`, `classify-inbound-message → stagePostClassification → emailRouter` la risolve sul partner sbagliato (TMWE stessa) e crea un `activities.follow_up`. Non c'è guardia "stesso dominio del proprietario".
 
-```
-authorization, x-client-info, apikey, content-type,
-x-supabase-client-platform, …, x-mailbox-id, x-sync-user-id,
-x-cron-secret, x-injection-review-id
-```
+3. **Niente description leggibile.**
+   `emailRouter.ts:160/322` e `questionAndComplaintHandler.ts:93` scrivono `description = input.aiSummary || fallback`. Il chiamante (`stagePostClassification.ts:31`) passa `aiSummary = result.intent`, che è uno **slug** (`booking_request`, `quote_request`, `cargo_status`…), non un testo. Risultato: in agenda compare "13 azioni oggi" senza description e con titoli identici.
 
-**Manca `x-unread-only`.** Il browser fa il preflight OPTIONS, il server non dichiara questo header come permesso, e il browser blocca la POST → `TypeError: Failed to fetch` → supabase-js lo riveste come `FunctionsFetchError` con `status: undefined`. Per questo gli edge logs mostrano `booted` ma nessun completamento: il preflight cached scade e ogni POST fallisce subito a livello di rete.
+4. **Niente collegamento all'email originale.**
+   Le INSERT di activities non valorizzano `email_subject`, `email_body`, `message_id_external`, `thread_id`. Quindi nel pannello azione non hai modo di vedere la mail (anteprima vuota / "Apri partner" è l'unico CTA utile).
 
-**Spiega anche perché**: la prima sincronizzazione di 492 email (14:16:55) era partita da auto-sync / "Scarica nuove" (senza `x-unread-only`), e quella ha funzionato.
+5. **Nessuna deduplica.**
+   La pipeline gira a ogni inbound; nessun unique su `(user_id, partner_id, message_id_external, classification)`. Stesso messaggio classificato due volte = due righe agenda. Oggi infatti ci sono 4 follow-up `cargo_status`, 4 `quote_request`, 3 `booking_request`, 2 `interested` sullo stesso partner.
 
-### Problema #2 — Retry inefficace su `FunctionsFetchError`
+### Files coinvolti (sorgente del bug)
 
-`src/lib/checkInbox.ts::isSkippableCheckInboxError` intercetta solo 503 `BOOT_ERROR` e 546 `WORKER_RESOURCE_LIMIT`. Un `FunctionsFetchError` (network/CORS) non ha `httpStatus` → non viene riconosciuto come transient → la retry rimbalza per 10 batch in `bgSyncStart` con back-off lineare (2s → 20s) producendo solo rumore. Va aggiunto: se l'errore è una `TypeError`/`FunctionsFetchError` senza status → trattalo come transient.
-
-### Problema #3 — "Scarica nuove" non rispetta il flag unread
-
-Il pulsante principale chiama `callCheckInbox(mailboxId)` senza `{ unreadOnly: true }`. Quando l'utente clicca "Scarica nuove", l'edge function fa `flag_resync` su tutta la finestra (vedi log: `checked: 492, marked_read: 492`) — pesante e in conflitto con la richiesta dell'utente di lavorare solo sulle non lette. Aggiungere `{ unreadOnly: true }` come default coerente con la doctrine.
-
-### Problema #4 — Single-flight troppo stretto
-
-`inFlightCheckInbox` in `src/lib/checkInbox.ts` deduplica per nome funzione, ignorando `mailboxId` e `unreadOnly`. Se il cron auto-sync (casella personale, full) parte mentre l'utente clicca "Download non lette" su una casella condivisa, le due chiamate si fondono e la seconda riceve i dati della prima. Va dedupato per `(mailboxId, unreadOnly)`.
+- `supabase/functions/_shared/postClassificationPipeline.ts` (orchestratore, manca guardia self-domain e flag `isInternal`)
+- `supabase/functions/_shared/emailRouter.ts` (handleInterested L153, handleFollowUp L315: insert activities incomplete)
+- `supabase/functions/_shared/questionAndComplaintHandler.ts` (L87, L228: stessa insert pattern)
+- `supabase/functions/classify-inbound-message/stages/stagePostClassification.ts` (L31: passa intent slug come aiSummary)
 
 ---
 
-## Piano di fix (minimale, edge-only + lib client)
+## Piano in 3 step (atomico, niente refactor)
 
-### 1. Sblocco CORS (root cause)
-File: `supabase/functions/_shared/cors.ts`
-- Aggiungere `x-unread-only` all'elenco `Access-Control-Allow-Headers`.
+### Step 1 — Guardia "internal sender / self-partner" (sorgente del rumore)
 
-### 2. Resilienza `callCheckInbox`
-File: `src/lib/checkInbox.ts`
-- Estendere `isSkippableCheckInboxError` per riconoscere anche `FunctionsFetchError` / errori senza `httpStatus` con name `TypeError|FunctionsFetchError|FunctionsRelayError` → ritornare `{ transient: true }` così bgSyncStart fa back-off.
-- Cambiare la chiave di dedup `inFlightCheckInbox` in una `Map<string, Promise>` con chiave `${mailboxId ?? "personal"}|${unreadOnly ? "u" : "all"}`.
+In `postClassificationPipeline.ts` aggiungere all'inizio di `runPostClassificationPipeline`:
 
-### 3. "Scarica nuove" passa `unreadOnly: true`
-File: `src/hooks/useEmailSync.ts` (`useCheckInbox`)
-- Modificare la mutation in `callCheckInbox(mailboxId, { unreadOnly: true })`. Anche `useEmailAutoSync` (`src/hooks/useEmailAutoSync.ts`) → idem.
+- Carica il dominio del proprietario: `select email from auth.users where id = userId` via `auth.admin` **oppure**, più semplice e già accessibile, derivarlo dalle mailbox attive del proprietario in `email_mailboxes` (campo email/from_address).
+- Se `senderEmail` ha lo stesso dominio del proprietario → **short-circuit**: niente activities, niente pending action, niente reminder. Solo `result.actionsExecuted.push("skip_internal_sender")` e ritorna.
+- Se `partnerId` punta a un partner il cui `email` o uno dei `partner_contacts.email` coincide con la mailbox del proprietario → stesso short-circuit + log `skip_self_partner` (un controllo, non distruttivo: non tocca i dati di quel partner).
 
-### 4. UI: rinominare il pulsante secondario
-File: `src/components/outreach/EmailToolbar.tsx`
-- Tooltip "Download non lette" → spiegare che è un loop continuo. Nessun cambio funzionale.
+Effetto: zero nuove righe da Sara/Elizabeth/Pasquale → booking. Le email interne restano scaricate e leggibili in Funnemail, ma non finiscono in agenda.
 
-### 5. Verifica post-deploy
-- Deploy `check-inbox` (per propagare il nuovo CORS shared).
-- Da `/v2/inbox`: cliccare "Download non lette" e leggere i log: niente più `FunctionsFetchError`, ogni batch deve produrre un metric line in `check-inbox`.
-- Verificare che "Scarica nuove" non scateni più 492 `marked_read` su mail già viste.
+### Step 2 — Description, contesto email, deduplica nelle INSERT activities
 
-### Non tocco
-- Logica `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria `linkedin-single-channel-rule` / `email-download-integrity`).
-- Trigger DB `on_inbound_message` (già fixato nello sprint precedente).
-- Editorial review, classificazione AI, queue.
+Modifica **solo** dei 3 punti che fanno `from("activities").insert(…)`:
 
-### Stima impatto
-3 file client + 1 file shared edge + 1 redeploy. Zero migrazioni DB. Zero breaking change su contratti API.
+`emailRouter.ts:153` (handleInterested), `emailRouter.ts:315` (handleFollowUp), `questionAndComplaintHandler.ts:87` (handleQuestion).
+
+In ognuno:
+
+- **Description leggibile**: usare prima `input.aiSummary` **solo se** è una frase (length > 30, contiene spazi); altrimenti fallback umano del tipo `"Risposta classificata come ${category} da ${senderEmail}. Apri per leggere il messaggio."`.
+- **Contesto email**: valorizzare `email_subject = input.subject`, `email_body = input.aiSummary || ""`, `message_id_external = input.messageId`, `thread_id = input.threadId`. Aggiungere i due campi opzionali a `RouterInput` / `QuestionComplaintInput` e propagarli in `stagePostClassification.ts` (già hanno `body.message_id`).
+- **Dedup pre-insert**: prima di insert, `select id from activities where user_id=? and partner_id=? and message_id_external=? and source_meta->>'classification'=? and deleted_at is null limit 1`. Se esiste, skip + `result.actionsExecuted.push("skip_duplicate")`.
+
+Niente nuove tabelle, niente migration: i campi `email_subject`, `email_body`, `message_id_external`, `thread_id` esistono già in `public.activities`.
+
+### Step 3 — Bonifica dati esistenti (one-shot, soft)
+
+Migration SQL minima:
+
+- Soft-delete (UPDATE `deleted_at = now()`, `deleted_by = system`) delle 13 activities di oggi sul partner `c126c50f…` create da `source_meta->>'pipeline' = 'postClassification'` con sender interno `@tmwe.it`. **Niente DELETE fisico** (rispetta la regola globale soft-delete).
+- Marcare il partner `c126c50f…` come **non actionable**: `UPDATE partners SET is_active=false, status_reason='self_company', deleted_at=now()` (soft) — così la pipeline e l'agenda lo escludono già senza altra logica.
+- Stesso trattamento se in DB esistono altri `partners.email` o `partner_contacts.email` che coincidono con una mailbox attiva del proprietario (query in due righe).
+
+### Cosa NON faccio
+
+- Non tocco `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria globale).
+- Non cambio `funnemail` né l'editorial review.
+- Non modifico la classificazione AI (resta intent/category attuali); solo il modo in cui usiamo `intent` per popolare la description.
+- Niente refactor di `postClassificationPipeline.ts` oltre il guard iniziale.
+
+### Verifica post-deploy
+
+1. Eseguo manualmente `classify-inbound-message` su una mail interna di Sara: deve loggare `skip_internal_sender`, zero righe in `activities` con `created_at >= now()`.
+2. Eseguo su una mail vera di partner esterno: nuova activity con `description` testuale, `email_subject` e `message_id_external` valorizzati, secondo run **non** crea duplicato.
+3. Apro `/v2/agenda` come `booking@tmwe.it`: la lista "13 azioni oggi" sparisce; restano solo le azioni reali su partner reali.
