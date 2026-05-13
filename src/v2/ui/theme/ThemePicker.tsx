@@ -9,7 +9,8 @@
  *    (uso dentro NavMenuPopover, dove non possiamo annidare un Radix dropdown).
  */
 import * as React from "react";
-import { Palette, Check, Sun, Moon } from "lucide-react";
+import { Palette, Check, Sun, Moon, Type } from "lucide-react";
+import { useTextIntensity, type TextIntensity } from "@/providers/TextIntensityProvider";
 
 export type ThemeId = "amber" | "lilac" | "space" | "notte";
 export type ThemeMode = "light" | "dark";
@@ -152,6 +153,7 @@ export function ThemePicker({ variant = "icon" }: ThemePickerProps): React.React
             >Scuro</button>
           </div>
         </div>
+        <TextIntensityRow />
       </div>
     );
   }
@@ -243,8 +245,61 @@ function ThemePickerIcon({
               className={"flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-sm transition-colors " + (mode === "dark" ? "bg-primary text-primary-foreground" : "hover:bg-accent/40")}
             ><Moon className="h-3.5 w-3.5" /> Scuro</button>
           </div>
+          <div className="h-px bg-border/60 my-1" />
+          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Intensità testo
+          </div>
+          <div className="px-2 pb-2">
+            <TextIntensityRow inline />
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const INTENSITY_STEPS: { value: TextIntensity; hint: string; size: string }[] = [
+  { value: "soft", hint: "Tenue", size: "text-[10px]" },
+  { value: "normal", hint: "Normale", size: "text-xs" },
+  { value: "strong", hint: "Forte", size: "text-sm" },
+  { value: "max", hint: "Massimo", size: "text-base font-semibold" },
+];
+
+function TextIntensityRow({ inline = false }: { inline?: boolean }): React.ReactElement {
+  const { intensity, setIntensity } = useTextIntensity();
+  const buttons = (
+    <div className="flex items-center gap-1 ml-auto rounded-md border border-border/60 p-0.5">
+      {INTENSITY_STEPS.map((s) => {
+        const active = s.value === intensity;
+        return (
+          <button
+            key={s.value}
+            type="button"
+            onClick={() => setIntensity(s.value)}
+            title={`Intensità testo: ${s.hint}`}
+            aria-label={`Intensità testo ${s.hint}`}
+            aria-pressed={active}
+            className={
+              "px-1.5 py-0.5 leading-none rounded-sm transition-colors min-w-[22px] " +
+              s.size +
+              " " +
+              (active
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground")
+            }
+          >
+            Aa
+          </button>
+        );
+      })}
+    </div>
+  );
+  if (inline) return buttons;
+  return (
+    <div className="flex items-center gap-2">
+      <Type className="h-4 w-4 text-muted-foreground shrink-0" />
+      <span className="text-xs text-muted-foreground mr-1">Testo</span>
+      {buttons}
     </div>
   );
 }
