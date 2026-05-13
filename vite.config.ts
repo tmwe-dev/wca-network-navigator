@@ -1,11 +1,23 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import viteCompression from "vite-plugin-compression";
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const projectId =
+    env.VITE_SUPABASE_PROJECT_ID ||
+    (env.VITE_SUPABASE_URL ? new URL(env.VITE_SUPABASE_URL).host.split(".")[0] : "");
+  // Escape regex meta chars in project id (safety)
+  const escapedHost = projectId
+    ? `${projectId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.supabase\\.co`
+    : "[a-z0-9-]+\\.supabase\\.co";
+  const edgeFnPattern = new RegExp(`^https:\\/\\/${escapedHost}\\/functions\\/v1\\/`);
+  const restPattern = new RegExp(`^https:\\/\\/${escapedHost}\\/rest\\/v1\\/`);
+
+  return ({
   server: {
     host: "::",
     port: 8080,
@@ -38,7 +50,7 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            urlPattern: /^https:\/\/zrbditqddhjkutzjycgi\.supabase\.co\/functions\/v1\//,
+            urlPattern: edgeFnPattern,
             handler: "NetworkFirst",
             options: {
               cacheName: "edge-functions",
@@ -47,7 +59,7 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            urlPattern: /^https:\/\/zrbditqddhjkutzjycgi\.supabase\.co\/rest\/v1\//,
+            urlPattern: restPattern,
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "supabase-rest",
@@ -116,4 +128,5 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-}));
+  });
+});
