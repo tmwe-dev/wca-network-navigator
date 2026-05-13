@@ -4,6 +4,7 @@
  */
 
 import { generateReplyDraft, enrichActionPayload, type EmailAddressRule } from "./classificationRules.ts";
+import { insertFollowUpActivity } from "./activityInsertHelper.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -29,6 +30,9 @@ export interface QuestionComplaintInput {
   urgency?: number;
   sentiment?: string;
   emailAddressRule?: EmailAddressRule;
+  messageId?: string;
+  threadId?: string;
+  bodyPreview?: string;
 }
 
 /**
@@ -84,25 +88,28 @@ export async function handleQuestion(
   if (input.partnerId) {
     const days = isUrgent ? 1 : 2;
     try {
-      await supabase.from("activities").insert({
-        user_id: input.userId,
-        partner_id: input.partnerId,
-        source_id: input.partnerId,
-        source_type: "partner",
-        activity_type: "follow_up",
+      const outcome = await insertFollowUpActivity(supabase, {
+        userId: input.userId,
+        partnerId: input.partnerId,
         title: `Rispondi a domanda di ${input.senderName || input.senderEmail}`,
-        description: input.aiSummary || "Il partner ha posto una domanda. Risposta richiesta.",
-        status: "pending",
-        priority,
-        due_date: new Date(Date.now() + days * 86400000).toISOString(),
-        source_meta: {
-          classification: input.category,
-          urgency: input.urgency,
-          pipeline: "postClassification",
-        },
+        classification: input.category,
+        aiSummary: input.aiSummary,
+        senderEmail: input.senderEmail,
+        senderName: input.senderName,
+        subject: input.subject,
+        bodyPreview: input.bodyPreview,
+        messageId: input.messageId,
+        threadId: input.threadId,
+        priority: priority as "low" | "normal" | "high" | "critical",
+        dueInDays: days,
+        extraMeta: { urgency: input.urgency },
       });
-      result.reminderCreated = true;
-      result.actionsExecuted.push(`reminder_question_T+${days}`);
+      if (outcome.duplicate) {
+        result.actionsExecuted.push("skip_duplicate_question");
+      } else if (outcome.inserted) {
+        result.reminderCreated = true;
+        result.actionsExecuted.push(`reminder_question_T+${days}`);
+      }
     } catch (e) {
       result.errors.push(`Question reminder failed: ${e}`);
     }
