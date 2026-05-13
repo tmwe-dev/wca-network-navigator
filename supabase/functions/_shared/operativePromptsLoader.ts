@@ -163,7 +163,7 @@ export async function loadOperativePrompts(
     const { data, error } = await supabase
       .from("operative_prompts")
       .select("id, name, context, objective, procedure, criteria, examples, tags, priority")
-      .eq("user_id", userId)
+      .or(`user_id.eq.${userId},user_id.is.null`)
       .eq("is_active", true)
       .order("priority", { ascending: false });
 
