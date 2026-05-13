@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { PartnerViewModel, EnrichmentData } from "@/types/partner-views";
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
