@@ -22,7 +22,7 @@ const mockUseAuth = vi.fn(() => ({
   user: { id: "user-1" },
 }));
 vi.mock("@/providers/AuthProvider", () => ({
-  useAuth: (...args: unknown[]) => mockUseAuth(...args),
+  useAuth: () => mockUseAuth(),
 }));
 
 // Mock notifications data functions
@@ -71,7 +71,7 @@ describe("usePushNotifications Hook", () => {
       configurable: true,
     });
 
-    (global.Notification as Record<string, unknown>).requestPermission = vi.fn();
+    (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn();
 
     // Mock navigator.serviceWorker
     Object.defineProperty(navigator, "serviceWorker", {
@@ -146,9 +146,9 @@ describe("usePushNotifications Hook", () => {
         p256dh: "t",
         auth_key: "t",
         created_at: "2024-01-15T10:00:00Z",
-      } as unknown);
+      } as never);
 
-      (global.Notification as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("granted");
+      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("granted");
 
       const { result } = renderHook(() => usePushNotifications());
 
@@ -185,9 +185,9 @@ describe("usePushNotifications Hook", () => {
         p256dh: "t",
         auth_key: "t",
         created_at: "2024-01-15T10:00:00Z",
-      } as unknown);
+      } as never);
 
-      (global.Notification as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("granted");
+      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("granted");
 
       const { result } = renderHook(() => usePushNotifications());
 
@@ -199,7 +199,7 @@ describe("usePushNotifications Hook", () => {
     });
 
     it("should return false when permission denied", async () => {
-      (global.Notification as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("denied");
+      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("denied");
 
       const { result } = renderHook(() => usePushNotifications());
 
@@ -213,7 +213,7 @@ describe("usePushNotifications Hook", () => {
     });
 
     it("should handle permission request errors gracefully", async () => {
-      (global.Notification as Record<string, unknown>).requestPermission = vi
+      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi
         .fn()
         .mockRejectedValue(new Error("Permission request failed"));
 
@@ -280,7 +280,7 @@ describe("usePushNotifications Hook", () => {
         configurable: true,
       });
 
-      vi.mocked(notificationsData.deletePushSubscription).mockResolvedValue(true as unknown);
+      vi.mocked(notificationsData.deletePushSubscription).mockResolvedValue(true as never);
 
       const { result } = renderHook(() => usePushNotifications());
 
