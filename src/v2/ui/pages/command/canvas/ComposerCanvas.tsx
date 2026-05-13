@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
