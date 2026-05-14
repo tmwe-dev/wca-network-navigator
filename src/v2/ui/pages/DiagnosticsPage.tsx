@@ -13,6 +13,7 @@ import { PageShell } from "@/v2/ui/templates/PageShell";
 
 export function DiagnosticsPage() {
   const isAdmin = useRequireRole({ role: "admin" });
+  const { results, running, expandedCats, categories, summary, runAll, abort, toggleCat, byCat } = useDiagnosticsRunner();
 
   if (!isAdmin) {
     return (
@@ -23,8 +24,6 @@ export function DiagnosticsPage() {
       </PageShell>
     );
   }
-
-  const { results, running, expandedCats, categories, summary, runAll, abort, toggleCat, byCat } = useDiagnosticsRunner();
 
   return (
     <PageShell

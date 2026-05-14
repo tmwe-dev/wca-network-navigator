@@ -111,9 +111,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
       {
         title: "Hub",
         items: [
-          { label: "Apri Lab & Verifiche", path: "/v2/lab" },
-          { label: "Tests",                path: "/v2/lab?group=tests" },
-          { label: "Prompts",              path: "/v2/lab?group=prompts" },
+          { label: "Test & Prompts",       path: "/v2/lab?group=tests" },
           { label: "Observability",        path: "/v2/lab?group=observability" },
           { label: "Design System",        path: "/v2/lab?group=design" },
         ],

@@ -35,7 +35,7 @@ import {
   Wand2,
 } from "lucide-react";
 
-export type LabTabGroup = "tests" | "prompts" | "observability" | "design";
+export type LabTabGroup = "tests" | "observability" | "design";
 
 export interface LabGroupConfig {
   id: LabTabGroup;
@@ -53,8 +53,7 @@ export interface LabTabConfig {
 }
 
 export const LAB_GROUPS: readonly LabGroupConfig[] = [
-  { id: "tests",         label: "Tests",         icon: FlaskConical },
-  { id: "prompts",       label: "Prompts",       icon: Wand2 },
+  { id: "tests",         label: "Test & Prompts", icon: FlaskConical },
   { id: "observability", label: "Observability", icon: Eye },
   { id: "design",        label: "Design",        icon: Palette },
 ] as const;
@@ -73,22 +72,20 @@ export const LAB_TABS: readonly LabTabConfig[] = [
   { id: "e2e",          label: "E2E Smoke",     group: "tests", icon: Activity, legacyPath: "/v2/settings/e2e-status",
     Component: lazy(() => import("@/v2/ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage }))) },
 
-  // ─── PROMPTS ─────────────────────────────────────────────
-  { id: "prompt-lab",       label: "Prompt Lab",  group: "prompts", icon: Wand2, legacyPath: "/v2/settings/prompt-lab",
+  // ─── PROMPTS (stesso gruppo "tests") ─────────────────────
+  { id: "prompt-lab",       label: "Prompt Lab",  group: "tests", icon: Wand2, legacyPath: "/v2/settings/prompt-lab",
     Component: lazy(() => import("@/v2/ui/pages/PromptLabPage").then((m) => ({ default: m.PromptLabPage }))) },
-  { id: "prompt-catalog",   label: "Catalog",     group: "prompts", icon: BookOpen, legacyPath: "/v2/prompt-lab/catalog",
+  { id: "prompt-catalog",   label: "Catalog",     group: "tests", icon: BookOpen, legacyPath: "/v2/prompt-lab/catalog",
     Component: lazy(() => import("@/v2/ui/pages/PromptCatalogPage")) },
-  { id: "prompt-tests",     label: "Regression", group: "prompts", icon: TestTube, legacyPath: "/v2/prompt-lab/tests",
-    Component: lazy(() => import("@/v2/ui/pages/PromptTestsPage")) },
-  { id: "prompt-atlas",     label: "Atlas",       group: "prompts", icon: MapIcon, legacyPath: "/v2/prompt-lab/atlas",
+  { id: "prompt-atlas",     label: "Atlas",       group: "tests", icon: MapIcon, legacyPath: "/v2/prompt-lab/atlas",
     Component: lazy(() => import("@/v2/ui/pages/prompt-lab/atlas/AgentAtlasPage")) },
-  { id: "prompt-suggest",   label: "Suggestions", group: "prompts", icon: Lightbulb, legacyPath: "/v2/prompt-lab/suggestions",
+  { id: "prompt-suggest",   label: "Suggestions", group: "tests", icon: Lightbulb, legacyPath: "/v2/prompt-lab/suggestions",
     Component: lazy(() => import("@/v2/ui/pages/prompt-lab/SuggestionsReviewPage")) },
-  { id: "prompt-proposals", label: "Proposals",   group: "prompts", icon: GitBranch, legacyPath: "/v2/prompt-lab/proposals",
+  { id: "prompt-proposals", label: "Proposals",   group: "tests", icon: GitBranch, legacyPath: "/v2/prompt-lab/proposals",
     Component: lazy(() => import("@/v2/ui/pages/prompt-lab/ProposalsReviewPage")) },
-  { id: "prompt-reader",    label: "Reader",      group: "prompts", icon: FileText, legacyPath: "/v2/settings/prompt-reader",
+  { id: "prompt-reader",    label: "Reader",      group: "tests", icon: FileText, legacyPath: "/v2/settings/prompt-reader",
     Component: lazy(() => import("@/v2/ui/pages/prompt-lab/PromptReaderPage")) },
-  { id: "brand-voice",      label: "Brand Voice", group: "prompts", icon: Mic, legacyPath: "/v2/settings/brand-voice",
+  { id: "brand-voice",      label: "Brand Voice", group: "tests", icon: Mic, legacyPath: "/v2/settings/brand-voice",
     Component: lazy(() => import("@/v2/ui/pages/BrandVoicePage").then((m) => ({ default: m.BrandVoicePage }))) },
 
   // ─── OBSERVABILITY ───────────────────────────────────────
@@ -127,7 +124,6 @@ export function findLabTab(id: string | null | undefined): LabTabConfig | undefi
 export const DEFAULT_LAB_GROUP: LabTabGroup = "tests";
 export const DEFAULT_LAB_TAB_BY_GROUP: Record<LabTabGroup, string> = {
   tests: "scenari",
-  prompts: "prompt-lab",
   observability: "diagnostica",
   design: "design",
 };
