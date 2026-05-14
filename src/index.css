@@ -49,6 +49,9 @@ html, body {
     --input: 220 13% 91%;
     --ring: 217 91% 60%;
     --radius: 1rem;
+    /* Field background — leggermente più chiaro del background per identificare aree compilabili */
+    --field: 0 0% 100%;
+    --field-foreground: 222 47% 11%;
     /* Design system IntelliFlow (kept) */
     --info: 262 60% 66%;
     --info-foreground: 262 60% 95%;
@@ -191,6 +194,8 @@ html, body {
     --theme-active-border: rgba(200, 150, 70, 0.5);
     --theme-icon-active: rgba(180, 130, 50, 1);
     --theme-section-bg: rgba(180, 130, 50, 0.04);
+    --field: 30 20% 99%;
+    --field-foreground: 25 25% 15%;
   }
 
   .dark {
@@ -218,6 +223,9 @@ html, body {
     --border: 216 34% 17%;
     --input: 216 34% 17%;
     --ring: 268 80% 65%;
+    /* Field background dark — più scuro del background per evidenziare i campi */
+    --field: 222 47% 4%;
+    --field-foreground: 210 40% 98%;
     /* Design system IntelliFlow */
     --info: 268 60% 66%;
     --info-foreground: 268 60% 95%;
@@ -267,6 +275,7 @@ html, body {
     --sidebar-primary: 192 91% 60%;
     --sidebar-ring: 192 91% 60%;
     --info: 192 91% 60%;
+    --field: 220 40% 3%;
   }
 
   /* Dark + Notte */
@@ -285,6 +294,7 @@ html, body {
     --sidebar-primary: 38 70% 55%;
     --sidebar-ring: 38 70% 55%;
     --info: 38 70% 55%;
+    --field: 25 15% 3%;
   }
 }
 
