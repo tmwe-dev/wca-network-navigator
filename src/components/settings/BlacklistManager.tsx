@@ -35,40 +35,39 @@ function looksLikeCsv(buffer: ArrayBuffer, fileName: string): boolean {
 
 async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]> {
   const buffer = await file.arrayBuffer();
-  const ExcelJS = await getExcelJS();
-  const workbook = new ExcelJS.Workbook();
 
+  let rows: string[][];
   if (looksLikeCsv(buffer, file.name)) {
     let text = new TextDecoder("utf-8").decode(buffer);
-    // Strip BOM
     if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-    const blob = new Blob([text], { type: "text/csv" });
-    const stream = blob.stream() as never;
-    await workbook.csv.read(stream);
+    rows = parseCsv(text);
   } else {
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
+    const sheet = workbook.worksheets[0];
+    if (!sheet) throw new Error("No worksheet found");
+    rows = [];
+    sheet.eachRow((row) => {
+      const cells: string[] = [];
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        cells[colNumber - 1] = String(cell.value ?? "");
+      });
+      rows.push(cells);
+    });
   }
 
-  const sheet = workbook.worksheets[0];
-  if (!sheet) throw new Error("No worksheet found");
-
-  const headers: string[] = [];
-  sheet.getRow(1).eachCell((cell, colNumber) => {
-    headers[colNumber] = String(cell.value || "").trim();
-  });
-
+  if (rows.length === 0) throw new Error("Empty file");
+  const headers = rows[0].map((h) => String(h || "").trim());
   const entries: Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[] = [];
 
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return; // skip header
+  for (let i = 1; i < rows.length; i++) {
     const obj: Record<string, string> = {};
-    row.eachCell((cell, colNumber) => {
-      obj[headers[colNumber] || `col${colNumber}`] = String(cell.value ?? "");
+    rows[i].forEach((val, idx) => {
+      obj[headers[idx] || `col${idx}`] = String(val ?? "");
     });
-
     const no = parseInt(String(obj["No."] || obj["No"] || "0"));
     const totalStr = String(obj["TotalOwedAmount"] || obj["Total Owed Amount"] || "0").replace(/[^0-9.-]/g, "");
-
     const entry = {
       blacklist_no: isNaN(no) ? null : no,
       company_name: String(obj["CompanyName"] || obj["Company Name"] || "").trim(),
@@ -80,11 +79,46 @@ async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id"
       matched_partner_id: null,
       source: "manual" as const,
     };
-
     if (entry.company_name.length > 0) entries.push(entry);
-  });
+  }
 
   return entries;
+}
+
+/** Parser CSV minimale RFC4180-like: gestisce quote, escape "" e newline dentro campi quotati. Rileva delimitatore , ; \t */
+function parseCsv(text: string): string[][] {
+  // Detect delimiter from first non-quoted line
+  const firstLine = text.split(/\r?\n/, 1)[0] || "";
+  const counts: Record<string, number> = {
+    ",": (firstLine.match(/,/g) || []).length,
+    ";": (firstLine.match(/;/g) || []).length,
+    "\t": (firstLine.match(/\t/g) || []).length,
+  };
+  const delimiter = (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]) || ",";
+
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        field += c;
+      }
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === delimiter) { row.push(field); field = ""; }
+      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (c === "\r") { /* skip, handled by \n */ }
+      else field += c;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((v) => v && v.trim().length > 0));
 }
 
 export default function BlacklistManager() {
