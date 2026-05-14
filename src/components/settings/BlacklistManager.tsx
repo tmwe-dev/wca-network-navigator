@@ -125,6 +125,9 @@ export default function BlacklistManager() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[] | null>(null);
   const [allParsed, setAllParsed] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useBlacklistStats();
   const { data: logs } = useBlacklistSyncLog();
@@ -133,14 +136,23 @@ export default function BlacklistManager() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFileName(file.name);
+    setParseError(null);
+    setParsing(true);
+    setPreview(null);
+    setAllParsed([]);
     try {
       const entries = await parseBlacklistFile(file);
       setAllParsed(entries);
       setPreview(entries.slice(0, 10));
       toast.success(`${entries.length} record trovati nel file`);
     } catch (e) {
-      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-      toast.error("Errore nel parsing del file");
+      const msg = e instanceof Error ? e.message : String(e);
+      log.warn("operation failed", { error: msg });
+      setParseError(msg);
+      toast.error("Errore nel parsing del file: " + msg);
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -151,6 +163,7 @@ export default function BlacklistManager() {
       toast.success(`Importati ${result.imported} record, ${result.matched} match trovati`);
       setPreview(null);
       setAllParsed([]);
+      setFileName(null);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err: unknown) {
       toast.error("Errore importazione: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto"));
