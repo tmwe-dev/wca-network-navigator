@@ -25,10 +25,12 @@ interface Props {
   className?: string;
   /** Etichetta breve. Default: "Deep Search". */
   label?: string;
+  /** Callback al termine della Deep Search (riceve la sintesi). */
+  onComplete?: (summary: string | null) => void;
 }
 
 export function DeepSearchEmailButton({
-  email, source, size = "sm", variant = "outline", className, label = "Deep Search",
+  email, source, size = "sm", variant = "outline", className, label = "Deep Search", onComplete,
 }: Props): React.ReactElement {
   const [open, setOpen] = React.useState(false);
   const [level, setLevel] = React.useState<SherlockLevel | undefined>(undefined);
@@ -67,6 +69,7 @@ export function DeepSearchEmailButton({
         onOpenChange={setOpen}
         target={target}
         autoStartLevel={level}
+        onComplete={onComplete}
       />
     </>
   );

@@ -33,6 +33,8 @@ interface Props {
   target: SherlockLauncherTarget | null;
   /** Pre-seleziona un livello da avviare automaticamente all'apertura. */
   autoStartLevel?: SherlockLevel;
+  /** Callback chiamato una sola volta quando l'indagine termina. */
+  onComplete?: (summary: string | null) => void;
 }
 
 const LEVEL_META: Record<SherlockLevel, { label: string; Icon: typeof Search; eta: string }> = {
@@ -41,7 +43,7 @@ const LEVEL_META: Record<SherlockLevel, { label: string; Icon: typeof Search; et
   3: { label: "Sherlock", Icon: Telescope, eta: "~5min" },
 };
 
-export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLevel }: Props): React.ReactElement {
+export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLevel, onComplete }: Props): React.ReactElement {
   const vars = React.useMemo<Record<string, string>>(() => {
     if (!target) return {} as Record<string, string>;
     return {
@@ -80,6 +82,16 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
   React.useEffect(() => {
     if (sherlock.running) ranOnceRef.current = true;
   }, [sherlock.running]);
+
+  const completeFiredRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!open) { completeFiredRef.current = false; return; }
+    if (sherlock.running) return;
+    if (!ranOnceRef.current) return;
+    if (completeFiredRef.current) return;
+    completeFiredRef.current = true;
+    try { onComplete?.(sherlock.summary ?? null); } catch { /* silent */ }
+  }, [open, sherlock.running, sherlock.summary, onComplete]);
 
   // Auto-close quando la Deep Search finisce: lasciamo 1.8s per leggere la sintesi, poi chiudiamo.
   React.useEffect(() => {
