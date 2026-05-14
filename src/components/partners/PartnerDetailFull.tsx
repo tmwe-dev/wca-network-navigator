@@ -39,6 +39,8 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
         partner={partner}
         enrichment={enrichment}
         networks={networks}
+        services={services}
+        branchCountries={branchCountries}
         years={years}
         expiryDate={expiryDate}
         isExpiringSoon={isExpiringSoon}
