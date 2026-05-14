@@ -213,6 +213,7 @@ export function NavMenuPopover({
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         align={align}
+        side={side}
         sideOffset={8}
         className="w-72 p-1 bg-background/95 backdrop-blur-xl border-white/10 max-h-[80vh] overflow-y-auto"
       >
