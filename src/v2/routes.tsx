@@ -324,16 +324,16 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-lab"                  element={<Navigate to="/v2/lab?group=tests&tab=ai-lab" replace />} />
           <Route path="email-lab"               element={<Navigate to="/v2/lab?group=tests&tab=email-lab" replace />} />
           <Route path="ai-staff/email-forge"    element={<Navigate to="/v2/email/forge" replace />} />
-          <Route path="ai-staff/prompt-lab"     element={<Navigate to="/v2/lab?group=prompts&tab=prompt-lab" replace />} />
-          <Route path="prompt-lab"              element={<Navigate to="/v2/lab?group=prompts&tab=prompt-lab" replace />} />
-          <Route path="settings/prompt-lab"     element={<Navigate to="/v2/lab?group=prompts&tab=prompt-lab" replace />} />
-          <Route path="prompt-lab/atlas"        element={<Navigate to="/v2/lab?group=prompts&tab=prompt-atlas" replace />} />
-          <Route path="prompt-lab/suggestions"  element={<Navigate to="/v2/lab?group=prompts&tab=prompt-suggest" replace />} />
-          <Route path="prompt-lab/proposals"    element={<Navigate to="/v2/lab?group=prompts&tab=prompt-proposals" replace />} />
-          <Route path="prompt-lab/catalog"      element={<Navigate to="/v2/lab?group=prompts&tab=prompt-catalog" replace />} />
-          <Route path="prompt-lab/tests"        element={<Navigate to="/v2/lab?group=prompts&tab=prompt-tests" replace />} />
-          <Route path="prompt-reader"           element={<Navigate to="/v2/lab?group=prompts&tab=prompt-reader" replace />} />
-          <Route path="settings/prompt-reader"  element={<Navigate to="/v2/lab?group=prompts&tab=prompt-reader" replace />} />
+          <Route path="ai-staff/prompt-lab"     element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
+          <Route path="prompt-lab"              element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
+          <Route path="settings/prompt-lab"     element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
+          <Route path="prompt-lab/atlas"        element={<Navigate to="/v2/lab?group=tests&tab=prompt-atlas" replace />} />
+          <Route path="prompt-lab/suggestions"  element={<Navigate to="/v2/lab?group=tests&tab=prompt-suggest" replace />} />
+          <Route path="prompt-lab/proposals"    element={<Navigate to="/v2/lab?group=tests&tab=prompt-proposals" replace />} />
+          <Route path="prompt-lab/catalog"      element={<Navigate to="/v2/lab?group=tests&tab=prompt-catalog" replace />} />
+          <Route path="prompt-lab/tests"        element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
+          <Route path="prompt-reader"           element={<Navigate to="/v2/lab?group=tests&tab=prompt-reader" replace />} />
+          <Route path="settings/prompt-reader"  element={<Navigate to="/v2/lab?group=tests&tab=prompt-reader" replace />} />
           <Route path="ai-interactions-log"     element={<Navigate to="/v2/lab?group=observability&tab=ai-log" replace />} />
           <Route path="pipeline-traces"         element={<Navigate to="/v2/lab?group=observability&tab=pipeline-traces" replace />} />
           <Route path="token-cockpit"           element={<Navigate to="/v2/lab?group=observability&tab=token-cockpit" replace />} />
@@ -372,7 +372,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings/health"        element={<Navigate to="/v2/lab?group=observability&tab=health" replace />} />
           <Route path="settings/e2e-status"    element={<Navigate to="/v2/lab?group=tests&tab=e2e" replace />} />
           <Route path="settings/alert-routing" element={<Navigate to="/v2/lab?group=observability&tab=alert-routing" replace />} />
-          <Route path="settings/brand-voice"   element={<Navigate to="/v2/lab?group=prompts&tab=brand-voice" replace />} />
+          <Route path="settings/brand-voice"   element={<Navigate to="/v2/lab?group=tests&tab=brand-voice" replace />} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />
