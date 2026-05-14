@@ -15,6 +15,7 @@ import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
 import type { PartnerViewModel } from "@/types/partner-views";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { getPartnerDisplayCity } from "@/lib/partnerUtils";
 import {
   SherlockLauncherDialog,
   type SherlockLauncherTarget,
@@ -47,7 +48,7 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
         partnerId,
         contactId: null,
         companyName: (vm.company_name as string | null) ?? null,
-        city: (vm.city as string | null) ?? null,
+        city: getPartnerDisplayCity(vm) || null,
         countryName: (vm.country_name as string | null) ?? null,
         countryCode: (vm.country_code as string | null) ?? null,
         website: (vm.website as string | null) ?? null,

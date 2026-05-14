@@ -45,6 +45,10 @@ export function getRealLogoUrl(logoUrl: string | null | undefined): string | nul
 export interface PartnerLike {
   logo_url?: string | null;
   enrichment_data?: unknown;
+  city?: string | null;
+  address?: string | null;
+  office_type?: string | null;
+  has_branches?: boolean | null;
   mobile?: string | null;
   partner_contacts?: Array<Record<string, unknown>>;
   partner_social_links?: Array<Record<string, unknown>>;
@@ -113,6 +117,52 @@ export function getBranchCountries(partner: PartnerLike): { code: string; name: 
     }
   });
   return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
+}
+
+function cleanAddressPart(value: string): string {
+  return value.replace(/\s+/g, " ").replace(/^[,\s]+|[,\s]+$/g, "").trim();
+}
+
+function normalizeLocation(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function extractCityFromAddress(address: string | null | undefined, countryName?: string): string | null {
+  if (!address) return null;
+  const countryTokens = new Set([
+    normalizeLocation(countryName || ""),
+    "australia", "canada", "new zealand", "south africa", "united states", "united states of america", "usa",
+  ].filter(Boolean));
+  const parts = address.split(",").map(cleanAddressPart).filter(Boolean);
+  for (const part of [...parts].reverse()) {
+    const withoutCountry = cleanAddressPart(part.replace(/\b(United States of America|United States|USA|Australia|Canada|New Zealand|South Africa)\b/gi, ""));
+    const normalized = normalizeLocation(withoutCountry || part);
+    if (!withoutCountry || countryTokens.has(normalized)) continue;
+    if (/company\s+number|gst\s+number/i.test(withoutCountry)) continue;
+    if (/^\d+$/.test(withoutCountry)) continue;
+    if (/^[A-Z]{1,3}$/i.test(withoutCountry)) continue;
+    if (/^[A-Z]{1,3}\s*\d[\dA-Z\s-]*$/i.test(withoutCountry)) continue;
+    if (/^\d[\dA-Z\s-]*$/i.test(withoutCountry)) continue;
+    if (/\b(level|floor|suite|unit|road|street|avenue|drive|bvd|blvd|place|way|lane)\b/i.test(withoutCountry)) continue;
+    const city = cleanAddressPart(withoutCountry.replace(/\b[A-Z]{2,3}\s*\d[\dA-Z\s-]*$/i, "").replace(/\b\d{4,6}\b.*$/i, ""));
+    return city || null;
+  }
+  return null;
+}
+
+export function getPartnerDisplayCity(partner: PartnerLike): string {
+  const rawCity = typeof partner.city === "string" ? cleanAddressPart(partner.city) : "";
+  const addressCity = extractCityFromAddress(partner.address, partner.country_name);
+  if (!addressCity) return rawCity;
+  if (!rawCity) return addressCity;
+  if (normalizeLocation(addressCity) === normalizeLocation(rawCity)) return rawCity;
+  const branches = Array.isArray(partner.branch_cities) ? partner.branch_cities : [];
+  const rawCityInBranchList = branches.some((branch) => {
+    const value = typeof branch === "string" ? branch : (branch as Record<string, unknown> | null)?.city;
+    return typeof value === "string" && normalizeLocation(value) === normalizeLocation(rawCity);
+  });
+  if ((partner.has_branches === true || branches.length > 1) && rawCityInBranchList) return addressCity;
+  return rawCity;
 }
 
 export function sortPartners(partners: PartnerLike[], sortBy: SortOption): PartnerLike[] {

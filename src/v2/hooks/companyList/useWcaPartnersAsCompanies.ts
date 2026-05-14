@@ -14,6 +14,7 @@ import { findPartners, findPartnersPreview, type PartnerWithRelations } from "@/
 import { queryKeys } from "@/lib/queryKeys";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import type { CompanyEntity, ContactEntity } from "@/v2/ui/molecules/CompanyCardList";
+import { getPartnerDisplayCity, type PartnerLike } from "@/lib/partnerUtils";
 
 function yearsSince(dateIso: string | null | undefined): number | undefined {
   if (!dateIso) return undefined;
@@ -78,7 +79,7 @@ function mapPartner(p: PartnerWithRelations): CompanyEntity {
   return {
     id: p.id,
     name: p.company_alias || p.company_name,
-    city: p.city,
+    city: getPartnerDisplayCity(p as unknown as PartnerLike),
     countryCode: p.country_code,
     source: "wca",
     badge: { label: "WCA", tone: "wca" },
