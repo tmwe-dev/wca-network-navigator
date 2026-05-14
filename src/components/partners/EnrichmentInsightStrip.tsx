@@ -1,5 +1,6 @@
 import type { PartnerViewModel } from "@/types/partner-views";
-import { ArrowUpRight, Building2, Calendar, Sparkles, Truck, Users, Warehouse } from "lucide-react";
+import type * as React from "react";
+import { ArrowUpRight, Building2, Calendar, Truck, Users, Warehouse } from "lucide-react";
 import { getCountryFlag, resolveCountryCode, formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
@@ -182,9 +183,9 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
         </div>
       )}
 
-      {(warehouseDetails || fleetDetails) && (
+      {warehouseDetails && (
         <div className="flex flex-col gap-1 border-t border-primary/10 pt-2 text-[10px] leading-relaxed text-muted-foreground">
-          {warehouseDetails && <span><Building2 className="mr-1 inline h-3 w-3 text-primary" />{warehouseDetails}</span>}
+          <span><Building2 className="mr-1 inline h-3 w-3 text-primary" />{warehouseDetails}</span>
         </div>
       )}
     </div>
