@@ -11,7 +11,6 @@
  */
 import * as React from "react";
 import { useLocation } from "react-router-dom";
-import { Button } from "../atoms/Button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
 import { StatusPill } from "./header/StatusPill";
