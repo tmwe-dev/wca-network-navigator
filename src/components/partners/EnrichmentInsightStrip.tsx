@@ -1,10 +1,10 @@
 import type { PartnerViewModel } from "@/types/partner-views";
 import type * as React from "react";
-import { ArrowUpRight, Building2, Calendar, Truck, Users, Warehouse } from "lucide-react";
+import { ArrowRight, Building2, Calendar, Truck, Users, Warehouse, MapPin, Globe2, Building } from "lucide-react";
 import { getCountryFlag, resolveCountryCode, formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
-import { getServiceIcon } from "@/components/partners/shared/ServiceIcons";
+import { resolveServiceIcon } from "@/components/partners/shared/ServiceIcons";
 
 interface PartnerService {
   readonly service_category: string;
@@ -27,6 +27,7 @@ interface Props {
   readonly enrichment: Record<string, unknown> | null;
   readonly services: readonly PartnerService[];
   readonly branchCountries: readonly BranchCountry[];
+  readonly networks?: readonly { readonly id: string; readonly network_name: string }[];
 }
 
 const COUNTRY_ALIASES: Readonly<Record<string, string>> = {
@@ -80,18 +81,7 @@ function routeItems(value: unknown): RouteLike[] {
   });
 }
 
-function serviceKeyFromLabel(label: string): string {
-  const normalized = label.toLowerCase();
-  if (normalized.includes("air") || normalized.includes("aereo")) return "air_freight";
-  if (normalized.includes("sea") || normalized.includes("ocean") || normalized.includes("mare")) return "ocean_fcl";
-  if (normalized.includes("warehouse") || normalized.includes("magazz")) return "warehousing";
-  if (normalized.includes("custom") || normalized.includes("dogan")) return "customs_broker";
-  if (normalized.includes("road") || normalized.includes("truck") || normalized.includes("camion")) return "road_freight";
-  if (normalized.includes("rail") || normalized.includes("ferro")) return "rail_freight";
-  return label;
-}
-
-export function EnrichmentInsightStrip({ partner, enrichment, services, branchCountries }: Props): React.ReactElement | null {
+export function EnrichmentInsightStrip({ partner, enrichment, services, branchCountries, networks = [] }: Props): React.ReactElement | null {
   const companyProfile = enrichment?.company_profile && typeof enrichment.company_profile === "object"
     ? enrichment.company_profile as Record<string, unknown>
     : null;
@@ -116,70 +106,106 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
   const fleetDetails = textValue(enrichment?.fleet_details);
   const warehouseDetails = textValue(enrichment?.warehouse_details);
   const hasWarehouses = enrichment?.has_warehouses === true || warehouseSqm !== null || !!warehouseDetails;
-  const hasData = !!summary || serviceLabels.length > 0 || markets.length > 0 || routes.length > 0 || hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails || branchCountries.length > 0;
+  const hasData = !!summary || serviceLabels.length > 0 || markets.length > 0 || routes.length > 0 || hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails || branchCountries.length > 0 || networks.length > 0;
 
   if (!hasData && !partner.enriched_at) return null;
 
   return (
-    <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5 space-y-2">
+    <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5 space-y-2.5">
+      {/* Row 1 — pitch in una riga */}
       <div className="flex items-start gap-2">
         <EnrichmentBadge partner={partner} variant="pill" className="shrink-0" />
-        {summary && <p className="text-[11px] leading-relaxed text-foreground/80 line-clamp-3">{summary}</p>}
+        {summary && <p className="text-[11px] leading-relaxed text-foreground/85 line-clamp-2">{summary}</p>}
       </div>
 
-      {(serviceLabels.length > 0 || hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails) && (
+      {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
+      {serviceLabels.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {serviceLabels.map((label) => {
-            const key = serviceKeyFromLabel(label);
-            const Icon = getServiceIcon(key);
+            const Icon = resolveServiceIcon(label);
             return (
-              <span key={label} className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-card/70 px-2 py-1 text-[10px] font-medium text-foreground/80">
-                <Icon className="h-3 w-3 text-primary" strokeWidth={1.6} />
-                {formatServiceCategory(label)}
+              <span
+                key={label}
+                title={formatServiceCategory(label)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-card/70 px-2 py-1 text-[10px] font-medium text-foreground/85"
+              >
+                <Icon className="h-3.5 w-3.5 text-primary shrink-0" strokeWidth={1.6} />
+                <span className="max-w-[14rem] truncate">{formatServiceCategory(label)}</span>
               </span>
             );
           })}
+        </div>
+      )}
+
+      {/* Row 3 — footprint operativo (numeri compatti) */}
+      {(hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails) && (
+        <div className="flex flex-wrap gap-1.5">
           {hasWarehouses && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-card/70 px-2 py-1 text-[10px] font-medium text-foreground/80">
-              <Warehouse className="h-3 w-3 text-primary" strokeWidth={1.6} />
-              {warehouseSqm ? `${warehouseSqm.toLocaleString("it-IT")} mq warehouse` : "Warehousing"}
-            </span>
+            <Metric
+              icon={Warehouse}
+              label={warehouseSqm ? `${warehouseSqm.toLocaleString("it-IT")} m² warehouse` : "Warehousing"}
+            />
           )}
-          {employeeCount !== null && <Metric icon={Users} label={`${employeeCount.toLocaleString("it-IT")} dip.`} />}
+          {employeeCount !== null && <Metric icon={Users} label={`${employeeCount.toLocaleString("it-IT")} dipendenti`} />}
           {foundingYear !== null && <Metric icon={Calendar} label={`Dal ${foundingYear}`} />}
           {fleetDetails && <Metric icon={Truck} label={fleetDetails} />}
         </div>
       )}
 
-      {(markets.length > 0 || routes.length > 0 || branchCountries.length > 0) && (
-        <div className="space-y-1.5 border-t border-primary/10 pt-2">
-          {(markets.length > 0 || branchCountries.length > 0) && (
-            <div className="flex flex-wrap gap-1.5">
-              {branchCountries.slice(0, 6).map((country) => (
-                <CountryChip key={country.code} code={country.code} label={`Filiale ${country.name}`} />
-              ))}
-              {markets.map((market) => (
-                <CountryChip key={market} code={countryCodeFromLabel(market)} label={market} />
-              ))}
-            </div>
-          )}
-          {routes.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {routes.map((route, index) => {
-                const from = route.from || route.origin || "";
-                const to = route.to || route.destination || "";
-                const fromCode = countryCodeFromLabel(from);
-                const toCode = countryCodeFromLabel(to);
-                return (
-                  <span key={`${from}-${to}-${index}`} className="inline-flex items-center gap-1 rounded-lg border border-primary/15 bg-card/60 px-2 py-1 text-[10px] text-foreground/80">
-                    <span>{fromCode ? getCountryFlag(fromCode) : from || "🌍"}</span>
-                    <ArrowUpRight className="h-3 w-3 text-primary" strokeWidth={1.6} />
-                    <span>{toCode ? getCountryFlag(toCode) : to || "🌍"}</span>
-                  </span>
-                );
-              })}
-            </div>
-          )}
+      {/* Row 4 — geografia (paesi con RUOLO) */}
+      {(markets.length > 0 || branchCountries.length > 0) && (
+        <div className="border-t border-primary/10 pt-2">
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1 flex items-center gap-1">
+            <Globe2 className="h-3 w-3" /> Presenza geografica
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {branchCountries.slice(0, 8).map((country) => (
+              <CountryChip key={`b-${country.code}`} code={country.code} label={country.name} role="Filiale" tone="branch" />
+            ))}
+            {markets.map((market) => (
+              <CountryChip key={`m-${market}`} code={countryCodeFromLabel(market)} label={market} role="Mercato" tone="market" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Row 5 — rotte principali */}
+      {routes.length > 0 && (
+        <div>
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1 flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> Rotte principali
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {routes.map((route, index) => {
+              const from = route.from || route.origin || "";
+              const to = route.to || route.destination || "";
+              const fromCode = countryCodeFromLabel(from);
+              const toCode = countryCodeFromLabel(to);
+              return (
+                <span key={`${from}-${to}-${index}`} className="inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] text-foreground/85">
+                  <span className="text-sm leading-none">{fromCode ? getCountryFlag(fromCode) : "🌍"}</span>
+                  <span className="max-w-[7rem] truncate text-foreground/70">{from || "—"}</span>
+                  <ArrowRight className="h-3 w-3 text-primary shrink-0" strokeWidth={1.8} />
+                  <span className="text-sm leading-none">{toCode ? getCountryFlag(toCode) : "🌍"}</span>
+                  <span className="max-w-[7rem] truncate text-foreground/70">{to || "—"}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Row 6 — network di appartenenza (loghi orizzontali) */}
+      {networks.length > 0 && (
+        <div className="border-t border-primary/10 pt-2">
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1 flex items-center gap-1">
+            <Building className="h-3 w-3" /> Network ({networks.length})
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {networks.map((n) => (
+              <NetworkBadge key={n.id} name={n.network_name} />
+            ))}
+          </div>
         </div>
       )}
 
@@ -192,19 +218,52 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
   );
 }
 
-function CountryChip({ code, label }: { readonly code: string | null; readonly label: string }): React.ReactElement {
+function CountryChip({
+  code, label, role, tone,
+}: {
+  readonly code: string | null;
+  readonly label: string;
+  readonly role: "Filiale" | "Mercato" | "Hub";
+  readonly tone: "branch" | "market";
+}): React.ReactElement {
+  const toneClasses = tone === "branch"
+    ? "border-primary/35 bg-primary/10 text-foreground"
+    : "border-primary/15 bg-card/60 text-foreground/85";
+  const roleClasses = tone === "branch"
+    ? "bg-primary/25 text-primary-foreground"
+    : "bg-muted/60 text-muted-foreground";
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground/80" title={label}>
-      <span>{code ? getCountryFlag(code) : "🌍"}</span>
-      <span className="max-w-[8rem] truncate">{label}</span>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-[10px] font-medium", toneClasses)} title={`${role} · ${label}`}>
+      <span className="text-sm leading-none">{code ? getCountryFlag(code) : "🌍"}</span>
+      <span className="max-w-[7rem] truncate">{label}</span>
+      <span className={cn("rounded px-1 py-0 text-[8px] font-bold uppercase tracking-wider", roleClasses)}>{role}</span>
+    </span>
+  );
+}
+
+function NetworkBadge({ name }: { readonly name: string }): React.ReactElement {
+  // Estrae acronimo riconoscibile (es. "WCA Pharma" → "WCA")
+  const initials = name
+    .split(/[\s.-]+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 4)
+    .toUpperCase();
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 pl-1 pr-2 py-0.5 text-[10px] font-medium text-foreground" title={name}>
+      <span className="inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded bg-primary/80 px-1 text-[9px] font-extrabold tracking-tight text-primary-foreground">
+        {initials}
+      </span>
+      <span className="max-w-[10rem] truncate">{name}</span>
     </span>
   );
 }
 
 function Metric({ icon: Icon, label, className }: { readonly icon: React.ElementType; readonly label: string; readonly className?: string }): React.ReactElement {
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground/80", className)}>
-      <Icon className="h-3 w-3 text-primary" strokeWidth={1.6} />
+    <span className={cn("inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground/85", className)}>
+      <Icon className="h-3.5 w-3.5 text-primary" strokeWidth={1.6} />
       {label}
     </span>
   );
