@@ -58,7 +58,15 @@ export function BusinessCardsViewV2(): React.ReactElement {
 }
 
 interface BcaCardRowProps {
-  card: { id: string; company_name: string | null; contact_name: string | null; email: string | null; phone: string | null; match_status: string; match_confidence: number | null; lead_status: string | null; event_name: string | null; created_at: string };
+  card: {
+    id: string;
+    company_name: string | null;
+    contact_name: string | null;
+    email: string | null;
+    event_name: string | null;
+    match_status: string;
+    match_confidence: number | null;
+  } & Record<string, unknown>;
   matchStatusMap: Record<string, "success" | "warning" | "error" | "info">;
   blacklistNames: Set<string> | undefined;
 }
