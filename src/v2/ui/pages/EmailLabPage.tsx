@@ -7,9 +7,10 @@
  * Route: /v2/email-lab  (montato anche dentro /v2/lab → Email Lab)
  */
 import * as React from "react";
-import { Wand2, Inbox, Wrench } from "lucide-react";
+import { Wand2, Inbox, Wrench, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductionTab } from "./email-lab/ProductionTab";
 import { FunnemailTab } from "./email-lab/FunnemailTab";
 import { ToolsBanner } from "./email-lab/ToolsBanner";
@@ -21,109 +22,80 @@ export function EmailLabPage(): React.ReactElement {
   const [toolsOpen, setToolsOpen] = React.useState(false);
 
   return (
-    <div className="flex h-full flex-col gap-5 p-5">
-      {/* HEADER + spiegazione 3 passi */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="max-w-2xl">
-          <h1 className="text-xl font-semibold tracking-tight">Banco di prova email</h1>
-          <p className="mt-1 text-sm text-foreground/70">
-            Genera o smista un'email finta e vedi come la produce/classifica l'AI. Nessuna scrittura
-            su CRM, contatti o caselle reali.
-          </p>
-          <ol className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground/65">
-            <li className="flex items-center gap-1.5">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">1</span>
-              Scegli uno scenario o partiamo da bianco
-            </li>
-            <span className="text-foreground/30">→</span>
-            <li className="flex items-center gap-1.5">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">2</span>
-              Configura destinatario e tipo
-            </li>
-            <span className="text-foreground/30">→</span>
-            <li className="flex items-center gap-1.5">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">3</span>
-              Lancia e confronta le iterazioni
-            </li>
-          </ol>
+    <div className="flex h-full flex-col gap-2 p-3">
+      {/* HEADER COMPATTO — una sola riga */}
+      <header className="flex flex-wrap items-center gap-2">
+        <h1 className="text-base font-semibold tracking-tight">Banco di prova email</h1>
+
+        {/* Info popup con descrizione + 3 passi */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/60" aria-label="Cos'è questa pagina">
+              <Info className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80 text-sm">
+            <p className="text-foreground/80">
+              Genera o smista un'email finta e vedi come la produce/classifica l'AI.
+              Nessuna scrittura su CRM, contatti o caselle reali.
+            </p>
+            <ol className="mt-3 space-y-1.5 text-xs text-foreground/70">
+              <li className="flex items-start gap-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">1</span>
+                Scegli uno scenario o parti da bianco
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">2</span>
+                Configura destinatario e tipo
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">3</span>
+                Lancia e confronta le iterazioni
+              </li>
+            </ol>
+          </PopoverContent>
+        </Popover>
+
+        {/* Modalità: dropdown */}
+        <Select value={mode} onValueChange={(v) => setMode(v as Mode)}>
+          <SelectTrigger className="h-8 w-[230px] text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="production">
+              <span className="inline-flex items-center gap-2">
+                <Wand2 className="h-3.5 w-3.5" /> Produzione email
+              </span>
+            </SelectItem>
+            <SelectItem value="funnemail">
+              <span className="inline-flex items-center gap-2">
+                <Inbox className="h-3.5 w-3.5" /> Smistamento Funnemail
+              </span>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="ml-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 text-foreground/70"
+            onClick={() => setToolsOpen((v) => !v)}
+            aria-expanded={toolsOpen}
+          >
+            <Wrench className="h-3.5 w-3.5" />
+            Strumenti collegati
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 text-foreground/70"
-          onClick={() => setToolsOpen((v) => !v)}
-          aria-expanded={toolsOpen}
-        >
-          <Wrench className="h-3.5 w-3.5" />
-          Strumenti collegati
-        </Button>
       </header>
 
       {toolsOpen ? <ToolsBanner /> : null}
-
-      {/* TOGGLE MODALITÀ — grosso, chiaro, 2 stati */}
-      <div
-        role="tablist"
-        aria-label="Modalità banco di prova"
-        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-      >
-        <ModeCard
-          active={mode === "production"}
-          onClick={() => setMode("production")}
-          icon={<Wand2 className="h-5 w-5" />}
-          title="Produzione email"
-          desc="L'AI scrive una bozza per un destinatario, poi la migliora versione dopo versione."
-        />
-        <ModeCard
-          active={mode === "funnemail"}
-          onClick={() => setMode("funnemail")}
-          icon={<Inbox className="h-5 w-5" />}
-          title="Smistamento Funnemail"
-          desc="Simula un'email in arrivo: classificazione, scout mittente, route, policy — stage per stage."
-        />
-      </div>
 
       {/* WORKFLOW della modalità attiva */}
       <div className="min-h-0 flex-1">
         {mode === "production" ? <ProductionTab /> : <FunnemailTab />}
       </div>
     </div>
-  );
-}
-
-function ModeCard({
-  active, onClick, icon, title, desc,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-}): React.ReactElement {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={cn(
-        "group flex items-start gap-3 rounded-lg border bg-card/40 p-4 text-left transition",
-        active
-          ? "border-primary/60 bg-primary/5 ring-1 ring-primary/30"
-          : "border-border/60 hover:border-primary/40 hover:bg-primary/5",
-      )}
-    >
-      <span className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
-        active ? "bg-primary/20 text-primary" : "bg-muted text-foreground/70 group-hover:text-primary",
-      )}>
-        {icon}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-semibold text-foreground">{title}</span>
-        <span className="mt-0.5 block text-xs leading-snug text-foreground/65">{desc}</span>
-      </span>
-    </button>
   );
 }
 
