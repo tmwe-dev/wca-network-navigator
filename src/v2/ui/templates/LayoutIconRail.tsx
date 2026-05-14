@@ -96,7 +96,7 @@ export function LayoutIconRail({ currentPath, onOpenSidebar }: Props): React.Rea
                   className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-1 inline-flex items-center justify-center rounded-full text-[9px] font-semibold bg-primary text-primary-foreground"
                   aria-label={`${count} da gestire`}
                 >
-                  {count > 99 ? "99+" : count}
+                  {count}
                 </span>
               )}
               {item.badge && (
