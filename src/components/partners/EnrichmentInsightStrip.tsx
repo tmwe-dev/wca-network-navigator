@@ -3,7 +3,6 @@ import type * as React from "react";
 import { ArrowRight, Calendar, Truck, Users, Warehouse, MapPin, Building } from "lucide-react";
 import { getCountryFlag, resolveCountryCode, formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
 import { resolveServiceIcon } from "@/components/partners/shared/ServiceIcons";
 
 interface PartnerService {
@@ -112,11 +111,10 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
 
   return (
     <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5 space-y-2.5">
-      {/* Row 1 — pitch in una riga */}
-      <div className="flex items-start gap-2">
-        <EnrichmentBadge partner={partner} variant="pill" className="shrink-0" />
-        {summary && <p className="text-[11px] leading-relaxed text-foreground/85 line-clamp-2">{summary}</p>}
-      </div>
+      {/* Row 1 — pitch sintetico */}
+      {summary && (
+        <p className="text-[11px] leading-relaxed text-foreground/85 line-clamp-2">{summary}</p>
+      )}
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
       {serviceLabels.length > 0 && (
