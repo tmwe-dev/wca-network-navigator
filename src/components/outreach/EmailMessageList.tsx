@@ -18,7 +18,7 @@ type Props = {
   holdingFilter?: boolean;
 };
 
-const ROW_HEIGHT = 148;
+const ROW_HEIGHT = 168;
 
 export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter = false }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -50,6 +50,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 5,
+    measureElement: (el) => el.getBoundingClientRect().height,
   });
 
   useEffect(() => {
@@ -161,12 +162,13 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           return (
             <div
               key={msg.id}
+              ref={virtualizer.measureElement}
+              data-index={virtualRow.index}
               style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
-                height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
