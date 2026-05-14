@@ -9,7 +9,7 @@ import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag, formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { getEffectiveLogoUrl } from "@/lib/partnerUtils";
+import { getEffectiveLogoUrl, getPartnerDisplayCity } from "@/lib/partnerUtils";
 import { PARTNER_TYPE_ICONS } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
@@ -41,6 +41,7 @@ export function PartnerDetailHeader({
   const sherlockLevel = useSherlockLevel("partner", partner.id);
   const inHolding = isInHoldingPattern(partner.lead_status as string | null | undefined);
   const effectiveLogo = getEffectiveLogoUrl(partner);
+  const displayCity = getPartnerDisplayCity(partner);
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
@@ -121,9 +122,9 @@ export function PartnerDetailHeader({
                   <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
                 </Tooltip>
               </div>
-              {(partner.city || partner.wca_id) && (
+              {(displayCity || partner.wca_id) && (
                 <div className="flex items-center gap-2 text-xs text-foreground/75">
-                  {partner.city && <span>{String(partner.city)}</span>}
+                  {displayCity && <span>{displayCity}</span>}
                   {partner.wca_id && (
                     <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
                   )}
