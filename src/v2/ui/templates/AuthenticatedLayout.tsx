@@ -37,7 +37,6 @@ import { useWcaSession } from "@/hooks/useWcaSession";
 import { BackgroundServices } from "./BackgroundServices";
 
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
-import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
@@ -255,33 +254,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         Vai al contenuto principale
                       </a>
-                      {/* Desktop sidebar */}
-                       <div
-                         className={`hidden md:block fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
-                         onMouseLeave={() => setSidebarOpen(false)}
-                         role="navigation"
-                         aria-label="Menu principale"
-                       >
-                         <div className="w-56 h-full flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
-                           <LayoutSidebarNav
-                             profileName={profile?.displayName}
-                             wcaStatusColor={wcaStatusColor}
-                             wcaStatusLabel={wcaStatusLabel}
-                             wcaSessionActive={wcaSession.sessionActive}
-                             onWcaReconnect={() => wcaSession.ensureSession()}
-                             isDark={isDark}
-                             onToggleTheme={toggleTheme}
-                             onSignOut={signOut}
-                             onOpenCommandPalette={() => setCommandOpen(true)}
-                           />
-                        </div>
-                      </div>
-
-                      {/* Desktop icon rail — sempre visibile, sotto la sidebar */}
-                      <LayoutIconRail
-                        currentPath={location.pathname}
-                        onOpenSidebar={() => setSidebarOpen(true)}
-                      />
+                      {/* Desktop icon rail — unico menu (hamburger lilla in cima apre NavMenuPopover) */}
+                      <LayoutIconRail currentPath={location.pathname} />
 
                        {/* Mobile header */}
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2" role="banner">
