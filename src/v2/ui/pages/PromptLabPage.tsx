@@ -183,7 +183,7 @@ export function PromptLabPage() {
             >
               <PageTitleHint
                 title="Prompt Lab"
-                hint="Configura i prompt operativi degli agenti AI. Modifica un blocco a sinistra, salva o chiedi di migliorarlo con AI. Le modifiche sono in produzione, usa Review prima di accettare suggerimenti automatici."
+                hint="Cosa fai qui in 3 passi: 1) scegli una macroarea (Core AI / Comunicazione / Strategia / Operazioni); 2) seleziona un blocco dal menu a sinistra e modificalo; 3) salva oppure usa la chat in basso per chiedere all'AI di migliorarlo — Review prima di accettare. Modifiche live in produzione."
                 right={<MetricsSummaryBadge />}
               />
               <PromptLabHealthBanner />
