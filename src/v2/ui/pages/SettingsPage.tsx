@@ -1,9 +1,9 @@
 /**
  * SettingsPage V2 — Standalone V1 content migration (NO wrapper)
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power, Activity, Puzzle, Layers, FlaskConical } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power, Activity, Puzzle, Layers, FlaskConical, ChevronDown, ChevronRight, type LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -45,6 +45,188 @@ import { SECONDARY_NAV } from "@/v2/navigation/registry";
 import LabPage from "@/v2/ui/pages/LabPage";
 
 const DEV_PAGE_GROUPS = SECONDARY_NAV;
+
+interface SettingsTabDef {
+  value: string;
+  label: string;
+  icon: LucideIcon;
+}
+interface SettingsGroupDef {
+  id: string;
+  title: string;
+  items: SettingsTabDef[];
+}
+
+const SETTINGS_GROUPS: SettingsGroupDef[] = [
+  {
+    id: "generali",
+    title: "Generali",
+    items: [
+      { value: "generale", label: "Generale", icon: SettingsIcon },
+      { value: "wca", label: "Connessioni", icon: Link },
+      { value: "estensioni", label: "Estensioni", icon: Puzzle },
+      { value: "reportaziende", label: "Report Aziende", icon: FileText },
+      { value: "notifiche", label: "Notifiche", icon: Bell },
+      { value: "timing", label: "Timing & Schedule", icon: Clock },
+    ],
+  },
+  {
+    id: "agenti",
+    title: "Agenti",
+    items: [
+      { value: "voce-ai", label: "Voce AI", icon: Volume2 },
+      { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
+      { value: "provider-ai", label: "Provider AI", icon: Cpu },
+    ],
+  },
+  {
+    id: "update",
+    title: "Update",
+    items: [
+      { value: "enrichment", label: "Arricchimento", icon: Image },
+    ],
+  },
+  {
+    id: "import-export-grp",
+    title: "Import & Export",
+    items: [
+      { value: "backup-export", label: "Backup & Export", icon: Package },
+      { value: "import-export", label: "Importa", icon: Download },
+    ],
+  },
+  {
+    id: "contatori",
+    title: "Contatori",
+    items: [
+      { value: "ai-monitor", label: "AI Monitor", icon: Activity },
+      { value: "processi-automatici", label: "Processi Automatici", icon: Power },
+      { value: "token-ai", label: "Token AI", icon: Coins },
+      { value: "memoria-ai", label: "Memoria AI", icon: Database },
+    ],
+  },
+  {
+    id: "report",
+    title: "Report",
+    items: [
+      { value: "audit", label: "Audit Trail", icon: LogSquare },
+      { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
+    ],
+  },
+  {
+    id: "posta",
+    title: "Posta",
+    items: [
+      { value: "download-email", label: "Download Email", icon: Mail },
+      { value: "caselle-aziendali", label: "Caselle Aziendali", icon: Mail },
+    ],
+  },
+  {
+    id: "master",
+    title: "Master",
+    items: [
+      { value: "development", label: "Development", icon: Layers },
+    ],
+  },
+  {
+    id: "test",
+    title: "TEST",
+    items: [
+      { value: "lab", label: "Lab & Verifiche", icon: FlaskConical },
+    ],
+  },
+  {
+    id: "team",
+    title: "Team",
+    items: [
+      { value: "operatori", label: "Operatori", icon: Users },
+      { value: "ruoli", label: "Ruoli & Permessi", icon: KeyRound },
+      { value: "ruoli-utenti", label: "Ruoli Utenti", icon: UsersRound },
+      { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
+      { value: "team", label: "Team", icon: Users },
+    ],
+  },
+];
+
+function GroupedSettingsNav({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const initialOpen = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const g of SETTINGS_GROUPS) {
+      map[g.id] = g.items.some((it) => it.value === value);
+    }
+    if (!Object.values(map).some(Boolean)) map[SETTINGS_GROUPS[0].id] = true;
+    return map;
+  }, [value]);
+  const [open, setOpen] = useState<Record<string, boolean>>(initialOpen);
+
+  useEffect(() => {
+    setOpen((prev) => {
+      const next = { ...prev };
+      for (const g of SETTINGS_GROUPS) {
+        if (g.items.some((it) => it.value === value)) next[g.id] = true;
+      }
+      return next;
+    });
+  }, [value]);
+
+  return (
+    <nav className="flex flex-col w-full h-full min-h-0 overflow-y-auto border-r border-border/50 bg-muted/20 py-1">
+      {SETTINGS_GROUPS.map((group) => {
+        const isOpen = open[group.id] ?? false;
+        return (
+          <div key={group.id} className="border-b border-border/30 last:border-b-0">
+            <button
+              type="button"
+              onClick={() => setOpen((p) => ({ ...p, [group.id]: !isOpen }))}
+              className="flex w-full items-center gap-1.5 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground hover:bg-accent/40 transition-colors"
+            >
+              {isOpen ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
+              <span className="truncate">{group.title}</span>
+              <span className="ml-auto text-[10px] text-muted-foreground/60">
+                {group.items.length}
+              </span>
+            </button>
+            {isOpen && (
+              <div className="pb-1">
+                {group.items.map((item) => {
+                  const active = value === item.value;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => onChange(item.value)}
+                      className={cn(
+                        "relative flex items-center gap-2 pl-6 pr-3 py-1.5 text-xs font-medium transition-colors text-left w-full",
+                        "hover:bg-primary/5 hover:text-foreground",
+                        active ? "text-primary bg-primary/10" : "text-muted-foreground",
+                      )}
+                    >
+                      {active && (
+                        <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-primary" />
+                      )}
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
 
 function DevelopmentPagesPanel() {
   const navigate = useNavigate();
@@ -128,36 +310,6 @@ export function SettingsPage() {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const tabs: VerticalTab[] = ([
-    { value: "ai-monitor", label: "AI Monitor", icon: Activity },
-    { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
-    { value: "enrichment", label: "Arricchimento", icon: Image },
-    { value: "audit", label: "Audit Trail", icon: LogSquare },
-    { value: "backup-export", label: "Backup & Export", icon: Package },
-    { value: "wca", label: "Connessioni", icon: Link },
-    { value: "development", label: "Development", icon: Layers },
-    { value: "lab", label: "Lab & Verifiche", icon: FlaskConical },
-    { value: "download-email", label: "Download Email", icon: Mail },
-    { value: "estensioni", label: "Estensioni", icon: Puzzle },
-    { value: "generale", label: "Generale", icon: SettingsIcon },
-    { value: "import-export", label: "Importa", icon: Download },
-    { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
-    { value: "memoria-ai", label: "Memoria AI", icon: Database },
-    { value: "notifiche", label: "Notifiche", icon: Bell },
-    { value: "operatori", label: "Operatori", icon: Users },
-    { value: "caselle-aziendali", label: "Caselle Aziendali", icon: Mail },
-    { value: "processi-automatici", label: "Processi Automatici", icon: Power },
-    { value: "provider-ai", label: "Provider AI", icon: Cpu },
-    { value: "reportaziende", label: "Report Aziende", icon: FileText },
-    { value: "ruoli", label: "Ruoli & Permessi", icon: KeyRound },
-    { value: "ruoli-utenti", label: "Ruoli Utenti", icon: UsersRound },
-    { value: "team", label: "Team", icon: Users },
-    { value: "timing", label: "Timing & Schedule", icon: Clock },
-    { value: "token-ai", label: "Token AI", icon: Coins },
-    { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
-    { value: "voce-ai", label: "Voce AI", icon: Volume2 },
-  ] satisfies VerticalTab[]).slice().sort((a, b) => a.label.localeCompare(b.label, "it"));
-
   return (
     <div data-testid="page-settings" className="flex h-full min-h-0 flex-col overflow-hidden">
       <PageTitleHeader icon={SettingsIcon} title="Config" subtitle="impostazioni di sistema" />
@@ -167,7 +319,7 @@ export function SettingsPage() {
         className="flex-1 min-h-0"
       >
       <ResizablePanel defaultSize={16} minSize={8} maxSize={40} className="min-h-0">
-        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} fluid />
+        <GroupedSettingsNav value={tab} onChange={setTab} />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={84} minSize={40} className="min-h-0">
