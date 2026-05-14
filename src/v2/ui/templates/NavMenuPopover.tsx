@@ -9,7 +9,7 @@ import * as React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronRight, Layers, LogOut } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, LogOut, Search, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -118,9 +118,12 @@ export function NavMenuPopover({
   const [devOpen, setDevOpen] = useState(false);
   const { signOut } = useAuthV2();
   const { data: badgeCounts } = useNavBadgeCountsV2();
+  const [query, setQuery] = useState("");
+  const searchRef = React.useRef<HTMLInputElement>(null);
 
   const handleSelect = (path: string) => {
     setOpen(false);
+    setQuery("");
     nav(path);
   };
 
@@ -151,6 +154,57 @@ export function NavMenuPopover({
     }
   }, [currentPath]);
 
+  // Indice piatto per ricerca su tutte le voci (principali, sotto-cartelle,
+  // tab Config, pagine Development).
+  type SearchEntry = { label: string; path: string; trail: string };
+  const searchIndex = React.useMemo<SearchEntry[]>(() => {
+    const out: SearchEntry[] = [];
+    for (const item of navItemsDef) {
+      const translated = t(item.labelKey);
+      const label = translated === item.labelKey
+        ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
+        : translated;
+      out.push({ label, path: item.path, trail: label });
+      const sub = EXPANDABLE_MAIN_NAV[item.path];
+      if (sub) {
+        for (const g of sub) {
+          for (const it of g.items ?? []) {
+            out.push({ label: it.label, path: it.path, trail: `${label} › ${g.title}` });
+          }
+        }
+      }
+    }
+    for (const group of DEV_PAGE_GROUPS) {
+      for (const it of group.items ?? []) {
+        out.push({ label: it.label, path: it.path, trail: `Development › ${group.title}` });
+      }
+      for (const sg of group.subGroups ?? []) {
+        for (const it of sg.items) {
+          out.push({ label: it.label, path: it.path, trail: `Development › ${group.title} › ${sg.title}` });
+        }
+      }
+    }
+    // Dedup per path
+    const seen = new Set<string>();
+    return out.filter((e) => (seen.has(e.path) ? false : (seen.add(e.path), true)));
+  }, [t]);
+
+  const q = query.trim().toLowerCase();
+  const results = React.useMemo(() => {
+    if (!q) return [] as SearchEntry[];
+    return searchIndex
+      .filter((e) => e.label.toLowerCase().includes(q) || e.trail.toLowerCase().includes(q))
+      .slice(0, 30);
+  }, [q, searchIndex]);
+
+  React.useEffect(() => {
+    if (open) {
+      const id = setTimeout(() => searchRef.current?.focus(), 50);
+      return () => clearTimeout(id);
+    }
+    setQuery("");
+  }, [open]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
@@ -160,6 +214,61 @@ export function NavMenuPopover({
         className="w-72 p-1 bg-background/95 backdrop-blur-xl border-white/10 max-h-[80vh] overflow-y-auto"
       >
         <div className="flex flex-col">
+          {/* Barra di ricerca */}
+          <div className="relative px-1 pb-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && results.length > 0) {
+                  e.preventDefault();
+                  handleSelect(results[0].path);
+                } else if (e.key === "Escape" && query) {
+                  e.preventDefault();
+                  setQuery("");
+                }
+              }}
+              placeholder="Cerca pagina…"
+              className="w-full h-8 pl-8 pr-7 text-xs rounded-md bg-muted/40 border border-white/10 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-white/5"
+                aria-label="Pulisci"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {q && (
+            <div className="flex flex-col pb-1">
+              {results.length === 0 ? (
+                <div className="px-3 py-4 text-xs text-muted-foreground text-center">
+                  Nessun risultato per "{query}"
+                </div>
+              ) : (
+                results.map((r) => (
+                  <button
+                    key={r.path}
+                    type="button"
+                    onClick={() => handleSelect(r.path)}
+                    className="flex flex-col items-start px-3 py-1.5 rounded-md text-left hover:bg-primary/10 hover:text-primary transition-colors"
+                  >
+                    <span className="text-xs font-medium text-foreground">{r.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{r.trail}</span>
+                  </button>
+                ))
+              )}
+              <div className="my-1 border-t border-white/10" />
+            </div>
+          )}
+          {!q && (
+          <>
           {navItemsDef.map((item) => {
               const isActive = sectionRoot(item.path) === activeRoot;
               const translated = t(item.labelKey);
