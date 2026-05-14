@@ -393,7 +393,7 @@ export function NavMenuPopover({
                       title={`${count} da gestire`}
                       aria-label={`${count} elementi da gestire`}
                     >
-                      {count > 99 ? "99+" : count}
+                      {count}
                     </span>
                   )}
                 </button>
