@@ -125,6 +125,9 @@ export default function BlacklistManager() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[] | null>(null);
   const [allParsed, setAllParsed] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useBlacklistStats();
   const { data: logs } = useBlacklistSyncLog();
@@ -133,14 +136,23 @@ export default function BlacklistManager() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFileName(file.name);
+    setParseError(null);
+    setParsing(true);
+    setPreview(null);
+    setAllParsed([]);
     try {
       const entries = await parseBlacklistFile(file);
       setAllParsed(entries);
       setPreview(entries.slice(0, 10));
       toast.success(`${entries.length} record trovati nel file`);
     } catch (e) {
-      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-      toast.error("Errore nel parsing del file");
+      const msg = e instanceof Error ? e.message : String(e);
+      log.warn("operation failed", { error: msg });
+      setParseError(msg);
+      toast.error("Errore nel parsing del file: " + msg);
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -151,6 +163,7 @@ export default function BlacklistManager() {
       toast.success(`Importati ${result.imported} record, ${result.matched} match trovati`);
       setPreview(null);
       setAllParsed([]);
+      setFileName(null);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err: unknown) {
       toast.error("Errore importazione: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto"));
@@ -233,7 +246,7 @@ export default function BlacklistManager() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <input
               ref={fileRef}
               type="file"
@@ -244,10 +257,36 @@ export default function BlacklistManager() {
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Seleziona File
             </Button>
+            {fileName && (
+              <div className="flex items-center gap-2 text-xs">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="font-mono truncate max-w-[260px]" title={fileName}>{fileName}</span>
+                {parsing && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+              </div>
+            )}
             {allParsed.length > 0 && (
               <Badge variant="secondary">{allParsed.length} record pronti</Badge>
             )}
+            {allParsed.length > 0 && (
+              <Button onClick={handleImport} disabled={importMutation.isPending} size="sm" className="ml-auto">
+                {importMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importazione...</>
+                ) : (
+                  <><CheckCircle2 className="w-4 h-4 mr-2" /> Importa {allParsed.length} record</>
+                )}
+              </Button>
+            )}
           </div>
+
+          {parseError && (
+            <div className="flex items-start gap-2 p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-xs text-destructive">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Errore nel parsing del file</p>
+                <p className="mt-0.5 font-mono opacity-80 break-all">{parseError}</p>
+              </div>
+            </div>
+          )}
 
           {preview && preview.length > 0 && (
             <div className="space-y-3">
@@ -275,13 +314,6 @@ export default function BlacklistManager() {
                   ))}
                 </div>
               </ScrollArea>
-              <Button onClick={handleImport} disabled={importMutation.isPending} className="w-full">
-                {importMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importazione...</>
-                ) : (
-                  <><CheckCircle2 className="w-4 h-4 mr-2" /> Importa {allParsed.length} record</>
-                )}
-              </Button>
             </div>
           )}
         </CardContent>
