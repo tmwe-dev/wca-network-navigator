@@ -120,17 +120,17 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
       {serviceLabels.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {serviceLabels.map((label) => {
             const Icon = resolveServiceIcon(label);
             return (
               <span
                 key={label}
                 title={formatServiceCategory(label)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-card/70 px-2 py-1 text-[10px] font-medium text-foreground/85"
+                aria-label={formatServiceCategory(label)}
+                className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-primary/20 bg-card/70 text-foreground/85 hover:bg-primary/10 hover:border-primary/40 transition-colors cursor-help"
               >
-                <Icon className="h-3.5 w-3.5 text-primary shrink-0" strokeWidth={1.6} />
-                <span className="max-w-[14rem] truncate">{formatServiceCategory(label)}</span>
+                <Icon className="h-5 w-5 text-primary" strokeWidth={1.6} />
               </span>
             );
           })}
