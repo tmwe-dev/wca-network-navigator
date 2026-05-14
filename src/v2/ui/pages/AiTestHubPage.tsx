@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiTestHub } from "@/v2/hooks/useAiTestHub";
 import type { AiTestScenario } from "@/data/aiTestScenarios";
 import { Loader2, Play, CheckCircle2, XCircle, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { LabGuideHeader } from "@/v2/ui/molecules/LabGuideHeader";
 
 const CATEGORY_LABELS: Record<string, string> = {
   "finder-api": "Finder API",
@@ -59,6 +60,15 @@ export function AiTestHubPage() {
 
   return (
     <div className="text-foreground space-y-4">
+      <LabGuideHeader
+        title="Scenari AI — banco di prova edge function"
+        subtitle="Ogni scenario è una chiamata reale a una edge AI con assertion (status, contenuto, JSON path). Niente side-effect su CRM/email."
+        steps={[
+          { label: "Filtra per categoria o crea un nuovo scenario" },
+          { label: "Seleziona uno o più scenari da eseguire" },
+          { label: "Lancia e leggi pass / fail con preview risposta" },
+        ]}
+      />
       {/* Toolbar — riga 1: azioni principali. Riga 2: filtri categoria. */}
       <Card className="border-primary/20">
         <CardContent className="p-4 space-y-3">
