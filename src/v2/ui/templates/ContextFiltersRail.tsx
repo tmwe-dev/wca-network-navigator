@@ -151,7 +151,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
         onClick={() => setIsOpen((open) => !open)}
         className={[
           "fixed top-1/2 -translate-y-1/2 z-[70] flex h-14 w-7 items-center justify-center rounded-r-lg border border-l-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all duration-200 hover:border-primary/50 hover:bg-primary/25",
-          isOpen ? "left-[88vw] sm:left-80" : "left-0",
+          isOpen ? "left-[88vw] sm:left-80" : "left-0 md:left-14",
         ].join(" ")}
         aria-label={isOpen ? `Chiudi ${context.title}` : `Apri ${context.title}`}
         aria-expanded={isOpen}

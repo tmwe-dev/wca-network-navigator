@@ -338,18 +338,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         )}
                       </AnimatePresence>
 
-                      {/* Linguetta filtri SEMPRE disponibile (mobile, tablet, desktop). */}
-                      <button
-                        onClick={() => setFiltersOpen(true)}
-                        className={cn(
-                          `hidden md:flex fixed ${sidebarOpen ? "left-56" : "left-14"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
-                          filtersOpen && "opacity-0 pointer-events-none"
-                        )}
-                        style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
-                        aria-label="Apri filtri"
-                      >
-                        <SlidersHorizontal className="w-3 h-3 text-primary" />
-                      </button>
+                      {/* Linguetta filtri rimossa: usiamo solo quella contestuale di ContextFiltersRail */}
                       <button
                         onClick={() => setMissionOpen(true)}
                         className={cn(
