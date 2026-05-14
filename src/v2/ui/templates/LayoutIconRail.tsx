@@ -12,15 +12,14 @@ import { ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { navItemsDef } from "./navConfig";
-import { EXPANDABLE_MAIN_NAV, sectionRoot } from "./NavMenuPopover";
+import { EXPANDABLE_MAIN_NAV, sectionRoot, NavMenuPopover } from "./NavMenuPopover";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 
 interface Props {
   currentPath?: string;
-  onOpenSidebar: () => void;
 }
 
-export function LayoutIconRail({ currentPath, onOpenSidebar }: Props): React.ReactElement {
+export function LayoutIconRail({ currentPath }: Props): React.ReactElement {
   const nav = useNavigate();
   const { t } = useTranslation();
   const { data: badgeCounts } = useNavBadgeCountsV2();
@@ -45,22 +44,19 @@ export function LayoutIconRail({ currentPath, onOpenSidebar }: Props): React.Rea
       role="navigation"
       aria-label="Navigazione rapida"
     >
-      {/* Toggle sidebar in cima */}
-      <Tooltip delayDuration={150}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={onOpenSidebar}
-            aria-label="Apri menu completo"
-            className="h-9 w-9 flex flex-col items-center justify-center gap-1 rounded-md text-foreground/70 hover:text-primary hover:bg-primary/10 transition-colors"
-          >
-            <span className="block h-0.5 w-4 bg-current rounded" />
-            <span className="block h-0.5 w-4 bg-current rounded" />
-            <span className="block h-0.5 w-4 bg-current rounded" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">Menu completo</TooltipContent>
-      </Tooltip>
+      {/* Hamburger lilla — apre il NavMenuPopover (unico menu) */}
+      <NavMenuPopover currentPath={currentPath} align="start" side="right">
+        <button
+          type="button"
+          aria-label="Apri menu completo"
+          title="Menu · ⌘K cerca rapida"
+          className="h-9 w-9 flex flex-col items-center justify-center gap-1 rounded-full border-2 border-primary text-primary hover:bg-primary/10 transition-colors"
+        >
+          <span className="block h-0.5 w-4 bg-current rounded" />
+          <span className="block h-0.5 w-4 bg-current rounded" />
+          <span className="block h-0.5 w-4 bg-current rounded" />
+        </button>
+      </NavMenuPopover>
 
       <div className="my-1 h-px w-8 bg-border/40" />
 
