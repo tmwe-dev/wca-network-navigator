@@ -58,8 +58,13 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
     (email: string) => {
       if (!email) return;
       void invokeAi("suggest-email-groups", {
-        scope: "classification",
-        context: { source: "EmailMessageList", route: "/v2/inbox", trigger: "post-deep-search" },
+        scope: "classify",
+        context: {
+          source: "EmailMessageList",
+          route: "/v2/inbox",
+          mode: "post-deep-search",
+          extra: { email },
+        },
         body: { emails: [email], min_email_count: 1, batch_size: 5 },
       })
         .then(() => {
