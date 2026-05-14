@@ -60,37 +60,54 @@ export function PartnerDetailHeader({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-foreground truncate">{String(partner.company_name)}</h2>
-            {inHolding && (
+          {/* Riga 1 — sinistra: nome + Arricchito + badge stato; destra: bandiera/paese + stelline/coppa + ★ */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <h2 className="text-lg font-bold text-foreground truncate">{String(partner.company_name)}</h2>
+              <EnrichmentBadge partner={partner} variant="pill" />
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.5 rounded-full border font-medium",
+                isExpired ? "border-destructive/30 text-destructive" :
+                isExpiringSoon ? "border-primary/30 text-primary" :
+                "border-emerald-500/20 text-emerald-400"
+              )}>
+                {expiryDate ? `Scade ${format(expiryDate, "MM/yyyy")}` : "N/A"}
+              </span>
+              {inHolding && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium animate-pulse">
+                      <Plane className="w-3 h-3" /> In attesa
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Azienda nel circuito di attesa ({String(partner.lead_status)})</TooltipContent>
+                </Tooltip>
+              )}
+              {sherlockLevel && (
+                <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="inline-flex items-center gap-1.5 text-xs text-foreground/85">
+                <span className="text-base leading-none">{getCountryFlag(String(partner.country_code))}</span>
+                <span className="font-medium">{String(partner.country_name)}</span>
+              </span>
+              {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3.5 h-3.5" />}
+              {years > 0 && <TrophyRow years={years} />}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium animate-pulse">
-                    <Plane className="w-3 h-3" /> In attesa
-                  </span>
+                  <Button variant="ghost" size="sm" onClick={onToggleFavorite}
+                    className={cn("h-7 w-7 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}>
+                    {partner.is_favorite ? <Star className="w-4 h-4 fill-primary text-primary" /> : <StarOff className="w-4 h-4 text-muted-foreground" />}
+                  </Button>
                 </TooltipTrigger>
-                <TooltipContent>Azienda nel circuito di attesa ({String(partner.lead_status)})</TooltipContent>
+                <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
               </Tooltip>
-            )}
-            <EnrichmentBadge partner={partner} variant="pill" />
-            {sherlockLevel && (
-              <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={onToggleFavorite}
-                  className={cn("h-7 w-7 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}>
-                  {partner.is_favorite ? <Star className="w-4 h-4 fill-primary text-primary" /> : <StarOff className="w-4 h-4 text-muted-foreground" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
-            </Tooltip>
+            </div>
           </div>
 
+          {/* Riga 2 — meta orizzontale (city · type · HQ · #id · network count) tutto allineato sx */}
           <div className="flex items-center gap-1.5 mt-1 text-xs text-foreground/80 flex-wrap">
-            <span className="text-base leading-none">{getCountryFlag(String(partner.country_code))}</span>
-            <span>{String(partner.country_name)}</span>
-            <span className="text-muted-foreground/60">·</span>
             <span>{String(partner.city)}</span>
             <span className="text-muted-foreground/60">·</span>
             <PartnerTypeIcon className="w-3.5 h-3.5 opacity-60" strokeWidth={1.5} />
@@ -100,20 +117,7 @@ export function PartnerDetailHeader({
                 {partner.office_type === "head_office" ? "HQ" : "Branch"}
               </span>
             )}
-          </div>
-
-          <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-            {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3.5 h-3.5" />}
-            {years > 0 && <TrophyRow years={years} />}
             {partner.wca_id && <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>}
-            <span className={cn(
-              "text-[10px] px-1.5 py-0.5 rounded-full border font-medium",
-              isExpired ? "border-destructive/30 text-destructive" :
-              isExpiringSoon ? "border-primary/30 text-primary" :
-              "border-emerald-500/20 text-emerald-400"
-            )}>
-              {expiryDate ? `Scade ${format(expiryDate, "MM/yyyy")}` : "N/A"}
-            </span>
             {networks.length > 0 && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-primary/20 text-foreground/70 font-medium">
                 {networks.length} network
@@ -121,6 +125,7 @@ export function PartnerDetailHeader({
             )}
           </div>
 
+          {/* Riga 3 — contatti sempre a sinistra */}
           <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
             {partner.phone && (
               <a href={`tel:${String(partner.phone)}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground transition-colors">
