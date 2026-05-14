@@ -147,9 +147,9 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 email={(msg.from_address?.match(/<(.+?)>/)?.[1] || msg.from_address || "")}
                 source={{ displayName: brand, partnerId: msg.partner_id ?? null }}
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 label="Deep Search"
-                className="h-7 gap-1 text-[10px]"
+                className="h-7 gap-1 text-[10px] border border-border/60 bg-transparent hover:bg-muted/60"
               />
               <EmailMessageActions message={msg} />
               <InlineGroupAssigner
