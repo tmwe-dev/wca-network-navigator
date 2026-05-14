@@ -104,11 +104,13 @@ export function PartnerDetailHeader({
               </div>
             </div>
             <div className="flex flex-col items-start gap-0.5 shrink-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 text-xs text-foreground/85">
                   <span className="text-base leading-none">{getCountryFlag(String(partner.country_code))}</span>
                   <span className="font-medium">{String(partner.country_name)}</span>
                 </span>
+                {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3.5 h-3.5" />}
+                {years > 0 && <TrophyRow years={years} />}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="sm" onClick={onToggleFavorite}
@@ -119,15 +121,13 @@ export function PartnerDetailHeader({
                   <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
                 </Tooltip>
               </div>
-              {partner.city && (
-                <span className="text-xs text-foreground/75">{String(partner.city)}</span>
-              )}
-              <div className="flex items-center gap-2">
-                {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3.5 h-3.5" />}
-                {years > 0 && <TrophyRow years={years} />}
-              </div>
-              {partner.wca_id && (
-                <span className="text-[10px] text-muted-foreground font-mono self-end">#{String(partner.wca_id)}</span>
+              {(partner.city || partner.wca_id) && (
+                <div className="flex items-center gap-2 text-xs text-foreground/75">
+                  {partner.city && <span>{String(partner.city)}</span>}
+                  {partner.wca_id && (
+                    <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
+                  )}
+                </div>
               )}
             </div>
           </div>
