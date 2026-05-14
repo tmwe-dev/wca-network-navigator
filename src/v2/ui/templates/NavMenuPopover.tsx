@@ -31,7 +31,7 @@ const DEV_PAGE_GROUPS = SECONDARY_NAV;
  * Mappa pagine principali con sotto-cartelle navigabili inline nel popover
  * (stesso comportamento di "Development").
  */
-const EXPANDABLE_MAIN_NAV: Record<string, readonly SecondaryNavGroup[]> = {
+export const EXPANDABLE_MAIN_NAV: Record<string, readonly SecondaryNavGroup[]> = {
   // Config → tab della pagina /v2/settings
   "/v2/settings": [
     { title: "Generali", items: [
@@ -92,7 +92,7 @@ const EXPANDABLE_MAIN_NAV: Record<string, readonly SecondaryNavGroup[]> = {
 };
 
 /** Estrae la radice di sezione: `/v2/intelligence/agents` → `/v2/intelligence`. */
-function sectionRoot(path: string): string {
+export function sectionRoot(path: string): string {
   const parts = path.split("/").filter(Boolean);
   if (parts.length < 2) return "/v2";
   return `/${parts[0]}/${parts[1]}`;

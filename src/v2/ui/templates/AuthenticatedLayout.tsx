@@ -39,6 +39,7 @@ import { BackgroundServices } from "./BackgroundServices";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutHeader } from "./LayoutHeader";
+import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
@@ -276,6 +277,12 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         </div>
                       </div>
 
+                      {/* Desktop icon rail — sempre visibile, sotto la sidebar */}
+                      <LayoutIconRail
+                        currentPath={location.pathname}
+                        onOpenSidebar={() => setSidebarOpen(true)}
+                      />
+
                        {/* Mobile header */}
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2" role="banner">
                         <h2 className="text-sm font-bold text-foreground truncate min-w-0">WCA Partners</h2>
@@ -335,7 +342,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <button
                         onClick={() => setFiltersOpen(true)}
                         className={cn(
-                          `hidden md:flex fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
+                          `hidden md:flex fixed ${sidebarOpen ? "left-56" : "left-14"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
                           filtersOpen && "opacity-0 pointer-events-none"
                         )}
                         style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
@@ -357,7 +364,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <BcaFiltersGate>
-                      <div className="flex-1 flex overflow-hidden">
+                      <div className="flex-1 flex overflow-hidden md:pl-14">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
