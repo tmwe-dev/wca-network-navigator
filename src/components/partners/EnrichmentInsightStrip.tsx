@@ -71,10 +71,10 @@ function routeItems(value: unknown): RouteLike[] {
     if (!item || typeof item !== "object") return [];
     const route = item as Record<string, unknown>;
     return [{
-      from: textValue(route.from),
-      origin: textValue(route.origin),
-      to: textValue(route.to),
-      destination: textValue(route.destination),
+      from: textValue(route.from) ?? undefined,
+      origin: textValue(route.origin) ?? undefined,
+      to: textValue(route.to) ?? undefined,
+      destination: textValue(route.destination) ?? undefined,
     }];
   });
 }
