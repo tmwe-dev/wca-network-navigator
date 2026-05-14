@@ -11,7 +11,6 @@
  */
 import * as React from "react";
 import { useLocation } from "react-router-dom";
-import { Button } from "../atoms/Button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
 import { StatusPill } from "./header/StatusPill";
@@ -20,8 +19,6 @@ import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
 import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
-import { NavMenuPopover } from "./NavMenuPopover";
-import { Menu } from "lucide-react";
 import { useInitTheme } from "@/v2/ui/theme/ThemePicker";
 
 interface OutreachQueue {
@@ -68,6 +65,7 @@ export function LayoutHeader({
   // per retrocompatibilità con i call site; consumato altrove o ignorato.
   void onAiClick;
   const { pathname } = useLocation();
+  void pathname;
   useInitTheme();
 
   return (
@@ -78,18 +76,6 @@ export function LayoutHeader({
     >
       {/* LEFT cluster */}
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-        <NavMenuPopover currentPath={pathname} align="start">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            aria-label="Apri menu di navigazione"
-            title="Menu · ⌘K cerca rapida"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-        </NavMenuPopover>
-
         <StatusPill
           onAiClick={onAiClick ?? (() => {})}
           outreachQueue={outreachQueue}

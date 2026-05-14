@@ -105,12 +105,15 @@ interface NavMenuPopoverProps {
   currentPath?: string;
   /** Allineamento del contenuto rispetto al trigger. Default: start. */
   align?: "start" | "center" | "end";
+  /** Lato in cui aprire il popover. Default: bottom. */
+  side?: "top" | "right" | "bottom" | "left";
 }
 
 export function NavMenuPopover({
   children,
   currentPath,
   align = "start",
+  side = "bottom",
 }: NavMenuPopoverProps): React.ReactElement {
   const nav = useNavigate();
   const { t } = useTranslation();
@@ -210,6 +213,7 @@ export function NavMenuPopover({
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         align={align}
+        side={side}
         sideOffset={8}
         className="w-72 p-1 bg-background/95 backdrop-blur-xl border-white/10 max-h-[80vh] overflow-y-auto"
       >
