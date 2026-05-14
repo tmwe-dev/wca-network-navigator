@@ -2,7 +2,7 @@ import {
   Plane, Ship, Container, Truck, TrainFront, Package, AlertTriangle,
   Snowflake, Pill, ShoppingCart, Home, FileCheck, Warehouse, Anchor, Box,
   Boxes, ThermometerSnowflake, Banknote, Briefcase, Stamp, ShieldAlert,
-  Radar, Globe2, Forklift, Boat, Cog, Building2, Wrench, ClipboardList,
+  Radar, Globe2, Forklift, Sailboat, Cog, Building2, Wrench, ClipboardList,
   Wine, Fuel, Car, Sprout, Leaf, Hammer, Microscope, BookOpen, MonitorSmartphone,
 } from "lucide-react";
 
@@ -30,7 +30,7 @@ export const SERVICE_ICONS: Record<string, any> = {
   tracking: Radar,
   multimodal: Globe2,
   forklift: Forklift,
-  port_services: Boat,
+  port_services: Sailboat,
   machinery: Cog,
   construction: Hammer,
   contract_logistics: ClipboardList,
@@ -74,7 +74,7 @@ export function resolveServiceIcon(label: string) {
   const rules: ReadonlyArray<readonly [RegExp, any]> = [
     [/\b(air|aer|aviation|cargo aere)/, Plane],
     [/\b(sea|ocean|mare|maritt|marit|fcl|lcl|naval)/, Ship],
-    [/\b(port|porto|terminal|banchina)/, Boat],
+    [/\b(port|porto|terminal|banchina)/, Sailboat],
     [/\b(road|truck|camion|strada|gomma|trasporto su)/, Truck],
     [/\b(rail|ferro|treno|intermod\b)/, TrainFront],
     [/\b(multimod|combinato)/, Globe2],
