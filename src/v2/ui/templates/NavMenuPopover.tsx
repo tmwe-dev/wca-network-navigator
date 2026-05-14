@@ -18,10 +18,78 @@ import {
 import { navItemsDef } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
-import { SECONDARY_NAV, findSecondaryNavGroup } from "@/v2/navigation/registry";
+import {
+  SECONDARY_NAV,
+  findSecondaryNavGroup,
+  type SecondaryNavGroup,
+} from "@/v2/navigation/registry";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 
 const DEV_PAGE_GROUPS = SECONDARY_NAV;
+
+/**
+ * Mappa pagine principali con sotto-cartelle navigabili inline nel popover
+ * (stesso comportamento di "Development").
+ */
+const EXPANDABLE_MAIN_NAV: Record<string, readonly SecondaryNavGroup[]> = {
+  // Config → tab della pagina /v2/settings
+  "/v2/settings": [
+    { title: "Generali", items: [
+      { label: "Generale",         path: "/v2/settings?tab=generale" },
+      { label: "Connessioni",      path: "/v2/settings?tab=wca" },
+      { label: "Estensioni",       path: "/v2/settings?tab=estensioni" },
+      { label: "Report Aziende",   path: "/v2/settings?tab=reportaziende" },
+      { label: "Notifiche",        path: "/v2/settings?tab=notifiche" },
+      { label: "Timing & Schedule",path: "/v2/settings?tab=timing" },
+    ]},
+    { title: "Agenti", items: [
+      { label: "Voce AI",          path: "/v2/settings?tab=voce-ai" },
+      { label: "AI & Prompt",      path: "/v2/settings?tab=ai-prompt" },
+      { label: "Provider AI",      path: "/v2/settings?tab=provider-ai" },
+    ]},
+    { title: "Update", items: [
+      { label: "Arricchimento",    path: "/v2/settings?tab=enrichment" },
+    ]},
+    { title: "Import & Export", items: [
+      { label: "Backup & Export",  path: "/v2/settings?tab=backup-export" },
+      { label: "Importa",          path: "/v2/settings?tab=import-export" },
+    ]},
+    { title: "Contatori", items: [
+      { label: "AI Monitor",       path: "/v2/settings?tab=ai-monitor" },
+      { label: "Processi Automatici", path: "/v2/settings?tab=processi-automatici" },
+      { label: "Token AI",         path: "/v2/settings?tab=token-ai" },
+      { label: "Memoria AI",       path: "/v2/settings?tab=memoria-ai" },
+    ]},
+    { title: "Report", items: [
+      { label: "Audit Trail",      path: "/v2/settings?tab=audit" },
+      { label: "Jobs Operativi",   path: "/v2/settings?tab=guida-operativa" },
+    ]},
+    { title: "Posta", items: [
+      { label: "Download Email",   path: "/v2/settings?tab=download-email" },
+      { label: "Caselle Aziendali",path: "/v2/settings?tab=caselle-aziendali" },
+    ]},
+    { title: "Master", items: [
+      { label: "Development",      path: "/v2/settings?tab=development" },
+    ]},
+    { title: "TEST", items: [
+      { label: "Lab & Verifiche",  path: "/v2/settings?tab=lab" },
+    ]},
+    { title: "Team", items: [
+      { label: "Operatori",        path: "/v2/settings?tab=operatori" },
+      { label: "Ruoli & Permessi", path: "/v2/settings?tab=ruoli" },
+      { label: "Ruoli Utenti",     path: "/v2/settings?tab=ruoli-utenti" },
+      { label: "Utenti Autorizzati", path: "/v2/settings?tab=utenti" },
+      { label: "Team",             path: "/v2/settings?tab=team" },
+    ]},
+  ],
+  // Agenti / Missioni → riusa il gruppo della SECONDARY_NAV
+  "/v2/agents/autopilot": (
+    SECONDARY_NAV.find((g) => g.title === "Agenti & Missioni")?.subGroups?.map((sg) => ({
+      title: sg.title,
+      items: sg.items,
+    })) ?? []
+  ),
+};
 
 /** Estrae la radice di sezione: `/v2/intelligence/agents` → `/v2/intelligence`. */
 function sectionRoot(path: string): string {
@@ -63,12 +131,25 @@ export function NavMenuPopover({
   );
   const isInDev = activeGroupTitle !== null;
   const [openGroup, setOpenGroup] = React.useState<string | null>(activeGroupTitle);
+  const [expandedMain, setExpandedMain] = React.useState<Record<string, boolean>>({});
+  const [openSubInMain, setOpenSubInMain] = React.useState<Record<string, string | null>>({});
   React.useEffect(() => {
     if (isInDev) {
       setDevOpen(true);
       setOpenGroup(activeGroupTitle);
     }
   }, [isInDev, activeGroupTitle]);
+  React.useEffect(() => {
+    // Auto-espandi la voce principale che contiene la rotta corrente
+    if (!currentPath) return;
+    const next: Record<string, boolean> = {};
+    for (const [parentPath] of Object.entries(EXPANDABLE_MAIN_NAV)) {
+      if (currentPath.startsWith(parentPath)) next[parentPath] = true;
+    }
+    if (Object.keys(next).length > 0) {
+      setExpandedMain((prev) => ({ ...prev, ...next }));
+    }
+  }, [currentPath]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -87,6 +168,86 @@ export function NavMenuPopover({
                   ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
                   : translated;
               const count = badgeForPath(badgeCounts, item.path);
+              const expandable = EXPANDABLE_MAIN_NAV[item.path];
+              if (expandable && expandable.length > 0) {
+                const isOpen = expandedMain[item.path] ?? false;
+                const subOpen = openSubInMain[item.path] ?? null;
+                return (
+                  <div key={item.path}>
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() =>
+                        setExpandedMain((prev) => ({ ...prev, [item.path]: !isOpen }))
+                      }
+                      className={
+                        "flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left capitalize " +
+                        (isActive
+                          ? "bg-primary/15 text-primary font-semibold"
+                          : "text-foreground/90 hover:bg-white/5 hover:text-foreground")
+                      }
+                    >
+                      <span className="text-muted-foreground">{item.icon}</span>
+                      <span className="flex-1">{label}</span>
+                      {isOpen ? (
+                        <ChevronDown className="h-4 w-4 opacity-60" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 opacity-60" />
+                      )}
+                    </button>
+                    {isOpen && (
+                      <div className="mt-1 space-y-0.5 pb-1 pl-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSelect(item.path)}
+                          className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-foreground/70 hover:bg-white/5 hover:text-foreground"
+                        >
+                          ↳ Apri pagina
+                        </button>
+                        {expandable.map((group) => {
+                          const isGroupOpen = subOpen === group.title;
+                          return (
+                            <div key={group.title}>
+                              <button
+                                type="button"
+                                aria-expanded={isGroupOpen}
+                                onClick={() =>
+                                  setOpenSubInMain((prev) => ({
+                                    ...prev,
+                                    [item.path]: isGroupOpen ? null : group.title,
+                                  }))
+                                }
+                                className="flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs text-foreground/85 hover:bg-white/5 hover:text-foreground text-left"
+                              >
+                                {isGroupOpen ? (
+                                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                                ) : (
+                                  <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+                                )}
+                                <span className="flex-1">{group.title}</span>
+                              </button>
+                              {isGroupOpen && (
+                                <div className="ml-5 mt-0.5 mb-1 flex flex-col border-l border-white/10 pl-2">
+                                  {(group.items ?? []).map((sub) => (
+                                    <button
+                                      key={sub.path}
+                                      type="button"
+                                      onClick={() => handleSelect(sub.path)}
+                                      className="flex items-center px-3 py-1.5 rounded-md text-xs text-foreground/75 hover:bg-white/5 hover:text-foreground text-left"
+                                    >
+                                      {sub.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
               return (
                 <button
                   key={item.path}
