@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Play, CheckCircle, XCircle, AlertTriangle, Download, History, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { LabGuideHeader } from "@/v2/ui/molecules/LabGuideHeader";
 import {
   insertTestRun, insertTestResults,
   fetchRecentRuns, fetchRunResults, exportResultsToCSV,
@@ -355,25 +356,30 @@ export function AILab() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">🧪 AI Lab — Test Suite</h1>
-          <p className="text-muted-foreground">30 scenari di test per generate-email, generate-outreach, improve-email</p>
-        </div>
-        <div className="flex items-center gap-4">
-          {results.size > 0 && (
-            <div className="flex gap-2 text-sm">
-              <Badge variant="default" className="bg-success">✅ {passCount}</Badge>
-              <Badge variant="default" className="bg-warning">⚠️ {warnCount}</Badge>
-              <Badge variant="destructive">❌ {failCount}</Badge>
-              <Badge variant="outline">Score: {totalScore}/{maxScore} ({Math.round(totalScore/maxScore*10000)}/10000)</Badge>
-            </div>
-          )}
-          <Button onClick={runAllTests} disabled={running} size="lg">
-            {running ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Esecuzione...</> : <><Play className="mr-2 h-4 w-4" /> Esegui 30 Test</>}
-          </Button>
-        </div>
-      </div>
+      <LabGuideHeader
+        title="AI Lab Email — suite 30 scenari"
+        subtitle="Esegue 30 scenari hardcoded su generate-email, generate-outreach e improve-email. Solo dry-run, niente invii reali."
+        steps={[
+          { label: "Lancia la suite (esecuzione in batch da 3)" },
+          { label: "Vedi pass / warn / fail con score per scenario" },
+          { label: "Apri uno scenario per leggere output e debug" },
+        ]}
+        right={
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {results.size > 0 && (
+              <div className="flex gap-2 text-sm">
+                <Badge variant="default" className="bg-success">✅ {passCount}</Badge>
+                <Badge variant="default" className="bg-warning">⚠️ {warnCount}</Badge>
+                <Badge variant="destructive">❌ {failCount}</Badge>
+                <Badge variant="outline">Score: {totalScore}/{maxScore}</Badge>
+              </div>
+            )}
+            <Button onClick={runAllTests} disabled={running} size="lg">
+              {running ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Esecuzione...</> : <><Play className="mr-2 h-4 w-4" /> Esegui 30 Test</>}
+            </Button>
+          </div>
+        }
+      />
 
       {/* Run History */}
       <RunHistory onLoadRun={handleLoadHistoricalRun} />
