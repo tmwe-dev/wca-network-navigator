@@ -208,6 +208,12 @@ export function NavMenuPopover({
     setQuery("");
   }, [open]);
 
+  // Notifica globale apertura/chiusura per nascondere overlay concorrenti
+  // (es. linguetta filtri ContextFiltersRail).
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent("nav-menu-open-change", { detail: { open } }));
+  }, [open]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>

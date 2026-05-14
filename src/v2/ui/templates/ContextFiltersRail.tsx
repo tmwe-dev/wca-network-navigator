@@ -102,6 +102,7 @@ function getFilterContext(
 export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [navMenuOpen, setNavMenuOpen] = React.useState(false);
   const asideRef = React.useRef<HTMLElement | null>(null);
   const toggleRef = React.useRef<HTMLButtonElement | null>(null);
   const [networkView, setNetworkView] = React.useState<"partners" | "bca">(() => {
@@ -132,6 +133,15 @@ export function ContextFiltersRail(): React.ReactElement | null {
     return () => window.removeEventListener("open-drawer", onOpenDrawer);
   }, []);
 
+  React.useEffect(() => {
+    const onNav = (e: Event) => {
+      const detail = (e as CustomEvent<{ open?: boolean }>).detail;
+      setNavMenuOpen(!!detail?.open);
+    };
+    window.addEventListener("nav-menu-open-change", onNav);
+    return () => window.removeEventListener("nav-menu-open-change", onNav);
+  }, []);
+
   // Nessun auto-close su click esterno: la sidebar è multi-selezione,
   // l'utente la chiude esplicitamente con il tasto "Conferma" o la linguetta.
 
@@ -152,6 +162,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
         className={[
           "fixed top-1/2 -translate-y-1/2 z-[70] flex h-14 w-7 items-center justify-center rounded-r-lg border border-l-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all duration-200 hover:border-primary/50 hover:bg-primary/25",
           isOpen ? "left-[88vw] sm:left-80" : "left-0 md:left-14",
+          navMenuOpen && !isOpen ? "opacity-0 pointer-events-none" : "",
         ].join(" ")}
         aria-label={isOpen ? `Chiudi ${context.title}` : `Apri ${context.title}`}
         aria-expanded={isOpen}
