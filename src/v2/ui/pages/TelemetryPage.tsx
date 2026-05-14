@@ -15,6 +15,15 @@ import { PageShell } from "@/v2/ui/templates/PageShell";
 export function TelemetryPage() {
   const isAdmin = useRequireRole({ role: "admin" });
 
+  useTrackPage("telemetry");
+  const [tab, setTab] = useUrlState<TabKey>("tab", "events");
+  const [range, setRange] = useUrlState<string>("range", "24h");
+
+  const sinceIso = useMemo(() => {
+    const hours = RANGES.find((r) => r.key === range)?.hours ?? 24;
+    return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  }, [range]);
+
   if (!isAdmin) {
     return (
       <PageShell title="Telemetria">
@@ -24,15 +33,6 @@ export function TelemetryPage() {
       </PageShell>
     );
   }
-
-  useTrackPage("telemetry");
-  const [tab, setTab] = useUrlState<TabKey>("tab", "events");
-  const [range, setRange] = useUrlState<string>("range", "24h");
-
-  const sinceIso = useMemo(() => {
-    const hours = RANGES.find((r) => r.key === range)?.hours ?? 24;
-    return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-  }, [range]);
 
   return (
     <PageShell
