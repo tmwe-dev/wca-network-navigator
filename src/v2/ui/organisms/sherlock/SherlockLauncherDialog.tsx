@@ -61,6 +61,8 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
   });
 
   const autoStartedRef = React.useRef(false);
+  const ranOnceRef = React.useRef(false);
+  const autoCloseRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
     if (open && autoStartLevel && !autoStartedRef.current && !sherlock.running && vars.companyName) {
       autoStartedRef.current = true;
@@ -68,9 +70,30 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
     }
     if (!open) {
       autoStartedRef.current = false;
+      ranOnceRef.current = false;
+      if (autoCloseRef.current) { clearTimeout(autoCloseRef.current); autoCloseRef.current = null; }
       sherlock.stop();
     }
   }, [open, autoStartLevel, vars.companyName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Marca che almeno una run è stata avviata (per distinguere "mai partita" da "appena finita")
+  React.useEffect(() => {
+    if (sherlock.running) ranOnceRef.current = true;
+  }, [sherlock.running]);
+
+  // Auto-close quando la Deep Search finisce: lasciamo 1.8s per leggere la sintesi, poi chiudiamo.
+  React.useEffect(() => {
+    if (!open) return;
+    if (sherlock.running) return;
+    if (!ranOnceRef.current) return;
+    if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
+    autoCloseRef.current = setTimeout(() => {
+      onOpenChange(false);
+    }, 1800);
+    return () => {
+      if (autoCloseRef.current) { clearTimeout(autoCloseRef.current); autoCloseRef.current = null; }
+    };
+  }, [open, sherlock.running, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
