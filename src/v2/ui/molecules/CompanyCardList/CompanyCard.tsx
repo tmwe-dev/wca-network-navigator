@@ -3,7 +3,7 @@
  * Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import { Plane, Trophy, MoreHorizontal, Star, Clock, Mail, MessageCircle, Phone, ExternalLink, Search, ScanSearch, Telescope } from "lucide-react";
+import { Plane, Trophy, MoreHorizontal, Star, Clock, Mail, MessageCircle, Phone, ExternalLink, Search, ScanSearch, Telescope, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "sonner";
 import type { CompanyEntity, CompanyCardListCallbacks, CompanySource } from "./types";
 import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
+import { useBlacklistedPartnerIds, useBlacklistedCompanyNames } from "@/hooks/useBlacklist";
 
 function sourceTone(source: CompanySource): EntityRowTone {
   if (source === "wca") return "wca";
@@ -63,6 +64,13 @@ export function CompanyCard({
   const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount, origin, enrichedAt, logoUrl, primaryEmail, primaryPhone } = company;
   const tone = sourceTone(source);
   const { handleSendEmail, handleSendWhatsApp } = useDirectContactActions();
+
+  // Blacklist (set globali in cache, no N+1).
+  const { data: blacklistIds } = useBlacklistedPartnerIds();
+  const { data: blacklistNames } = useBlacklistedCompanyNames();
+  const isBlacklisted =
+    (!!blacklistIds && blacklistIds.has(String(company.id))) ||
+    (!!blacklistNames && !!name && blacklistNames.has(name.toLowerCase().trim()));
 
   const primaryContactFull = company.contacts?.[0];
   const firstEmail = primaryContactFull?.email || primaryEmail || null;
@@ -198,6 +206,16 @@ export function CompanyCard({
         </Badge>
       )}
       {leadStatusBadge}
+      {isBlacklisted && (
+        <Badge
+          variant="outline"
+          className="text-[9px] flex-shrink-0 px-1 py-0 h-4 gap-0.5 bg-destructive/15 text-destructive border-destructive/40 font-semibold"
+          title="Azienda presente nella blacklist WCA World"
+        >
+          <ShieldAlert className="w-2.5 h-2.5" />
+          Blacklist
+        </Badge>
+      )}
       {sherlockLevel && (
         <SherlockLevelBadge level={sherlockLevel} completedAt={sherlockCompletedAt} />
       )}

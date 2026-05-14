@@ -86,6 +86,7 @@ export const crmKeys = {
     stats: ["blacklist-stats"] as const,
     syncLog: ["blacklist-sync-log"] as const,
     partnerIds: ["blacklist-partner-ids"] as const,
+    companyNames: ["blacklist-company-names"] as const,
     partner: (partnerId?: string) => ["blacklist-partner", partnerId] as const,
   },
   contactMerge: {

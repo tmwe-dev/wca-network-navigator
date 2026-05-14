@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries, updateBlacklistEntry, insertBlacklistSyncLog } from "@/data/blacklist";
+import { getBlacklistedPartnerIds, getBlacklistedCompanyNames } from "@/data/blacklist";
 import { queryKeys } from "@/lib/queryKeys";
 
 type BlacklistEntryRow = Database["public"]["Tables"]["blacklist_entries"]["Row"];
@@ -62,6 +63,24 @@ export function useBlacklistForPartner(partnerId: string | undefined) {
       if (error) throw error;
       return data ?? [];
     },
+  });
+}
+
+/** Set globale di partner.id in blacklist. Usato dalle liste/card per badge. */
+export function useBlacklistedPartnerIds() {
+  return useQuery({
+    queryKey: queryKeys.blacklist.partnerIds,
+    queryFn: () => getBlacklistedPartnerIds(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Set globale di company_name (lowercase trim) in blacklist. Usato per BCA/biglietti. */
+export function useBlacklistedCompanyNames() {
+  return useQuery({
+    queryKey: queryKeys.blacklist.companyNames,
+    queryFn: () => getBlacklistedCompanyNames(),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
