@@ -1,6 +1,6 @@
 import type { PartnerViewModel } from "@/types/partner-views";
 import type * as React from "react";
-import { ArrowRight, Building2, Calendar, Truck, Users, Warehouse, MapPin, Globe2, Building } from "lucide-react";
+import { ArrowRight, Calendar, Truck, Users, Warehouse, MapPin, Building } from "lucide-react";
 import { getCountryFlag, resolveCountryCode, formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
@@ -137,9 +137,9 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
         </div>
       )}
 
-      {/* Row 3 — footprint operativo (numeri compatti) */}
-      {(hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails) && (
-        <div className="flex flex-wrap gap-1.5">
+      {/* Row 3 — footprint operativo (warehouse + dipendenti + anno + flotta + nota magazzino) */}
+      {(hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails || !!warehouseDetails) && (
+        <div className="flex flex-wrap items-start gap-1.5">
           {hasWarehouses && (
             <Metric
               icon={Warehouse}
@@ -149,23 +149,23 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
           {employeeCount !== null && <Metric icon={Users} label={`${employeeCount.toLocaleString("it-IT")} dipendenti`} />}
           {foundingYear !== null && <Metric icon={Calendar} label={`Dal ${foundingYear}`} />}
           {fleetDetails && <Metric icon={Truck} label={fleetDetails} />}
+          {warehouseDetails && (
+            <span className="text-[10px] leading-snug text-muted-foreground italic max-w-full">
+              {warehouseDetails}
+            </span>
+          )}
         </div>
       )}
 
-      {/* Row 4 — geografia (paesi con RUOLO) */}
+      {/* Row 4 — paesi (bandiera + nome, orizzontale, niente label MERCATO/FILIALE) */}
       {(markets.length > 0 || branchCountries.length > 0) && (
-        <div className="border-t border-primary/10 pt-2">
-          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1 flex items-center gap-1">
-            <Globe2 className="h-3 w-3" /> Presenza geografica
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {branchCountries.slice(0, 8).map((country) => (
-              <CountryChip key={`b-${country.code}`} code={country.code} label={country.name} role="Filiale" tone="branch" />
-            ))}
-            {markets.map((market) => (
-              <CountryChip key={`m-${market}`} code={countryCodeFromLabel(market)} label={market} role="Mercato" tone="market" />
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {branchCountries.slice(0, 8).map((country) => (
+            <CountryChip key={`b-${country.code}`} code={country.code} label={country.name} highlight />
+          ))}
+          {markets.map((market) => (
+            <CountryChip key={`m-${market}`} code={countryCodeFromLabel(market)} label={market} />
+          ))}
         </div>
       )}
 
@@ -209,34 +209,24 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
         </div>
       )}
 
-      {warehouseDetails && (
-        <div className="flex flex-col gap-1 border-t border-primary/10 pt-2 text-[10px] leading-relaxed text-muted-foreground">
-          <span><Building2 className="mr-1 inline h-3 w-3 text-primary" />{warehouseDetails}</span>
-        </div>
-      )}
     </div>
   );
 }
 
 function CountryChip({
-  code, label, role, tone,
+  code, label, highlight = false,
 }: {
   readonly code: string | null;
   readonly label: string;
-  readonly role: "Filiale" | "Mercato" | "Hub";
-  readonly tone: "branch" | "market";
+  readonly highlight?: boolean;
 }): React.ReactElement {
-  const toneClasses = tone === "branch"
+  const toneClasses = highlight
     ? "border-primary/35 bg-primary/10 text-foreground"
     : "border-primary/15 bg-card/60 text-foreground/85";
-  const roleClasses = tone === "branch"
-    ? "bg-primary/25 text-primary-foreground"
-    : "bg-muted/60 text-muted-foreground";
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-[10px] font-medium", toneClasses)} title={`${role} · ${label}`}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium", toneClasses)} title={highlight ? `Filiale · ${label}` : label}>
       <span className="text-sm leading-none">{code ? getCountryFlag(code) : "🌍"}</span>
-      <span className="max-w-[7rem] truncate">{label}</span>
-      <span className={cn("rounded px-1 py-0 text-[8px] font-bold uppercase tracking-wider", roleClasses)}>{role}</span>
+      <span className="max-w-[8rem] truncate">{label}</span>
     </span>
   );
 }
