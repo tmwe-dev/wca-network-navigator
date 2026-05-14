@@ -1,5 +1,5 @@
-import { useEffect, useRef, useMemo } from "react";
-import { Building2, User, MailOpen, HelpCircle } from "lucide-react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
+import { Building2, User, MailOpen, HelpCircle, Sparkles, Gauge, CheckCheck } from "lucide-react";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -10,6 +10,10 @@ import { EmailMessageActions } from "./EmailMessageActions";
 import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { MailRowChrome } from "@/v2/ui/molecules/email/MailRowChrome";
+import { useInboxEnrichment } from "@/hooks/useInboxEnrichment";
+import { invokeAi } from "@/lib/ai/invokeAi";
+import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 type Props = {
   messages: ChannelMessage[];
@@ -22,6 +26,7 @@ const ROW_HEIGHT = 168;
 
 export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter = false }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const qc = useQueryClient();
   
   const sourceIds = useMemo(() => {
     const ids: { partnerId?: string; contactId?: string }[] = [];
@@ -35,6 +40,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
   const holdingSet = useHoldingPatternEmails(sourceIds);
   const { getGroup } = useEmailAddressGroups();
   const markRead = useMarkAsRead();
+  const { getEnrichment } = useInboxEnrichment(messages);
 
   const displayMessages = useMemo(() => {
     if (!holdingFilter) return messages;
@@ -44,6 +50,26 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
       return false;
     });
   }, [messages, holdingFilter, holdingSet]);
+
+  // Hook post-DeepSearch: chiede a `suggest-email-groups` di proporre un
+  // gruppo per il mittente, poi invalida la cache enrichment per mostrare
+  // subito il chip "Suggerito: …".
+  const onDeepSearchComplete = useCallback(
+    (email: string) => {
+      if (!email) return;
+      void invokeAi("suggest-email-groups", {
+        scope: "classification",
+        context: { source: "EmailMessageList", route: "/v2/inbox", trigger: "post-deep-search" },
+        body: { emails: [email], min_email_count: 1, batch_size: 5 },
+      })
+        .then(() => {
+          qc.invalidateQueries({ queryKey: ["inbox-enrichment", "ai-suggestions"] });
+          qc.invalidateQueries({ queryKey: ["email-address-groups"] });
+        })
+        .catch(() => { /* silent */ });
+    },
+    [qc],
+  );
 
   const virtualizer = useVirtualizer({
     count: displayMessages.length,
@@ -80,6 +106,13 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
 
           const group = getGroup(msg.from_address);
           const groupColor = group?.groupColor ?? null;
+          const enrichment = getEnrichment(msg);
+          const partner = enrichment.partner;
+          const intel = enrichment.intel;
+          const aiSuggestedGroup = enrichment.aiSuggestedGroup;
+          const enriched = !!partner || !!intel;
+          const displayBrand = partner?.company_alias || partner?.company_name || brand;
+          const emailAddress = msg.from_address?.match(/<(.+?)>/)?.[1] || msg.from_address || "";
 
           // Sorgente (partner / contact) mostrata come piccolo chip in alto a destra,
           // sopra al group badge — niente più chip “buttati al centro card”.
@@ -115,6 +148,14 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                   {group.groupIcon && <span>{group.groupIcon}</span>}
                   <span className="max-w-[140px] truncate">{group.groupName}</span>
                 </span>
+              ) : aiSuggestedGroup ? (
+                <span
+                  className="inline-flex items-center gap-1 rounded border border-dashed border-primary/40 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-foreground"
+                  title={`Gruppo suggerito dall'AI · ${aiSuggestedGroup}`}
+                >
+                  <Sparkles className="h-3 w-3 opacity-70" />
+                  <span className="max-w-[140px] truncate">Suggerito: {aiSuggestedGroup}</span>
+                </span>
               ) : (
                 <span
                   className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400"
@@ -125,6 +166,31 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 </span>
               )}
             </div>
+          );
+
+          // Chips riga: stato commerciale + arricchito (stessa formattazione Funnemail)
+          const chipBase = "inline-flex items-center gap-1 rounded border px-2 text-[11px] leading-none";
+          const chips = (
+            <>
+              {partner?.lead_status && (
+                <span
+                  className={cn(chipBase, "border-border bg-muted text-foreground")}
+                  title="Stato commerciale"
+                >
+                  <Gauge className="h-3 w-3" />
+                  {partner.lead_status.replace(/_/g, " ")}
+                </span>
+              )}
+              {enriched && (
+                <span
+                  className={cn(chipBase, "border-emerald-500/30 bg-emerald-500/10 font-medium text-emerald-600 dark:text-emerald-400")}
+                  title={partner ? "Partner conosciuto a sistema" : "Mittente arricchito (intel dominio)"}
+                >
+                  <CheckCheck className="h-3 w-3" />
+                  Arricchito
+                </span>
+              )}
+            </>
           );
 
           const trailing = isUnread ? (
@@ -144,12 +210,20 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           const actions = (
             <>
               <DeepSearchEmailButton
-                email={(msg.from_address?.match(/<(.+?)>/)?.[1] || msg.from_address || "")}
-                source={{ displayName: brand, partnerId: msg.partner_id ?? null }}
+                email={emailAddress}
+                source={{
+                  displayName: displayBrand,
+                  partnerId: msg.partner_id ?? partner?.id ?? null,
+                  city: partner?.city ?? null,
+                  countryName: partner?.country_name ?? null,
+                  countryCode: partner?.country_code ?? null,
+                  website: partner?.website ?? null,
+                }}
                 size="sm"
                 variant="ghost"
                 label="Deep Search"
                 className="h-7 gap-1 text-[10px] border border-border/60 bg-transparent hover:bg-muted/60"
+                onComplete={() => onDeepSearchComplete(emailAddress)}
               />
               <EmailMessageActions message={msg} />
               <InlineGroupAssigner
@@ -174,17 +248,21 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
             >
               <MailRowChrome
                 fromAddress={msg.from_address}
-                brand={brand}
+                brand={displayBrand}
                 subject={msg.subject || "(nessun oggetto)"}
                 secondaryLine={secondaryLine}
                 date={displayDate}
                 isUnread={isUnread}
                 isSelected={isSelected}
                 inHolding={isInHolding}
+                countryCode={partner?.country_code ?? null}
+                countryName={partner?.country_name ?? null}
+                logoUrl={partner?.logo_url ?? null}
                 size="sm"
                 previewText={(msg.body_text || "").replace(/\s+/g, " ").trim().slice(0, 220) || null}
                 groupBadge={groupBadge}
                 groupColor={groupColor}
+                chips={chips}
                 trailing={trailing}
                 actions={actions}
                 onClick={() => onSelect(msg)}
