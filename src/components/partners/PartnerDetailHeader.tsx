@@ -148,6 +148,7 @@ export function PartnerDetailHeader({
             enrichment={enrichment}
             services={services}
             branchCountries={branchCountries}
+            networks={networks}
           />
         </div>
       </div>
