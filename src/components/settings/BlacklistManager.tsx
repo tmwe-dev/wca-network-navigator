@@ -3,24 +3,45 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, Loader2, ShieldAlert, RefreshCw, CheckCircle2, AlertTriangle, FileSpreadsheet, Calendar, MapPin, DollarSign } from "lucide-react";
+import { Upload, Loader2, ShieldAlert, CheckCircle2, FileSpreadsheet, Calendar, MapPin, DollarSign, Info } from "lucide-react";
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
-import { invokeEdge } from "@/lib/api/invokeEdge";
 // ExcelJS loaded lazily to reduce bundle size
 const getExcelJS = () => import("exceljs").then(m => m.default);
 import { createLogger } from "@/lib/log";
 
+/** Soglia (giorni) oltre la quale la blacklist è considerata da aggiornare. */
+const BLACKLIST_REFRESH_DAYS = 30;
+
 const log = createLogger("BlacklistManager");
 
-/* ── Parse XLS/CSV file ── */
+/* ── Parse XLS/XLSX/CSV file ── */
+/**
+ * Sniffa il contenuto reale del file (alcuni export WCA hanno estensione .xls
+ * ma sono CSV con BOM UTF-8). Decide CSV vs XLSX in base ai primi byte.
+ */
+function looksLikeCsv(buffer: ArrayBuffer, fileName: string): boolean {
+  if (fileName.toLowerCase().endsWith(".csv")) return true;
+  const head = new Uint8Array(buffer.slice(0, 8));
+  // XLSX/XLS (binario): zip "PK" o OLE compound D0 CF 11 E0
+  if (head[0] === 0x50 && head[1] === 0x4b) return false;
+  if (head[0] === 0xd0 && head[1] === 0xcf && head[2] === 0x11 && head[3] === 0xe0) return false;
+  // BOM UTF-8 → CSV
+  if (head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) return true;
+  // Primi 200 byte: se trova virgole/tab/newline e nessun null byte → CSV
+  const sample = new TextDecoder("utf-8", { fatal: false }).decode(buffer.slice(0, 200));
+  return /[,;\t]/.test(sample) && /\r|\n/.test(sample) && !/\u0000/.test(sample);
+}
+
 async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]> {
   const buffer = await file.arrayBuffer();
   const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
 
-  if (file.name.endsWith(".csv")) {
-    const text = new TextDecoder().decode(buffer);
+  if (looksLikeCsv(buffer, file.name)) {
+    let text = new TextDecoder("utf-8").decode(buffer);
+    // Strip BOM
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
     const blob = new Blob([text], { type: "text/csv" });
     const stream = blob.stream() as never;
     await workbook.csv.read(stream);
@@ -70,7 +91,6 @@ export default function BlacklistManager() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[] | null>(null);
   const [allParsed, setAllParsed] = useState<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]>([]);
-  const [scraping, setScraping] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useBlacklistStats();
   const { data: logs } = useBlacklistSyncLog();
@@ -103,25 +123,12 @@ export default function BlacklistManager() {
     }
   };
 
-  const handleScrape = async () => {
-    setScraping(true);
-    try {
-      const data = await invokeEdge<Record<string, unknown>>("scrape-wca-blacklist", { context: "BlacklistManager.scrape_wca_blacklist" });
-      if (data?.success) {
-        toast.success(`Scraping completato: ${data.entries_count || 0} record, ${data.matched_count || 0} match`);
-      } else {
-        toast.error(String(data?.error || "Scraping fallito"));
-      }
-    } catch (err: unknown) {
-      toast.error("Errore: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto"));
-    } finally {
-      setScraping(false);
-    }
-  };
-
   const daysSinceUpdate = stats?.lastUpdated
     ? Math.floor((Date.now() - new Date(stats.lastUpdated).getTime()) / 86400000)
     : null;
+  const daysToNextUpdate = daysSinceUpdate === null ? null : Math.max(0, BLACKLIST_REFRESH_DAYS - daysSinceUpdate);
+  const isOverdue = daysSinceUpdate !== null && daysSinceUpdate >= BLACKLIST_REFRESH_DAYS;
+  const isExpiringSoon = daysSinceUpdate !== null && !isOverdue && daysToNextUpdate !== null && daysToNextUpdate <= 5;
 
   return (
     <div className="space-y-6">
@@ -154,13 +161,22 @@ export default function BlacklistManager() {
             <div className="p-2 rounded-lg bg-primary/10">
               <Calendar className="w-5 h-5 text-primary" />
             </div>
-            <div>
+          <div>
               <p className="text-2xl font-bold">
                 {statsLoading ? "..." : daysSinceUpdate !== null ? `${daysSinceUpdate}g fa` : "Mai"}
               </p>
               <p className="text-xs text-muted-foreground">Ultimo aggiornamento</p>
-              {daysSinceUpdate !== null && daysSinceUpdate > 7 && (
-                <Badge variant="destructive" className="mt-1 text-[10px]">⚠️ Aggiornamento richiesto</Badge>
+              {daysSinceUpdate === null && (
+                <Badge variant="destructive" className="mt-1 text-[10px]">⚠️ Mai importata</Badge>
+              )}
+              {isOverdue && (
+                <Badge variant="destructive" className="mt-1 text-[10px]">⚠️ Scaduta da {daysSinceUpdate! - BLACKLIST_REFRESH_DAYS}g</Badge>
+              )}
+              {isExpiringSoon && (
+                <Badge variant="warning" className="mt-1 text-[10px]">In scadenza tra {daysToNextUpdate}g</Badge>
+              )}
+              {!isOverdue && !isExpiringSoon && daysToNextUpdate !== null && (
+                <p className="text-[10px] text-muted-foreground mt-1">Prossimo aggiornamento tra {daysToNextUpdate}g</p>
               )}
             </div>
           </CardContent>
@@ -176,7 +192,9 @@ export default function BlacklistManager() {
             </div>
             <div>
               <CardTitle className="text-base">Importa Blacklist</CardTitle>
-              <CardDescription>Carica il file Excel/CSV esportato da WCA World</CardDescription>
+              <CardDescription>
+                Carica il file <code className="text-[11px]">BlackListExport-*.xls</code> esportato da WCA World (formato CSV, XLS o XLSX). Aggiornamento consigliato ogni {BLACKLIST_REFRESH_DAYS} giorni.
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -235,30 +253,19 @@ export default function BlacklistManager() {
         </CardContent>
       </Card>
 
-      {/* Auto Scraping */}
+      {/* How-to */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <RefreshCw className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-base">Scraping Automatico</CardTitle>
-              <CardDescription>Scarica la blacklist direttamente da wcaworld.com</CardDescription>
-            </div>
+        <CardContent className="pt-6 flex items-start gap-3">
+          <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p><strong className="text-foreground">Come aggiornare la blacklist:</strong></p>
+            <ol className="list-decimal pl-4 space-y-0.5">
+              <li>Su <code>wcaworld.com</code> esporta la blacklist in formato Excel.</li>
+              <li>Carica qui sopra il file (anche con estensione <code>.xls</code> in formato CSV).</li>
+              <li>L'import sostituisce gli ingressi precedenti e ri-aggancia i match con i partner CRM.</li>
+              <li>Ripeti l'operazione ogni {BLACKLIST_REFRESH_DAYS} giorni: ti avviseremo in cima alla pagina quando scade.</li>
+            </ol>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button onClick={handleScrape} disabled={scraping} className="w-full" size="lg">
-            {scraping ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Scraping in corso...</>
-            ) : (
-              <><RefreshCw className="w-4 h-4 mr-2" /> Scrape Blacklist Ora</>
-            )}
-          </Button>
-          <p className="text-xs text-muted-foreground text-center">
-            Utilizza Partner Connect per analizzare la pagina WCA Blacklist e aggiornare il database
-          </p>
         </CardContent>
       </Card>
 
