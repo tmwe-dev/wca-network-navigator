@@ -1,43 +1,26 @@
 ## Obiettivo
-Differenziare visivamente tutti i campi compilabili (input, textarea, select, search, combobox) dal background della pagina, in modo coerente su tutti i temi:
-- **Tema scuro** → sfondo campo più scuro del background (quasi nero)
-- **Tema chiaro** → sfondo campo leggermente più chiaro/contrastato del background
+Eliminare il doppione di navigazione: tenere **un solo menu**, l'icon rail laterale (sempre visibile, già usata per navigare con 1 click). Rimuovere il popover hamburger che duplica le stesse voci comparendo davanti al contenuto.
 
-## Strategia (UI-only, zero logica)
+## Cosa cambia (UI-only, zero logica)
 
-### 1. Nuovo design token globale `--field`
-In `src/index.css` aggiungo, accanto a `--input` (che oggi è il bordo), un nuovo token che rappresenta lo **sfondo** dei campi:
-- `:root` (light): `--field: 0 0% 100%;` o leggermente più chiaro del background
-- `.dark`: `--field: 222 47% 6%;` (più scuro del background dark)
-- Replicato per tutti i temi custom presenti in `index.css` (Lilac, Emerald, ecc.) — variante light e `.dark`
+### 1. `src/v2/ui/templates/LayoutIconRail.tsx`
+- Rimuovere il blocco "Hamburger lilla" (righe 47–61) che renderizza `<NavMenuPopover>` con il pulsante a tre linee.
+- Lasciare l'icon rail così com'è (icone + tooltip + sotto-popover contestuali per le sezioni con figli, già funzionanti via `EXPANDABLE_MAIN_NAV`).
+- Rimuovere import `NavMenuPopover` (resta `EXPANDABLE_MAIN_NAV`, `sectionRoot`).
 
-### 2. Mappatura Tailwind
-In `tailwind.config.ts` aggiungo:
-```ts
-field: { DEFAULT: "hsl(var(--field))", foreground: "hsl(var(--field-foreground))" }
-```
-Espone la classe `bg-field`.
+### 2. Altri call site di `NavMenuPopover` — verificare se vanno toccati
+- `src/v2/ui/templates/LayoutHeader.tsx` → controllare se monta un secondo trigger (riga ~40 menziona "bottone ☰ ora apre il NavMenuPopover globale"); se sì, sostituire con un semplice pulsante che apra la `CommandPalette` (già montata, ⌘K). Mantenere comportamento mobile.
+- `src/v2/ui/theme/ThemePicker.tsx`, `src/v2/ui/pages/command/components/CommandPageBackButton.tsx`, `src/v2/navigation/registry.ts` → solo se realmente renderizzano un trigger nav: lasciare il file `NavMenuPopover.tsx` in repo (non lo cancello, evita rotture import) ma rimuoverne l'uso visibile.
 
-### 3. Aggiornamento primitive shadcn (un solo punto)
-Cambio `bg-background` → `bg-field` nei primitive condivisi:
-- `src/components/ui/input.tsx`
-- `src/components/ui/textarea.tsx`
-- `src/components/ui/select.tsx` (SelectTrigger)
-- `src/components/ui/command.tsx` (CommandInput)
+### 3. Mobile
+- Sul mobile resta `LayoutSidebarNav` (drawer apribile dall'hamburger header mobile). Nessuna modifica.
 
-Tutto il sistema (Funnemail, Inbox, Prompt Lab, dialog, drawer, filtri…) eredita automaticamente.
+## Risultato
+- Un solo menu visibile: l'icon rail verticale a sinistra.
+- Hover su un'icona → tooltip con il nome.
+- Click su una sezione "espandibile" (es. Rubriche) → mini-popover contestuale con le sotto-voci di QUELLA sezione (non l'intero menu).
+- Niente più lista lunga che esce davanti al contenuto.
 
-### 4. Verifica
-Smoke visivo su `/v2/lab` (dark) e `/v2` (light): contrasto bordo `border-input` ancora visibile, testo leggibile, nessuna regressione su campi che già forzano `bg-card`/`bg-muted`.
-
-## File toccati
-- `src/index.css` (aggiunta token su tutti i temi)
-- `tailwind.config.ts` (registrazione `field`)
-- `src/components/ui/input.tsx`
-- `src/components/ui/textarea.tsx`
-- `src/components/ui/select.tsx`
-- `src/components/ui/command.tsx`
-
-## Fuori scope
-- Componenti che già usano sfondi custom (`bg-card`, `bg-muted`) restano invariati.
-- Nessuna modifica a logica, dati, edge function, RLS.
+## Out-of-scope
+- Nessun cambio logico, nessun edge function, nessun cambio dati.
+- Il file `NavMenuPopover.tsx` resta sul filesystem (export `EXPANDABLE_MAIN_NAV` e `sectionRoot` sono usati altrove); rimuovo solo il rendering del trigger.
