@@ -29,7 +29,7 @@ const SCENARIOS: Array<{
     desc: "Apri una conversazione con un partner mai sentito.",
     goal: "Presenta brevemente TMWE e proponi una call introduttiva di 15 minuti.",
     tone: "professionale",
-    emailTypeId: DEFAULT_EMAIL_TYPES.find((t) => /contatto|presentaz/i.test(t.label))?.id,
+    emailTypeId: DEFAULT_EMAIL_TYPES.find((t) => /contatto|presentaz/i.test(t.name))?.id,
   },
   {
     id: "follow-up",
@@ -37,7 +37,7 @@ const SCENARIOS: Array<{
     desc: "Seconda email a chi non ha risposto dopo 7 giorni.",
     goal: "Riprendi il filo senza essere insistente, aggiungi un piccolo elemento di valore.",
     tone: "cordiale",
-    emailTypeId: DEFAULT_EMAIL_TYPES.find((t) => /follow/i.test(t.label))?.id,
+    emailTypeId: DEFAULT_EMAIL_TYPES.find((t) => /follow/i.test(t.name))?.id,
   },
   {
     id: "proposta",
@@ -45,7 +45,7 @@ const SCENARIOS: Array<{
     desc: "Email con una proposta concreta a partner già scaldato.",
     goal: "Formalizza una proposta operativa con prossimo passo chiaro (call o documento).",
     tone: "diretto",
-    emailTypeId: DEFAULT_EMAIL_TYPES.find((t) => /propos|offert/i.test(t.label))?.id,
+    emailTypeId: DEFAULT_EMAIL_TYPES.find((t) => /propos|offert/i.test(t.name))?.id,
   },
 ];
 
