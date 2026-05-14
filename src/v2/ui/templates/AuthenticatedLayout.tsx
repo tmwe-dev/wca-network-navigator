@@ -18,6 +18,7 @@ import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
+import { BlacklistStaleBanner } from "@/components/shared/BlacklistStaleBanner";
 import { LiveRegion } from "@/components/shared/LiveRegion";
 import { useLiveAnnounce } from "@/hooks/useLiveAnnounce";
 import { useAiBridgeListener } from "@/hooks/useAiBridgeListener";
@@ -332,6 +333,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
+                        <BlacklistStaleBanner />
                         <BackgroundServices>
                           {({ outreachQueue, globalSync }) => (
                             <LayoutHeader
