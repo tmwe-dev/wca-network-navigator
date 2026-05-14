@@ -177,9 +177,9 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     const domain = extractDomain(msg.from_address);
     const addr = extractEmail(msg.from_address);
     const intel = domain ? intelByDomain.get(domain) ?? null : null;
-    const partner =
-      (msg.partner_id ? partnersById.get(msg.partner_id) ?? null : null) ??
-      (intel?.partner_id ? partnersById.get(intel.partner_id) ?? null : null);
+    let partner: FunnemailPartnerSnapshot | null = null;
+    if (msg.partner_id) partner = partnersById.get(msg.partner_id) ?? null;
+    if (!partner && intel?.partner_id) partner = partnersById.get(intel.partner_id) ?? null;
     const aiSuggestedGroup = addr ? suggestionByAddress.get(addr) ?? null : null;
     return { partner, intel, aiSuggestedGroup };
   }
