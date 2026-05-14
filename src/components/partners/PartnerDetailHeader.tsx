@@ -18,12 +18,15 @@ import { Box } from "lucide-react";
 import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
 import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
+import { EnrichmentInsightStrip } from "@/components/partners/EnrichmentInsightStrip";
 
  
 interface PartnerDetailHeaderProps {
   partner: PartnerViewModel;
   enrichment: Record<string, unknown> | null;
   networks: { id: string; network_name: string }[];
+  services: { service_category: string }[];
+  branchCountries: { code: string; name: string }[];
   years: number;
   expiryDate: Date | null;
   isExpiringSoon: boolean;
@@ -32,7 +35,7 @@ interface PartnerDetailHeaderProps {
 }
 
 export function PartnerDetailHeader({
-  partner, enrichment, networks, years, expiryDate, isExpiringSoon, isExpired, onToggleFavorite,
+  partner, enrichment, networks, services, branchCountries, years, expiryDate, isExpiringSoon, isExpired, onToggleFavorite,
 }: PartnerDetailHeaderProps) {
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
@@ -140,6 +143,12 @@ export function PartnerDetailHeader({
           <div className="mt-1">
             <SocialLinks partnerId={String(partner.id)} compact />
           </div>
+          <EnrichmentInsightStrip
+            partner={partner}
+            enrichment={enrichment}
+            services={services}
+            branchCountries={branchCountries}
+          />
         </div>
       </div>
     </div>
