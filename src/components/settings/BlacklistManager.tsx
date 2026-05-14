@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, Loader2, ShieldAlert, CheckCircle2, FileSpreadsheet, Calendar, MapPin, DollarSign, Info } from "lucide-react";
+import { Upload, Loader2, ShieldAlert, CheckCircle2, FileSpreadsheet, Calendar, MapPin, DollarSign, Info, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
 // ExcelJS loaded lazily to reduce bundle size
