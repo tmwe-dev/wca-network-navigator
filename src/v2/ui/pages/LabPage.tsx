@@ -101,7 +101,11 @@ export function LabPage() {
           {ActiveComp ? (
             <FeatureErrorBoundary featureName={`Lab/${group}/${activeTab}`}>
               <Suspense fallback={<PageSkeleton />}>
-                <ActiveComp />
+                {/* key={activeTab} forza l'unmount/mount tra tab diverse:
+                    elimina la classe di bug "Rendered more hooks than during
+                    the previous render" quando un tab ha early-return prima
+                    di un hook. */}
+                <ActiveComp key={activeTab} />
               </Suspense>
             </FeatureErrorBoundary>
           ) : null}
