@@ -92,33 +92,29 @@ export function TokenTrendCard() {
 
       const [todayRes, yesterdayRes, thisWeekRes, lastWeekRes] = await Promise.all([
         supabase
-          .from("ai_token_usage")
-          .select("total_tokens")
-          .eq("user_id", userData.id)
+          .from("ai_prompt_log")
+          .select("tokens_total")
           .gte("created_at", startOfToday.toISOString()),
         supabase
-          .from("ai_token_usage")
-          .select("total_tokens")
-          .eq("user_id", userData.id)
+          .from("ai_prompt_log")
+          .select("tokens_total")
           .gte("created_at", startOfYesterday.toISOString())
           .lt("created_at", endOfYesterday.toISOString()),
         supabase
-          .from("ai_token_usage")
-          .select("total_tokens")
-          .eq("user_id", userData.id)
+          .from("ai_prompt_log")
+          .select("tokens_total")
           .gte("created_at", startOfThisWeek.toISOString()),
         supabase
-          .from("ai_token_usage")
-          .select("total_tokens")
-          .eq("user_id", userData.id)
+          .from("ai_prompt_log")
+          .select("tokens_total")
           .gte("created_at", startOfLastWeek.toISOString())
           .lt("created_at", endOfLastWeek.toISOString()),
       ]);
 
-      const today = (todayRes.data || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
-      const yesterday = (yesterdayRes.data || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
-      const thisWeek = (thisWeekRes.data || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
-      const lastWeek = (lastWeekRes.data || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
+      const today = (todayRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const yesterday = (yesterdayRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const thisWeek = (thisWeekRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const lastWeek = (lastWeekRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
 
       return { today, yesterday, thisWeek, lastWeek };
     },
