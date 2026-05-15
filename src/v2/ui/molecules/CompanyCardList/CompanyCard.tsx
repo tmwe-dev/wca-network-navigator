@@ -357,7 +357,7 @@ export function CompanyCard({
         titleSlot={titleSlot}
         subTitleSlot={subTitleSlot}
         extraRowsSlot={metaRowSlot}
-        city={city}
+        city={null}
         channels={channels}
         score={score ?? null}
         recencySlot={recencySlot}
