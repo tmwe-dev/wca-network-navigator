@@ -74,14 +74,12 @@ export function TokenBudgetGauge() {
 
       const [{ data: dailyData }, { data: monthlyData }, { data: settingsData }] = await Promise.all([
         supabase
-          .from("ai_token_usage")
-          .select("total_tokens")
-          .eq("user_id", userData.id)
+          .from("ai_prompt_log")
+          .select("tokens_total")
           .gte("created_at", startOfDay.toISOString()),
         supabase
-          .from("ai_token_usage")
-          .select("total_tokens")
-          .eq("user_id", userData.id)
+          .from("ai_prompt_log")
+          .select("tokens_total")
           .gte("created_at", startOfMonth.toISOString()),
         supabase
           .from("app_settings")
@@ -90,8 +88,8 @@ export function TokenBudgetGauge() {
           .in("key", ["ai_daily_token_limit", "ai_monthly_token_limit"]),
       ]);
 
-      const dailyUsed = (dailyData || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
-      const monthlyUsed = (monthlyData || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
+      const dailyUsed = (dailyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const monthlyUsed = (monthlyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
 
       const settings = (settingsData || []).reduce((acc, row) => {
         acc[row.key] = row.value ?? "";
