@@ -174,6 +174,10 @@ const CommandPage = () => {
   const handleSend = (text?: string) => {
     const content = (text ?? state.input).trim();
     if (!content) return;
+    // Sblocca l'autoplay del browser dentro al gesto utente: senza questo
+    // i successivi audio.play() chiamati da useEffect (post-await fetch)
+    // vengono rifiutati con NotAllowedError e la voce sembra "rotta".
+    voiceOut.prime();
     state.setInput("");
     void submit.sendMessage(content);
   };
