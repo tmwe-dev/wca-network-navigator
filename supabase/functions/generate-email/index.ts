@@ -17,6 +17,7 @@ import { loadEntityFromActivity, loadStandalonePartner, assembleContextBlocks } 
 import { buildEmailPrompts, getModel, type PartnerData, type ContactData } from "./promptBuilder.ts";
 import { buildCalligrafiaSection } from "../_shared/calligrafiaInjector.ts";
 import { parseEmailResponse } from "./responseParser.ts";
+import { guardGeneratedEmailGrounding, type GroundingGuardWarning } from "./groundingGuard.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
@@ -258,10 +259,13 @@ serve(async (req) => {
 
     // ── Parse response ──
     const { subject, body } = parseEmailResponse(result.content || "", ctx.signatureBlock);
+    const groundingSourceText = `${systemPrompt}\n${userPrompt}`;
+    const preReviewGrounding = guardGeneratedEmailGrounding({ subject, body, sourceText: groundingSourceText });
+    const groundingWarnings: GroundingGuardWarning[] = [...preReviewGrounding.warnings];
 
     // ── GIORNALISTA AI — Caporedattore Finale (LOVABLE-80 v2) ──
-    let finalSubject = subject;
-    let finalBody = body;
+    let finalSubject = preReviewGrounding.subject;
+    let finalBody = preReviewGrounding.body;
     let journalistResult: JournalistReviewOutput | null = null;
     try {
       // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto.
@@ -307,9 +311,25 @@ serve(async (req) => {
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
           finalBody = journalistResult.edited_text;
         }
+        const postReviewGrounding = guardGeneratedEmailGrounding({
+          subject: finalSubject,
+          body: finalBody,
+          sourceText: groundingSourceText,
+        });
+        finalSubject = postReviewGrounding.subject;
+        finalBody = postReviewGrounding.body;
+        groundingWarnings.push(...postReviewGrounding.warnings);
       }
     } catch (jerr) {
       console.error("[generate-email] journalistReview failed:", jerr);
+      const fallbackGrounding = guardGeneratedEmailGrounding({
+        subject: finalSubject,
+        body: finalBody,
+        sourceText: groundingSourceText,
+      });
+      finalSubject = fallbackGrounding.subject;
+      finalBody = fallbackGrounding.body;
+      groundingWarnings.push(...fallbackGrounding.warnings);
     }
 
     // ── Credits (AFTER journalist review) ──
@@ -352,6 +372,10 @@ serve(async (req) => {
         quality_score: journalistResult.quality_score,
         reasoning: journalistResult.reasoning_summary,
       } : null,
+      grounding_guard: {
+        applied: groundingWarnings.length > 0,
+        warnings: groundingWarnings,
+      },
       _context_summary: {
         kb_sections: ctx.salesKBSections || [],
         history_present: !!ctx.historyContext,
