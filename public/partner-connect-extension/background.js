@@ -546,44 +546,134 @@ async function autoAcceptConsent(tabId) {
           /^aceitar$/i, /^aceitar tudo$/i,
           /^ok$/i, /^got it$/i, /^continue$/i,
         ];
-        let clickedSelector = null;
-        // 1) selettori noti
-        for (const sel of KNOWN_SELECTORS) {
-          const el = document.querySelector(sel);
-          if (el && el.offsetParent !== null) {
-            try { el.click(); clickedSelector = sel; break; } catch {}
-          }
+        // Blocklist: NON cliccare mai su questi (commerciali / contrari).
+        const BLOCK_PATTERNS = [
+          /reject/i, /decline/i, /deny/i, /rifiuta/i, /no,?\s*thanks/i,
+          /manage/i, /preferenze/i, /settings/i, /options?/i, /personalizza/i, /scegli/i,
+          /subscribe/i, /sign\s*up/i, /register/i, /login/i, /sign\s*in/i,
+          /buy/i, /checkout/i, /add to cart/i, /acquista/i,
+          /save (my )?choices/i, /salva (le )?preferenze/i,
+        ];
+
+        // Raccoglie candidati anche da shadow DOM aperti.
+        function collectCandidates(root, out, depth = 0) {
+          if (depth > 4 || !root) return;
+          const sel = 'button, a[role="button"], [role="button"], input[type="button"], input[type="submit"]';
+          try {
+            root.querySelectorAll(sel).forEach((el) => out.push(el));
+          } catch {}
+          // Shadow roots aperti
+          try {
+            root.querySelectorAll('*').forEach((el) => {
+              if (el.shadowRoot) collectCandidates(el.shadowRoot, out, depth + 1);
+            });
+          } catch {}
         }
-        // 2) fallback testuale
-        if (!clickedSelector) {
-          const candidates = document.querySelectorAll('button, a[role="button"], [role="button"], input[type="button"], input[type="submit"]');
-          for (const el of candidates) {
-            const txt = (el.innerText || el.value || '').trim();
-            if (!txt || txt.length > 40) continue;
-            if (TEXT_PATTERNS.some((re) => re.test(txt))) {
-              const r = el.getBoundingClientRect();
-              if (r.width > 0 && r.height > 0) {
-                try { el.click(); clickedSelector = `text:${txt.slice(0, 30)}`; break; } catch {}
-              }
+
+        function visible(el) {
+          if (!el) return false;
+          if (el.offsetParent === null && el.getClientRects().length === 0) return false;
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        }
+
+        function scoreCandidate(txt) {
+          const t = txt.toLowerCase();
+          if (BLOCK_PATTERNS.some((re) => re.test(t))) return -100;
+          let s = 0;
+          if (/\ball\b|tutti|tutto|todo|tudo|alle|tout/.test(t)) s += 10;
+          if (/accept|accetta|accetto|aceptar|aceitar|akzept|accept/i.test(t)) s += 8;
+          if (/agree|consent|consenti|acconsento|einverst|d'accord/i.test(t)) s += 6;
+          if (/^(ok|got it|continue|ho capito)$/i.test(t)) s += 3;
+          return s;
+        }
+
+        function tryClick(el) {
+          try {
+            el.scrollIntoView({ block: 'center' });
+            el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+            el.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, cancelable: true, view: window }));
+            el.dispatchEvent(new MouseEvent('click',     { bubbles: true, cancelable: true, view: window }));
+            if (typeof el.click === 'function') el.click();
+            return true;
+          } catch { return false; }
+        }
+
+        function attempt() {
+          // 1) selettori noti CMP
+          for (const sel of KNOWN_SELECTORS) {
+            const el = document.querySelector(sel);
+            if (el && visible(el)) {
+              if (tryClick(el)) return { selector: sel, text: (el.innerText || '').slice(0, 40) };
             }
           }
+          // 2) candidati testuali con scoring (light DOM + shadow DOM aperti)
+          const candidates = [];
+          collectCandidates(document, candidates, 0);
+          let best = null;
+          for (const el of candidates) {
+            if (!visible(el)) continue;
+            const txt = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim();
+            if (!txt || txt.length > 60) continue;
+            // Filtro grezzo: deve assomigliare a un consenso
+            const looksConsent =
+              TEXT_PATTERNS.some((re) => re.test(txt)) ||
+              /accept|agree|consent|allow|accetta|accetto|consenti|acconsento|aceptar|aceitar|akzept|d'accord|tout accepter|alle akzeptieren/i.test(txt);
+            if (!looksConsent) continue;
+            const s = scoreCandidate(txt);
+            if (s <= 0) continue;
+            if (!best || s > best.score) best = { el, score: s, text: txt };
+          }
+          if (best && tryClick(best.el)) {
+            return { selector: `text:${best.text.slice(0, 40)}`, text: best.text, score: best.score };
+          }
+          return null;
         }
-        // 3) reset scroll-lock anche se non abbiamo cliccato (alcuni siti bloccano body)
-        try {
-          document.documentElement.style.overflow = '';
-          document.body.style.overflow = '';
-          document.body.classList.remove('modal-open', 'no-scroll', 'noscroll', 'overflow-hidden');
-        } catch {}
-        return { accepted: !!clickedSelector, selector: clickedSelector };
+
+        // Reset scroll-lock SOLO dopo eventuale click (non prima: alcuni CMP
+        // si rendono usando overflow:hidden e cancellarlo prima li nasconde).
+        function unlockScroll() {
+          try {
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open', 'no-scroll', 'noscroll', 'overflow-hidden');
+          } catch {}
+        }
+
+        // Retry: alcuni banner appaiono dopo il primo render.
+        const SLEEP = (ms) => new Promise((r) => setTimeout(r, ms));
+        return (async () => {
+          let hit = null;
+          let attempts = 0;
+          for (let i = 0; i < 3; i++) {
+            attempts++;
+            hit = attempt();
+            if (hit) break;
+            await SLEEP(400);
+          }
+          unlockScroll();
+          return {
+            accepted: !!hit,
+            selector: hit ? hit.selector : null,
+            text: hit ? hit.text : null,
+            attempts,
+          };
+        })();
       }
     });
-    const top = results?.[0]?.result || { accepted: false, selector: null };
-    if (top.accepted) {
-      relayLog({ kind: 'consent', accepted: true, selector: top.selector });
-      // Settle: 800ms statici + tempo per il re-render del contenuto reale
-      await sleep(800);
+    // results contiene un entry per frame (allFrames:true). Considera "accettato"
+    // se almeno un frame ha cliccato qualcosa.
+    const arr = Array.isArray(results) ? results : [];
+    const accepted = arr.find((r) => r?.result?.accepted)?.result || null;
+    const summary = accepted
+      ? { accepted: true, selector: accepted.selector, text: accepted.text, frames: arr.length }
+      : { accepted: false, frames: arr.length };
+    if (summary.accepted) {
+      relayLog({ kind: 'consent', ...summary });
+      // Settle per lasciare al sito il tempo di ri-renderizzare il contenuto reale
+      await sleep(900);
     }
-    return top;
+    return summary;
   } catch (err) {
     return { accepted: false, error: err?.message || String(err) };
   }
