@@ -246,56 +246,69 @@ export function CompanyCard({
   );
 
   const subTitleSlot = primaryContact ? (
-    <>
-      <span className="truncate font-medium text-foreground/70">{primaryContact.name}</span>
+    <span className="flex items-baseline gap-1.5 min-w-0">
+      <span className="truncate font-semibold text-foreground/85 text-[12px]">{primaryContact.name}</span>
       {primaryContact.role && (
-        <>
-          <span className="text-muted-foreground/40">·</span>
-          <span className="truncate">{primaryContact.role}</span>
-        </>
-      )}
-      {contactsCount > 1 && (
-        <span className="text-muted-foreground/60 flex-shrink-0">+{contactsCount - 1}</span>
-      )}
-      {(origin || enrichedLabel || firstEmail || firstPhone) && (
-        <span className="text-muted-foreground/40 flex-shrink-0">·</span>
-      )}
-      {origin && (
-        <span className="text-[10px] text-muted-foreground/70 truncate flex-shrink-0" title={`Origine: ${origin}`}>
-          {origin}
+        <span className="truncate text-[11px] text-muted-foreground/80 font-normal">
+          — {primaryContact.role}
         </span>
       )}
+      {contactsCount > 1 && (
+        <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 font-medium">
+          +{contactsCount - 1}
+        </span>
+      )}
+    </span>
+  ) : (
+    <span className="italic text-muted-foreground/50 text-[11px]">
+      {contactsCount === 0 ? "Nessun referente" : `${contactsCount} contatt${contactsCount === 1 ? "o" : "i"}`}
+    </span>
+  );
+
+  // Riga meta separata: chip Deep Search, origine, email/telefono.
+  const hasMetaRow = !!(enrichedLabel || origin || firstEmail || firstPhone);
+  const metaRowSlot = hasMetaRow ? (
+    <div className="flex items-center flex-wrap gap-x-2 gap-y-1 min-w-0 pt-0.5">
       {enrichedLabel && (
-        <span className="text-[10px] text-emerald-500/80 flex-shrink-0" title={enrichedAt ? `Ultima Deep Search: ${new Date(enrichedAt).toLocaleString()}` : undefined}>
+        <span
+          className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 border border-emerald-500/25 rounded px-1.5 py-0 h-4"
+          title={enrichedAt ? `Ultima Deep Search: ${new Date(enrichedAt).toLocaleString()}` : undefined}
+        >
           {enrichedLabel}
+        </span>
+      )}
+      {origin && (
+        <span
+          className="inline-flex items-center text-[10px] text-muted-foreground/70 bg-muted/30 border border-border/40 rounded px-1.5 py-0 h-4 truncate max-w-[140px]"
+          title={`Origine: ${origin}`}
+        >
+          {origin}
         </span>
       )}
       {firstEmail && (
         <a
           href={`mailto:${firstEmail}`}
           onClick={(e) => e.stopPropagation()}
-          className="text-[10px] text-primary hover:underline flex-shrink-0 inline-flex items-center gap-0.5"
+          className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline flex-shrink-0"
           title={firstEmail}
         >
-          <Mail className="w-2.5 h-2.5" />
+          <Mail className="w-3 h-3" />
+          <span className="truncate max-w-[160px]">{firstEmail}</span>
         </a>
       )}
       {firstPhone && (
         <a
           href={`tel:${firstPhone.replace(/[^0-9+]/g, "")}`}
           onClick={(e) => e.stopPropagation()}
-          className="text-[10px] text-chart-3 hover:underline flex-shrink-0 inline-flex items-center gap-0.5"
+          className="inline-flex items-center gap-1 text-[10px] text-chart-3 hover:underline flex-shrink-0"
           title={firstPhone}
         >
-          <Phone className="w-2.5 h-2.5" />
+          <Phone className="w-3 h-3" />
+          <span className="truncate max-w-[120px]">{firstPhone}</span>
         </a>
       )}
-    </>
-  ) : (
-    <span className="italic text-muted-foreground/50">
-      {contactsCount === 0 ? "Nessun referente" : `${contactsCount} contatt${contactsCount === 1 ? "o" : "i"}`}
-    </span>
-  );
+    </div>
+  ) : null;
 
   return (
     <div
@@ -325,6 +338,7 @@ export function CompanyCard({
         }
         titleSlot={titleSlot}
         subTitleSlot={subTitleSlot}
+        extraRowsSlot={metaRowSlot}
         city={city}
         channels={channels}
         score={score ?? null}
