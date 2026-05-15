@@ -136,6 +136,10 @@ export async function loadMemoryContext(supabase: SupabaseClient, userId: string
 }
 
 export async function compressMessages(supabase: SupabaseClient, messages: Record<string, unknown>[], apiKey: string, userId: string): Promise<Record<string, unknown>[]> {
+  // Difensivo: se il caller passa messages non valido (undefined/null/non-array)
+  // restituisci array vuoto invece di crashare con "Cannot read properties of
+  // undefined (reading 'length')".
+  if (!Array.isArray(messages)) return [];
   if (messages.length <= 8) return messages;
 
   const LIVE_WINDOW = 6;
