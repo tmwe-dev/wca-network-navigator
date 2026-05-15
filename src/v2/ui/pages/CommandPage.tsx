@@ -76,6 +76,7 @@ const CommandPage = () => {
     onTranscript: (text) => state.setInput(text),
     onAutoSubmit: (text) => {
       state.setInput("");
+      voiceOut.prime();
       void submit.sendMessage(text);
     },
     silenceMs: 2000,
