@@ -3,7 +3,7 @@
  * Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import { Plane, Trophy, MoreHorizontal, Star, Clock, Mail, MessageCircle, Phone, ExternalLink, Search, ScanSearch, Telescope, ShieldAlert } from "lucide-react";
+import { Plane, Trophy, MoreHorizontal, Star, Clock, Mail, MessageCircle, Phone, ExternalLink, Search, ScanSearch, Telescope, ShieldAlert, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -266,9 +266,27 @@ export function CompanyCard({
   );
 
   // Riga meta separata: chip Deep Search, origine, email/telefono.
-  const hasMetaRow = !!(enrichedLabel || origin || firstEmail || firstPhone);
+  const hasMetaRow = !!(city || enrichedLabel || origin || firstEmail || firstPhone);
   const metaRowSlot = hasMetaRow ? (
     <div className="flex items-center flex-wrap gap-x-2 gap-y-1 min-w-0 pt-0.5">
+      {city && (
+        onCityClick ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onCityClick(city); }}
+            className="inline-flex items-center gap-1 text-[10px] font-medium text-foreground/80 bg-muted/40 border border-border/50 rounded px-1.5 py-0 h-4 hover:text-primary hover:border-primary/40 transition-colors max-w-[160px] truncate"
+            title={`Filtra per città ${city}`}
+          >
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{city}</span>
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-foreground/80 bg-muted/40 border border-border/50 rounded px-1.5 py-0 h-4 max-w-[160px] truncate">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{city}</span>
+          </span>
+        )
+      )}
       {enrichedLabel && (
         <span
           className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 border border-emerald-500/25 rounded px-1.5 py-0 h-4"
@@ -339,7 +357,7 @@ export function CompanyCard({
         titleSlot={titleSlot}
         subTitleSlot={subTitleSlot}
         extraRowsSlot={metaRowSlot}
-        city={city}
+        city={null}
         channels={channels}
         score={score ?? null}
         recencySlot={recencySlot}
