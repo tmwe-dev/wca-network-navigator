@@ -1,0 +1,228 @@
+// ══════════════════════════════════════════════════════════
+// FireScrape — Webapp Bridge Content Script
+// Bridges postMessage from the web app to the extension's
+// background service worker (chrome.runtime.sendMessage).
+// Handles: FireScrape (from-webapp-fs), WhatsApp (from-webapp-wa),
+//          LinkedIn (from-webapp)
+// ══════════════════════════════════════════════════════════
+
+(function () {
+  const HEARTBEAT_MS = 4000;
+  let alive = true;
+
+  function isExtensionAlive() {
+    try {
+      if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
+      void chrome.runtime.getManifest();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function post(payload) {
+    try { window.postMessage(payload, window.location.origin); }
+    catch (_) { window.postMessage(payload, "*"); }
+  }
+
+  function failResponse(direction, data, error) {
+    post({
+      direction: direction,
+      action: data.action,
+      requestId: data.requestId,
+      response: { success: false, error: error },
+    });
+  }
+
+  // ── FireScrape relay (from-webapp-fs → background.js) ──
+  function relayFireScrape(data) {
+    if (!isExtensionAlive()) {
+      alive = false;
+      failResponse("from-extension-fs", data, "Extension context invalidated — ricarica la pagina");
+      post({ direction: "from-extension-fs", action: "extensionDead" });
+      return;
+    }
+
+    // Ping handled locally
+    if (data.action === "ping") {
+      alive = true;
+      post({
+        direction: "from-extension-fs",
+        action: "ping",
+        requestId: data.requestId,
+        response: { success: true, version: "3.4.2", engine: "firescrape" },
+      });
+      post({ direction: "from-extension-fs", action: "contentScriptReady" });
+      return;
+    }
+
+    try {
+      const msg = { action: data.action };
+      if (data.url) msg.url = data.url;
+      if (data.query) msg.query = data.query;
+      if (data.schema) msg.schema = data.schema;
+      if (data.config) msg.config = data.config;
+      if (data.steps) msg.steps = data.steps;
+      if (data.step) msg.step = data.step;
+      if (data.skipCache !== undefined) msg.skipCache = data.skipCache;
+      if (data.format) msg.format = data.format;
+      if (data.selector) msg.selector = data.selector;
+      if (data.text) msg.text = data.text;
+      if (data.topic) msg.topic = data.topic;
+      if (data.prompt) msg.prompt = data.prompt;
+      if (data.body) msg.body = data.body;
+      if (data.limit !== undefined) msg.limit = data.limit;
+
+      chrome.runtime.sendMessage(msg, function (response) {
+        if (chrome.runtime.lastError) {
+          alive = false;
+          failResponse("from-extension-fs", data, "Extension context invalidated");
+          post({ direction: "from-extension-fs", action: "extensionDead" });
+          return;
+        }
+        alive = true;
+        const resp = response || {};
+        if (resp.error) resp.success = false;
+        else if (resp.success === undefined) resp.success = true;
+        post({
+          direction: "from-extension-fs",
+          action: data.action,
+          requestId: data.requestId,
+          response: resp,
+        });
+        if (data.action === "ping") {
+          post({ direction: "from-extension-fs", action: "contentScriptReady" });
+        }
+      });
+    } catch (err) {
+      alive = false;
+      failResponse("from-extension-fs", data, "Extension context invalidated");
+      post({ direction: "from-extension-fs", action: "extensionDead" });
+    }
+  }
+
+  // ── WhatsApp relay — DISABLED ──
+  // Partner Connect should NOT respond to from-webapp-wa messages.
+  // The dedicated WhatsApp extension (v5.10.0) owns that channel.
+  // This function is left stubbed for reference only.
+
+  // ── LinkedIn relay (from-webapp → background.js) ──
+  //
+  // NOTA — Partner Connect NON gestisce LinkedIn.
+  // L'estensione dedicata "LinkedIn Cookie Sync" (canale from-webapp-li)
+  // è l'unico canale ufficiale per send/read/test LinkedIn. Il relay
+  // storico qui sotto restava incompleto: chrome.tabs.sendMessage verso
+  // un tab LinkedIn fallisce sempre perché Partner Connect non inietta
+  // nessun content script su linkedin.com.
+  //
+  // Per non rompere il canale `from-webapp` usato da WCA Network Navigator
+  // (extractContacts, verifySession, preflightTest, ping), neutralizziamo
+  // SOLO le azioni chiaramente LinkedIn-specific: rispondiamo subito con
+  // errore esplicito invece di tentare un relay rotto. Tutto il resto
+  // continua a fluire come prima.
+  var LI_BLOCKED_ACTIONS = [
+    "sendMessage", "sendMessageWithMethod", "sendConnectionRequest",
+    "searchProfile", "readLinkedInInbox", "readLinkedInThread",
+    "backfillLinkedInThread", "syncCookie", "autoLogin",
+    "learnDom", "diagnosticLinkedInDom", "remapSendDom", "getSendPlan",
+    "setConfig",
+  ];
+
+  function relayLinkedIn(data) {
+    if (!isExtensionAlive()) {
+      alive = false;
+      failResponse("from-extension", data, "Extension context invalidated");
+      return;
+    }
+
+    if (data.action === "ping") {
+      alive = true;
+      post({
+        direction: "from-extension",
+        action: "ping",
+        requestId: data.requestId,
+        response: { success: true, version: "3.4.2" },
+      });
+      post({ direction: "from-extension", action: "contentScriptReady" });
+      return;
+    }
+
+    // Hard short-circuit per azioni LinkedIn-specific: questo canale è
+    // delegato all'estensione dedicata. Niente più sendMessage al vuoto.
+    if (LI_BLOCKED_ACTIONS.indexOf(data.action) !== -1) {
+      post({
+        direction: "from-extension",
+        action: data.action,
+        requestId: data.requestId,
+        response: {
+          success: false,
+          error: "linkedin_handled_by_dedicated_extension",
+          errorCode: "LI_DELEGATED",
+          hint: "Usa il canale from-webapp-li (estensione LinkedIn Cookie Sync).",
+        },
+      });
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage(
+        { type: "li-relay", liAction: data.action, requestId: data.requestId, payload: data },
+        function (response) {
+          if (chrome.runtime.lastError) {
+            failResponse("from-extension", data, "Extension context invalidated");
+            return;
+          }
+          alive = true;
+          post({
+            direction: "from-extension",
+            action: data.action,
+            requestId: data.requestId,
+            response: response || { success: false, error: "No response" },
+          });
+        }
+      );
+    } catch (err) {
+      failResponse("from-extension", data, "Extension context invalidated");
+    }
+  }
+
+  // ── Listen for push events from background.js (WA sidebar changes) ──
+  chrome.runtime.onMessage.addListener(function (msg) {
+    if (msg.type === 'wa-push-event') {
+      post({
+        direction: 'from-extension-wa',
+        action: 'sidebarChanged',
+        timestamp: msg.timestamp,
+      });
+    }
+  });
+
+  // ── Heartbeat ──
+  setInterval(function () {
+    const nowAlive = isExtensionAlive();
+    if (nowAlive && !alive) {
+      alive = true;
+      post({ direction: "from-extension-fs", action: "contentScriptReady" });
+      post({ direction: "from-extension", action: "contentScriptReady" });
+    } else if (!nowAlive && alive) {
+      alive = false;
+      post({ direction: "from-extension-fs", action: "extensionDead" });
+      post({ direction: "from-extension", action: "extensionDead" });
+    }
+  }, HEARTBEAT_MS);
+
+  // ── Message Router ──
+  window.addEventListener("message", function (event) {
+    if (event.source !== window) return;
+    const data = event.data;
+    if (!data || !data.direction) return;
+
+    if (data.direction === "from-webapp-fs") relayFireScrape(data);
+    else if (data.direction === "from-webapp") relayLinkedIn(data);
+  });
+
+  // Announce bridges (FS + LinkedIn only; WhatsApp is handled by dedicated extension)
+  post({ direction: "from-extension-fs", action: "contentScriptReady" });
+  post({ direction: "from-extension", action: "contentScriptReady" });
+  console.log("[Bridge] Unified webapp bridge loaded — v3.4.3 (FS only; LinkedIn delegated to dedicated extension)");
+})();
