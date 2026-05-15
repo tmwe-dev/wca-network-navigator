@@ -391,7 +391,7 @@ export function CompanyCard({
     >
       <div className={cn("absolute left-0 top-0 h-full w-1 bg-gradient-to-b", CARD_STRIPE[source])} />
 
-      <div className={cn("grid min-w-0 gap-3", compact ? "grid-cols-[42px_minmax(0,1fr)_32px]" : "grid-cols-[64px_minmax(0,1fr)_minmax(128px,auto)]")}>
+      <div className={cn("grid min-w-0 gap-3", compact ? "grid-cols-[42px_minmax(0,1fr)_28px]" : "grid-cols-[64px_minmax(0,1fr)_minmax(128px,auto)]")}>
         <div className="flex flex-col items-center gap-2 pl-1">
           {onToggleSelect && (
             <div onClick={(e) => e.stopPropagation()}>
@@ -439,12 +439,7 @@ export function CompanyCard({
                 {name || "—"}
               </h3>
             </div>
-            {compact && (
-              <div className="space-y-1.5">
-                {sourceBadgesSlot}
-                {statusBadgesSlot}
-              </div>
-            )}
+            {compact && sourceBadgesSlot}
           </div>
 
           {contactSlot}
@@ -524,6 +519,8 @@ export function CompanyCard({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {compact && <div className="mt-auto">{statusBadgesSlot}</div>}
 
           {!compact && (
             <div className="flex min-w-[128px] flex-col items-end gap-1.5">
