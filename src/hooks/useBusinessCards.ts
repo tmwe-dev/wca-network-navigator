@@ -55,6 +55,7 @@ export interface BusinessCardWithPartner extends BusinessCard {
     id: string;
     company_name: string;
     logo_url: string | null;
+    website: string | null;
     company_alias: string | null;
     enrichment_data: Record<string, unknown>;
     country_code: string | null;
