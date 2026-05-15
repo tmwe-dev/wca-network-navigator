@@ -4,6 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("useVoiceOutput");
+
+// 1-frame WAV silenzioso (44 byte) usato per "sbloccare" l'autoplay policy del
+// browser durante un gesto utente. Senza questo, i successivi audio.play()
+// chiamati DOPO un await fetch (es. dentro useEffect su messages) vengono
+// bloccati silenziosamente con NotAllowedError → la voce smette di partire.
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+
 export function useVoiceOutput() {
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState<boolean>(
@@ -11,6 +19,7 @@ export function useVoiceOutput() {
   );
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
+  const primedRef = useRef(false);
 
   const cleanup = useCallback(() => {
     if (audioRef.current) {
@@ -22,6 +31,31 @@ export function useVoiceOutput() {
       urlRef.current = null;
     }
     setSpeaking(false);
+  }, []);
+
+  /**
+   * Sblocca la riproduzione audio nel contesto di un gesto utente (click su
+   * "Invia", click sul mic, ecc.). Va chiamato SINCRONICAMENTE dentro
+   * l'handler dell'evento, prima di qualsiasi await. Idempotente.
+   */
+  const prime = useCallback(() => {
+    if (primedRef.current) return;
+    try {
+      const a = new Audio(SILENT_WAV);
+      a.muted = true;
+      const p = a.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          a.pause();
+          a.currentTime = 0;
+          primedRef.current = true;
+        }).catch(() => { /* gesture mancante: ritenteremo al prossimo click */ });
+      } else {
+        primedRef.current = true;
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -67,7 +101,18 @@ export function useVoiceOutput() {
         audioRef.current = audio;
         audio.onended = () => cleanup();
         audio.onerror = () => cleanup();
-        await audio.play();
+        try {
+          await audio.play();
+        } catch (playErr) {
+          // Autoplay bloccato (NotAllowedError): tipico quando speak() viene
+          // chiamato da useEffect senza prime() preventivo. Logghiamo esplicito
+          // così si vede in console invece di fallire in silenzio.
+          log.warn("[tts] audio.play blocked (autoplay policy)", {
+            error: playErr instanceof Error ? playErr.message : String(playErr),
+            primed: primedRef.current,
+          });
+          cleanup();
+        }
       } catch (e) {
         log.error("[tts] failed", { error: e });
         cleanup();
@@ -80,5 +125,5 @@ export function useVoiceOutput() {
     cleanup();
   }, [cleanup]);
 
-  return { speak, stop, speaking, muted, toggleMute };
+  return { speak, stop, speaking, muted, toggleMute, prime };
 }
