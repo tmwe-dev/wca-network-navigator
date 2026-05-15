@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
+import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import type { ContactPaginatedFilters, ContactPaginatedSort } from "./types";
 
 type ContactQuery = any;
@@ -27,7 +28,21 @@ export async function findContactsPaginated(
     }
   }
 
-  if (filters.countries?.length) query = query.in("country", filters.countries);
+  if (filters.countries?.length) {
+    // `imported_contacts.country` può contenere sia codici ISO ("AE")
+    // sia nomi estesi ("United Arab Emirates"). Espandiamo i codici
+    // ricevuti dai filtri (chip bandiera) anche al nome corrispondente.
+    const expanded = new Set<string>();
+    for (const c of filters.countries) {
+      if (!c) continue;
+      expanded.add(c);
+      const upper = c.toUpperCase();
+      expanded.add(upper);
+      const meta = WCA_COUNTRIES_MAP[upper];
+      if (meta?.name) expanded.add(meta.name);
+    }
+    query = query.in("country", Array.from(expanded));
+  }
   if (filters.origins?.length) {
     const wantsUnclassified = filters.origins.includes("__unclassified__");
     const real = filters.origins.filter((o) => o !== "__unclassified__");
