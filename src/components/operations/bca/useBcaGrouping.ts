@@ -2,6 +2,39 @@ import { useState, useMemo } from "react";
 import { guessCountryFromLocation, countryCodeToFlag } from "./bcaUtils";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 
+/** Estrae il dominio "pulito" da una URL o da un'email. */
+function extractDomain(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const raw = input.trim();
+  if (!raw) return null;
+  // email → parte dopo @
+  if (raw.includes("@")) {
+    const after = raw.split("@")[1] ?? "";
+    return after ? after.toLowerCase().replace(/^www\./, "") : null;
+  }
+  try {
+    const url = raw.startsWith("http") ? raw : `https://${raw}`;
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+    return host || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Domini pubblici di posta da escludere come fonte del logo aziendale. */
+const PUBLIC_MAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "yahoo.com", "yahoo.it", "outlook.com",
+  "hotmail.com", "hotmail.it", "live.com", "live.it", "icloud.com",
+  "me.com", "aol.com", "libero.it", "tiscali.it", "tin.it", "alice.it",
+  "virgilio.it", "fastwebnet.it", "pec.it", "protonmail.com", "proton.me",
+]);
+
+function faviconFor(domain: string | null): string | null {
+  if (!domain) return null;
+  if (PUBLIC_MAIL_DOMAINS.has(domain)) return null;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
 export type ViewMode = "compact" | "card" | "expanded";
 export type SortMode = "name_asc" | "name_desc" | "contacts_desc" | "matched_first";
 
