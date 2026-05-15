@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Partner Connect",
-  "version": "3.4.4",
-  "description": "Aggiunge auto-accept dei popup cookie/privacy (OneTrust, Cookiebot, Didomi, Iubenda + fallback testuale multilingua) prima dello scraping. LinkedIn resta delegato a LinkedIn Cookie Sync.",
+  "version": "3.4.5",
+  "description": "Auto-accept consenso cookie/privacy esteso a tutto il flusso Deep Search (BackgroundTab.navigate + handleScrape + crawl/map): selettori CMP estesi, scoring testuale multilingua, blocklist anti-falsi-positivi, retry e shadow DOM. LinkedIn resta delegato a LinkedIn Cookie Sync.",
   "permissions": [
     "activeTab",
     "scripting",
