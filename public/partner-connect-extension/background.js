@@ -480,11 +480,106 @@ async function withTab(url, fn) {
   try {
     tab = await chrome.tabs.create({ url, active: false });
     await waitForTabLoad(tab.id);
+    // Auto-accept eventuali popup di consenso cookie/privacy PRIMA di scrapare,
+    // altrimenti il contenuto reale resta gated dietro un overlay e l'estrazione
+    // ritorna solo il testo del banner.
+    try {
+      await autoAcceptConsent(tab.id);
+    } catch (e) {
+      relayLog({ kind: 'consent', accepted: false, error: e?.message || String(e) });
+    }
     return await fn(tab);
   } finally {
     if (tab?.id) {
       try { await chrome.tabs.remove(tab.id); } catch {}
     }
+  }
+}
+
+// ============================================================
+// CONSENT AUTO-ACCEPT
+// ============================================================
+// Strategia a cascata eseguita nel tab:
+//  1) selettori noti dei principali CMP (OneTrust, Cookiebot, Didomi, ecc.)
+//  2) fallback testuale multilingua sui bottoni "Accetta / Accept all / OK"
+//  3) reset scroll-lock (overflow:hidden su body/html, classi modal-open)
+//  4) breve settle window per lasciare al sito tempo di renderizzare
+// Idempotente: se nessun banner trovato, esce subito.
+async function autoAcceptConsent(tabId) {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        const KNOWN_SELECTORS = [
+          '#onetrust-accept-btn-handler',
+          '#accept-recommended-btn-handler',
+          '#CybotCookiebotDialogBodyLevelButtonAccept',
+          '#CybotCookiebotDialogBodyLevelButtonAcceptAll',
+          '#CybotCookiebotDialogBodyButtonAccept',
+          '#didomi-notice-agree-button',
+          '.didomi-continue-without-agreeing',
+          '.qc-cmp2-summary-buttons button[mode="primary"]',
+          'button.iubenda-cs-accept-btn',
+          '.cky-btn-accept',
+          'button[data-testid="uc-accept-all-button"]',
+          '#truste-consent-button',
+          '#hs-eu-confirmation-button',
+          'button.fc-cta-consent',
+          '.cmplz-btn.cmplz-accept',
+          '#axeptio_btn_acceptAll',
+          'button[aria-label*="accept all" i]',
+          'button[aria-label*="accetta tutti" i]',
+          'button[aria-label*="accept cookies" i]',
+        ];
+        const TEXT_PATTERNS = [
+          /^accept all$/i, /^accept$/i, /^i accept$/i, /^agree$/i, /^agree & continue$/i,
+          /^accetta tutti$/i, /^accetta$/i, /^accetto$/i, /^ho capito$/i, /^consenti$/i, /^acconsento$/i,
+          /^d'accord$/i, /^accepter$/i, /^tout accepter$/i, /^j'accepte$/i,
+          /^akzeptieren$/i, /^alle akzeptieren$/i, /^einverstanden$/i,
+          /^aceptar$/i, /^aceptar todo$/i, /^acepto$/i,
+          /^aceitar$/i, /^aceitar tudo$/i,
+          /^ok$/i, /^got it$/i, /^continue$/i,
+        ];
+        let clickedSelector = null;
+        // 1) selettori noti
+        for (const sel of KNOWN_SELECTORS) {
+          const el = document.querySelector(sel);
+          if (el && el.offsetParent !== null) {
+            try { el.click(); clickedSelector = sel; break; } catch {}
+          }
+        }
+        // 2) fallback testuale
+        if (!clickedSelector) {
+          const candidates = document.querySelectorAll('button, a[role="button"], [role="button"], input[type="button"], input[type="submit"]');
+          for (const el of candidates) {
+            const txt = (el.innerText || el.value || '').trim();
+            if (!txt || txt.length > 40) continue;
+            if (TEXT_PATTERNS.some((re) => re.test(txt))) {
+              const r = el.getBoundingClientRect();
+              if (r.width > 0 && r.height > 0) {
+                try { el.click(); clickedSelector = `text:${txt.slice(0, 30)}`; break; } catch {}
+              }
+            }
+          }
+        }
+        // 3) reset scroll-lock anche se non abbiamo cliccato (alcuni siti bloccano body)
+        try {
+          document.documentElement.style.overflow = '';
+          document.body.style.overflow = '';
+          document.body.classList.remove('modal-open', 'no-scroll', 'noscroll', 'overflow-hidden');
+        } catch {}
+        return { accepted: !!clickedSelector, selector: clickedSelector };
+      }
+    });
+    const top = results?.[0]?.result || { accepted: false, selector: null };
+    if (top.accepted) {
+      relayLog({ kind: 'consent', accepted: true, selector: top.selector });
+      // Settle: 800ms statici + tempo per il re-render del contenuto reale
+      await sleep(800);
+    }
+    return top;
+  } catch (err) {
+    return { accepted: false, error: err?.message || String(err) };
   }
 }
 
