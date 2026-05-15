@@ -20,6 +20,7 @@ import {
   updatePartnerWebsiteIfMissing,
   updatePartnerLinkedinIfMissing,
 } from "@/data/sherlockPlaybooks";
+import { persistSherlockFindings } from "@/data/partners";
 import { renderUrlTemplate, checkRequiredVars } from "./sherlockTemplates";
 import { throttle, estimateWaitMs } from "./rateLimiter";
 import type {

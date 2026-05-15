@@ -210,6 +210,105 @@ export async function toggleFavorite(id: string, isFavorite: boolean) {
   if (error) throw error;
 }
 
+// ─── Sherlock findings persistence ──────────────────────
+/**
+ * Salva sul partner i `consolidated` findings prodotti da una run Sherlock.
+ *
+ * Strategia non-distruttiva:
+ *  - i campi top-level (`website`, `phone`, `email`, `address`) vengono
+ *    scritti SOLO se il partner non li ha già (no overwrite)
+ *  - tutti gli altri findings finiscono in `enrichment_data` come merge
+ *    additivo, con `_sherlock_last_run` come marker temporale
+ *  - `linkedin_company_url_discovered` → `enrichment_data.linkedin_url`
+ *
+ * Restituisce il numero di campi nuovi/aggiornati (per toast diff).
+ */
+export async function persistSherlockFindings(
+  partnerId: string,
+  consolidated: Record<string, unknown>,
+): Promise<{ updatedFields: number; touchedKeys: string[] }> {
+  if (!partnerId || !consolidated || Object.keys(consolidated).length === 0) {
+    return { updatedFields: 0, touchedKeys: [] };
+  }
+
+  // Carica il record corrente per merge additivo + check campi vuoti
+  const { data: current, error: loadErr } = await supabase
+    .from("partners")
+    .select("website, phone, email, address, enrichment_data")
+    .eq("id", partnerId)
+    .maybeSingle();
+  if (loadErr || !current) return { updatedFields: 0, touchedKeys: [] };
+
+  const updates: Record<string, unknown> = {};
+  const touched: string[] = [];
+
+  // Helper: estrai una stringa "presentabile" da string | string[] | object
+  const asString = (v: unknown): string | null => {
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (Array.isArray(v) && v.length > 0 && typeof v[0] === "string") return String(v[0]).trim() || null;
+    return null;
+  };
+
+  // Mappa diretta sui campi colonna SOLO se vuoti
+  const websiteDiscovered = asString(consolidated.website_discovered) ?? asString(consolidated.website);
+  if (websiteDiscovered && !current.website) {
+    updates.website = websiteDiscovered;
+    touched.push("website");
+  }
+  const phoneDiscovered = asString(consolidated.phone) ?? asString(consolidated.phones);
+  if (phoneDiscovered && !current.phone) {
+    updates.phone = phoneDiscovered;
+    touched.push("phone");
+  }
+  const emailDiscovered = asString(consolidated.email) ?? asString(consolidated.emails);
+  if (emailDiscovered && !current.email) {
+    updates.email = emailDiscovered;
+    touched.push("email");
+  }
+  const addressDiscovered = asString(consolidated.address);
+  if (addressDiscovered && !current.address) {
+    updates.address = addressDiscovered;
+    touched.push("address");
+  }
+
+  // Merge additivo in enrichment_data
+  const prevEnrichment = (current.enrichment_data as Record<string, unknown> | null) ?? {};
+  const linkedinUrl =
+    asString(consolidated.linkedin_company_url_discovered) ??
+    asString((consolidated.linkedin_company as Record<string, unknown> | undefined)?.url) ??
+    asString(consolidated.linkedin_company);
+
+  const sherlockBucket: Record<string, unknown> = {
+    ...((prevEnrichment.sherlock as Record<string, unknown> | undefined) ?? {}),
+  };
+  // Conserva tutti i findings non già mappati su colonne
+  for (const [k, v] of Object.entries(consolidated)) {
+    if (v === null || v === undefined || v === "") continue;
+    if (k.startsWith("_")) continue;
+    sherlockBucket[k] = v;
+    if (!touched.includes(k)) touched.push(k);
+  }
+  sherlockBucket._last_run_at = new Date().toISOString();
+
+  const newEnrichment: Record<string, unknown> = {
+    ...prevEnrichment,
+    sherlock: sherlockBucket,
+  };
+  if (linkedinUrl && !prevEnrichment.linkedin_url) {
+    newEnrichment.linkedin_url = linkedinUrl;
+  }
+  updates.enrichment_data = newEnrichment;
+  updates.enriched_at = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("partners")
+    .update(updates as never)
+    .eq("id", partnerId);
+  if (error) return { updatedFields: 0, touchedKeys: [] };
+
+  return { updatedFields: touched.length, touchedKeys: touched };
+}
+
 export async function getPartnerStats() {
   const partners = await fetchAllRows<{ id: string; country_code: string; country_name: string; partner_type: string | null; member_since: string | null }>(
     (from, to) =>
