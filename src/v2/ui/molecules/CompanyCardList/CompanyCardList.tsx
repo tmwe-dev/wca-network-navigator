@@ -31,7 +31,7 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
   onCityClick?: (city: string) => void;
 }
 
-const ROW_HEIGHT = 60;        // header card (px)
+const ROW_HEIGHT = 142;       // card partner completa (px)
 const COMPACT_BREAKPOINT = 520; // px — sotto questa larghezza usa layout 2-righe
 
 export function CompanyCardList({
@@ -70,7 +70,7 @@ export function CompanyCardList({
   }, []);
 
   const estimateSize = useCallback(
-    () => (compact ? estimateRowSize + 28 : estimateRowSize + 16),
+    () => (compact ? estimateRowSize + 42 : estimateRowSize + 18),
     [estimateRowSize, compact]
   );
 
