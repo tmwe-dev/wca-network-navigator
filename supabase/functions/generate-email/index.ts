@@ -372,6 +372,10 @@ serve(async (req) => {
         quality_score: journalistResult.quality_score,
         reasoning: journalistResult.reasoning_summary,
       } : null,
+      grounding_guard: {
+        applied: groundingWarnings.length > 0,
+        warnings: groundingWarnings,
+      },
       _context_summary: {
         kb_sections: ctx.salesKBSections || [],
         history_present: !!ctx.historyContext,
