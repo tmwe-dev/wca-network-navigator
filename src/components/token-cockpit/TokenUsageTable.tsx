@@ -46,9 +46,8 @@ export function TokenUsageTable() {
       if (!userData?.id) return [];
 
       const { data, error } = await supabase
-        .from("ai_token_usage")
-        .select("id, function_name, model, input_tokens, output_tokens, total_tokens, cost_estimate, created_at")
-        .eq("user_id", userData.id)
+        .from("ai_prompt_log")
+        .select("id, function_name, model, tokens_in, tokens_out, tokens_total, cost_usd, created_at")
         .order("created_at", { ascending: false })
         .limit(20);
 
@@ -57,7 +56,17 @@ export function TokenUsageTable() {
         return [];
       }
 
-      return data as UsageRow[];
+      // Map ai_prompt_log columns to legacy UsageRow shape
+      return (data || []).map((r) => ({
+        id: r.id,
+        function_name: r.function_name,
+        model: r.model,
+        input_tokens: r.tokens_in ?? 0,
+        output_tokens: r.tokens_out ?? 0,
+        total_tokens: r.tokens_total ?? 0,
+        cost_estimate: Number(r.cost_usd ?? 0),
+        created_at: r.created_at,
+      })) as UsageRow[];
     },
     enabled: !!userData?.id,
   });
