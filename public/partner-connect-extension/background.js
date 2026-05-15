@@ -898,6 +898,7 @@ async function handleMap(msg) {
     try {
       tab = await chrome.tabs.create({ url, active: false });
       await waitForTabLoad(tab.id);
+      try { await autoAcceptConsent(tab.id); } catch {}
       await sleep(Stealth.gaussianRandom(1500, 500));
 
       const results = await chrome.scripting.executeScript({
