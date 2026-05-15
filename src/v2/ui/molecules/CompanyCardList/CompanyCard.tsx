@@ -210,7 +210,7 @@ export function CompanyCard({
   })();
 
   const sourceBadgesSlot = (
-    <div className={cn("flex flex-wrap gap-1.5", compact ? "justify-start" : "justify-end")}>
+    <div className="flex flex-wrap justify-start gap-1.5">
       {badge && (
         <Badge
           variant="outline"
@@ -239,7 +239,7 @@ export function CompanyCard({
   );
 
   const statusBadgesSlot = (
-    <div className={cn("flex flex-wrap gap-1.5", compact ? "justify-start" : "justify-end")}>
+    <div className="flex flex-wrap justify-end gap-1.5">
       {isBlacklisted && (
         <Badge
           variant="outline"
