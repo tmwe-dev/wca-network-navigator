@@ -801,6 +801,7 @@ async function handleCrawlStart(msg) {
 
         tab = await chrome.tabs.create({ url, active: false });
         await waitForTabLoad(tab.id);
+        try { await autoAcceptConsent(tab.id); } catch {}
         await Stealth.scrollTab(tab.id);
         await sleep(500 + Math.random() * 1000);
         const result = await scrapeTab(tab.id);
