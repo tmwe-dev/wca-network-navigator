@@ -441,8 +441,8 @@ export function CompanyCard({
               <h3 className="min-w-0 flex-1 truncate text-[17px] font-extrabold uppercase leading-tight text-foreground">
                 {name || "—"}
               </h3>
+              {compact && <div className="shrink-0">{sourceBadgesSlot}</div>}
             </div>
-            {compact && sourceBadgesSlot}
           </div>
 
           {contactSlot}
