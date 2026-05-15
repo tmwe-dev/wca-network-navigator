@@ -96,5 +96,6 @@ export const systemKeys = {
   cronJobs: {
     list: ["cron-jobs-list"] as const,
     runs: (limit: number) => ["cron-recent-runs", limit] as const,
+    channelActivity: (limit: number) => ["channel-activity", limit] as const,
   },
 } as const;
