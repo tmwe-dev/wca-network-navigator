@@ -71,7 +71,6 @@ function guardKnownHallucinations(
   let guarded = text;
   const warnings: GroundingGuardWarning[] = [];
   for (const term of KNOWN_HALLUCINATED_TERMS) {
-    if (isEvidenceBacked(term, normalizedSource)) continue;
     const replacement = location === "subject" ? "collaborazione operativa" : "la nostra operatività";
     const result = replaceUnbackedTerm(guarded, term, replacement);
     if (result.changed) {
