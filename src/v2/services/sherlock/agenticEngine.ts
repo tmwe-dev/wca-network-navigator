@@ -147,7 +147,7 @@ export async function runAgenticSherlock(opts: RunAgenticOptions): Promise<Agent
     visited.add(website);
 
     if (signal.aborted) {
-      return finishRun(results, consolidated, startTs);
+      return await finishRun(results, consolidated, startTs, partnerId, signal);
     }
   }
 
@@ -178,7 +178,7 @@ export async function runAgenticSherlock(opts: RunAgenticOptions): Promise<Agent
     visited.add(gUrl);
 
     if (signal.aborted) {
-      return finishRun(results, consolidated, startTs);
+      return await finishRun(results, consolidated, startTs, partnerId, signal);
     }
   }
 
