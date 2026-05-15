@@ -746,6 +746,11 @@ async function handleScrape(msg) {
     const cached = await Cache.get('domain', url);
     if (cached) return { ...cached, _fromCache: true };
   }
+  // Rete di sicurezza: anche se navigate non ha già accettato (es. caller
+  // diverso da BackgroundTab.navigate), proviamo qui prima di estrarre.
+  try { await autoAcceptConsent(tabId); } catch (e) {
+    relayLog({ kind: 'consent', accepted: false, where: 'handleScrape', error: e?.message || String(e) });
+  }
   const result = await scrapeTab(tabId);
   RateLimiter.recordRequest(url);
   await Cache.set('domain', url, result);
