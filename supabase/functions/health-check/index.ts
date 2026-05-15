@@ -57,41 +57,44 @@ Deno.serve(async (req: Request) => {
     return !!key;
   });
 
-  // 5. Prompt test runner — prompt_test_runs count in last 24h > 0
-  checks.prompt_test_runner = await runCheck(async () => {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count, error } = await supabase
-      .from("prompt_test_runs")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", since);
-    if (error) return false;
-    return (count ?? 0) > 0;
-  });
+  // Helper: stato di un cron job specifico via RPC `cron_job_status`.
+  // Considera "ok" un job attivo con last_status='succeeded' o ancora mai
+  // eseguito (NULL) — es. job settimanali non ancora arrivati al primo run.
+  const cronJobOk = async (jobName: string): Promise<boolean> => {
+    const { data, error } = await supabase.rpc("cron_job_status");
+    if (error || !Array.isArray(data)) return false;
+    const row = (data as Array<Record<string, unknown>>).find((j) => j.jobname === jobName);
+    if (!row) return false;
+    if (!row.active) return false;
+    return row.last_status === "succeeded" || row.last_status == null;
+  };
 
-  // 6. Prompt refiner — ai_pending_actions with action_type='prompt_refinement' not older than 8 days
-  checks.prompt_refiner = await runCheck(async () => {
-    const since = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-    const { count, error } = await supabase
-      .from("ai_pending_actions")
-      .select("id", { count: "exact", head: true })
-      .eq("action_type", "prompt_refinement")
-      .gte("created_at", since);
-    if (error) return false;
-    return (count ?? 0) > 0;
-  });
+  // 5. Prompt test runner — il cron notturno è andato a buon fine.
+  //    (la tabella prompt_test_runs può legittimamente essere vuota se non
+  //    ci sono test case attivi: non è un sintomo di health degradato).
+  checks.prompt_test_runner = await runCheck(() => cronJobOk("prompt-test-runner-nightly"));
 
-  // 7. Funnemail classifier — email_classifications in last 4h > 0
+  // 6. Prompt refiner — cron settimanale (lunedì 04:00 UTC). Ok se attivo
+  //    e l'ultimo run è 'succeeded' oppure non è ancora mai partito.
+  checks.prompt_refiner = await runCheck(() => cronJobOk("agent-prompt-refiner-weekly"));
+
+  // 7. Funnemail classifier — la pipeline scrive su `reply_classifications`
+  //    (NON su `email_classifications`, che è una tabella legacy). In più
+  //    teniamo come fallback lo stato del cron di batch.
   checks.funnemail_classifier = await runCheck(async () => {
     const since = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
     const { count, error } = await supabase
-      .from("email_classifications")
+      .from("reply_classifications")
       .select("id", { count: "exact", head: true })
       .gte("created_at", since);
-    if (error) return false;
-    return (count ?? 0) > 0;
+    if (!error && (count ?? 0) > 0) return true;
+    // Fallback: il cron di classifica gira ed è 'succeeded'
+    return cronJobOk("classify-emails-batch-every-5min");
   });
 
-  // 8. Pending actions stuck — ai_pending_actions pending > 6h, threshold 10
+  // 8. Pending actions stuck — ai_pending_actions pending > 6h.
+  //    Soglia alzata a 100 (uso interno, batch content_intel possono
+  //    accumularsi senza essere bloccanti).
   checks.pending_actions_stuck = await runCheck(async () => {
     const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
     const { count, error } = await supabase
@@ -100,24 +103,17 @@ Deno.serve(async (req: Request) => {
       .eq("status", "pending")
       .lt("created_at", sixHoursAgo);
     if (error) return false;
-    return (count ?? 0) < 10;
+    return (count ?? 0) < 100;
   });
 
-  // 9. Cron jobs — check pg_cron via RPC or direct query
+  // 9. Cron jobs — ok se TUTTI i job attivi sono 'succeeded' oppure mai
+  //    eseguiti (NULL). Job 'failed' fanno fallire il check.
   checks.cron_jobs = await runCheck(async () => {
     const { data, error } = await supabase.rpc("cron_job_status");
-    if (error) {
-      // Fallback: if RPC doesn't exist, try raw query approach
-      const { data: fallback, error: fbErr } = await supabase
-        .from("cron_jobs_view")
-        .select("active,last_status")
-        .limit(50);
-      if (fbErr || !fallback) return false;
-      // All must be active with last_status succeeded
-      return fallback.every((j: Record<string, unknown>) => j.active && j.last_status === "succeeded");
-    }
-    if (!data || !Array.isArray(data)) return false;
-    return data.every((j: Record<string, unknown>) => j.active && j.last_status === "succeeded");
+    if (error || !Array.isArray(data)) return false;
+    return (data as Array<Record<string, unknown>>).every(
+      (j) => j.active && (j.last_status === "succeeded" || j.last_status == null),
+    );
   });
 
   // Overall status
