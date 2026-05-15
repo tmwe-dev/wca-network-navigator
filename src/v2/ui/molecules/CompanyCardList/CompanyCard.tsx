@@ -458,7 +458,7 @@ export function CompanyCard({
           )}
         </div>
 
-        <div className="flex min-w-0 flex-col items-end justify-between gap-3">
+        <div className={cn("flex min-w-0 flex-col items-end", compact ? "justify-between gap-2" : "justify-between gap-3")}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -523,7 +523,7 @@ export function CompanyCard({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {compact && <div className="mt-auto">{statusBadgesSlot}</div>}
+          {compact && <div className="mt-auto max-w-[28px] [&_.rounded-md]:px-1 [&_.rounded-md]:text-[0px] [&_svg]:h-3.5 [&_svg]:w-3.5">{statusBadgesSlot}</div>}
 
           {!compact && (
             <div className="flex min-w-[128px] flex-col items-end gap-1.5">
