@@ -284,7 +284,10 @@ export function CompanyCard({
   );
 
   const contactSlot = primaryContact ? (
-    <div className="grid min-w-0 gap-2 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]">
+    <div className={cn(
+      "grid min-w-0 gap-2 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2",
+      compact ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]"
+    )}>
       <div className="min-w-0">
         <span className="block text-[10px] font-semibold leading-none text-muted-foreground/75">Contatto</span>
         <span className="mt-1 block truncate text-[13px] font-semibold leading-tight text-foreground/90">
@@ -310,7 +313,7 @@ export function CompanyCard({
   );
 
   const contactMethodsSlot = (firstEmail || firstPhone) && (
-    <div className="grid min-w-0 gap-1.5 sm:grid-cols-2">
+    <div className={cn("grid min-w-0 gap-1.5", compact ? "grid-cols-2" : "sm:grid-cols-2")}>
       {firstEmail && (
         <a
           href={`mailto:${firstEmail}`}
