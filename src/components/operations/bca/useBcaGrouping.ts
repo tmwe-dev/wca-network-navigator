@@ -164,10 +164,15 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
       const key = card.matched_partner_id || (card.company_name || "sconosciuta").toLowerCase().trim();
       if (!map.has(key)) {
         const partner = card.partner;
+        const fallbackDomain =
+          extractDomain(partner?.website) ||
+          extractDomain(card.email);
+        const resolvedLogo =
+          partner?.logo_url || faviconFor(fallbackDomain);
         map.set(key, {
           key,
           companyName: partner?.company_name || card.company_name || "Sconosciuta",
-          logoUrl: partner?.logo_url || null,
+          logoUrl: resolvedLogo,
           hasDeepSearch: !!(partner?.enrichment_data as Record<string, unknown> | undefined)?.deep_search_at,
           isMatched: !!card.matched_partner_id,
           inHolding: !!(card.lead_status && card.lead_status !== "new"),
