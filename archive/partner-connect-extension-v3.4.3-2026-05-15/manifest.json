@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Partner Connect",
-  "version": "3.4.4",
-  "description": "Aggiunge auto-accept dei popup cookie/privacy (OneTrust, Cookiebot, Didomi, Iubenda + fallback testuale multilingua) prima dello scraping. LinkedIn resta delegato a LinkedIn Cookie Sync.",
+  "version": "3.4.3",
+  "description": "LinkedIn delegato all'estensione dedicata LinkedIn Cookie Sync: relay LinkedIn-specific risponde subito con LI_DELEGATED invece di sendMessage al vuoto.",
   "permissions": [
     "activeTab",
     "scripting",

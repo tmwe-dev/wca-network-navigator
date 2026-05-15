@@ -20,6 +20,7 @@ import {
   updatePartnerWebsiteIfMissing,
   updatePartnerLinkedinIfMissing,
 } from "@/data/sherlockPlaybooks";
+import { persistSherlockFindings } from "@/data/partners";
 import { renderUrlTemplate, checkRequiredVars } from "./sherlockTemplates";
 import { throttle, estimateWaitMs } from "./rateLimiter";
 import type {
@@ -486,6 +487,17 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
 
   // Consolidamento finale: summary
   const summary = buildFinalSummary(consolidated, results);
+
+  // Persistenza completa sul partner (best-effort, non blocca):
+  // mappa website/phone/email/address sui campi colonna SE vuoti, e merge
+  // additivo di tutti i findings in enrichment_data.sherlock.
+  if (partnerId && !signal.aborted) {
+    try {
+      await persistSherlockFindings(partnerId, consolidated);
+    } catch (e) {
+      log.warn("[sherlock] persistSherlockFindings failed", { partnerId, err: e instanceof Error ? e.message : String(e) });
+    }
+  }
 
   return {
     results,

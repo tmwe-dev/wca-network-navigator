@@ -10,6 +10,7 @@ import { throttle } from "./rateLimiter";
 import { bootstrapHome, bootstrapGoogleSearch } from "./bootstrapSteps";
 import { runAgenticLoop } from "./agenticLoop";
 import { buildFinalSummary } from "./scrapeOperations";
+import { persistSherlockFindings } from "@/data/partners";
 import type {
   SherlockLevel,
   SherlockStepResult,
@@ -146,7 +147,7 @@ export async function runAgenticSherlock(opts: RunAgenticOptions): Promise<Agent
     visited.add(website);
 
     if (signal.aborted) {
-      return finishRun(results, consolidated, startTs);
+      return await finishRun(results, consolidated, startTs, partnerId, signal);
     }
   }
 
@@ -177,7 +178,7 @@ export async function runAgenticSherlock(opts: RunAgenticOptions): Promise<Agent
     visited.add(gUrl);
 
     if (signal.aborted) {
-      return finishRun(results, consolidated, startTs);
+      return await finishRun(results, consolidated, startTs, partnerId, signal);
     }
   }
 
@@ -206,15 +207,25 @@ export async function runAgenticSherlock(opts: RunAgenticOptions): Promise<Agent
     Object.assign(consolidated, loopResult.consolidated);
   }
 
-  return finishRun(results, consolidated, startTs);
+  return await finishRun(results, consolidated, startTs, partnerId, signal);
 }
 
-function finishRun(
+async function finishRun(
   results: SherlockStepResult[],
   consolidated: Record<string, unknown>,
   startTs: number,
-): AgenticRunResult {
+  partnerId?: string | null,
+  signal?: AbortSignal,
+): Promise<AgenticRunResult> {
   const sorted = [...results].sort((a, b) => a.order - b.order);
+  if (partnerId && !signal?.aborted) {
+    try {
+      await persistSherlockFindings(partnerId, consolidated);
+    } catch {
+      // best-effort: la UI invaliderà comunque le query, eventuali findings
+      // restano disponibili nel record investigation.
+    }
+  }
   return {
     results: sorted,
     consolidated,
