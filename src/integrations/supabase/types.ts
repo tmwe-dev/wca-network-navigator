@@ -12722,6 +12722,10 @@ export type Database = {
         Args: { _parent_contact_id: string }
         Returns: number
       }
+      can_see_channel_message_text: {
+        Args: { p_message_id: string }
+        Returns: boolean
+      }
       check_channel_rate_limit: {
         Args: { _channel: string; _user_id: string }
         Returns: Json
