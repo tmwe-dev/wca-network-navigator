@@ -40,12 +40,10 @@ export const EDGE_FUNCTIONS = [
   "consume-credits",
   "deduplicate-partners", "deep-search-contact", "deep-search-partner",
   "enrich-partner-website", "generate-aliases", "generate-email",
-  "get-linkedin-credentials", "get-ra-credentials", "get-wca-credentials",
+  "get-linkedin-credentials", "get-ra-credentials",
   "parse-profile-ai", "process-ai-import",
-  "process-download-job", "process-email-queue",
+  "process-email-queue",
   "save-linkedin-cookie", "save-ra-cookie", "save-ra-prospects",
-  "save-wca-contacts", "save-wca-cookie",
-  "scrape-wca-blacklist", "scrape-wca-directory", "scrape-wca-partners",
   "send-email", "unified-assistant", "wca-auto-login",
 ] as const;
 
