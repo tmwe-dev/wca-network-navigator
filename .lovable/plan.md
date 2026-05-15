@@ -1,81 +1,91 @@
-## Cosa sta succedendo (diagnosi)
+## Obiettivo
+Fare in modo che il Deep Search non si blocchi sui popup cookie/privacy e continui a leggere il contenuto reale dei siti.
 
-### Problema 1 — "Le card non si aggiornano dopo il Deep Search"
-Il motore Sherlock (`src/v2/services/sherlock/sherlockEngine.ts`) consolida correttamente i risultati (emails, phones, address, descrizione, social, ecc.) nel campo `consolidated`, ma **scrive sul partner solo due campi**:
-- `updatePartnerWebsiteIfMissing` (riga 292)
-- `updatePartnerLinkedinIfMissing` (righe 310, 467)
+## Diagnosi
+Il metodo corretto è un auto-consent centralizzato nell’estensione Partner Connect, ma oggi è collegato solo ad alcuni percorsi:
 
-Tutti gli altri dati estratti restano nell'`investigation_results` ma **non finiscono mai in `partners.enrichment_data` né in `partners.contact_info`**, quindi le card del Network non hanno nulla di nuovo da mostrare.
+- `withTab(url, fn)` chiama già `autoAcceptConsent(tab.id)` prima dello scraping.
+- Il Deep Search Sherlock però usa il flusso canonico `navigateBackground → wait → scrape`:
+  - webapp: `fs.readUrl()`
+  - estensione: `handleAgentAction(navigate background)`
+  - estensione: `handleScrape()`
+- In questo flusso l’auto-consent non viene eseguito: `BackgroundTab.navigate()` carica la pagina ma non clicca i popup, e `handleScrape()` estrae subito.
 
-In più, `useSherlock` invalida le query (`invalidateEnrichmentCaches`) solo nel ramo `stop()` — non al termine naturale di una run riuscita. Risultato: anche le poche scritture (website/linkedin) non si vedono finché non ricarichi la pagina.
+Quindi il problema non è solo la lista dei selettori: il punto principale è che il metodo non è inserito nel percorso effettivamente usato dal Deep Search.
 
-### Problema 2 — Lo scraper si ferma sui popup cookie/privacy
-L'estensione FireScrape (`public/partner-connect-extension/content.js`) tratta i banner cookie come *rumore da rimuovere dal DOM dopo averli letti* (`NOISE_SELECTORS` include `.cookie`, `.popup`, `.modal`, `.overlay`). Ma su molti siti reali:
-- l'overlay blocca lo scroll e nasconde il contenuto via `position:fixed` + `overflow:hidden` sul `body`
-- alcuni framework (OneTrust, Cookiebot, Didomi, Quantcast, IAB TCF) **non renderizzano** il contenuto principale finché non hai consentito
-- in SSR/Cloudflare, prima di `Accept` ti viene servita solo la pagina di consent
+## Metodo da usare
+Implementare un gate unico prima di ogni lettura pagina:
 
-Quindi togliere il banner dal markdown non basta: bisogna **cliccare "Accetta"** dentro al tab prima di estrarre.
+```text
+navigate page
+wait load
+run consent resolver
+wait for re-render / overlay removal
+scrape page
+```
 
----
+Il resolver deve:
 
-## Piano di intervento
+1. provare selettori noti dei CMP più diffusi;
+2. usare fallback testuale multilingua;
+3. attraversare anche iframe accessibili (`allFrames: true`);
+4. usare click realistico via eventi mouse + `.click()`;
+5. gestire shadow DOM aperti, dove possibile;
+6. ripetere 2-3 tentativi perché molti banner compaiono dopo il primo render;
+7. rimuovere solo blocchi visuali/scroll-lock residui dopo il click, senza cancellare prima il popup;
+8. restituire un report diagnostico: `accepted`, `selector`, `text`, `frameCount`, `attempts`.
 
-### Step 0 — Backup estensione (PRIMA di qualsiasi modifica)
-Copia integrale di `public/partner-connect-extension/` in `archive/partner-connect-extension-v3.4.3-2026-05-15/` come snapshot read-only. Nessuna modifica al sorgente live finché il backup non è in place.
+## Piano di modifica
 
-### Step 1 — Auto-accept dei consent popup nell'estensione
-In `public/partner-connect-extension/background.js`, nuova funzione `autoAcceptConsent(tabId)` chiamata **dentro `withTab`, dopo `waitForTabLoad` e prima di `scrapeTab`** (quindi attiva su `protectedScrape`, `handleGoogleSearch` e gli step del crawl).
+### 1. Spostare l’auto-consent nel flusso reale del Deep Search
+Agganciare `autoAcceptConsent(tabId)` direttamente a:
 
-Strategia a cascata, eseguita via `chrome.scripting.executeScript`:
-1. **Selettori noti dei principali CMP** (id/class deterministici): OneTrust (`#onetrust-accept-btn-handler`), Cookiebot (`#CybotCookiebotDialogBodyLevelButtonAccept`, `…ButtonAcceptAll`), Didomi (`#didomi-notice-agree-button`), Quantcast (`.qc-cmp2-summary-buttons button[mode="primary"]`), TrustArc, Iubenda (`.iubenda-cs-accept-btn`), Cookieyes, Usercentrics, Termly, Complianz, Borlabs, GDPR-cookie-consent generici (`button[aria-label*="accept" i]`).
-2. **Fallback testuale**: scansione di `button`, `a[role="button"]`, `[role="button"]` con `textContent` che combacia (case-insensitive, multilingua) con: accept all / accetta tutti / accetto / consenti / sono d'accordo / agree / ok / got it / I accept / autoriser / akzeptieren / aceptar / aceitar.
-3. **Reset scroll lock**: dopo il click, `document.body.style.overflow=''`, `document.documentElement.style.overflow=''`, rimozione di `[class*="no-scroll"]`, `.modal-open` sul body.
-4. **Settle window**: 600–900ms di attesa post-click + `MutationObserver` cap 1.5s per lasciare al sito il tempo di renderizzare il contenuto reale.
+- `BackgroundTab.navigate(url)` subito dopo `waitForTabLoad(tabId)`;
+- `handleScrape(msg)` prima di `scrapeTab(tabId)`, come rete di sicurezza.
 
-Tutto idempotente: se nessun banner trovato, esce subito senza errori. Logging via `relayLog({ kind: 'consent', accepted, selector })` per auditare l'efficacia.
+Questo copre Sherlock e il batch basato su `fs.readUrl()` senza cambiare la logica UI.
 
-`content.js` resta invariato per ora (rimozione cosmetica del banner residuo dal markdown va bene).
+### 2. Rendere `autoAcceptConsent()` più robusto
+Estendere l’attuale funzione con:
 
-### Step 2 — Persistenza completa dei findings sul partner
-In `src/v2/services/sherlock/sherlockEngine.ts`, sostituire i due update parziali con un'unica chiamata finale `persistConsolidatedToPartner(partnerId, consolidated)` (nuovo helper in `src/data/partners.ts`).
+- selettori aggiuntivi per CMP comuni: OneTrust, Cookiebot, Didomi, Iubenda, Quantcast, CookieYes, Usercentrics, Termly, Complianz, Axeptio, TrustArc, Google consent;
+- fallback testuale con pattern più ampi: “accept all”, “allow all”, “agree”, “continue”, “save choices”, “accetta tutto”, “consenti tutto”, “continua”, equivalenti FR/DE/ES/PT/NL;
+- ricerca in shadow roots aperti;
+- scoring dei candidati per preferire “accept all” rispetto a “reject”, “manage”, “settings”;
+- retry breve con MutationObserver o polling temporizzato.
 
-Mapping deterministico (solo se il campo partner è vuoto/null — niente sovrascritture aggressive):
-- `consolidated.website_discovered` → `partners.website`
-- `consolidated.linkedin_company_url_discovered` → `partners.linkedin_url`
-- `consolidated.emails[]` → merge in `partners.contact_info.emails` (dedup case-insensitive)
-- `consolidated.phones[]` → merge in `partners.contact_info.phones` (dedup E.164 via `phone-normalization`)
-- `consolidated.address`, `city`, `postal_code`, `country` → `partners.contact_info` se mancanti
-- `consolidated.description`, `consolidated.services`, `consolidated.industry`, `consolidated.social_*`, `consolidated.year_founded`, ecc. → merge in `partners.enrichment_data` (JSON, sempre additivo + timestamp `_sherlock_last_run`)
+### 3. Evitare falsi positivi pericolosi
+Non cliccare bottoni che contengono testo tipo:
 
-Tutto in un'unica `update` su `partners` (rispetta DAL: passa da `updatePartner` esistente). Soft-delete e RLS già coperti.
+- reject / decline / deny;
+- settings / preferences / manage options;
+- subscribe / sign up / buy / checkout;
+- login / register.
 
-### Step 3 — Refresh UI a fine run
-In `src/v2/hooks/useSherlock.ts`, dopo `runAgenticSherlock` riuscito (non solo nel ramo `stop`):
-- chiamare `invalidateEnrichmentCaches(queryClient, partnerId)`
-- invalidare anche `queryKeys.partners.detail(partnerId)` e `queryKeys.partners.list` (centralizzati in `src/lib/queryKeys.ts`) così il `CompanyCard` nel Network e il `PartnerDetailInline` si rifrescano live
-- toast informativo: "Card aggiornata: N nuovi campi" basato sul diff
+L’obiettivo è accettare solo popup consenso, non interagire con modali commerciali.
 
-### Step 4 — Verifica
-- Lanciare Detective su un partner con sito noto che ha banner OneTrust/Cookiebot (es. un partner EU). Controllare via `relayLog` che il consent sia stato cliccato e che il markdown contenga il contenuto reale, non più il testo del banner.
-- Aprire il `CompanyCard` post-run e confermare che email/telefoni/descrizione siano comparsi senza F5.
-- Test esistenti: `e2e/deep-search-runner.spec.ts` deve restare verde.
+### 4. Aggiornare i punti legacy dello scraper
+Aggiungere il gate anche nei percorsi che aprono tab manualmente e oggi non lo chiamano:
 
----
+- `handleCrawlStart()` dopo `waitForTabLoad()`;
+- `handleMap()` dopo `waitForTabLoad()`;
+- eventuale `agent navigate` non-background, se usato da pipeline future.
 
-## Sezione tecnica (per riferimento codice)
+Lasciare intatto WhatsApp/LinkedIn: fuori scope.
 
-**File toccati:**
-- `archive/partner-connect-extension-v3.4.3-2026-05-15/**` (nuovo, copia integrale)
-- `public/partner-connect-extension/background.js` (+ nuova `autoAcceptConsent`, integrazione in `withTab`/`protectedScrape`, bump versione manifest a `3.4.4`)
-- `public/partner-connect-extension/manifest.json` (version → `3.4.4`, descrizione aggiornata)
-- `src/data/partners.ts` (+ `persistSherlockFindings(partnerId, consolidated)`)
-- `src/v2/services/sherlock/sherlockEngine.ts` (rimuove i due update locali, chiama l'helper finale prima di `buildFinalSummary`)
-- `src/v2/hooks/useSherlock.ts` (invalidazione query a fine run + toast diff)
+### 5. Versionare e lasciare traccia
+- Bump Partner Connect da `3.4.4` a `3.4.5`.
+- Aggiornare descrizione manifest.
+- Aggiornare memoria tecnica `firescrape-consent-auto-accept` con il nuovo punto architetturale: auto-consent nel `BackgroundTab.navigate` e in `handleScrape`, non solo in `withTab`.
 
-**Memoria da aggiornare a fine sprint:**
-- `mem://architecture/sherlock-as-unified-deep-search` → nota persistenza completa su `partners`
-- nuova memoria `mem://tech/communication/firescrape-consent-auto-accept` → strategia CMP + fallback testuale
-- nessuna modifica a `check-inbox` / IMAP / WCA bridge (intoccabili).
+## Validazione prevista
 
-**Vincoli rispettati:** soft-delete (no DELETE), DAL only (`src/data/`), no `supabase.from()` in UI, query keys da `lib/queryKeys.ts`, niente refactor opportunistici sui nodi critici (Sherlock engine modificato in modo additivo locale).
+- Verificare via search che ogni `waitForTabLoad()` destinato a scraping abbia il gate consenso prima dell’estrazione.
+- Controllare che il percorso Sherlock rimanga:
+
+```text
+fs.readUrl → navigateBackground → BackgroundTab.navigate → autoAcceptConsent → handleScrape → scrapeTab
+```
+
+- Eseguire test statico mirato con `rg` sui punti `scrapeTab(` e `waitForTabLoad(`.
+- Non modificare persistenza DB, card, AI, email, WCA bridge o funzioni IMAP.

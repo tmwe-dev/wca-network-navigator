@@ -67,6 +67,12 @@ const BackgroundTab = {
     await chrome.tabs.update(tabId, { url, active: false });
     await waitForTabLoad(tabId);
     await sleep(800);
+    // Auto-accept popup consenso PRIMA che il caller scrappi.
+    // Senza questo, Sherlock Deep Search (fs.readUrl → navigateBackground →
+    // handleScrape) leggeva solo il banner cookie invece del contenuto reale.
+    try { await autoAcceptConsent(tabId); } catch (e) {
+      relayLog({ kind: 'consent', accepted: false, where: 'BackgroundTab.navigate', error: e?.message || String(e) });
+    }
     return tabId;
   },
 
