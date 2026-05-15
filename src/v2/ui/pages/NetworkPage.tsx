@@ -139,10 +139,14 @@ export function NetworkPage(): React.ReactElement {
   }, []);
 
   const handleBulkDeepSearch = useCallback((sel: CompanyEntity[]) => {
+    if (!sel.length) return;
+    const ids = sel.map((s) => s.id);
     window.dispatchEvent(
-      new CustomEvent("network-trigger-deep-search-batch", { detail: { partnerIds: sel.map((s) => s.id) } })
+      new CustomEvent("sherlock-launch", { detail: { queue: ids, level: 2 } })
     );
-    toast.info(`Deep Search avviato su ${sel.length} partner`);
+    toast.info(`Deep Search Detective avviato su ${ids.length} partner`, {
+      description: "Eseguiti in sequenza nel pannello Sherlock.",
+    });
   }, []);
 
   const handleBulkCampaign = useCallback((sel: CompanyEntity[]) => {
