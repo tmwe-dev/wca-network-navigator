@@ -25,17 +25,53 @@ interface LaunchDetail {
   _replay?: boolean;
   /** Target già pronto: salta la fetch del partner. */
   target?: Partial<SherlockLauncherTarget>;
+  /** Coda di partnerId per eseguire le indagini in sequenza (batch). */
+  queue?: ReadonlyArray<string>;
 }
 
 export function GlobalSherlockLauncher(): React.ReactElement | null {
   const [open, setOpen] = React.useState(false);
   const [target, setTarget] = React.useState<SherlockLauncherTarget | null>(null);
   const [autoLevel, setAutoLevel] = React.useState<SherlockLevel | undefined>(undefined);
+  const queueRef = React.useRef<{ ids: string[]; level: SherlockLevel } | null>(null);
+
+  const loadAndOpen = React.useCallback(async (partnerId: string, level?: SherlockLevel) => {
+    try {
+      const row = await getPartner(partnerId);
+      const r = row as Record<string, unknown>;
+      setTarget({
+        partnerId,
+        contactId: null,
+        companyName: (r.company_name as string | null) ?? null,
+        contactName: null,
+        city: (r.city as string | null) ?? null,
+        countryName: (r.country_name as string | null) ?? null,
+        countryCode: (r.country_code as string | null) ?? null,
+        website: (r.website as string | null) ?? null,
+        linkedinUrl: (r.linkedin_url as string | null) ?? null,
+      });
+      setAutoLevel(level);
+      setOpen(true);
+    } catch (err) {
+      log.warn("getPartner failed for sherlock-launch", { partnerId, err: err instanceof Error ? err.message : String(err) });
+    }
+  }, []);
 
   React.useEffect(() => {
     const handler = async (e: Event) => {
       const detail = (e as CustomEvent).detail as LaunchDetail | undefined;
       if (!detail || detail._replay) return;
+
+      // Batch mode: accoda i partnerId e avvia il primo.
+      if (detail.queue && detail.queue.length > 0) {
+        const ids = [...detail.queue];
+        const lvl = (detail.level ?? 2) as SherlockLevel;
+        const first = ids.shift()!;
+        queueRef.current = { ids, level: lvl };
+        await loadAndOpen(first, lvl);
+        return;
+      }
+
       if (!detail.partnerId && !detail.contactId && !detail.target) return;
 
       // Se ci dà già un target completo lo usiamo
@@ -58,31 +94,22 @@ export function GlobalSherlockLauncher(): React.ReactElement | null {
 
       // Altrimenti carichiamo il partner
       if (detail.partnerId) {
-        try {
-          const row = await getPartner(detail.partnerId);
-          const r = row as Record<string, unknown>;
-          setTarget({
-            partnerId: detail.partnerId,
-            contactId: detail.contactId ?? null,
-            companyName: (r.company_name as string | null) ?? null,
-            contactName: null,
-            city: (r.city as string | null) ?? null,
-            countryName: (r.country_name as string | null) ?? null,
-            countryCode: (r.country_code as string | null) ?? null,
-            website: (r.website as string | null) ?? null,
-            linkedinUrl: (r.linkedin_url as string | null) ?? null,
-          });
-          setAutoLevel(detail.level);
-          setOpen(true);
-        } catch (err) {
-          log.warn("getPartner failed for sherlock-launch", { partnerId: detail.partnerId, err: err instanceof Error ? err.message : String(err) });
-        }
+        await loadAndOpen(detail.partnerId, detail.level);
         return;
       }
     };
     window.addEventListener("sherlock-launch", handler);
     return () => window.removeEventListener("sherlock-launch", handler);
-  }, []);
+  }, [loadAndOpen]);
+
+  // Quando una run termina, se c'è una coda, lancia la successiva.
+  const handleComplete = React.useCallback(() => {
+    const q = queueRef.current;
+    if (!q || q.ids.length === 0) { queueRef.current = null; return; }
+    const next = q.ids.shift()!;
+    // Piccolo delay per lasciare al dialog il tempo di chiudersi/aprirsi pulito.
+    setTimeout(() => { void loadAndOpen(next, q.level); }, 400);
+  }, [loadAndOpen]);
 
   return (
     <SherlockLauncherDialog
@@ -90,6 +117,7 @@ export function GlobalSherlockLauncher(): React.ReactElement | null {
       onOpenChange={setOpen}
       target={target}
       autoStartLevel={autoLevel}
+      onComplete={handleComplete}
     />
   );
 }
