@@ -311,9 +311,25 @@ serve(async (req) => {
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
           finalBody = journalistResult.edited_text;
         }
+        const postReviewGrounding = guardGeneratedEmailGrounding({
+          subject: finalSubject,
+          body: finalBody,
+          sourceText: groundingSourceText,
+        });
+        finalSubject = postReviewGrounding.subject;
+        finalBody = postReviewGrounding.body;
+        groundingWarnings.push(...postReviewGrounding.warnings);
       }
     } catch (jerr) {
       console.error("[generate-email] journalistReview failed:", jerr);
+      const fallbackGrounding = guardGeneratedEmailGrounding({
+        subject: finalSubject,
+        body: finalBody,
+        sourceText: groundingSourceText,
+      });
+      finalSubject = fallbackGrounding.subject;
+      finalBody = fallbackGrounding.body;
+      groundingWarnings.push(...fallbackGrounding.warnings);
     }
 
     // ── Credits (AFTER journalist review) ──
