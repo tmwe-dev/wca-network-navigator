@@ -45,9 +45,8 @@ export function TokenByFunctionPie() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
       const { data, error } = await supabase
-        .from("ai_token_usage")
-        .select("function_name, total_tokens")
-        .eq("user_id", userData.id)
+        .from("ai_prompt_log")
+        .select("function_name, tokens_total")
         .gte("created_at", sevenDaysAgo.toISOString());
 
       if (error) {
@@ -58,8 +57,10 @@ export function TokenByFunctionPie() {
       // Aggregate by function
       const functionData: Record<string, number> = {};
       for (const row of data || []) {
-        const fn = row.function_name || "Altro";
-        functionData[fn] = (functionData[fn] || 0) + (row.total_tokens || 0);
+        // Normalize function names: strip ":hash" suffix from variants like "generate-email:ae35ad39"
+        const rawFn = row.function_name || "Altro";
+        const fn = rawFn.split(":")[0];
+        functionData[fn] = (functionData[fn] || 0) + (row.tokens_total || 0);
       }
 
       return Object.entries(functionData)

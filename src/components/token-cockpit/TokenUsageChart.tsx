@@ -35,9 +35,8 @@ export function TokenUsageChart() {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const { data, error } = await supabase
-        .from("ai_token_usage")
-        .select("total_tokens, created_at")
-        .eq("user_id", userData.id)
+        .from("ai_prompt_log")
+        .select("tokens_total, created_at")
         .gte("created_at", thirtyDaysAgo.toISOString())
         .order("created_at", { ascending: true });
 
@@ -50,7 +49,7 @@ export function TokenUsageChart() {
       const dailyData: Record<string, number> = {};
       for (const row of data || []) {
         const date = new Date(row.created_at ?? "").toLocaleDateString("it-IT");
-        dailyData[date] = (dailyData[date] || 0) + (row.total_tokens || 0);
+        dailyData[date] = (dailyData[date] || 0) + (row.tokens_total || 0);
       }
 
       return Object.entries(dailyData)
