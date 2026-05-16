@@ -8,6 +8,8 @@ import { callCheckInbox } from "@/lib/checkInbox";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("backgroundSync");
+const SYNC_LOOP_DELAY_MS = 1500;
+const TRANSIENT_RETRY_LIMIT = 4;
 
 export interface DownloadedEmail {
   id: string;
@@ -123,7 +125,7 @@ export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?
 
   try {
     let consecutiveErrors = 0;
-    const MAX_RETRIES = 10;
+      const MAX_RETRIES = TRANSIENT_RETRY_LIMIT;
 
     while (!abortSync) {
       batchNum += 1;
@@ -174,8 +176,8 @@ export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?
           status: "syncing",
         };
         notifyProgress();
-        // backoff lineare: 5s → 10s → 15s … (CPU edge si libera in pochi secondi)
-        await new Promise((resolve) => setTimeout(resolve, 5000 * consecutiveErrors));
+        // backoff progressivo: evita martellamento della funzione quando il worker è saturo
+        await new Promise((resolve) => setTimeout(resolve, 10_000 * consecutiveErrors));
         continue;
       }
 
@@ -227,7 +229,7 @@ export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?
 
       notifyProgress();
       if (!hasMore) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, SYNC_LOOP_DELAY_MS));
     }
 
     progress = {
