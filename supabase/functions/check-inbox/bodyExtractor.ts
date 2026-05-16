@@ -10,11 +10,10 @@ import {
 } from "./mimeDecoder.ts";
 import {
   extractLiteralBytesFromResponse, extractLiteralTextFromResponse,
-  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD,
+  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD, MAX_RAW_FETCH_BYTES,
 } from "./imapParser.ts";
 import { type AttachmentRecord } from "./dbOperations.ts";
 
-const MAX_RAW_FETCH_BYTES = 15_000_000; // 15MB
 const MAX_TEXT_LENGTH = 50_000;
 const MAX_HTML_LENGTH = 100_000;
 
