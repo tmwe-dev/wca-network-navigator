@@ -13,7 +13,7 @@ import {
   envelopeAddr, envelopeAddrName, envelopeAddrList,
   extractLiteralBytesFromResponse, extractLiteralTextFromResponse,
   parseRawHeaders, parseEmailFromHeader, computeThreadId, getNextUidBatch,
-  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD,
+  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD, MAX_RAW_FETCH_BYTES,
 } from "./imapParser.ts";
 import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperations.ts";
 import { detectBounce, handleBounce } from "./bounceDetector.ts";
@@ -47,8 +47,6 @@ interface MessageData {
   attachmentRecords: AttachmentRecord[];
   bodyStructure: Record<string, unknown> | null;
 }
-
-const MAX_RAW_FETCH_BYTES = 15_000_000; // 15MB
 
 export async function processMessage(
   uid: number,
