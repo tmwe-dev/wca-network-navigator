@@ -79,6 +79,34 @@ Deno.serve(async (req) => {
     // ── IMAP config ──
     // Multi-mailbox: header opzionale `x-mailbox-id`. Se assente → casella personale (legacy).
     const requestedMailboxId = req.headers.get("x-mailbox-id");
+
+    // GUARD: i secret globali IMAP_USER/IMAP_PASSWORD appartengono a un singolo
+    // operatore (oggi luca@tmwe.it). Se un altro operatore chiama check-inbox
+    // senza selezionare una casella condivisa (x-mailbox-id), in passato
+    // finiva per scaricare la casella di Luca salvandola sotto il proprio
+    // user_id. Per evitarlo: se non c'è x-mailbox-id, l'operatore DEVE avere
+    // `imap_user` valorizzato sulla riga `operators` (= ha credenziali
+    // personali sue). Altrimenti 403 con messaggio chiaro.
+    if (!requestedMailboxId) {
+      const { data: opRow } = await supabaseAdmin
+        .from("operators")
+        .select("imap_user, name")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const opImapUser = (opRow as { imap_user?: string | null } | null)?.imap_user ?? null;
+      if (!opImapUser) {
+        endMetrics(metrics, false, 403);
+        return new Response(
+          JSON.stringify({
+            error: "NO_PERSONAL_MAILBOX",
+            message:
+              "Nessuna casella personale configurata per questo operatore. Seleziona una casella condivisa (es. Booking) dal selettore in alto, oppure chiedi all'amministratore di configurare le credenziali IMAP personali.",
+          }),
+          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const resolved = await resolveMailbox(supabase as never, requestedMailboxId);
     const imapHost = resolved.imap_host;
     const imapUser = resolved.imap_user;
