@@ -221,22 +221,30 @@ Deno.serve(async (req) => {
     }
 
     // ── Post-sync operations (best-effort, fire-and-forget) ──
-    await applyEmailRules(supabase, supabaseUrl, serviceRoleKey, userId, messages);
-    await classifyInboundEmails(supabaseUrl, serviceRoleKey, userId, messages);
-
-    // ── Enqueue arricchimento + classify per mittenti SCONOSCIUTI ──
-    try {
-      const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
-      if (enq.enqueued > 0) {
-        console.log(JSON.stringify({
-          fn: "check-inbox",
-          step: "enrichment_enqueue",
-          enqueued: enq.enqueued,
-          skipped: enq.skipped,
-        }));
+    // FIX 2026-05-16 WORKER_RESOURCE_LIMIT (546): detach post-sync via
+    // EdgeRuntime.waitUntil per non bruciare il budget CPU della request.
+    // La response torna subito; il lavoro continua in background.
+    const postSync = (async () => {
+      try { await applyEmailRules(supabase, supabaseUrl, serviceRoleKey, userId, messages); } catch (_e) {}
+      try { await classifyInboundEmails(supabaseUrl, serviceRoleKey, userId, messages); } catch (_e) {}
+      try {
+        const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
+        if (enq.enqueued > 0) {
+          console.log(JSON.stringify({
+            fn: "check-inbox",
+            step: "enrichment_enqueue",
+            enqueued: enq.enqueued,
+            skipped: enq.skipped,
+          }));
+        }
+      } catch (enqErr: unknown) {
+        console.warn("enrichment_enqueue skipped:", extractErrorMessage(enqErr));
       }
-    } catch (enqErr: unknown) {
-      console.warn("enrichment_enqueue skipped:", extractErrorMessage(enqErr));
+    })();
+    // deno-lint-ignore no-explicit-any
+    const edgeRt = (globalThis as any).EdgeRuntime;
+    if (edgeRt && typeof edgeRt.waitUntil === "function") {
+      edgeRt.waitUntil(postSync);
     }
 
     // ── Response ──
