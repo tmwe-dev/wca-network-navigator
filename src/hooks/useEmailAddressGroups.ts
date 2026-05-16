@@ -37,7 +37,7 @@ export function useEmailAddressGroups() {
     queryFn: async () => {
       const { data, error } = await untypedFrom("email_sender_groups")
         .select("nome_gruppo, colore, icon")
-        .eq("user_id", userId);
+        ;
       if (error) return new Map<string, { color: string | null; icon: string | null }>();
       const map = new Map<string, { color: string | null; icon: string | null }>();
       (data ?? []).forEach((g: { nome_gruppo: string; colore: string | null; icon: string | null }) => {
