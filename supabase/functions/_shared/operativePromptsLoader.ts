@@ -157,13 +157,10 @@ export async function loadOperativePrompts(
   const limit = Math.max(1, Math.min(options.limit ?? 6, 20));
 
   try {
-    if (!userId) {
-      return { block: "", appliedNames: [], hasMandatory: false, matched: { contexts: [...matched.contexts], tags: [...matched.tags] } };
-    }
+    // Prompt operativi condivisi a livello workspace: nessun filtro per user_id.
     const { data, error } = await supabase
       .from("operative_prompts")
       .select("id, name, context, objective, procedure, criteria, examples, tags, priority")
-      .or(`user_id.eq.${userId},user_id.is.null`)
       .eq("is_active", true)
       .order("priority", { ascending: false });
 
