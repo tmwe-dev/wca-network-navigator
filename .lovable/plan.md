@@ -1,110 +1,62 @@
+## Premessa: cosa dicono i dati (verificato adesso sul DB)
 
-# Audit Autorizzazione & Visibilità Email
+Capisco il dubbio. Ti mostro i numeri esatti prima di proporre qualunque cosa, perché incidono sulla scelta.
 
-## TL;DR — perché Luigi vede le email "di Luca"
+Tabella `channel_messages`, canale email, casella personale (`mailbox_id IS NULL`):
 
-**Non è un buco di RLS.** È che la casella `booking@tmwe.it` viene scaricata via IMAP *tre volte* (una per operatore che la polla con le proprie credenziali), salvando ogni messaggio inbound con `operator_id = chi ha pollato` e `mailbox_id = NULL`. Risultato:
-
-- 4.953 messaggi `mailbox_id=NULL, operator_id=Luca`
-- 2.598 messaggi `mailbox_id=NULL, operator_id=Imane`
-- 2.508 messaggi `mailbox_id=NULL, operator_id=Luigi`
-- 43 messaggi correttamente taggati con `mailbox_id=booking`
-
-Quindi la "stessa email arrivata su booking" appare a ciascun operatore come fosse sua personale → Luigi vede *la sua copia* di un'email che Luca ha scritto/ricevuto, non la riga DB di Luca. La RLS di `channel_messages` (vedi sotto) blocca correttamente la riga di Luca, ma la triplicazione fa percepire un leak.
-
-## Stato attuale del modello
-
-```
-auth.users  ──1:1──>  operators (id, email, is_admin, is_active, user_id)
-                          │
-                          ├── operator_mailbox_access(operator_id, shared_mailbox_id)
-                          └── shared_mailboxes(id, email, ...)
-
-profiles    →  VUOTA per luca/luigi/imane (RBAC V2 su profiles è morto)
-```
-
-Funzioni RLS chiave (security definer):
-- `get_current_operator_id()` → `operators.id` di `auth.uid()`
-- `is_operator_admin()` → `operators.is_admin = true`
-- `get_active_operator_id()` → admin può impersonare via GUC `app.active_operator_id`
-- `get_effective_operator_ids()` → **admin ⇒ TUTTI gli operatori attivi**, non-admin ⇒ solo se stesso
-
-Operatori attuali (admin in grassetto): **luca@tmwe.it**, **jose@tmwe.it**, luigi, imane, jose.local, luca@gmail, pietro.
-
-## Findings RLS
-
-| # | Tabella | Policy | Severità | Problema |
+| Operatore | Righe fisiche | message_id distinti | Prima riga | Ultima riga |
 |---|---|---|---|---|
-| 1 | `channel_messages` | SELECT `operator_id = ANY get_effective_operator_ids()` | OK | Funziona; admin vede tutto by design |
-| 2 | `funnemail_decisions` | SELECT `qual: true` | **ALTO** | Tutti gli auth vedono TUTTE le decisioni AI: `subject`, `from_address`, `partner_id`, `reasoning`, `urgency`. Meta-leak completo della inbox altrui anche se i body sono protetti |
-| 3 | `outreach_queue` | SELECT `qual: true` | **ALTO** | Ogni operatore legge `subject`, `body`, `recipient_email` di tutta la pipeline outreach degli altri |
-| 4 | `partners`, `partner_contacts` | SELECT `qual: true` | Atteso (Shared Contact Policy) | Visibilità globale voluta per CRM, ma include `email`/`phone` |
-| 5 | `email_send_log` | SELECT `user_id = auth.uid()` | OK | Isolato per utente |
-| 6 | `email_drafts`, `email_address_rules` | SELECT `operator_id = ANY get_effective_operator_ids()` | OK | Coerente |
-| 7 | `shared_mailboxes` | SELECT `deleted_at IS NULL` | Tollerabile | Lista caselle condivise visibile a tutti gli auth, ma niente segreti IMAP nel payload |
-| 8 | `operator_mailbox_access` | SELECT `is_admin OR operator_id = ANY get_effective_operator_ids()` | OK | |
+| Luca | 4.985 | 4.985 | 03-04-2026 | 15-05-2026 |
+| Luigi | 2.539 | 2.539 | 07-04-2026 | 15-05-2026 |
+| Imane | 2.630 | 2.630 | 10-04-2026 | 15-05-2026 |
 
-## Findings architetturali
+Quelle 2.539 righe di Luigi e 2.630 di Imane **non sono una "vista" sulle tue email**: sono righe fisiche separate, con `operator_id = Luigi/Imane`, `user_id = Luigi/Imane`, scaricate via IMAP nei giorni in cui loro hanno cliccato "Scarica posta". Sono nate perché `check-inbox`, in mancanza di credenziali IMAP personali su `operators`, è caduto sui secret globali `IMAP_USER/IMAP_PASSWORD` = `luca@tmwe.it` e ha salvato il risultato sotto l'operatore che aveva premuto il pulsante.
 
-**A. Polling IMAP per-operatore della stessa casella condivisa** (root cause del sintomo)
-- `check-inbox` salva `operator_id = chi polla` invece di risolvere `mailbox_id` quando l'host/user IMAP coincide con uno `shared_mailboxes.imap_user`.
-- `mailbox_id` è `NULL` nel 99% dei record inbound → la UI Funnemail non riesce a presentare la "casella condivisa Booking" come stream unico, e ogni operatore vede solo i propri 2.5k duplicati.
-- Verifica: `get_accessible_mailboxes` restituisce Booking a Luigi (grazie a `operator_mailbox_access`), ma `listFunnemailGroupedInbox(..., {kind:"shared", id: booking})` filtra `mailbox_id = booking` → trova solo i 43 record taggati.
+Quindi il problema è duplice e va separato:
 
-**B. `funnemail_decisions` aperta**
-- Le decisioni AI contengono già subject + from + reasoning. Aprirle a `true` è equivalente a esporre l'inbox altrui in chiaro, anche con `channel_messages` chiusa.
+1. **Sorgente** — oggi Luigi/Imane, se cliccano "Scarica", riscaricano ancora la tua casella. Questo va fermato a monte.
+2. **Storico** — esistono già 5.169 righe duplicate sotto i loro account. Senza toccarle, Luigi continuerà a vedere "le sue email" che in realtà sono le tue.
 
-**C. Profili RBAC V2 non popolati**
-- Memoria di progetto cita `profiles.operator_role` come fonte di ruoli; in realtà nessuna riga profili per gli operatori reali. Tutta l'auth gira su `operators.is_admin`. Path `profiles` è codice morto da pulire o popolare.
+## Cosa propongo (zero DELETE)
 
-**D. Admin = wildcard a livello DB**
-- Per design `get_effective_operator_ids()` apre tutto agli admin. Nessun audit trail quando l'admin "impersona" via `app.active_operator_id`. Ok per oggi, ma se Luigi viene promosso admin per errore vede tutto senza notifica.
+Rispetto la tua regola: **non cancello niente**. Te le presento come opzioni separate da approvare.
 
-**E. Nessuna policy RESTRICTIVE su `funnemail_decisions`**
-- Anche aggiungendo policy permissive future, basta una `qual:true` esistente per vanificare tutto.
+### Parte A — Blocco a monte (obbligatoria, indolore)
 
-## Piano di remediation (proposto, ordine di priorità)
+Modifica a `supabase/functions/check-inbox/index.ts`:
 
-### P0 — Chiudere il meta-leak Funnemail
-1. **Migrazione SQL**: sostituire `funnemail_decisions SELECT qual:true` con
-   `EXISTS (SELECT 1 FROM channel_messages cm WHERE cm.message_id_external = funnemail_decisions.message_id AND cm.operator_id = ANY(get_effective_operator_ids()))`.
-2. Stessa logica per `funnemail_actions_log`, `funnemail_message_status`, `funnemail_message_status_history`, `funnemail_message_reminders`, `funnemail_escalation_events` (audit rapido dei `qual:true` su tutte le tabelle `funnemail_*`).
-3. Aggiornare `countFunnemailByFolder` se i conteggi devono restare globali per admin (già coperto da `get_effective_operator_ids` admin).
+- Se l'operatore non ha `imap_user`/`imap_password_encrypted` propri **e** non passa `x-mailbox-id` (cioè non ha selezionato una casella condivisa come Booking), la funzione risponde 403 con messaggio chiaro ("Nessuna casella personale configurata, seleziona Booking").
+- Niente più fallback ai secret globali per operatori diversi da Luca.
+- Luca continua a funzionare identico.
+- Luigi/Imane potranno scaricare solo da Booking (header `x-mailbox-id` impostato dal `MailboxSelector`).
 
-### P0 — Chiudere `outreach_queue`
-4. Sostituire `outreach_queue_select_all_authenticated` con
-   `operator_id = ANY(get_effective_operator_ids()) OR created_by = auth.uid()`.
-5. Verifica edge functions che leggono la coda con anon key: devono usare service role o il filtro spezza l'esecuzione.
+Effetto: da subito **nessuna nuova email tua finisce nelle loro inbox personali**.
 
-### P1 — Risolvere il sintomo "stessa email triplicata"
-6. **Backfill** `channel_messages.mailbox_id`: matchare `to_address`/`raw_payload[Delivered-To]` contro `shared_mailboxes.email`; popolare `mailbox_id` e dedupe per `(mailbox_id, message_id_external)` mantenendo la riga più recente.
-7. **Dedup constraint**: unique partial `(mailbox_id, message_id_external) WHERE mailbox_id IS NOT NULL`.
-8. **Fix `check-inbox`**: prima di insert, se `imap_user ∈ shared_mailboxes` → setta `mailbox_id` e `operator_id = NULL` (o `operator_id = mailbox.owner_operator_id`). Cambiare RLS di `channel_messages` per consentire visibilità anche via `mailbox_id ∈ accessible mailboxes`:
-   ```
-   SELECT USING (
-     (operator_id = ANY get_effective_operator_ids())
-     OR (mailbox_id IN (SELECT mailbox_id FROM get_accessible_mailboxes(NULL)))
-   )
-   ```
-9. **Schedulare il polling shared in un solo edge runner** invece di 1 cron per operatore (no più triplicazione futura).
+### Parte B — Storico esistente (scegli tu, niente DELETE)
 
-### P2 — Hardening RBAC
-10. Pulire/popolare `profiles.operator_role` o rimuovere ogni riferimento dal codice e dalla memoria.
-11. Audit log su admin impersonation (`app.active_operator_id`): trigger su `operators` o wrapper RPC che logga in `supervisor_audit_log`.
-12. Test E2E: `RLS_visibility.spec.ts` che, autenticato come Luigi, conta righe visibili in `channel_messages`/`funnemail_decisions`/`outreach_queue` per `operator_id = Luca` → atteso 0.
+Le 5.169 righe già duplicate sotto Luigi/Imane restano lì o le isoliamo. Tre opzioni, tutte **senza cancellare**:
 
-### P2 — Memoria/documentazione
-13. Aggiornare `mem://security/user-isolation-and-rbac-v2` con il modello reale (operators-based) e la nuova policy Funnemail.
-14. Aggiornare `mem://business/shared-contacts-visibility-policy` chiarendo che `outreach_queue` NON è "shared".
+- **B1. Lasciare tutto com'è.** Luigi e Imane continueranno a vedere quelle 2.539/2.630 email come "loro inbox personale" perché le righe sono fisicamente loro. Onesto ma confuso.
+- **B2. Nascondere via flag (consigliata).** UPDATE su quelle righe impostando `hidden_by_rule = true` (campo già esistente sulla tabella) + `folder = 'archived_legacy'`. Le inbox di Luigi/Imane si svuotano, i dati restano integri e recuperabili con una query, nessuna riga viene rimossa.
+- **B3. Riassegnazione.** UPDATE `operator_id`/`user_id` di quelle 5.169 righe a Luca. I dati confluiscono nella tua inbox (dove esistono già copie tue → potrebbero diventare doppioni visibili a te). Più invasivo.
 
-## Cosa NON va toccato
-- `channel_messages` policy SELECT esistente (è quella corretta).
-- `partners`/`partner_contacts` shared (scelta di business documentata).
-- `email_send_log` (per-utente OK).
-- Logica `is_operator_admin` / `get_effective_operator_ids` (admin = wildcard è scelta).
+La mia raccomandazione è **A + B2**: blocchiamo la sorgente e nascondiamo lo storico con un flag, senza perdere un byte.
 
-## Output dell'approvazione
-Eseguirò in 3 migration distinte:
-1. `funnemail_*` SELECT lockdown (atomica, rollback semplice).
-2. `outreach_queue` lockdown.
-3. `channel_messages` mailbox-aware policy + backfill + fix `check-inbox` (più rischiosa, va isolata per ultima — tocca un nodo critico, faccio mappa impatto separata prima di partire).
+### Parte C — Categorie/gruppi/prompt condivisi vs email personali
+
+Hai ragione: la condivisione deve fermarsi a metadati e regole, non al contenuto delle email.
+
+Verifico (in lettura, senza modificare niente) e ti riporto se serve toccare RLS:
+
+- `email_sender_groups` / `email_address_rules` / `operative_prompts`: confermare se sono già condivisi a livello workspace o per `user_id`. Se sono per `user_id`, rendiamo condivisibili **solo gruppo + categoria + prompt associato**, mai le righe di `channel_messages`.
+- `channel_messages`: la RLS resta strettamente per `user_id`/`operator_id`, mai cross-operatore.
+
+Per la Parte C nessuna modifica viene proposta finché non ho letto le policy attuali e te le mostro: se sono già a posto, non tocco nulla.
+
+## Riepilogo decisionale per te
+
+1. Confermi **Parte A** (blocco `check-inbox` per chi non ha credenziali proprie, fallback globale solo per Luca)?
+2. Per lo **storico** (Parte B): preferisci **B1 lasciare**, **B2 nascondere con flag** (consigliata), o **B3 riassegnare a Luca**?
+3. Vuoi che proceda anche con l'audit RLS della **Parte C** in lettura per dirti se serve davvero toccare qualcosa?
+
+Nessuna riga verrà toccata finché non rispondi su 1 e 2.
