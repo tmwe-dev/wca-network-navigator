@@ -26,7 +26,6 @@ export async function findEmailAddressRules(userId: string): Promise<EmailAddres
   const { data, error } = await supabase
     .from("email_address_rules")
     .select("id, user_id, email_address, display_name, category, group_name, custom_prompt, notes, is_active, priority, auto_action, auto_action_params, applied_count, last_applied_at")
-    .eq("user_id", userId)
     .order("priority", { ascending: false });
   if (error) throw error;
   return (data ?? []) as EmailAddressRule[];
@@ -57,7 +56,6 @@ export async function bulkUpdateAutoAction(
       auto_action_params: params,
       auto_execute: action !== "none",
     })
-    .eq("user_id", userId)
     .in("email_address", emails);
   if (error) throw error;
 }
@@ -78,7 +76,6 @@ export async function bulkSetBlocked(
     : { is_blocked: false };
   const { error } = await untypedFrom("email_address_rules")
     .update(patch)
-    .eq("user_id", userId)
     .in("email_address", emails);
   if (error) throw error;
 }
@@ -95,10 +92,22 @@ export async function upsertEmailAddressRule(
 ): Promise<void> {
   const addr = emailAddress.trim().toLowerCase();
   if (!addr) return;
-  const { error } = await untypedFrom("email_address_rules")
-    .upsert(
-      [{ user_id: userId, email_address: addr, ...patch }],
-      { onConflict: "user_id,email_address" },
-    );
-  if (error) throw error;
+  // Classificazione condivisa: cerco una regola esistente per questa email
+  // (di qualsiasi operatore) e la aggiorno; se non esiste la creo col user_id corrente.
+  const { data: existing, error: selErr } = await untypedFrom("email_address_rules")
+    .select("id")
+    .eq("email_address", addr)
+    .limit(1);
+  if (selErr) throw selErr;
+  const existingId = (existing as Array<{ id: string }> | null)?.[0]?.id;
+  if (existingId) {
+    const { error } = await untypedFrom("email_address_rules")
+      .update(patch)
+      .eq("id", existingId);
+    if (error) throw error;
+  } else {
+    const { error } = await untypedFrom("email_address_rules")
+      .insert([{ user_id: userId, email_address: addr, ...patch }]);
+    if (error) throw error;
+  }
 }
