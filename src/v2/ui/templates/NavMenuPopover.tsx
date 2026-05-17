@@ -18,6 +18,10 @@ import {
 import { navItemsDef } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
+import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
+import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
 import {
   SECONDARY_NAV,
   findSecondaryNavGroup,
@@ -224,6 +228,19 @@ export function NavMenuPopover({
         className="w-72 p-1 bg-background/95 backdrop-blur-xl border-white/10 max-h-[80vh] overflow-y-auto"
       >
         <div className="flex flex-col">
+          {/* Toolbar globale: notifiche, operatore attivo, WA sync, estensioni.
+              Sostituisce la vecchia top bar — sono i soli controlli "globali"
+              che valgono in ogni pagina. */}
+          <div className="flex items-center justify-between gap-1 px-1 pb-1.5 mb-1 border-b border-white/10">
+            <div className="flex items-center gap-0.5">
+              <NotificationCenter />
+              <OperationalContextSelector />
+            </div>
+            <div className="flex items-center gap-0.5">
+              <DownloadExtensionsButton />
+              <WhatsAppSyncButton />
+            </div>
+          </div>
           {/* Barra di ricerca */}
           <div className="relative px-1 pb-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
