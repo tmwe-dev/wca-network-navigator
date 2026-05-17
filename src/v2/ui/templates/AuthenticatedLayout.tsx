@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
-import { X, Menu, Command, Sparkles, SlidersHorizontal, Target } from "lucide-react";
+import { Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
@@ -38,15 +38,12 @@ import { useWcaSession } from "@/hooks/useWcaSession";
 import { BackgroundServices } from "./BackgroundServices";
 
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
-import { LayoutHeader } from "./LayoutHeader";
-import { LayoutSidebarNav } from "./LayoutSidebarNav";
-import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
+import { GlobalNavTrigger } from "./GlobalNavTrigger";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
 import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
-import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
