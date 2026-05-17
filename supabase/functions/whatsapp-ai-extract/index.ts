@@ -302,10 +302,12 @@ REGOLE:
           clearTimeout(retryTimer);
           if (retryResponse.ok) {
             aiResponse = retryResponse;
+          } else if (retryResponse.status === 402) {
+            return aiCreditsFallbackResponse(dynCors, mode);
           } else {
             return new Response(
               JSON.stringify({ error: "Rate limit exceeded after retry" }),
-              { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
+              { status: 429, headers: jsonHeaders(dynCors) }
             );
           }
         } catch (retryErr) {
@@ -326,17 +328,7 @@ REGOLE:
           );
         }
         if (aiResponse.status === 402) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              fallback: true,
-              error: "AI_CREDITS_EXHAUSTED",
-              message: "Crediti AI esauriti — aggiungili in Settings → Workspace → Usage",
-              mode,
-              items: [],
-            }),
-            { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } }
-          );
+          return aiCreditsFallbackResponse(dynCors, mode);
         }
 
         return new Response(
