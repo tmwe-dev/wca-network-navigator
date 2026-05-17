@@ -18,6 +18,10 @@ import {
 import { navItemsDef } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
+import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
+import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
 import {
   SECONDARY_NAV,
   findSecondaryNavGroup,
