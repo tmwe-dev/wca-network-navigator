@@ -6,7 +6,6 @@ import * as React from "react";
 import { useEffect, useState, Suspense, useRef } from "react";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,11 +61,9 @@ const PWAInstallPrompt = lazyRetry(() => import("@/components/shared/PWAInstallP
 const NotificationsProvider = lazyRetry(() => import("@/components/notifications/NotificationsProvider").then(m => ({ default: m.NotificationsProvider })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
-  const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
+  const { isAuthenticated, isLoading } = useAuthV2();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useAiBridgeListener();
 
@@ -100,13 +97,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const [agentDashOpen, setAgentDashOpen] = useState(false);
   const [testExtOpen, setTestExtOpen] = useState(false);
 
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
-  const toggleTheme = () => {
-    document.documentElement.classList.toggle("dark");
-    const next = !isDark;
-    setIsDark(next);
-    localStorage.setItem("dl_theme", next ? "dark" : "light");
-  };
 
   const deepSearch = useDeepSearchRunner();
 
@@ -222,9 +212,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       </GlobalErrorBoundary>
     );
   }
-
-  const wcaStatusColor = wcaSession.sessionActive === true ? "text-success" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
-  const wcaStatusLabel = wcaSession.sessionActive === true ? "WCA Online" : wcaSession.isChecking ? "Verifica…" : wcaSession.sessionActive === false ? "WCA Offline" : "WCA";
 
   return (
     <GlobalErrorBoundary>
