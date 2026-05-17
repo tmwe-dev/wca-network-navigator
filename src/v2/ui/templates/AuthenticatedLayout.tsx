@@ -6,12 +6,13 @@ import * as React from "react";
 import { useEffect, useState, Suspense, useRef } from "react";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
-import { Target } from "lucide-react";
+import { X, Menu, Command, Sparkles, SlidersHorizontal, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
@@ -37,12 +38,15 @@ import { useWcaSession } from "@/hooks/useWcaSession";
 import { BackgroundServices } from "./BackgroundServices";
 
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
+import { LayoutHeader } from "./LayoutHeader";
+import { LayoutSidebarNav } from "./LayoutSidebarNav";
+import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
-import { GlobalNavTrigger } from "./GlobalNavTrigger";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
 import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
+import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
@@ -61,9 +65,11 @@ const PWAInstallPrompt = lazyRetry(() => import("@/components/shared/PWAInstallP
 const NotificationsProvider = lazyRetry(() => import("@/components/notifications/NotificationsProvider").then(m => ({ default: m.NotificationsProvider })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
-  const { isAuthenticated, isLoading } = useAuthV2();
+  const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useAiBridgeListener();
 
@@ -72,6 +78,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
     const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     document.title = `${title} — WCA Partners`;
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   // Session readiness sourced from centralized AuthProvider
@@ -96,6 +103,13 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const [agentDashOpen, setAgentDashOpen] = useState(false);
   const [testExtOpen, setTestExtOpen] = useState(false);
 
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const toggleTheme = () => {
+    document.documentElement.classList.toggle("dark");
+    const next = !isDark;
+    setIsDark(next);
+    localStorage.setItem("dl_theme", next ? "dark" : "light");
+  };
 
   const deepSearch = useDeepSearchRunner();
 
@@ -212,6 +226,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     );
   }
 
+  const wcaStatusColor = wcaSession.sessionActive === true ? "text-success" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
+  const wcaStatusLabel = wcaSession.sessionActive === true ? "WCA Online" : wcaSession.isChecking ? "Verifica…" : wcaSession.sessionActive === false ? "WCA Offline" : "WCA";
+
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -239,8 +256,63 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         Vai al contenuto principale
                       </a>
-                      {/* Unico menu globale: pulsante fluttuante ☰ Menu in alto a sinistra. */}
-                      <GlobalNavTrigger />
+                      {/* Desktop icon rail — unico menu (hamburger lilla in cima apre NavMenuPopover) */}
+                      <LayoutIconRail currentPath={location.pathname} />
+
+                       {/* Mobile header */}
+                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2" role="banner">
+                        <h2 className="text-sm font-bold text-foreground truncate min-w-0">WCA Partners</h2>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <ThemePicker variant="icon" />
+                          <button
+                            onClick={() => setCommandOpen(true)}
+                            className="min-h-[40px] min-w-[40px] flex items-center justify-center text-primary"
+                            aria-label="Apri Command"
+                            data-testid="mobile-command-button"
+                          >
+                            <Command className="h-5 w-5" />
+                          </button>
+                          <button onClick={() => setIntelliflowOpen(true)} aria-label="Apri IntelliFlow" className="min-h-[40px] min-w-[40px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
+                          <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"} className="min-h-[40px] min-w-[40px] flex items-center justify-center">
+                            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Mobile sidebar overlay with Framer Motion */}
+                      <AnimatePresence>
+                        {mobileOpen && (
+                          <div className="md:hidden fixed inset-0 z-40 flex">
+                            <motion.div
+                              initial={{ x: "-100%" }}
+                              animate={{ x: 0 }}
+                              exit={{ x: "-100%" }}
+                              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                              className="w-64 bg-card border-r border-border/40 flex flex-col mt-12"
+                            >
+                              <LayoutSidebarNav
+                                profileName={profile?.displayName}
+                                wcaStatusColor={wcaStatusColor}
+                                wcaStatusLabel={wcaStatusLabel}
+                                wcaSessionActive={wcaSession.sessionActive}
+                                onWcaReconnect={() => wcaSession.ensureSession()}
+                                isDark={isDark}
+                                onToggleTheme={toggleTheme}
+                                onSignOut={signOut}
+                                onMobileClose={() => setMobileOpen(false)}
+                                onOpenCommandPalette={() => setCommandOpen(true)}
+                              />
+                            </motion.div>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="flex-1 bg-black/50"
+                              onClick={() => setMobileOpen(false)}
+                            />
+                          </div>
+                        )}
+                      </AnimatePresence>
 
                       {/* Linguetta filtri rimossa: usiamo solo quella contestuale di ContextFiltersRail */}
                       <button
@@ -257,13 +329,28 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <BcaFiltersGate>
-                      <div className="flex-1 flex overflow-hidden">
+                      <div className="flex-1 flex overflow-hidden md:pl-14">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
                         <BlacklistStaleBanner />
-                        <BackgroundServices>{() => null}</BackgroundServices>
-                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-x-none pb-16 md:pb-0">
+                        <BackgroundServices>
+                          {({ outreachQueue, globalSync }) => (
+                            <LayoutHeader
+                              onToggleSidebar={() => setSidebarOpen(o => !o)}
+                              onOpenCommandPalette={() => setCommandOpen(true)}
+                              onAiClick={() => setIntelliflowOpen(true)}
+                              onAddContact={() => setAddContactOpen(true)}
+                              onAgentDash={() => setAgentDashOpen(true)}
+                              onTestExt={() => setTestExtOpen(true)}
+                              outreachQueue={outreachQueue}
+                              globalSync={globalSync}
+                              isDark={isDark}
+                              onToggleTheme={toggleTheme}
+                            />
+                          )}
+                        </BackgroundServices>
+                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-x-none md:mt-0 mt-12 pb-16 md:pb-0">
                           {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
                           <div className="h-full animate-in fade-in duration-150">
                             <Outlet />
