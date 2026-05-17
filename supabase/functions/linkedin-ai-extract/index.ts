@@ -138,6 +138,18 @@ ${Object.entries(snapshot.htmlSamples || {}).map(([k, v]) => `--- ${k} ---\n${(v
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI API error:", aiResponse.status, errText);
+      if (aiResponse.status === 402 || aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            fallback: true,
+            error: aiResponse.status === 402 ? "AI_CREDITS_EXHAUSTED" : "AI_RATE_LIMITED",
+            schema: {},
+            pageType,
+          }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(JSON.stringify({ error: "AI call failed", status: aiResponse.status }), {
         status: 502,
         headers: { ...dynCors, "Content-Type": "application/json" },
