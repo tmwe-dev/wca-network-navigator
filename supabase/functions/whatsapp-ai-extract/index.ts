@@ -308,8 +308,15 @@ REGOLE:
         }
         if (aiResponse.status === 402) {
           return new Response(
-            JSON.stringify({ error: "AI credits exhausted" }),
-            { status: 402, headers: { ...dynCors, "Content-Type": "application/json" } }
+            JSON.stringify({
+              success: false,
+              fallback: true,
+              error: "AI_CREDITS_EXHAUSTED",
+              message: "Crediti AI esauriti — aggiungili in Settings → Workspace → Usage",
+              mode,
+              items: [],
+            }),
+            { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } }
           );
         }
 
