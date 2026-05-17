@@ -6,6 +6,7 @@
  * Sostituisce LayoutHeader + LayoutIconRail + header mobile: niente più
  * top bar né sidebar. Stesso pattern del Command page.
  */
+import * as React from "react";
 import { motion } from "framer-motion";
 import { Menu } from "lucide-react";
 import { useLocation } from "react-router-dom";
