@@ -3,6 +3,24 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
+const jsonHeaders = (headers: Record<string, string>) => ({
+  ...headers,
+  "Content-Type": "application/json",
+});
+
+const aiCreditsFallbackResponse = (headers: Record<string, string>, mode: unknown) =>
+  new Response(
+    JSON.stringify({
+      success: false,
+      fallback: true,
+      error: "AI_CREDITS_EXHAUSTED",
+      message: "Crediti AI esauriti — aggiungili in Settings → Workspace → Usage",
+      mode,
+      items: [],
+    }),
+    { status: 200, headers: jsonHeaders(headers) }
+  );
+
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -219,7 +237,8 @@ REGOLE:
 
     const gatewayUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
     const gatewayHeaders = {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Lovable-API-Key": LOVABLE_API_KEY,
+      "X-Lovable-AIG-SDK": "raw-fetch",
       "Content-Type": "application/json",
     };
     const selectedModel = mode === "learnDom" ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
