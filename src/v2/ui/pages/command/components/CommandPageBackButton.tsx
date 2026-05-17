@@ -4,6 +4,7 @@
  * il pulsante reale è ora montato una sola volta dal layout, quindi
  * questo componente non rende nulla per evitare duplicazioni.
  */
-export function CommandPageBackButton(): null {
+export function CommandPageBackButton(_props?: { currentPath?: string }): null {
+  void _props;
   return null;
 }
