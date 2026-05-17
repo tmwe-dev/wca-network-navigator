@@ -72,7 +72,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
     const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     document.title = `${title} — WCA Partners`;
-    setSidebarOpen(false);
   }, [location.pathname]);
 
   // Session readiness sourced from centralized AuthProvider
