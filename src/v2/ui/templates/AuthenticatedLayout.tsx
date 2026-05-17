@@ -253,63 +253,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         Vai al contenuto principale
                       </a>
-                      {/* Desktop icon rail — unico menu (hamburger lilla in cima apre NavMenuPopover) */}
-                      <LayoutIconRail currentPath={location.pathname} />
-
-                       {/* Mobile header */}
-                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2" role="banner">
-                        <h2 className="text-sm font-bold text-foreground truncate min-w-0">WCA Partners</h2>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <ThemePicker variant="icon" />
-                          <button
-                            onClick={() => setCommandOpen(true)}
-                            className="min-h-[40px] min-w-[40px] flex items-center justify-center text-primary"
-                            aria-label="Apri Command"
-                            data-testid="mobile-command-button"
-                          >
-                            <Command className="h-5 w-5" />
-                          </button>
-                          <button onClick={() => setIntelliflowOpen(true)} aria-label="Apri IntelliFlow" className="min-h-[40px] min-w-[40px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
-                          <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"} className="min-h-[40px] min-w-[40px] flex items-center justify-center">
-                            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Mobile sidebar overlay with Framer Motion */}
-                      <AnimatePresence>
-                        {mobileOpen && (
-                          <div className="md:hidden fixed inset-0 z-40 flex">
-                            <motion.div
-                              initial={{ x: "-100%" }}
-                              animate={{ x: 0 }}
-                              exit={{ x: "-100%" }}
-                              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                              className="w-64 bg-card border-r border-border/40 flex flex-col mt-12"
-                            >
-                              <LayoutSidebarNav
-                                profileName={profile?.displayName}
-                                wcaStatusColor={wcaStatusColor}
-                                wcaStatusLabel={wcaStatusLabel}
-                                wcaSessionActive={wcaSession.sessionActive}
-                                onWcaReconnect={() => wcaSession.ensureSession()}
-                                isDark={isDark}
-                                onToggleTheme={toggleTheme}
-                                onSignOut={signOut}
-                                onMobileClose={() => setMobileOpen(false)}
-                                onOpenCommandPalette={() => setCommandOpen(true)}
-                              />
-                            </motion.div>
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              className="flex-1 bg-black/50"
-                              onClick={() => setMobileOpen(false)}
-                            />
-                          </div>
-                        )}
-                      </AnimatePresence>
+                      {/* Unico menu globale: pulsante fluttuante ☰ Menu in alto a sinistra. */}
+                      <GlobalNavTrigger />
 
                       {/* Linguetta filtri rimossa: usiamo solo quella contestuale di ContextFiltersRail */}
                       <button
@@ -326,28 +271,13 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <BcaFiltersGate>
-                      <div className="flex-1 flex overflow-hidden md:pl-14">
+                      <div className="flex-1 flex overflow-hidden">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
                         <BlacklistStaleBanner />
-                        <BackgroundServices>
-                          {({ outreachQueue, globalSync }) => (
-                            <LayoutHeader
-                              onToggleSidebar={() => setSidebarOpen(o => !o)}
-                              onOpenCommandPalette={() => setCommandOpen(true)}
-                              onAiClick={() => setIntelliflowOpen(true)}
-                              onAddContact={() => setAddContactOpen(true)}
-                              onAgentDash={() => setAgentDashOpen(true)}
-                              onTestExt={() => setTestExtOpen(true)}
-                              outreachQueue={outreachQueue}
-                              globalSync={globalSync}
-                              isDark={isDark}
-                              onToggleTheme={toggleTheme}
-                            />
-                          )}
-                        </BackgroundServices>
-                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-x-none md:mt-0 mt-12 pb-16 md:pb-0">
+                        <BackgroundServices>{() => null}</BackgroundServices>
+                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-x-none pb-16 md:pb-0">
                           {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
                           <div className="h-full animate-in fade-in duration-150">
                             <Outlet />
