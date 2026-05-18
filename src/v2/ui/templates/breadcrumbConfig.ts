@@ -59,6 +59,7 @@ const SUB_LABELS: Record<string, string> = {
   "token-cockpit": "Token",
   notifications: "Notifiche",
   "admin-users": "Admin",
+  "ai-routing": "AI Routing",
 };
 
 function humanize(seg: string): string {
