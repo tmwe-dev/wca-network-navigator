@@ -2195,6 +2195,36 @@ export type Database = {
           },
         ]
       }
+      ai_routing_config: {
+        Row: {
+          model: string
+          notes: string | null
+          provider: string
+          scope: string
+          tier: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          model: string
+          notes?: string | null
+          provider: string
+          scope: string
+          tier?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          model?: string
+          notes?: string | null
+          provider?: string
+          scope?: string
+          tier?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       ai_runtime_traces: {
         Row: {
           correlation_id: string
