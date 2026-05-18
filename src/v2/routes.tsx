@@ -70,6 +70,7 @@ const RAScrapingEnginePage = lazy(() => import("./ui/pages/RAScrapingEnginePage"
 const RACompanyDetailPage = lazy(() => import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })));
 const CampaignJobsPage = lazy(() => import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })));
 const AdminUsersPage = lazy(() => import("./ui/pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
+const AiRoutingConfigPage = lazy(() => import("./ui/pages/AiRoutingConfigPage").then((m) => ({ default: m.AiRoutingConfigPage })));
 const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) => ({ default: m.Onboarding })));
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage"));
 const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
@@ -364,6 +365,7 @@ export function V2Routes(): React.ReactElement {
           {/* Settings + figli admin/system */}
           <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
           <Route path="settings/admin-users" element={guardedPage(AdminUsersPage, "AdminUsers")} />
+          <Route path="settings/ai-routing" element={guardedPage(AiRoutingConfigPage, "AiRoutingConfig")} />
           <Route path="settings/email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
           {/* Legacy settings/* lab paths → /v2/lab */}
           <Route path="settings/diagnostics"   element={<Navigate to="/v2/lab?group=observability&tab=diagnostica" replace />} />

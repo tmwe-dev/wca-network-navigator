@@ -129,6 +129,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
     title: "Sistema & Admin",
     items: [
       { label: "Admin Users",          path: "/v2/settings/admin-users" },
+      { label: "AI Routing",           path: "/v2/settings/ai-routing" },
       { label: "Email Download",       path: "/v2/settings/email-download" },
       { label: "Finder API",           path: "/v2/finder-api" },
       { label: "Finder API Catalog",   path: "/v2/finder-api/schema" },

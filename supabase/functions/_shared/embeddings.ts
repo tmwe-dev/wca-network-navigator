@@ -6,10 +6,12 @@
  *
  * Modello default: text-embedding-3-small (1536 dim, costo basso, qualità ok
  * per KB freight forwarding multilingua).
+ *
+ * NOTA migrazione 2026-05-18: embeddings ora SOLO OpenAI nativo
+ * (`OPENAI_API_KEY`). Il fallback Lovable Gateway è stato rimosso secondo
+ * decisione utente ("OpenAI solo per embeddings").
  */
 
-// Lovable AI Gateway non supporta più embedding models. Usiamo OpenAI direct.
-const LOVABLE_EMBEDDINGS_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
 const OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings";
 
 export const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -47,25 +49,16 @@ export async function embedOne(text: string, opts: EmbedOptions = {}): Promise<n
  */
 export async function embedBatch(texts: string[], opts: EmbedOptions = {}): Promise<number[][]> {
   if (texts.length === 0) return [];
-  // Preferisci OPENAI_API_KEY (supporta embedding); LOVABLE_API_KEY come fallback legacy.
   const openaiKey = opts.apiKey || Deno.env.get("OPENAI_API_KEY");
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!openaiKey && !lovableKey) {
-    throw new EmbeddingError("no_api_key", "Neither OPENAI_API_KEY nor LOVABLE_API_KEY configured");
+  if (!openaiKey) {
+    throw new EmbeddingError("no_api_key", "OPENAI_API_KEY not configured (required for embeddings)");
   }
   const baseModel = (opts.model || DEFAULT_EMBEDDING_MODEL).replace(/^openai\//, "");
   const timeoutMs = opts.timeoutMs ?? 30000;
 
-  // Provider chain: OpenAI nativo prima (se chiave presente), poi Lovable Gateway come
-  // fallback. Su 401/403 OpenAI proviamo automaticamente il gateway: la chiave OpenAI può
-  // essere scaduta/invalida ma il gateway resta operativo.
-  const providers: Array<{ name: string; url: string; key: string; model: string }> = [];
-  if (openaiKey) {
-    providers.push({ name: "openai", url: OPENAI_EMBEDDINGS_URL, key: openaiKey, model: baseModel });
-  }
-  if (lovableKey) {
-    providers.push({ name: "lovable", url: LOVABLE_EMBEDDINGS_URL, key: lovableKey, model: `openai/${baseModel}` });
-  }
+  const providers: Array<{ name: string; url: string; key: string; model: string }> = [
+    { name: "openai", url: OPENAI_EMBEDDINGS_URL, key: openaiKey, model: baseModel },
+  ];
 
   let lastErr: EmbeddingError | null = null;
   for (const p of providers) {
@@ -89,12 +82,6 @@ export async function embedBatch(texts: string[], opts: EmbedOptions = {}): Prom
       if (!resp.ok) {
         const errText = await resp.text().catch(() => "");
         const err = new EmbeddingError("http", `Embedding HTTP ${resp.status} via ${p.name}: ${errText.slice(0, 200)}`, resp.status);
-        // 401/403 su OpenAI → retry sul prossimo provider (gateway)
-        if ((resp.status === 401 || resp.status === 403) && p.name === "openai") {
-          console.warn(`[embeddings] OpenAI auth ${resp.status}, falling back to Lovable Gateway`);
-          lastErr = err;
-          continue;
-        }
         throw err;
       }
       const data = await resp.json();
