@@ -337,14 +337,14 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
   }
 
   logLine("error", "ai_gateway.all_failed", {
-    ctx, provider, models: opts.models, attempts: totalAttempts,
+    ctx, provider, models: modelChain, attempts: totalAttempts,
     lastError: lastError?.kind,
   });
   metricsLog.error("ai_gateway_all_failed", lastError ?? new Error("all_models_failed"), {
     duration_ms: Date.now() - startedAt,
     status_code: lastError?.status ?? 500,
     tags: ["ai", provider, "error", lastError?.kind ?? "unknown"],
-    provider, models: opts.models, attempts: totalAttempts,
+    provider, models: modelChain, attempts: totalAttempts,
   });
   await metricsLog.flush().catch(() => undefined);
   throw lastError ?? new AiGatewayError("all_models_failed", "All models exhausted");
