@@ -20,6 +20,7 @@ const SECURITY_HEADERS: Record<string, string> = {
 };
 
 const ALLOWED_MODELS = new Set([
+  // Logical (mapped via MODEL_MAP)
   "google/gemini-2.5-pro",
   "google/gemini-2.5-flash",
   "google/gemini-2.5-flash-lite",
@@ -28,6 +29,15 @@ const ALLOWED_MODELS = new Set([
   "openai/gpt-5",
   "openai/gpt-5-mini",
   "openai/gpt-5-nano",
+  // Native names (post-migration)
+  "claude-sonnet-4-5",
+  "claude-haiku-4-5",
+  "claude-opus-4-5",
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-2.5-flash-lite",
 ]);
 
 const RequestSchema = z.object({
