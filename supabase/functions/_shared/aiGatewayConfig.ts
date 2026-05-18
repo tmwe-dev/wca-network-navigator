@@ -10,36 +10,45 @@ export type ProviderKey = "lovable" | "openrouter" | "openai" | "anthropic" | "g
 export interface ProviderEntry {
   url: string;
   authHeader: (key: string) => string;
+  /** Env var that holds this provider's API key. */
+  envKey: string;
 }
 
 export const PROVIDER_CONFIG: Record<ProviderKey, ProviderEntry> = {
   lovable: {
     url: "https://ai.gateway.lovable.dev/v1/chat/completions",
     authHeader: (key) => "Bearer " + key,
+    envKey: "LOVABLE_API_KEY",
   },
   openrouter: {
     url: "https://openrouter.ai/api/v1/chat/completions",
     authHeader: (key) => "Bearer " + key,
+    envKey: "OPENROUTER_API_KEY",
   },
   openai: {
     url: "https://api.openai.com/v1/chat/completions",
     authHeader: (key) => "Bearer " + key,
+    envKey: "OPENAI_API_KEY",
   },
   anthropic: {
     url: "https://api.anthropic.com/v1/messages",
     authHeader: (key) => key,
+    envKey: "ANTHROPIC_API_KEY",
   },
   google: {
     url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
     authHeader: (key) => "Bearer " + key,
+    envKey: "GEMINI_API_KEY",
   },
   grok: {
     url: "https://api.x.ai/v1/chat/completions",
     authHeader: (key) => "Bearer " + key,
+    envKey: "GROK_API_KEY",
   },
   qwen: {
     url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
     authHeader: (key) => "Bearer " + key,
+    envKey: "QWEN_API_KEY",
   },
 };
 
@@ -55,20 +64,20 @@ export const MODEL_MAP: Record<string, Record<string, string>> = {
     "google/gemini-3-flash-preview": "gpt-4o",
   },
   anthropic: {
-    "google/gemini-3-flash-preview": "claude-sonnet-4-20250514",
-    "openai/gpt-5": "claude-sonnet-4-20250514",
-    "google/gemini-2.5-flash": "claude-haiku-4-20250514",
-    "google/gemini-2.5-flash-lite": "claude-haiku-4-20250514",
-    "openai/gpt-5-mini": "claude-haiku-4-20250514",
-    "openai/gpt-5-nano": "claude-haiku-4-20250514",
+    "google/gemini-3-flash-preview": "claude-sonnet-4-5",
+    "openai/gpt-5":                  "claude-sonnet-4-5",
+    "google/gemini-2.5-flash":       "claude-haiku-4-5",
+    "google/gemini-2.5-flash-lite":  "claude-haiku-4-5",
+    "openai/gpt-5-mini":             "claude-haiku-4-5",
+    "openai/gpt-5-nano":             "claude-haiku-4-5",
   },
   google: {
-    "google/gemini-2.5-flash": "gemini-2.5-flash",
-    "google/gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
+    "google/gemini-2.5-flash":       "gemini-2.5-flash",
+    "google/gemini-2.5-flash-lite":  "gemini-2.5-flash-lite",
     "google/gemini-3-flash-preview": "gemini-2.5-flash",
-    "openai/gpt-5": "gemini-2.5-flash",
-    "openai/gpt-5-mini": "gemini-2.5-flash-lite",
-    "openai/gpt-5-nano": "gemini-2.5-flash-lite",
+    "openai/gpt-5":                  "gemini-2.5-pro",
+    "openai/gpt-5-mini":             "gemini-2.5-flash",
+    "openai/gpt-5-nano":             "gemini-2.5-flash-lite",
   },
   grok: {
     "google/gemini-2.5-flash": "grok-3-mini-fast",
