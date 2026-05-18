@@ -1,9 +1,7 @@
 import "../_shared/llmFetchInterceptor.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
-
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -30,13 +28,6 @@ Deno.serve(async (req) => {
     if (!snapshot) {
       return new Response(JSON.stringify({ error: "snapshot is required" }), {
         status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
         headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
@@ -100,52 +91,32 @@ Textboxes: ${JSON.stringify(snapshot.textboxes || [])}
 HTML samples:
 ${Object.entries(snapshot.htmlSamples || {}).map(([k, v]) => `--- ${k} ---\n${(v as string).substring(0, 800)}`).join("\n\n")}`;
 
-    // J7 — Timeout 30s + AbortController on AI gateway fetch
-    const aiController = new AbortController();
-    const aiTimeout = setTimeout(() => aiController.abort(), 30000);
-
-    let aiResponse: Response;
+    // Migrato al gateway multi-provider (scope routing via ai_routing_config).
+    let content = "";
     try {
-      aiResponse = await fetch(AI_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.1,
-          max_tokens: 2000,
-        }),
-        signal: aiController.signal,
+      const r = await aiChat({
+        scope: "agent",
+        context: "linkedin-ai-extract",
+        functionName: "linkedin-ai-extract",
+        models: ["google/gemini-2.5-flash"],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 2000,
+        timeoutMs: 30000,
       });
-      clearTimeout(aiTimeout);
-    } catch (fetchErr) {
-      clearTimeout(aiTimeout);
-      if ((fetchErr as Error).name === "AbortError") {
-        return new Response(
-          JSON.stringify({ error: "AI gateway timeout (30s)" }),
-          { status: 504, headers: { ...dynCors, "Content-Type": "application/json" } }
-        );
-      }
-      throw fetchErr;
+      content = r.content ?? "";
+    } catch (aiErr) {
+      const status = aiErr instanceof AiGatewayError ? (aiErr.status ?? 502) : 502;
+      const kind = aiErr instanceof AiGatewayError ? aiErr.kind : "ai_error";
+      console.error("linkedin-ai-extract AI error:", kind, status, aiErr);
+      return new Response(
+        JSON.stringify({ error: "AI call failed", kind, status, fallback: true }),
+        { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
     }
-
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI API error:", aiResponse.status, errText);
-      return new Response(JSON.stringify({ error: "AI call failed", status: aiResponse.status }), {
-        status: 502,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content || "";
 
     // Parse JSON from AI response (may be wrapped in markdown code block)
     let schema: Record<string, string> = {};
