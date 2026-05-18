@@ -1,62 +1,115 @@
-## Premessa: cosa dicono i dati (verificato adesso sul DB)
+# Migrazione AI: da Lovable Gateway a Anthropic + OpenAI + Google con routing configurabile
 
-Capisco il dubbio. Ti mostro i numeri esatti prima di proporre qualunque cosa, perché incidono sulla scelta.
+## Obiettivo
+Spostare tutte le chiamate AI dall'AI Gateway di Lovable verso le API native dei tre provider di cui hai gli account (Anthropic, OpenAI, Google Gemini), con possibilità di scegliere **per scope** il modello da usare direttamente da una pagina di configurazione, senza redeploy.
 
-Tabella `channel_messages`, canale email, casella personale (`mailbox_id IS NULL`):
+## Architettura proposta
 
-| Operatore | Righe fisiche | message_id distinti | Prima riga | Ultima riga |
-|---|---|---|---|---|
-| Luca | 4.985 | 4.985 | 03-04-2026 | 15-05-2026 |
-| Luigi | 2.539 | 2.539 | 07-04-2026 | 15-05-2026 |
-| Imane | 2.630 | 2.630 | 10-04-2026 | 15-05-2026 |
+```text
+                Frontend (invokeAi + scope)
+                          |
+                          v
+              Edge function (qualsiasi)
+                          |
+                          v
+           _shared/aiGateway.aiChat({scope, models})
+                          |
+              +-----------+------------+
+              v                        v
+    routing_rules DB              MODEL_MAP fallback
+    (scope -> provider+model)
+              |
+              v
+    +---------+---------+---------+----------+
+    v                   v         v          v
+ Anthropic            OpenAI    Google    Lovable* (solo embeddings opt)
+ ANTHROPIC_API_KEY    OPENAI    GEMINI    (fallback emergenze)
+```
 
-Quelle 2.539 righe di Luigi e 2.630 di Imane **non sono una "vista" sulle tue email**: sono righe fisiche separate, con `operator_id = Luigi/Imane`, `user_id = Luigi/Imane`, scaricate via IMAP nei giorni in cui loro hanno cliccato "Scarica posta". Sono nate perché `check-inbox`, in mancanza di credenziali IMAP personali su `operators`, è caduto sui secret globali `IMAP_USER/IMAP_PASSWORD` = `luca@tmwe.it` e ha salvato il risultato sotto l'operatore che aveva premuto il pulsante.
+*Embeddings: OpenAI `text-embedding-3-small` (Anthropic non li offre).
 
-Quindi il problema è duplice e va separato:
+## Strategia di mapping costo/complessità
 
-1. **Sorgente** — oggi Luigi/Imane, se cliccano "Scarica", riscaricano ancora la tua casella. Questo va fermato a monte.
-2. **Storico** — esistono già 5.169 righe duplicate sotto i loro account. Senza toccarle, Luigi continuerà a vedere "le sue email" che in realtà sono le tue.
+Tier per scegliere il modello giusto in base al lavoro che fa lo scope:
 
-## Cosa propongo (zero DELETE)
+| Tier | Quando | Modello consigliato | Costo indicativo (1M tok in/out) |
+|------|--------|---------------------|----------------------------------|
+| **HEAVY** | Agent loop, multi-tool reasoning, journalist review finale, classify-inbound-message complesso, sherlock-extract, ai-assistant principale | `claude-sonnet-4-5` (Anthropic) | $3 / $15 |
+| **STANDARD** | Generate-email, generate-outreach, improve-email, refine-classification-rule, agentic-decide, ai-query-planner, prompt-copilot-chat | `gpt-4o` (OpenAI) o `claude-haiku-4-5` se costo critico | $2.50/$10 — $1/$5 |
+| **LIGHT** | suggest-email-groups, categorize-content, classify-inbound-content, learn-from-group-correction, summarize, generate-aliases, parse-business-card (text), kb-intake-analyze | `gemini-2.5-flash` (Google) | $0.075/$0.30 |
+| **VISION** | parse-business-card OCR, ai-match-business-cards, linkedin-ai-extract, whatsapp-ai-extract con immagini | `gemini-2.5-flash` (multimodale, ottimo prezzo/qualità) | $0.075/$0.30 |
+| **EMBEDDINGS** | KB, memoria, RAG, doctrine audit | `text-embedding-3-small` (OpenAI) | $0.02/1M tok |
 
-Rispetto la tua regola: **non cancello niente**. Te le presento come opzioni separate da approvare.
+Tutti i valori sono **default proposti** — modificabili dalla pagina di config senza redeploy.
 
-### Parte A — Blocco a monte (obbligatoria, indolore)
+## Cosa cambia tecnicamente
 
-Modifica a `supabase/functions/check-inbox/index.ts`:
+### 1. Secrets (via tool secrets)
+Aggiungo: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`.
+`LOVABLE_API_KEY` resta solo come fallback emergenza (puoi disattivarlo dopo aver verificato che tutto gira).
 
-- Se l'operatore non ha `imap_user`/`imap_password_encrypted` propri **e** non passa `x-mailbox-id` (cioè non ha selezionato una casella condivisa come Booking), la funzione risponde 403 con messaggio chiaro ("Nessuna casella personale configurata, seleziona Booking").
-- Niente più fallback ai secret globali per operatori diversi da Luca.
-- Luca continua a funzionare identico.
-- Luigi/Imane potranno scaricare solo da Booking (header `x-mailbox-id` impostato dal `MailboxSelector`).
+### 2. Nuova tabella `ai_routing_config` (DB)
+```text
+scope text PRIMARY KEY      -- es. "agent_loop", "generate_email", "classify_inbound"
+provider text NOT NULL      -- 'anthropic' | 'openai' | 'google'
+model text NOT NULL         -- es. 'claude-sonnet-4-5'
+tier text                   -- 'heavy' | 'standard' | 'light' | 'vision' (documentazione)
+notes text
+updated_at, updated_by
+```
+RLS: lettura per tutti gli autenticati, scrittura solo admin.
+Seedata con i default della tabella sopra (uno scope per ogni edge function AI).
 
-Effetto: da subito **nessuna nuova email tua finisce nelle loro inbox personali**.
+### 3. Refactor `_shared/aiGateway.ts`
+- `aiChat({ scope, ... })` legge `ai_routing_config` (con cache in-memory 60s) e risolve provider+model.
+- Se scope non in tabella -> usa MODEL_MAP esistente come fallback.
+- Rimuovo l'hard-coded `AI_PROVIDER` env e i nomi `claude-sonnet-4-20250514` errati.
+- Aggiorno `MODEL_MAP` Anthropic ai nomi reali (`claude-sonnet-4-5`, `claude-haiku-4-5`).
+- Aggiorno `MODEL_MAP` Google ai nomi reali (`gemini-2.5-flash`, `gemini-2.5-pro`).
+- Header auth Anthropic: aggiungo `x-api-key` + `anthropic-version: 2023-06-01`.
 
-### Parte B — Storico esistente (scegli tu, niente DELETE)
+### 4. Bonifica bypass gateway (~5 file)
+Porto tutte le funzioni elencate sotto a usare `aiChat()`:
+- `ai-gateway-micro/index.ts` — wrapper diretto, lo riconverto
+- `whatsapp-ai-extract`, `parse-business-card`, `funnemail-classify`, `linkedin-ai-extract` — chiamate dirette a `ai.gateway.lovable.dev`
+- `ai-assistant/aiProviderResolver.ts` — riallineato al nuovo router; mantiene BYOK utente come override
 
-Le 5.169 righe già duplicate sotto Luigi/Imane restano lì o le isoliamo. Tre opzioni, tutte **senza cancellare**:
+### 5. Embeddings (`_shared/embeddings.ts`)
+Switch da Lovable AI a `https://api.openai.com/v1/embeddings` con `text-embedding-3-small` (1536 dim — stessa dimensione delle pgvector columns attuali, **nessuna migrazione vettoriale necessaria**). Verifico con un check rapido sui pgvector columns esistenti prima di confermare.
 
-- **B1. Lasciare tutto com'è.** Luigi e Imane continueranno a vedere quelle 2.539/2.630 email come "loro inbox personale" perché le righe sono fisicamente loro. Onesto ma confuso.
-- **B2. Nascondere via flag (consigliata).** UPDATE su quelle righe impostando `hidden_by_rule = true` (campo già esistente sulla tabella) + `folder = 'archived_legacy'`. Le inbox di Luigi/Imane si svuotano, i dati restano integri e recuperabili con una query, nessuna riga viene rimossa.
-- **B3. Riassegnazione.** UPDATE `operator_id`/`user_id` di quelle 5.169 righe a Luca. I dati confluiscono nella tua inbox (dove esistono già copie tue → potrebbero diventare doppioni visibili a te). Più invasivo.
+### 6. Pagina di configurazione
+Nuova route `/v2/settings/ai-routing` (admin only):
+- Tabella scope x (provider, model) con dropdown
+- Pulsanti "Reset to defaults", "Test scope" (chiama l'edge `ai-gateway-micro` con il modello selezionato e mostra latenza/costo stimato)
+- Badge tier (Heavy/Standard/Light/Vision) accanto a ogni riga
+- Storico modifiche (chi/quando)
 
-La mia raccomandazione è **A + B2**: blocchiamo la sorgente e nascondiamo lo storico con un flag, senza perdere un byte.
+### 7. Osservabilità
+`structuredLogger` già logga `provider` e `model` — aggiungo `scope` e `cost_estimate_usd` per riga in `edge_metrics`, così vedi i costi reali per scope in dashboard.
 
-### Parte C — Categorie/gruppi/prompt condivisi vs email personali
+## Cosa NON cambia
+- Frontend `invokeAi()` — già astratto, zero modifiche
+- `ai_scope_registry`, `journalistReview`, prompt sanitizer, injection guard, prompt versioning, hard guards
+- Logica di business delle edge function (solo lo strato di trasporto AI)
+- BYOK utente (`user_api_keys`) — resta come override per utente avanzato
 
-Hai ragione: la condivisione deve fermarsi a metadati e regole, non al contenuto delle email.
+## Piano di rilascio (atomico, reversibile)
+1. **Fase 1** — Migrazione DB (tabella `ai_routing_config` + seed default) — *reversibile (drop table)*
+2. **Fase 2** — Refactor `aiGateway.ts` + nuovo resolver, fallback a MODEL_MAP intatto — *reversibile (env `AI_PROVIDER=lovable` riattiva path vecchio)*
+3. **Fase 3** — Bonifica 5 funzioni con bypass — *reversibile (git revert per file)*
+4. **Fase 4** — Switch embeddings a OpenAI — *NON reversibile vettorialmente se cambia dim; pre-check obbligatorio*
+5. **Fase 5** — Pagina `/v2/settings/ai-routing` admin
+6. **Fase 6** — Smoke test su 6 scope chiave (`generate-email`, `agent-loop`, `classify-inbound-message`, `parse-business-card`, `suggest-email-groups`, `ai-assistant`) tramite `curl_edge_functions`
 
-Verifico (in lettura, senza modificare niente) e ti riporto se serve toccare RLS:
+## Domande residue (rispondo io con default se non specifichi)
+- **Pagina config**: la metto sotto `/v2/settings` o preferisci nel Prompt Lab?
+- **Lovable Gateway**: lo rimuovo del tutto o lo lascio come provider opzionale per emergenze?
+- **Test scope**: vuoi anche stima costo nella UI (ti calcolo $/1k token in base ai prezzi pubblici di ogni provider)?
 
-- `email_sender_groups` / `email_address_rules` / `operative_prompts`: confermare se sono già condivisi a livello workspace o per `user_id`. Se sono per `user_id`, rendiamo condivisibili **solo gruppo + categoria + prompt associato**, mai le righe di `channel_messages`.
-- `channel_messages`: la RLS resta strettamente per `user_id`/`operator_id`, mai cross-operatore.
+Se non rispondi a queste, vado con: `/v2/settings/ai-routing`, Lovable rimosso da MODEL_MAP ma codice provider conservato in PROVIDER_CONFIG (toggle disabilitato), stima costo inclusa.
 
-Per la Parte C nessuna modifica viene proposta finché non ho letto le policy attuali e te le mostro: se sono già a posto, non tocco nulla.
-
-## Riepilogo decisionale per te
-
-1. Confermi **Parte A** (blocco `check-inbox` per chi non ha credenziali proprie, fallback globale solo per Luca)?
-2. Per lo **storico** (Parte B): preferisci **B1 lasciare**, **B2 nascondere con flag** (consigliata), o **B3 riassegnare a Luca**?
-3. Vuoi che proceda anche con l'audit RLS della **Parte C** in lettura per dirti se serve davvero toccare qualcosa?
-
-Nessuna riga verrà toccata finché non rispondi su 1 e 2.
+## Vincoli rispettati
+- Memoria progetto: nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, journalist review, hard guards
+- AI Invocation Charter: ogni scope continua a passare da `invokeAi()` con `ai_scope_registry`
+- DAL only, no `any`, `.maybeSingle()`, env per secrets — tutto preservato
+- Soft-delete, RLS, CORS whitelist — non toccati
