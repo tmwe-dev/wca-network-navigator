@@ -16,6 +16,7 @@
 
 import { PROVIDER_CONFIG, MODEL_MAP, ALLOWED_MODELS, type ProviderKey } from "./aiGatewayConfig.ts";
 import { createLogger } from "./structuredLogger.ts";
+import { resolveScopeRoute } from "./aiScopeRouter.ts";
 import {
   AiGatewayError,
   isRetryableStatus,
@@ -57,20 +58,42 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
     scope: opts.scope ?? null,
   });
 
-  // Resolve provider
-  const provider = (Deno.env.get("AI_PROVIDER") || "lovable") as string;
-  const config = PROVIDER_CONFIG[provider as ProviderKey] || PROVIDER_CONFIG.lovable;
+  // ---------------------------------------------------------------------------
+  // Resolve provider — priority:
+  //   1. DB routing per scope (ai_routing_config) — overrides everything
+  //   2. AI_PROVIDER env var (legacy/global override)
+  //   3. "anthropic" default (post-Lovable migration)
+  // ---------------------------------------------------------------------------
+  const scopeRoute = await resolveScopeRoute(opts.scope);
+  const provider: ProviderKey =
+    (scopeRoute?.provider as ProviderKey | undefined) ||
+    ((Deno.env.get("AI_PROVIDER") as ProviderKey | undefined) ?? "anthropic");
+  const config = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.anthropic;
   const gatewayUrl = Deno.env.get("AI_GATEWAY_URL") || config.url;
-  const apiKey = opts.apiKey || Deno.env.get("AI_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
+  // Per-provider env key (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, …).
+  // Fallback chain: explicit opts.apiKey → provider-specific env → legacy AI_API_KEY → LOVABLE_API_KEY.
+  const apiKey =
+    opts.apiKey ||
+    Deno.env.get(config.envKey) ||
+    Deno.env.get("AI_API_KEY") ||
+    Deno.env.get("LOVABLE_API_KEY");
 
   if (!apiKey) {
-    throw new AiGatewayError("no_api_key", "AI_API_KEY not configured (set AI_API_KEY or LOVABLE_API_KEY)");
+    throw new AiGatewayError(
+      "no_api_key",
+      `${config.envKey} not configured for provider '${provider}'`,
+    );
   }
   if (!opts.models.length) {
     throw new AiGatewayError("invalid_model", "models[] cannot be empty");
   }
 
-  for (const m of opts.models) {
+  // If DB scope route provides a concrete model, prepend it so it wins over fallbacks.
+  const modelChain = scopeRoute?.model
+    ? [scopeRoute.model, ...opts.models.filter((m) => m !== scopeRoute.model)]
+    : opts.models;
+
+  for (const m of modelChain) {
     if (!ALLOWED_MODELS.has(m)) {
       logLine("warn", "ai_gateway.unknown_model", { model: m, hint: "Model not in ALLOWED_MODELS set, proceeding anyway" });
     }
@@ -84,7 +107,7 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
   let totalAttempts = 0;
   let lastError: AiGatewayError | null = null;
 
-  for (const model of opts.models) {
+  for (const model of modelChain) {
     const nativeModel = MODEL_MAP[provider]?.[model] || model;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
