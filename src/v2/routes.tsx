@@ -211,8 +211,6 @@ export function V2Routes(): React.ReactElement {
 
         {/* Fullscreen authenticated routes (no sidebar/header) */}
         <Route element={<V2AuthGateRaw />}>
-          <Route path="command" element={guardedPage(CommandPage, "Command")} />
-          <Route path="command/help" element={guardedPage(CommandHelpPage, "CommandHelp")} />
           <Route path="finder-api" element={guardedPage(FinderApiPage, "FinderAPI")} />
           <Route path="finder-api/schema" element={guardedPage(FinderApiSchemaMapPage, "FinderAPISchema")} />
           <Route path="guided-onboarding" element={guardedPage(GuidedOnboardingPage, "GuidedOnboarding")} />
@@ -222,6 +220,9 @@ export function V2Routes(): React.ReactElement {
         <Route element={<V2AuthGate />}>
           {/* Home V2 → Command (Dashboard accessibile esplicitamente su /v2/dashboard) */}
           <Route index element={<Navigate to="/v2/command" replace />} />
+          {/* Command vive ora dentro AuthenticatedLayout per avere la sidebar sx come tutte le altre pagine */}
+          <Route path="command" element={guardedPage(CommandPage, "Command")} />
+          <Route path="command/help" element={guardedPage(CommandHelpPage, "CommandHelp")} />
           <Route path="dashboard" element={guardedPage(DashboardPage, "Dashboard")} />
 
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
