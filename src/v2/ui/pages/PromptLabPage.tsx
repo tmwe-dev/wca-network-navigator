@@ -86,10 +86,11 @@ import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav
 import { PageTitleHint } from "@/v2/ui/atoms/PageTitleHint";
 
 const GROUP_ICONS: Record<PromptLabGroupId, LucideIcon> = {
-  core_ai: Brain,
-  communication: MessageSquare,
-  strategy: Target,
-  operations: Wrench,
+  prompts: Library,
+  personas: Users,
+  capabilities: ShieldCheck,
+  tests: FlaskConical,
+  health: Brain,
 };
 
 const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
@@ -117,7 +118,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
 
 export function PromptLabPage() {
   const { user } = useAuth();
-  const [activeGroupId, setActiveGroupId] = useState<PromptLabGroupId>("core_ai");
+  const [activeGroupId, setActiveGroupId] = useState<PromptLabGroupId>("prompts");
   const [activeTabId, setActiveTabId] = useState<PromptLabTabId>("system_prompt");
   const [globalImproverOpen, setGlobalImproverOpen] = useState(false);
   const [harmonizeOpen, setHarmonizeOpen] = useState(false);
