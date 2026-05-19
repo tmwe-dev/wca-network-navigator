@@ -83,9 +83,6 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   {
     title: "Email & Comunicazione",
     items: [
-      { label: "Funnemail Hub",        path: "/v2/funnemail" },
-      { label: "Mail Playground",      path: "/v2/funnemail/playground" },
-      { label: "Statistiche mittenti", path: "/v2/funnemail/statistiche-mittenti" },
       { label: "Funnemail Sorting",    path: "/v2/funnemail-inbox/sorting" },
     ],
   },

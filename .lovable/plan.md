@@ -1,109 +1,115 @@
+# Migrazione AI: da Lovable Gateway a Anthropic + OpenAI + Google con routing configurabile
 
-# Piano: riveste Funnemail con la grafica del prototipo, zero logica toccata
+## Obiettivo
+Spostare tutte le chiamate AI dall'AI Gateway di Lovable verso le API native dei tre provider di cui hai gli account (Anthropic, OpenAI, Google Gemini), con possibilità di scegliere **per scope** il modello da usare direttamente da una pagina di configurazione, senza redeploy.
 
-## Principio guida
-- **Logica V2 invariata**: hook, DAL, edge function, RLS, query keys, journalistReview, claim system, sorting queue, Scout/Brain/Jobs/Eval/Simulator → nessun cambio funzionale.
-- **Solo "pelle nuova"**: layout, classi, token, asset, micro-interazioni dal prototipo `funnemail-sorgenti-20260518-1751.zip`.
-- Le 7 maschere "tecniche" (Scout Cache, Job Ledger, Eval, Operations, Brain, Routing Rules, Simulator) restano dove sono ma non si vedono dentro Funnemail: vengono **spostate a livello di navigazione** in Settings/Analytics.
+## Architettura proposta
 
----
+```text
+                Frontend (invokeAi + scope)
+                          |
+                          v
+              Edge function (qualsiasi)
+                          |
+                          v
+           _shared/aiGateway.aiChat({scope, models})
+                          |
+              +-----------+------------+
+              v                        v
+    routing_rules DB              MODEL_MAP fallback
+    (scope -> provider+model)
+              |
+              v
+    +---------+---------+---------+----------+
+    v                   v         v          v
+ Anthropic            OpenAI    Google    Lovable* (solo embeddings opt)
+ ANTHROPIC_API_KEY    OPENAI    GEMINI    (fallback emergenze)
+```
 
-## Fase 1 — Estrazione design system dal prototipo
+*Embeddings: OpenAI `text-embedding-3-small` (Anthropic non li offre).
 
-Da `/tmp/funnemail-proto/style.css` estraggo e porto in V2:
-- Palette (`--ink`, `--accent`, `--paper`, `--glass-*`, ombre, radius) → convertita in **HSL** e aggiunta a `src/index.css` come token `--funnemail-*` (namespaced, non sovrascrive niente di esistente).
-- Classi utility glassmorphism, sidebar sliding, mascot frame → componenti React riutilizzabili in `src/v2/ui/atoms/funnemail/`:
-  - `FunnemailGlassCard.tsx`
-  - `FunnemailSectionShell.tsx` (layout 2-3 colonne del prototipo)
-  - `FunnemailMascot.tsx`
-  - `FunnemailToneChip.tsx` (preset tono)
-  - `FunnemailViewSwitch.tsx` (FunneMail/Globale)
-- Asset copiati in `src/assets/funnemail/`: `funnemail-logo.png`, `mascot.png`, icone SVG.
+## Strategia di mapping costo/complessità
 
-Nessuna modifica al `tailwind.config.ts` se non aggiunta di token namespaced.
+Tier per scegliere il modello giusto in base al lavoro che fa lo scope:
 
----
+| Tier | Quando | Modello consigliato | Costo indicativo (1M tok in/out) |
+|------|--------|---------------------|----------------------------------|
+| **HEAVY** | Agent loop, multi-tool reasoning, journalist review finale, classify-inbound-message complesso, sherlock-extract, ai-assistant principale | `claude-sonnet-4-5` (Anthropic) | $3 / $15 |
+| **STANDARD** | Generate-email, generate-outreach, improve-email, refine-classification-rule, agentic-decide, ai-query-planner, prompt-copilot-chat | `gpt-4o` (OpenAI) o `claude-haiku-4-5` se costo critico | $2.50/$10 — $1/$5 |
+| **LIGHT** | suggest-email-groups, categorize-content, classify-inbound-content, learn-from-group-correction, summarize, generate-aliases, parse-business-card (text), kb-intake-analyze | `gemini-2.5-flash` (Google) | $0.075/$0.30 |
+| **VISION** | parse-business-card OCR, ai-match-business-cards, linkedin-ai-extract, whatsapp-ai-extract con immagini | `gemini-2.5-flash` (multimodale, ottimo prezzo/qualità) | $0.075/$0.30 |
+| **EMBEDDINGS** | KB, memoria, RAG, doctrine audit | `text-embedding-3-small` (OpenAI) | $0.02/1M tok |
 
-## Fase 2 — Riveste le pagine esistenti (logica intatta)
+Tutti i valori sono **default proposti** — modificabili dalla pagina di config senza redeploy.
 
-| Pagina V2 esistente | Nuova grafica | Logica |
-|---|---|---|
-| `FunnemailInboxPage.tsx` | Layout 2 colonne del prototipo `inbox.html` + sidebar filtri + ViewSwitch FunneMail/Globale | Stesso `useFunnemailInbox`, stessi bulk, claim, reclassify |
-| `EmailIntelligencePage.tsx` (10 tab) | Header + struttura 3 colonne come `intelligence-manual.html` + KPI grid come `intelligence-senders.html` | Stessi hook/DAL; le 10 tab restano ma con look glass |
-| `EmailLabPage.tsx` (Funnemail tab) | Toolbar e flow come `index.html` Mail Playground | `FunnemailTab` invariato |
-| `MessageClaimBanner` | Bordo + tipografia del prototipo | Stessa logica claim |
+## Cosa cambia tecnicamente
 
----
+### 1. Secrets (via tool secrets)
+Aggiungo: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`.
+`LOVABLE_API_KEY` resta solo come fallback emergenza (puoi disattivarlo dopo aver verificato che tutto gira).
 
-## Fase 3 — Nuove pagine richieste dal prototipo (solo UI, dati dai DAL esistenti)
+### 2. Nuova tabella `ai_routing_config` (DB)
+```text
+scope text PRIMARY KEY      -- es. "agent_loop", "generate_email", "classify_inbound"
+provider text NOT NULL      -- 'anthropic' | 'openai' | 'google'
+model text NOT NULL         -- es. 'claude-sonnet-4-5'
+tier text                   -- 'heavy' | 'standard' | 'light' | 'vision' (documentazione)
+notes text
+updated_at, updated_by
+```
+RLS: lettura per tutti gli autenticati, scrittura solo admin.
+Seedata con i default della tabella sopra (uno scope per ogni edge function AI).
 
-1. **`/v2/funnemail`** — Hub landing "Tutto quello che puoi fare" (5 card → Inbox, Mail Playground, Cataloga mittenti, Statistiche, Impostazioni). Grafica del file `funnemail-index.html`. Zero logica: solo `<Link>` alle route esistenti.
-2. **`/v2/funnemail/playground`** — Mail Playground con switch FunneMail/Globale, preset tono (6 chip), "Componi a selezionati", "Regola automatica" inline, "Prompt AI personale" inline. Layout 1:1 con `index.html`. Sotto il cofano collega `EmailEditorPanel` + `improve-email`/`generate-email` via `invokeAi()` (già esistenti).
-3. **`/v2/funnemail/statistiche-mittenti`** — KPI grid + lista mittenti aggregata. Grafica `intelligence-senders.html`. DAL: riusa `listEmailSenderStats` esistente.
+### 3. Refactor `_shared/aiGateway.ts`
+- `aiChat({ scope, ... })` legge `ai_routing_config` (con cache in-memory 60s) e risolve provider+model.
+- Se scope non in tabella -> usa MODEL_MAP esistente come fallback.
+- Rimuovo l'hard-coded `AI_PROVIDER` env e i nomi `claude-sonnet-4-20250514` errati.
+- Aggiorno `MODEL_MAP` Anthropic ai nomi reali (`claude-sonnet-4-5`, `claude-haiku-4-5`).
+- Aggiorno `MODEL_MAP` Google ai nomi reali (`gemini-2.5-flash`, `gemini-2.5-pro`).
+- Header auth Anthropic: aggiungo `x-api-key` + `anthropic-version: 2023-06-01`.
 
----
+### 4. Bonifica bypass gateway (~5 file)
+Porto tutte le funzioni elencate sotto a usare `aiChat()`:
+- `ai-gateway-micro/index.ts` — wrapper diretto, lo riconverto
+- `whatsapp-ai-extract`, `parse-business-card`, `funnemail-classify`, `linkedin-ai-extract` — chiamate dirette a `ai.gateway.lovable.dev`
+- `ai-assistant/aiProviderResolver.ts` — riallineato al nuovo router; mantiene BYOK utente come override
 
-## Fase 4 — Spostamento maschere tecniche fuori da Funnemail (solo navigazione)
+### 5. Embeddings (`_shared/embeddings.ts`)
+Switch da Lovable AI a `https://api.openai.com/v1/embeddings` con `text-embedding-3-small` (1536 dim — stessa dimensione delle pgvector columns attuali, **nessuna migrazione vettoriale necessaria**). Verifico con un check rapido sui pgvector columns esistenti prima di confermare.
 
-Le maschere restano nei loro file e route. **Cambia solo dove appaiono nel menu**:
+### 6. Pagina di configurazione
+Nuova route `/v2/settings/ai-routing` (admin only):
+- Tabella scope x (provider, model) con dropdown
+- Pulsanti "Reset to defaults", "Test scope" (chiama l'edge `ai-gateway-micro` con il modello selezionato e mostra latenza/costo stimato)
+- Badge tier (Heavy/Standard/Light/Vision) accanto a ogni riga
+- Storico modifiche (chi/quando)
 
-| Maschera | Era in | Va in |
-|---|---|---|
-| Operations + Brain | tab di `/v2/email-intelligence` | sezione **Analytics** → `/v2/analytics/funnemail-ops` (alias route della stessa pagina) |
-| Job Ledger | sparso | sezione **Analytics** → stessa pagina ops, tab dedicata |
-| Scout Cache | tab Email Intelligence | sezione **Settings** → `/v2/settings/funnemail-advanced` (sub-tab) |
-| Eval Set | tab Email Intelligence | sezione **Settings** → stessa pagina, sub-tab |
-| Routing Rules | tab Email Intelligence | sezione **Settings** → stessa pagina, sub-tab |
-| Simulator | già in `/v2/prompt-lab` | resta lì |
+### 7. Osservabilità
+`structuredLogger` già logga `provider` e `model` — aggiungo `scope` e `cost_estimate_usd` per riga in `edge_metrics`, così vedi i costi reali per scope in dashboard.
 
-Le vecchie route restano funzionanti (alias) per non rompere link salvati. Solo `registry.ts` + `breadcrumbConfig.ts` cambiano la collocazione visibile.
+## Cosa NON cambia
+- Frontend `invokeAi()` — già astratto, zero modifiche
+- `ai_scope_registry`, `journalistReview`, prompt sanitizer, injection guard, prompt versioning, hard guards
+- Logica di business delle edge function (solo lo strato di trasporto AI)
+- BYOK utente (`user_api_keys`) — resta come override per utente avanzato
 
-`MessageClaimBanner`: aggiunto flag `VITE_FUNNEMAIL_CLAIM_ENABLED` (default `false` → nascosto in singolo-operatore; quando in futuro arriverà un secondo operatore, basterà accendere il flag).
+## Piano di rilascio (atomico, reversibile)
+1. **Fase 1** — Migrazione DB (tabella `ai_routing_config` + seed default) — *reversibile (drop table)*
+2. **Fase 2** — Refactor `aiGateway.ts` + nuovo resolver, fallback a MODEL_MAP intatto — *reversibile (env `AI_PROVIDER=lovable` riattiva path vecchio)*
+3. **Fase 3** — Bonifica 5 funzioni con bypass — *reversibile (git revert per file)*
+4. **Fase 4** — Switch embeddings a OpenAI — *NON reversibile vettorialmente se cambia dim; pre-check obbligatorio*
+5. **Fase 5** — Pagina `/v2/settings/ai-routing` admin
+6. **Fase 6** — Smoke test su 6 scope chiave (`generate-email`, `agent-loop`, `classify-inbound-message`, `parse-business-card`, `suggest-email-groups`, `ai-assistant`) tramite `curl_edge_functions`
 
----
+## Domande residue (rispondo io con default se non specifichi)
+- **Pagina config**: la metto sotto `/v2/settings` o preferisci nel Prompt Lab?
+- **Lovable Gateway**: lo rimuovo del tutto o lo lascio come provider opzionale per emergenze?
+- **Test scope**: vuoi anche stima costo nella UI (ti calcolo $/1k token in base ai prezzi pubblici di ogni provider)?
 
-## Cosa NON tocco (nodi critici)
-- `useFunnemailInbox`, `useEmailIntelligence`, hook claim, hook brain
-- DAL `funnemail*.ts`, `emailProcessingJobs.ts`, `emailSenderStats`
-- Edge functions: `check-inbox`, `funnemail-classify-and-route`, `funnemail-send-autoresponder`, classify-*, agent-*
-- RLS, query keys, journalistReview, hard guards, idempotency
-- AI Invocation Charter: ogni nuova chiamata AI passa da `invokeAi()` esistente
+Se non rispondi a queste, vado con: `/v2/settings/ai-routing`, Lovable rimosso da MODEL_MAP ma codice provider conservato in PROVIDER_CONFIG (toggle disabilitato), stima costo inclusa.
 
----
-
-## Verifica fine lavori
-- Inbox apre, filtra, classifica, segna letto, archivia → identico
-- Claim banner: nascosto di default, visibile con flag
-- Sorting queue funziona
-- Email Intelligence: tutte le 10 tab vecchie raggiungibili (5 dentro Funnemail + 5 spostate in Settings/Analytics via alias)
-- Mail Playground non invia nulla in produzione (è un editor; submit reale resta nei flussi outreach esistenti)
-- Build pulita, nessuna rottura ai test E2E `funnemail-*.spec.ts`
-
----
-
-## File previsti (stima)
-
-**Nuovi (~10)**
-- `src/index.css` (aggiunta sezione `:root { --funnemail-* }`)
-- `src/v2/ui/atoms/funnemail/{FunnemailGlassCard, FunnemailSectionShell, FunnemailMascot, FunnemailToneChip, FunnemailViewSwitch}.tsx`
-- `src/v2/ui/pages/funnemail/FunnemailHubPage.tsx`
-- `src/v2/ui/pages/funnemail/FunnemailPlaygroundPage.tsx`
-- `src/v2/ui/pages/funnemail/FunnemailSenderStatsPage.tsx`
-- `src/assets/funnemail/` (logo + mascot + 3 icone)
-
-**Modificati (~6, solo presentazione)**
-- `FunnemailInboxPage.tsx` (wrap nella shell prototipo)
-- `EmailIntelligencePage.tsx` (header + classi glass; tab logica intatta)
-- `MessageClaimBanner.tsx` (flag + restyle)
-- `src/v2/navigation/registry.ts` (sposta voci, aggiunge hub e 3 nuove route)
-- `src/v2/routes.tsx` (3 nuove route + 2 alias)
-- `src/v2/ui/templates/breadcrumbConfig.ts`
-
-**Migration**: nessuna.
-**Edge function nuove**: nessuna.
-**Secrets nuovi**: nessuno. Solo `VITE_FUNNEMAIL_CLAIM_ENABLED` opzionale in `.env.example`.
-
----
-
-## Rollback
-Tutto reversibile rimuovendo le nuove pagine e ripristinando `registry.ts`/`routes.tsx`. Nessun dato persistente cambia.
+## Vincoli rispettati
+- Memoria progetto: nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, journalist review, hard guards
+- AI Invocation Charter: ogni scope continua a passare da `invokeAi()` con `ai_scope_registry`
+- DAL only, no `any`, `.maybeSingle()`, env per secrets — tutto preservato
+- Soft-delete, RLS, CORS whitelist — non toccati

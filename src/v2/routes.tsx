@@ -79,9 +79,6 @@ const EmailIntelligenceOperationsPage = lazy(() => import("./ui/pages/EmailIntel
 const AlertRoutingPage = lazy(() => import("./ui/pages/AlertRoutingPage").then((m) => ({ default: m.AlertRoutingPage })));
 const FunnemailInboxPage = lazy(() => import("./ui/pages/FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })));
 const FunnemailSortingQueuePage = lazy(() => import("./ui/pages/funnemail-inbox/SortingQueuePage").then((m) => ({ default: m.SortingQueuePage })));
-const FunnemailHubPage = lazy(() => import("./ui/pages/funnemail/FunnemailHubPage").then((m) => ({ default: m.FunnemailHubPage })));
-const FunnemailPlaygroundPage = lazy(() => import("./ui/pages/funnemail/FunnemailPlaygroundPage").then((m) => ({ default: m.FunnemailPlaygroundPage })));
-const FunnemailSenderStatsPage = lazy(() => import("./ui/pages/funnemail/FunnemailSenderStatsPage").then((m) => ({ default: m.FunnemailSenderStatsPage })));
 const AIArenaPage = lazy(() => import("./ui/pages/AIArenaPage").then((m) => ({ default: m.AIArenaPage })));
 const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
 const AnalyticsPage = lazy(() => import("./ui/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
@@ -393,9 +390,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="email-intelligence/operations" element={guardedPage(EmailIntelligenceOperationsPage, "EmailIntelligenceOperations")} />
           <Route path="funnemail-inbox" element={guardedPage(FunnemailInboxPage, "FunnemailInbox")} />
           <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
-          <Route path="funnemail" element={guardedPage(FunnemailHubPage, "FunnemailHub")} />
-          <Route path="funnemail/playground" element={guardedPage(FunnemailPlaygroundPage, "FunnemailPlayground")} />
-          <Route path="funnemail/statistiche-mittenti" element={guardedPage(FunnemailSenderStatsPage, "FunnemailSenderStats")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           {/* token-cockpit standalone removed: moved to Lab Hub (see redirect above) */}
           <Route path="tmwe/clients" element={guardedPage(TmweClientsPage, "TmweClients")} />
