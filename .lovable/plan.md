@@ -1,115 +1,141 @@
-# Migrazione AI: da Lovable Gateway a Anthropic + OpenAI + Google con routing configurabile
 
-## Obiettivo
-Spostare tutte le chiamate AI dall'AI Gateway di Lovable verso le API native dei tre provider di cui hai gli account (Anthropic, OpenAI, Google Gemini), con possibilità di scegliere **per scope** il modello da usare direttamente da una pagina di configurazione, senza redeploy.
+# Piano: Lean Mode + Prompt Lab ridisegnato + Comunicazioni unica
 
-## Architettura proposta
+Obiettivo: rendere il sistema snello, focalizzato e leggibile **senza cancellare codice**, usando un feature flag reversibile. Tre interventi atomici, in sequenza, ognuno reversibile.
 
-```text
-                Frontend (invokeAi + scope)
-                          |
-                          v
-              Edge function (qualsiasi)
-                          |
-                          v
-           _shared/aiGateway.aiChat({scope, models})
-                          |
-              +-----------+------------+
-              v                        v
-    routing_rules DB              MODEL_MAP fallback
-    (scope -> provider+model)
-              |
-              v
-    +---------+---------+---------+----------+
-    v                   v         v          v
- Anthropic            OpenAI    Google    Lovable* (solo embeddings opt)
- ANTHROPIC_API_KEY    OPENAI    GEMINI    (fallback emergenze)
+---
+
+## Principio guida
+
+Tutto passa da un singolo flag `VITE_LEAN_MODE=true` (default ON). Niente DROP di tabelle, niente eliminazione file. Solo:
+- nascondere voci di menu
+- consolidare rotte sotto un guscio unico
+- ridisegnare il Prompt Lab in 5 tab invece di 20+
+
+Se serve tornare indietro: si toglie il flag, tutto riappare.
+
+---
+
+## Fase 1 — Lean Mode (sidebar + rotte nascoste)
+
+**File toccati (solo lettura/scrittura mirata, no refactor):**
+- `src/v2/ui/templates/navConfig.tsx` → filtra `navItemsDef` in base al flag
+- `src/v2/navigation/registry.ts` → rimuove dai popover voci RA Explorer, Super Mario, AI Arena 3D, Standalone Globe, Voice agents, Mission Builder visuale, KPI Dashboard separato, AI Lab v1
+- `src/lib/featureFlags.ts` (nuovo, o estende esistente) → esporta `LEAN_MODE`
+- `.env.example` → documenta `VITE_LEAN_MODE`
+
+**Sidebar finale (7 voci):**
+```
+Command       /v2/command
+Esplora       /v2/explore/network
+Pipeline      /v2/cockpit
+Comunicazioni /v2/comms          ← nuova rotta-guscio (Fase 3)
+Agenda        /v2/agenda
+Agenti        /v2/agents
+Config        /v2/settings
 ```
 
-*Embeddings: OpenAI `text-embedding-3-small` (Anthropic non li offre).
+**Voci spostate sotto Config → Avanzato (solo admin):**
+- Prompt Lab (nuovo, Fase 2)
+- Observability / AI Routing / Edge Metrics / AI Interaction Log
+- Lab tests / KB Supervisor / Email Forge
+- Finder API / Guida
 
-## Strategia di mapping costo/complessità
+**Voci nascoste a tutti (codice resta, rotte attive solo via deep-link):**
+- RA Explorer, RA Scraping
+- AI Arena 3D, Standalone Globe
+- Super Mario (flag già spento)
+- Voice agents 11Labs (Aurora/Bruce/Robin/Floating Copilot)
+- Mission Builder visuale (Autopilot resta)
+- KPI Dashboard separato (metriche già nel Cockpit)
 
-Tier per scegliere il modello giusto in base al lavoro che fa lo scope:
+**Sidebar shadcn:** sostituire l'attuale top-bar/dock con `Sidebar collapsible="icon"` laterale fissa (già richiesto nel turno precedente, lavoro già in parte fatto).
 
-| Tier | Quando | Modello consigliato | Costo indicativo (1M tok in/out) |
-|------|--------|---------------------|----------------------------------|
-| **HEAVY** | Agent loop, multi-tool reasoning, journalist review finale, classify-inbound-message complesso, sherlock-extract, ai-assistant principale | `claude-sonnet-4-5` (Anthropic) | $3 / $15 |
-| **STANDARD** | Generate-email, generate-outreach, improve-email, refine-classification-rule, agentic-decide, ai-query-planner, prompt-copilot-chat | `gpt-4o` (OpenAI) o `claude-haiku-4-5` se costo critico | $2.50/$10 — $1/$5 |
-| **LIGHT** | suggest-email-groups, categorize-content, classify-inbound-content, learn-from-group-correction, summarize, generate-aliases, parse-business-card (text), kb-intake-analyze | `gemini-2.5-flash` (Google) | $0.075/$0.30 |
-| **VISION** | parse-business-card OCR, ai-match-business-cards, linkedin-ai-extract, whatsapp-ai-extract con immagini | `gemini-2.5-flash` (multimodale, ottimo prezzo/qualità) | $0.075/$0.30 |
-| **EMBEDDINGS** | KB, memoria, RAG, doctrine audit | `text-embedding-3-small` (OpenAI) | $0.02/1M tok |
+---
 
-Tutti i valori sono **default proposti** — modificabili dalla pagina di config senza redeploy.
+## Fase 2 — Prompt Lab ridisegnato (20+ tab → 5)
 
-## Cosa cambia tecnicamente
+**Problema attuale:** 4 macro gruppi × ~20 tab + 6 sister pages = caos. Audit 2026-05-11 → 62/100.
 
-### 1. Secrets (via tool secrets)
-Aggiungo: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`.
-`LOVABLE_API_KEY` resta solo come fallback emergenza (puoi disattivarlo dopo aver verificato che tutto gira).
+**Nuovo Prompt Lab:** una sola pagina `/v2/prompt-lab` con **5 tab orizzontali**.
 
-### 2. Nuova tabella `ai_routing_config` (DB)
-```text
-scope text PRIMARY KEY      -- es. "agent_loop", "generate_email", "classify_inbound"
-provider text NOT NULL      -- 'anthropic' | 'openai' | 'google'
-model text NOT NULL         -- es. 'claude-sonnet-4-5'
-tier text                   -- 'heavy' | 'standard' | 'light' | 'vision' (documentazione)
-notes text
-updated_at, updated_by
-```
-RLS: lettura per tutti gli autenticati, scrittura solo admin.
-Seedata con i default della tabella sopra (uno scope per ogni edge function AI).
+| Tab | Cosa contiene oggi sparso | Cosa fa |
+|---|---|---|
+| **1. Prompts** | Catalog + Operative Prompts + Email/WA/LI/Classification/Outreach prompts + Funnemail Classifier | Lista unica di tutti i prompt operativi con filtro per scope, edit inline, versioning, rollback |
+| **2. Personas** | Agent Personas tab + Editor Persona | 8 agenti × identità/tono/KB filtrata |
+| **3. Capabilities** | Agent Capabilities tab | Tool whitelist/blacklist, timeout, modello, modalità per agente |
+| **4. Tests** | Test cases + Test runs + Simulator + Eval set Funnemail | Run regression, vedere ultime esecuzioni, dry-run simulator |
+| **5. Health** | Audit + Drift + Suggestions + Proposals + Architect + Harmonizer + Refiner status | Dashboard salute: KPI prompt, cron status, suggerimenti pending, drift report |
 
-### 3. Refactor `_shared/aiGateway.ts`
-- `aiChat({ scope, ... })` legge `ai_routing_config` (con cache in-memory 60s) e risolve provider+model.
-- Se scope non in tabella -> usa MODEL_MAP esistente come fallback.
-- Rimuovo l'hard-coded `AI_PROVIDER` env e i nomi `claude-sonnet-4-20250514` errati.
-- Aggiorno `MODEL_MAP` Anthropic ai nomi reali (`claude-sonnet-4-5`, `claude-haiku-4-5`).
-- Aggiorno `MODEL_MAP` Google ai nomi reali (`gemini-2.5-flash`, `gemini-2.5-pro`).
-- Header auth Anthropic: aggiungo `x-api-key` + `anthropic-version: 2023-06-01`.
+**File toccati:**
+- `src/v2/ui/pages/PromptLabPage.tsx` → ristruttura in 5 tab (i sotto-componenti esistenti restano, solo riorganizzati)
+- Sister pages (`/v2/prompt-lab/atlas`, `/catalog`, `/tests`, `/proposals`, `/suggestions`, `/agent/:slug`) → restano accessibili via deep-link da dentro le 5 tab, non più voci separate di menu
+- `src/v2/config/labTabs.ts` (se esiste) → SSOT dei 5 tab
 
-### 4. Bonifica bypass gateway (~5 file)
-Porto tutte le funzioni elencate sotto a usare `aiChat()`:
-- `ai-gateway-micro/index.ts` — wrapper diretto, lo riconverto
-- `whatsapp-ai-extract`, `parse-business-card`, `funnemail-classify`, `linkedin-ai-extract` — chiamate dirette a `ai.gateway.lovable.dev`
-- `ai-assistant/aiProviderResolver.ts` — riallineato al nuovo router; mantiene BYOK utente come override
+**Nessun edit ai prompt esistenti, nessun edit alle edge function di governance.**
 
-### 5. Embeddings (`_shared/embeddings.ts`)
-Switch da Lovable AI a `https://api.openai.com/v1/embeddings` con `text-embedding-3-small` (1536 dim — stessa dimensione delle pgvector columns attuali, **nessuna migrazione vettoriale necessaria**). Verifico con un check rapido sui pgvector columns esistenti prima di confermare.
+---
 
-### 6. Pagina di configurazione
-Nuova route `/v2/settings/ai-routing` (admin only):
-- Tabella scope x (provider, model) con dropdown
-- Pulsanti "Reset to defaults", "Test scope" (chiama l'edge `ai-gateway-micro` con il modello selezionato e mostra latenza/costo stimato)
-- Badge tier (Heavy/Standard/Light/Vision) accanto a ogni riga
-- Storico modifiche (chi/quando)
+## Fase 3 — Comunicazioni: una sola voce
 
-### 7. Osservabilità
-`structuredLogger` già logga `provider` e `model` — aggiungo `scope` e `cost_estimate_usd` per riga in `edge_metrics`, così vedi i costi reali per scope in dashboard.
+**Problema:** oggi 4 voci di menu parlano di messaggi (Inbox, Email, Funnemail Inbox, Rubrica WA, Rubrica LinkedIn, Email Intelligence). L'utente non sa dove cliccare.
 
-## Cosa NON cambia
-- Frontend `invokeAi()` — già astratto, zero modifiche
-- `ai_scope_registry`, `journalistReview`, prompt sanitizer, injection guard, prompt versioning, hard guards
-- Logica di business delle edge function (solo lo strato di trasporto AI)
-- BYOK utente (`user_api_keys`) — resta come override per utente avanzato
+**Nuova rotta:** `/v2/comms` con 5 tab interne:
 
-## Piano di rilascio (atomico, reversibile)
-1. **Fase 1** — Migrazione DB (tabella `ai_routing_config` + seed default) — *reversibile (drop table)*
-2. **Fase 2** — Refactor `aiGateway.ts` + nuovo resolver, fallback a MODEL_MAP intatto — *reversibile (env `AI_PROVIDER=lovable` riattiva path vecchio)*
-3. **Fase 3** — Bonifica 5 funzioni con bypass — *reversibile (git revert per file)*
-4. **Fase 4** — Switch embeddings a OpenAI — *NON reversibile vettorialmente se cambia dim; pre-check obbligatorio*
-5. **Fase 5** — Pagina `/v2/settings/ai-routing` admin
-6. **Fase 6** — Smoke test su 6 scope chiave (`generate-email`, `agent-loop`, `classify-inbound-message`, `parse-business-card`, `suggest-email-groups`, `ai-assistant`) tramite `curl_edge_functions`
+| Tab | Sostituisce |
+|---|---|
+| **Inbox** | `/v2/inbox` (vista unificata cross-canale) |
+| **Email** | `/v2/email` (composer + thread email) |
+| **WhatsApp** | `/v2/rubrica/whatsapp` |
+| **LinkedIn** | `/v2/rubrica/linkedin` |
+| **Smistamento (Funnemail)** | `/v2/funnemail-inbox` + `/v2/email-intelligence` |
 
-## Domande residue (rispondo io con default se non specifichi)
-- **Pagina config**: la metto sotto `/v2/settings` o preferisci nel Prompt Lab?
-- **Lovable Gateway**: lo rimuovo del tutto o lo lascio come provider opzionale per emergenze?
-- **Test scope**: vuoi anche stima costo nella UI (ti calcolo $/1k token in base ai prezzi pubblici di ogni provider)?
+**File toccati:**
+- `src/v2/ui/pages/CommsPage.tsx` (nuovo, ~80 righe) → guscio con `<Tabs>` shadcn che monta i 5 componenti pagina esistenti
+- `src/App.tsx` o router V2 → aggiunge rotta `/v2/comms` + rotte `/v2/comms/:tab` per deep-link
+- Vecchie rotte `/v2/inbox`, `/v2/email`, `/v2/funnemail-inbox`, `/v2/rubrica/*`, `/v2/email-intelligence` → redirect a `/v2/comms/<tab>` corrispondente (stesso pattern V1→V2)
 
-Se non rispondi a queste, vado con: `/v2/settings/ai-routing`, Lovable rimosso da MODEL_MAP ma codice provider conservato in PROVIDER_CONFIG (toggle disabilitato), stima costo inclusa.
+**I componenti pagina esistenti non vengono modificati.** Solo montati dentro un guscio Tabs.
 
-## Vincoli rispettati
-- Memoria progetto: nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, journalist review, hard guards
-- AI Invocation Charter: ogni scope continua a passare da `invokeAi()` con `ai_scope_registry`
-- DAL only, no `any`, `.maybeSingle()`, env per secrets — tutto preservato
-- Soft-delete, RLS, CORS whitelist — non toccati
+---
+
+## Cosa NON viene toccato (zero rischio)
+
+- Edge functions (check-inbox, journalist review, send-email, classify-*, agent-loop, ecc.)
+- DB schema, RLS, trigger soft-delete
+- Auth, whitelist, RBAC
+- DAL (`src/data/`)
+- Hard guards, AI Invocation Charter, Editorial review
+- Cron jobs
+- Extension bridge (WA/LI/email)
+- Logica business (lead scoring, holding pattern, dedup)
+
+---
+
+## Verifica finale
+
+Dopo le 3 fasi:
+- `bun run build` → typecheck verde
+- Smoke test manuale: login → Command → Pipeline → Comunicazioni (5 tab) → Agenda → Prompt Lab (5 tab) → Config
+- Tutti i vecchi URL diretti continuano a funzionare via redirect
+- Toggle `VITE_LEAN_MODE=false` riporta tutto come prima
+
+---
+
+## Memorie da aggiornare a fine lavoro
+
+- `mem://ui/lean-mode-2026-05-19` (nuova) — flag, sidebar 7 voci, redirect map
+- `mem://features/prompt-lab-5-tabs-2026-05-19` (nuova) — nuova IA Prompt Lab
+- `mem://features/comms-unified-page-2026-05-19` (nuova) — guscio /v2/comms
+- Aggiornare `mem://index.md` con i 3 nuovi riferimenti
+
+---
+
+## Stima
+
+- Fase 1: ~45 min
+- Fase 2: ~60 min
+- Fase 3: ~30 min
+- Verifica + memorie: ~15 min
+
+**Totale: ~2.5 ore di lavoro, zero rischio business, completamente reversibile.**
