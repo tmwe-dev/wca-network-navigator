@@ -83,22 +83,47 @@ export const PROMPT_LAB_TABS: readonly PromptLabTabDef[] = [
 ] as const;
 
 /** Macroarea raggruppante (Livello 1 navigazione Prompt Lab). */
-export type PromptLabGroupId = "core_ai" | "communication" | "strategy" | "operations"; // LOVABLE-93
+export type PromptLabGroupId = "prompts" | "personas" | "capabilities" | "tests" | "health"; // 2026-05-19 Lean Mode
 
 export interface PromptLabGroupDef {
   id: PromptLabGroupId;
   label: string;
   /** lucide-react icon name (mapped in component) */
-  icon: "Brain" | "MessageSquare" | "Target" | "Package" | "Receipt" | "LifeBuoy";
+  icon:
+    | "Library"
+    | "Users"
+    | "ShieldCheck"
+    | "FlaskConical"
+    | "HeartPulse"
+    // legacy values kept per backward-compat (build safety)
+    | "Brain"
+    | "MessageSquare"
+    | "Target"
+    | "Package"
+    | "Receipt"
+    | "LifeBuoy";
   tabs: ReadonlyArray<PromptLabTabId>;
 }
 
+/**
+ * 2026-05-19 Lean Mode: 5 macroaree invece di 4×20 tab sparpagliati.
+ * Stessi PROMPT_LAB_TABS componenti, solo riorganizzati per leggibilità.
+ */
 export const PROMPT_LAB_GROUPS: readonly PromptLabGroupDef[] = [
-  { id: "core_ai", label: "Core AI", icon: "Brain", tabs: ["system_prompt", "kb_doctrine", "ai_profile", "journalists"] },
-  { id: "communication", label: "Comunicazione", icon: "MessageSquare", tabs: ["email", "voice", "operative"] },
-  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas", "capabilities", "simulator", "tests", "history", "audit", "routing", "super_mario"] },
-  // LOVABLE-93: coerenza Prompt Lab multi-dominio
-  { id: "operations", label: "Operazioni", icon: "Package", tabs: ["operative_kb", "administrative_kb", "support_kb", "domain_routing"] },
+  {
+    id: "prompts",
+    label: "Prompts",
+    icon: "Library",
+    tabs: [
+      "system_prompt", "kb_doctrine", "ai_profile",
+      "operative", "email", "voice", "playbooks", "journalists",
+      "operative_kb", "administrative_kb", "support_kb", "domain_routing",
+    ],
+  },
+  { id: "personas",     label: "Personas",     icon: "Users",        tabs: ["personas"] },
+  { id: "capabilities", label: "Capabilities", icon: "ShieldCheck",  tabs: ["capabilities"] },
+  { id: "tests",        label: "Tests",        icon: "FlaskConical", tabs: ["simulator", "tests", "history"] },
+  { id: "health",       label: "Health",       icon: "HeartPulse",   tabs: ["audit", "routing", "super_mario"] },
 ] as const;
 
 /** Default System Prompt blocks (mirrors supabase/functions/ai-assistant) */
