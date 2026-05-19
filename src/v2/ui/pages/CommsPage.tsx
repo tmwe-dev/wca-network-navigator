@@ -53,10 +53,10 @@ export function CommsPage(): JSX.Element {
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="border-b border-border bg-background sticky top-0 z-10 px-4 py-2">
-        <h1 className="text-lg font-semibold mb-2">Comunicazioni</h1>
-        <Tabs value={active} onValueChange={onTabChange}>
-          <TabsList className="grid w-full max-w-3xl grid-cols-5">
+      <div className="border-b border-border bg-background sticky top-0 z-10 px-4 py-2 flex items-center gap-4">
+        <h1 className="text-sm font-semibold shrink-0">Comunicazioni</h1>
+        <Tabs value={active} onValueChange={onTabChange} className="flex-1 min-w-0">
+          <TabsList className="inline-flex h-8 justify-start">
             <TabsTrigger value="inbox" className="gap-2">
               <Inbox className="h-4 w-4" />
               <span className="hidden sm:inline">Inbox</span>
