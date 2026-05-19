@@ -9,8 +9,9 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, MessageCircle, Linkedin, Target, FlaskConical,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, MessageCircle, Linkedin, Target, FlaskConical, Bot, MessagesSquare,
 } from "lucide-react";
+import { LEAN_MODE, LEAN_NAV_PATHS } from "@/lib/featureFlags";
 
 export interface NavItemDef {
   readonly labelKey: string;
@@ -29,13 +30,18 @@ export interface NavGroupDef {
   readonly items: readonly NavItemDef[];
 }
 
-/** The canonical destinations — flat list (no titled group). */
-export const navItemsDef: readonly NavItemDef[] = [
+/**
+ * Lista completa dei destination V2.
+ * In Lean Mode la sidebar mostra solo le voci con path in LEAN_NAV_PATHS;
+ * le altre restano accessibili via deep-link e popover "Tutte le pagine".
+ */
+const FULL_NAV_ITEMS: readonly NavItemDef[] = [
   { labelKey: "nav.command",            path: "/v2/command",            icon: <Command className="h-4 w-4" />,  pinned: true, pinOrder: 1 },
   { labelKey: "nav.missioni",           path: "/v2/agents/autopilot",   icon: <Target className="h-4 w-4" />,   pinned: true, pinOrder: 1.5 },
   { labelKey: "nav.explore",            path: "/v2/explore/network",    icon: <Search className="h-4 w-4" />,   pinned: true, pinOrder: 2 },
   { labelKey: "nav.cestinone",          path: "/v2/cestinone",          icon: <Trash2 className="h-4 w-4" />,   pinned: true, pinOrder: 4, badge: "NEW" },
   { labelKey: "nav.cockpit",            path: "/v2/cockpit",            icon: <Rocket className="h-4 w-4" />,   pinned: true, pinOrder: 5 },
+  { labelKey: "nav.comms",              path: "/v2/comms",              icon: <MessagesSquare className="h-4 w-4" />, pinned: true, pinOrder: 5.05, badge: "NEW" },
   { labelKey: "nav.inbox",              path: "/v2/inbox",              icon: <Inbox className="h-4 w-4" />,    pinned: true, pinOrder: 5.1 },
   { labelKey: "nav.email",              path: "/v2/email",              icon: <Mail className="h-4 w-4" />,     pinned: true, pinOrder: 5.2 },
   { labelKey: "nav.agenda",             path: "/v2/agenda",             icon: <CalendarDays className="h-4 w-4" />, pinned: true, pinOrder: 6 },
@@ -44,9 +50,15 @@ export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.funnemail_inbox",    path: "/v2/funnemail-inbox",    icon: <Sparkles className="h-4 w-4" />, pinned: true, pinOrder: 7.5, badge: "NEW" },
   { labelKey: "nav.rubrica_whatsapp",   path: "/v2/rubrica/whatsapp",   icon: <MessageCircle className="h-4 w-4" />, pinned: true, pinOrder: 7.7, badge: "NEW" },
   { labelKey: "nav.rubrica_linkedin",   path: "/v2/rubrica/linkedin",   icon: <Linkedin className="h-4 w-4" />, pinned: true, pinOrder: 7.8, badge: "NEW" },
+  { labelKey: "nav.agenti",             path: "/v2/intelligence/agents", icon: <Bot className="h-4 w-4" />,     pinned: true, pinOrder: 7.9 },
   { labelKey: "nav.intelligence",       path: "/v2/intelligence",       icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 8 },
   { labelKey: "nav.config",             path: "/v2/settings",           icon: <Settings className="h-4 w-4" />, pinned: true, pinOrder: 9 },
 ] as const;
+
+/** The destinations shown in the sidebar (filtered by Lean Mode). */
+export const navItemsDef: readonly NavItemDef[] = LEAN_MODE
+  ? FULL_NAV_ITEMS.filter((i) => LEAN_NAV_PATHS.has(i.path))
+  : FULL_NAV_ITEMS;
 
 /**
  * Backward-compat: the sidebar still iterates `navGroupsDef`.
