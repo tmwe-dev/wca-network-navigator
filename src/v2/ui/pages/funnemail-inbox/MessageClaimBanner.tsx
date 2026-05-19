@@ -14,7 +14,19 @@ interface Props {
   messageId: string;
 }
 
+/**
+ * Flag opzionale per nascondere il banner claim su deployment a singolo
+ * operatore. Default = false (nascosto). Quando il team cresce, basta
+ * impostare `VITE_FUNNEMAIL_CLAIM_ENABLED=true` per riattivarlo.
+ */
+const CLAIM_BANNER_ENABLED = String(
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+    ?.VITE_FUNNEMAIL_CLAIM_ENABLED ?? "",
+).toLowerCase() === "true";
+
 export function MessageClaimBanner({ messageId }: Props): React.ReactElement | null {
+  if (!CLAIM_BANNER_ENABLED) return null;
+
   const ctl = useFunnemailClaims(null);
   const { isAdmin } = useAuthV2();
   const claim = ctl.claimsByMessageId.get(messageId) ?? null;
