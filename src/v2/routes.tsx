@@ -393,6 +393,9 @@ export function V2Routes(): React.ReactElement {
           <Route path="email-intelligence/operations" element={guardedPage(EmailIntelligenceOperationsPage, "EmailIntelligenceOperations")} />
           <Route path="funnemail-inbox" element={guardedPage(FunnemailInboxPage, "FunnemailInbox")} />
           <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
+          <Route path="funnemail" element={guardedPage(FunnemailHubPage, "FunnemailHub")} />
+          <Route path="funnemail/playground" element={guardedPage(FunnemailPlaygroundPage, "FunnemailPlayground")} />
+          <Route path="funnemail/statistiche-mittenti" element={guardedPage(FunnemailSenderStatsPage, "FunnemailSenderStats")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           {/* token-cockpit standalone removed: moved to Lab Hub (see redirect above) */}
           <Route path="tmwe/clients" element={guardedPage(TmweClientsPage, "TmweClients")} />
