@@ -14,7 +14,6 @@
 import { useEffect, useRef } from "react";
 import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
-import FloatingDock from "@/components/layout/FloatingDock";
 import ConversationSidebar from "./command/ConversationSidebar";
 import type { ToolResult, BulkAction } from "./command/tools/types";
 import type { Message } from "./command/constants";
@@ -296,8 +295,6 @@ const CommandPage = () => {
           }}
         />
       </div>
-
-      <FloatingDock />
     </div>
   );
 };
