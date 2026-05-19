@@ -30,3 +30,6 @@
 - [Pipeline Traces Viewer](mem://features/pipeline-traces-viewer) — Tabella pipeline_traces + helper _shared/pipelineTrace.ts + pagina /v2/pipeline-traces (live/per-trace/per-step). Trace_id = message_id. Wireup: classify-inbound-message + funnemail-auto-route.
 - [Lab Hub Config-Driven](mem://architecture/lab-hub-config-driven) — /v2/lab unico hub con tutti i tool di test/prompt/observability/charts; SSOT src/v2/config/labTabs.ts (una riga per tab), 22 tab in 4 group, legacy paths reindirizzati
 - [Email Send SSOT](mem://architecture/email-send-ssot-enforcement) — Nessun invokeEdge('send-email') diretto in UI: tutto passa da useEnqueueAction → ai_pending_actions → useApproveAndDispatch. Eccezioni: GeneralSettings test, funnemail-send-autoresponder.
+- [Lean Mode 2026-05-19](mem://ui/lean-mode-2026-05-19) — Flag VITE_LEAN_MODE (default ON): sidebar a 7 voci filtrate via LEAN_NAV_PATHS in featureFlags.ts. Rotte non eliminate.
+- [Comms Unified Page 2026-05-19](mem://features/comms-unified-page-2026-05-19) — /v2/comms guscio Tabs (Inbox/Email/WA/LinkedIn/Smistamento) monta pagine canale esistenti senza modificarle.
+- [Prompt Lab 5 Macro 2026-05-19](mem://features/prompt-lab-5-macro-2026-05-19) — PROMPT_LAB_GROUPS in 5 macroaree (prompts/personas/capabilities/tests/health). Zero modifiche ai tab.
