@@ -13,7 +13,6 @@ import { CommandInput } from "./command/components/CommandInput";
 import { CommandPageBackButton } from "./command/components/CommandPageBackButton";
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
-import FloatingDock from "@/components/layout/FloatingDock";
 import { useFinderApi } from "./finder-api/useFinderApi";
 import { FinderApiCanvas } from "./finder-api/FinderApiCanvas";
 import VoicePresence from "@/components/workspace/VoicePresence";
@@ -127,8 +126,6 @@ const FinderApiPage = () => {
           />
         )}
       </div>
-
-      <FloatingDock />
     </div>
   );
 };
