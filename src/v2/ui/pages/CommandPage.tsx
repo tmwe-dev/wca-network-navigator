@@ -26,7 +26,8 @@ import { useCommandSubmit } from "./command/hooks/useCommandSubmit";
 import { CommandHistory } from "./command/components/CommandHistory";
 import { CommandInput } from "./command/components/CommandInput";
 import { CommandOutput } from "./command/components/CommandOutput";
-import { CommandPageBackButton } from "./command/components/CommandPageBackButton";
+// CommandPageBackButton rimosso (Lean Mode 2026-05-19): duplicava la LayoutIconRail
+// a sinistra. Unica sidebar = LayoutIconRail già montata da AuthenticatedLayout.
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
@@ -185,7 +186,6 @@ const CommandPage = () => {
   return (
     <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
       <PageTitleHeader icon={CommandIcon} title="Command" subtitle="Orchestratore conversazionale" />
-      <CommandPageBackButton currentPath="/v2/command" />
       <CommandPageBackground />
       <CommandPageHeader
         flowPhase={state.flowPhase}
