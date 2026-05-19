@@ -16,7 +16,7 @@ export interface NavItemDef {
   readonly labelKey: string;
   readonly path: string;
   readonly icon: React.ReactNode;
-  /** If true, shown in the FloatingDock as a top-level shortcut (deprecated). */
+  /** If true, shown as a top-level shortcut (legacy flag, mantenuto per compat). */
   readonly pinned?: boolean;
   /** Pin order in the dock (lower first). */
   readonly pinOrder?: number;
