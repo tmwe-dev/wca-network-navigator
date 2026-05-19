@@ -184,7 +184,7 @@ export function PromptLabPage() {
             >
               <PageTitleHint
                 title="Prompt Lab"
-                hint="Cosa fai qui in 3 passi: 1) scegli una macroarea (Core AI / Comunicazione / Strategia / Operazioni); 2) seleziona un blocco dal menu a sinistra e modificalo; 3) salva oppure usa la chat in basso per chiedere all'AI di migliorarlo — Review prima di accettare. Modifiche live in produzione."
+                hint="5 macroaree: Prompts (tutti i prompt operativi e KB), Personas (identità agenti), Capabilities (tool & limiti), Tests (simulator + regressioni), Health (audit & routing). Modifiche live in produzione."
                 right={<MetricsSummaryBadge />}
               />
               <PromptLabHealthBanner />
