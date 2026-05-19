@@ -36,12 +36,11 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
     flowPhase !== "idle" && flowPhase !== "done" ? "ESECUZIONE" : null;
 
   return (
-    // Lean Mode 2026-05-19: barra essenziale, sinistra-allineata.
-    // Tutta la telemetria (sessione, agent dots, fonti, monitor, help, voce, lingua)
-    // è dietro l'icona "Dettagli" (Info). Si apre solo on-click.
-    <div className="flex items-center justify-start gap-2 px-4 py-2 relative z-10 flex-shrink-0">
+    // Lean Mode 2026-05-19: pillola compatta da inserire come `right` slot
+    // dentro la PageTitleHeader (topbar). Niente riga dedicata sotto al titolo.
+    <div className="flex items-center gap-1.5">
       <motion.div
-        className="w-1.5 h-1.5 rounded-full bg-primary/95 ml-14"
+        className="w-1.5 h-1.5 rounded-full bg-primary/95"
         animate={{ opacity: [0.5, 0.85, 0.5] }}
         transition={{ duration: 3, repeat: Infinity }}
         title="Sessione attiva"

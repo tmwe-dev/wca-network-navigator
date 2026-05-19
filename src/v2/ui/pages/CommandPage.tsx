@@ -185,14 +185,20 @@ const CommandPage = () => {
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
-      <PageTitleHeader icon={CommandIcon} title="Command" subtitle="Orchestratore conversazionale" />
-      <CommandPageBackground />
-      <CommandPageHeader
-        flowPhase={state.flowPhase}
-        lang={state.lang}
-        onLangChange={() => state.setLang(state.lang === "it" ? "en" : "it")}
-        onOpenTraceConsole={() => window.dispatchEvent(new CustomEvent("trace-console-open"))}
+      <PageTitleHeader
+        icon={CommandIcon}
+        title="Command"
+        subtitle="Orchestratore conversazionale"
+        right={
+          <CommandPageHeader
+            flowPhase={state.flowPhase}
+            lang={state.lang}
+            onLangChange={() => state.setLang(state.lang === "it" ? "en" : "it")}
+            onOpenTraceConsole={() => window.dispatchEvent(new CustomEvent("trace-console-open"))}
+          />
+        }
       />
+      <CommandPageBackground />
 
       <div className="flex-1 flex overflow-hidden relative z-10">
         <ConversationSidebar
