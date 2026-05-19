@@ -11,7 +11,7 @@
  * useCommandPageState) are intentionally NOT used here. Doctrine: one logic per task,
  * everywhere.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import ConversationSidebar from "./command/ConversationSidebar";
@@ -31,7 +31,7 @@ import { CommandOutput } from "./command/components/CommandOutput";
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
-import { Command as CommandIcon } from "lucide-react";
+import { Command as CommandIcon, PanelLeft, PanelLeftClose } from "lucide-react";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 // NB: BriefingPanel, useCommandBriefing e useRecentCommandPrompts intenzionalmente
 // non importati: lo stato vuoto della Command resta zen (solo titolo + orb + input).
@@ -42,6 +42,7 @@ const CommandPage = () => {
   const conv = useConversation();
   const governance = useGovernance(state.activeToolKey ?? undefined);
   const voiceOut = useVoiceOutput();
+  const [conversationsCollapsed, setConversationsCollapsed] = useState(true);
 
   const submit = useCommandSubmit({
     addMessage: state.addMessage,
@@ -190,12 +191,27 @@ const CommandPage = () => {
         title="Command"
         subtitle="Orchestratore conversazionale"
         right={
-          <CommandPageHeader
-            flowPhase={state.flowPhase}
-            lang={state.lang}
-            onLangChange={() => state.setLang(state.lang === "it" ? "en" : "it")}
-            onOpenTraceConsole={() => window.dispatchEvent(new CustomEvent("trace-console-open"))}
-          />
+          <>
+            <button
+              type="button"
+              onClick={() => setConversationsCollapsed((value) => !value)}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-muted/40 hover:text-foreground"
+              title={conversationsCollapsed ? "Mostra conversazioni" : "Nascondi conversazioni"}
+              aria-label={conversationsCollapsed ? "Mostra conversazioni" : "Nascondi conversazioni"}
+            >
+              {conversationsCollapsed ? (
+                <PanelLeft className="h-3.5 w-3.5" />
+              ) : (
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <CommandPageHeader
+              flowPhase={state.flowPhase}
+              lang={state.lang}
+              onLangChange={() => state.setLang(state.lang === "it" ? "en" : "it")}
+              onOpenTraceConsole={() => window.dispatchEvent(new CustomEvent("trace-console-open"))}
+            />
+          </>
         }
       />
       <CommandPageBackground />
@@ -204,6 +220,7 @@ const CommandPage = () => {
         <ConversationSidebar
           conversations={conv.conversations}
           activeId={conv.conversationId}
+          collapsed={conversationsCollapsed}
           onSelect={(id) => {
             state.setCanvas(null);
             state.setLiveResult(null);
