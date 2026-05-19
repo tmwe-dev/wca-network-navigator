@@ -123,6 +123,7 @@ const AgendaSection       = lazy(() => import("./ui/pages/sections/AgendaSection
 
 // ── Cestinone (unified pre-send queue) ───────────────────────────────
 const CestinonePage = lazy(() => import("./ui/pages/CestinonePage").then((m) => ({ default: m.CestinonePage })));
+const CommsPage = lazy(() => import("./ui/pages/CommsPage").then((m) => ({ default: m.CommsPage })));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
 function guardedPage(Page: React.LazyExoticComponent<React.ComponentType>, name: string): React.ReactElement {
@@ -273,6 +274,9 @@ export function V2Routes(): React.ReactElement {
           <Route path="cockpit" element={guardedPage(OutreachPage, "Cockpit")} />
           <Route path="inbox"   element={guardedPage(InreachPage, "Inbox")} />
           <Route path="email"   element={guardedPage(EmailComposerPage, "Email")} />
+          {/* ── Comunicazioni unificate (Fase 3 Lean Mode) ── */}
+          <Route path="comms"        element={guardedPage(CommsPage, "Comms")} />
+          <Route path="comms/:tab"   element={guardedPage(CommsPage, "Comms")} />
           {/* Canonical Email Forge under /v2/email/forge (Fase 3) */}
           <Route path="email/forge" element={guardedPage(EmailForgePage, "EmailForge")} />
           {/* Legacy redirects → nuove voci top-level */}
