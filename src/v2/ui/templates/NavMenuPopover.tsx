@@ -89,10 +89,23 @@ export const EXPANDABLE_MAIN_NAV: Record<string, readonly SecondaryNavGroup[]> =
       items: sg.items,
     })) ?? []
   ),
+  "/v2/funnemail": [
+    { title: "Funnemail", items: [
+      { label: "Hub", path: "/v2/funnemail" },
+      { label: "Posta in arrivo", path: "/v2/funnemail-inbox" },
+      { label: "Da smistare", path: "/v2/funnemail-inbox/sorting" },
+      { label: "Mail Playground", path: "/v2/funnemail/playground" },
+      { label: "Statistiche mittenti", path: "/v2/funnemail/statistiche-mittenti" },
+      { label: "Intelligence", path: "/v2/email-intelligence" },
+    ]},
+  ],
 };
 
 /** Estrae la radice di sezione: `/v2/intelligence/agents` → `/v2/intelligence`. */
 export function sectionRoot(path: string): string {
+  if (path.startsWith("/v2/funnemail") || path.startsWith("/v2/email-intelligence")) {
+    return "/v2/funnemail";
+  }
   const parts = path.split("/").filter(Boolean);
   if (parts.length < 2) return "/v2";
   return `/${parts[0]}/${parts[1]}`;
