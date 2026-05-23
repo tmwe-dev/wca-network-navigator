@@ -691,6 +691,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_capabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
+          },
+          {
             foreignKeyName: "agent_capabilities_operator_id_fkey"
             columns: ["operator_id"]
             isOneToOne: false
@@ -734,6 +741,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_knowledge_links_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_knowledge_links_kb_entry_id_fkey"
@@ -908,6 +922,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_personas_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
+          },
+          {
             foreignKeyName: "agent_personas_operator_id_fkey"
             columns: ["operator_id"]
             isOneToOne: false
@@ -1009,6 +1030,13 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agent_routing_rules_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
+          },
         ]
       }
       agent_tasks: {
@@ -1067,6 +1095,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_tasks_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_tasks_operator_id_fkey"
@@ -3050,6 +3085,13 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bridge_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
+          },
         ]
       }
       browser_action_log: {
@@ -3718,6 +3760,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "client_assignments_manager_id_fkey"
@@ -5120,6 +5169,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_address_rules_exclusive_agent_id_fkey"
+            columns: ["exclusive_agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_full"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "email_address_rules_group_id_fkey"
@@ -12623,6 +12679,71 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      v_agent_full: {
+        Row: {
+          agent_created_at: string | null
+          agent_id: string | null
+          agent_updated_at: string | null
+          allowed_tools: string[] | null
+          approval_required_tools: string[] | null
+          assigned_tools: Json | null
+          assigned_tutor_id: string | null
+          avatar_emoji: string | null
+          blocked_tools: string[] | null
+          can_access_inbox: boolean | null
+          can_send_email: boolean | null
+          can_send_whatsapp: boolean | null
+          capability_id: string | null
+          capability_notes: string | null
+          capability_updated_at: string | null
+          custom_tone_prompt: string | null
+          daily_send_limit: number | null
+          deleted_at: string | null
+          elevenlabs_agent_id: string | null
+          elevenlabs_voice_id: string | null
+          example_messages: Json | null
+          execution_mode: string | null
+          has_capabilities: boolean | null
+          has_persona: boolean | null
+          is_active: boolean | null
+          kb_filter: Json | null
+          knowledge_base: Json | null
+          language: string | null
+          max_concurrent_tools: number | null
+          max_iterations: number | null
+          max_tokens_per_call: number | null
+          name: string | null
+          operator_id: string | null
+          persona_id: string | null
+          persona_updated_at: string | null
+          preferred_model: string | null
+          role: string | null
+          schedule_config: Json | null
+          signature_html: string | null
+          signature_image_url: string | null
+          signature_template: string | null
+          stats: Json | null
+          step_timeout_ms: number | null
+          style_rules: string[] | null
+          system_prompt: string | null
+          temperature: number | null
+          territory_codes: string[] | null
+          tone: string | null
+          user_id: string | null
+          vocabulary_do: string[] | null
+          vocabulary_dont: string[] | null
+          voice_call_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_brand_voice_outcomes: {
         Row: {
