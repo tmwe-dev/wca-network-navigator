@@ -10,6 +10,24 @@ import { cronPausedResponse } from "../_shared/cronGate.ts";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/**
+ * createPauseChecker — fabbrica memoized del check `ai_automations_paused`.
+ * Esportato per test: garantisce che lookup ripetuti sullo stesso user_id
+ * facciano UNA sola query DB per ciclo.
+ */
+export function createPauseChecker(
+  lookup: (userId: string) => Promise<boolean>,
+): (userId: string) => Promise<boolean> {
+  const cache = new Map<string, boolean>();
+  return async (userId: string) => {
+    const hit = cache.get(userId);
+    if (hit !== undefined) return hit;
+    const paused = await lookup(userId);
+    cache.set(userId, paused);
+    return paused;
+  };
+}
+
 interface CadenceRule {
   delay_days?: number;
   max_attempts?: number;
@@ -68,20 +86,15 @@ Deno.serve(async (req) => {
     // processes up to 50 actions/cycle and many share the same user_id. Without
     // cache: 50 lookups on app_settings. With cache: 1 lookup per distinct user.
     // Locale al request, nessun side-effect persistente (rollback = rimuovi 8 righe).
-    const pauseCache = new Map<string, boolean>();
-    const isUserPaused = async (userId: string): Promise<boolean> => {
-      const cached = pauseCache.get(userId);
-      if (cached !== undefined) return cached;
+    const isUserPaused = createPauseChecker(async (userId) => {
       const { data } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", "ai_automations_paused")
         .eq("user_id", userId)
         .maybeSingle();
-      const paused = data?.value === "true";
-      pauseCache.set(userId, paused);
-      return paused;
-    };
+      return data?.value === "true";
+    });
 
     for (const action of actions as ActionRow[]) {
       try {
