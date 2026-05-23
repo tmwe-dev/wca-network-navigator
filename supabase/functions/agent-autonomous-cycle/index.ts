@@ -65,7 +65,7 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: Ar
     .from("partners")
     .select("country_code")
     .eq("id", partnerId)
-    .single();
+    .maybeSingle();
 
   if (partner?.country_code) {
     const cc = partner.country_code.toUpperCase();
@@ -129,7 +129,7 @@ async function screenIncomingMessages(userId: string, agents: Array<Record<strin
         .from("partners")
         .select("lead_status, rating")
         .eq("id", msg.partner_id)
-        .single();
+        .maybeSingle();
 
       if (partner) {
         stakes = isHighStakes(partner, hsCriteria);
@@ -263,7 +263,7 @@ serve(async (req) => {
 
           let stakes = false;
           if (fup.partner_id) {
-            const { data: p } = await supabase.from("partners").select("rating, lead_status").eq("id", fup.partner_id).single();
+            const { data: p } = await supabase.from("partners").select("rating, lead_status").eq("id", fup.partner_id).maybeSingle();
             if (p) stakes = isHighStakes(p, highStakesCriteria);
           }
 
