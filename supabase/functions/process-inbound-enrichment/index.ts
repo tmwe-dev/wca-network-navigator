@@ -13,6 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { callLLM } from "../_shared/callLLM.ts";
 import { safeParseAiJson } from "../_shared/aiJsonValidator.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 
 const BATCH_SIZE = 5;
@@ -26,7 +27,7 @@ const SuggestionSchema = z.object({
 });
 type Suggestion = z.infer<typeof SuggestionSchema>;
 
-const PROMPT_SYSTEM = `Sei un classificatore di email B2B in arrivo.
+const PROMPT_SYSTEM_FALLBACK = `Sei un classificatore di email B2B in arrivo.
 Per ogni mail rispondi SOLO con JSON che rispetta lo schema fornito.
 Categorie ammesse: "commerciale", "amministrativa", "tecnica", "spam", "newsletter", "personale", "altro".
 Confidence: 0.0-1.0. suggested_group: nome breve (es. "Fornitori", "Clienti potenziali", "Marketing") o null.`;
@@ -80,6 +81,21 @@ Deno.serve(async (req) => {
   let done = 0;
   let failed = 0;
 
+  // Audit Sez.1 — D: prompt dal Prompt Lab (scope=funnemail_classifier), fallback hardcoded.
+  // Caricato 1 sola volta per batch — risparmio I/O e token.
+  let systemPrompt = PROMPT_SYSTEM_FALLBACK;
+  try {
+    const { block } = await loadOperativePrompts(supabase, jobs[0]?.user_id ?? "", {
+      scope: "funnemail_classifier",
+      extraTags: ["inbound", "classification"],
+      includeUniversal: false,
+      limit: 3,
+    });
+    if (block && block.length > 80) {
+      systemPrompt = `${PROMPT_SYSTEM_FALLBACK}\n\n${block}`;
+    }
+  } catch (_e) { /* keep fallback */ }
+
   for (const job of jobs as Array<{
     id: string;
     user_id: string;
@@ -111,7 +127,7 @@ Deno.serve(async (req) => {
         userId: job.user_id,
         models: ["google/gemini-2.5-flash"],
         messages: [
-          { role: "system", content: PROMPT_SYSTEM },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
             content: buildUserPrompt({

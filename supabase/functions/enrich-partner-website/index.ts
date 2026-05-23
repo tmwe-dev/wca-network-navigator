@@ -13,6 +13,15 @@ import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 // Audit Sez.1 — G: rimosso credit/BYOK dead-code.
 // AI usage limits sono globalmente disattivati (kill-switch AI_USAGE_LIMITS_ENABLED).
 // In caso di riattivazione futura, la contabilità centralizzata vive in `_shared/callLLM.ts`.
+// Audit Sez.1 — B/E: caching su scrape_cache (markdown) + ai_extract_cache (output AI).
+// Contratto I/O invariato — gli output sono identici a prima, solo serviti da cache se hit.
+
+const SCRAPE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 giorni
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -86,8 +95,26 @@ Deno.serve(async (req) => {
     if (preScrapedMarkdown && preScrapedMarkdown.length > 50) {
       markdown = preScrapedMarkdown.substring(0, 15000);
     } else {
-      // Fallback: direct fetch website content
+      // Audit Sez.1 — B: prova scrape_cache prima di fetchare (TTL 7gg).
       try {
+        const { data: cached } = await supabase
+          .from("scrape_cache")
+          .select("payload, scraped_at")
+          .eq("url", url)
+          .maybeSingle();
+        if (cached?.scraped_at && (Date.now() - new Date(cached.scraped_at).getTime()) < SCRAPE_CACHE_TTL_MS) {
+          const payload = cached.payload as { markdown?: string; text?: string } | null;
+          const cachedMd = payload?.markdown ?? payload?.text ?? "";
+          if (typeof cachedMd === "string" && cachedMd.length > 50) {
+            markdown = cachedMd.substring(0, 15000);
+          }
+        }
+      } catch (e) {
+        swallowedError("enrich_partner_website.scrape_cache_read_failed", e);
+      }
+
+      // Fallback: direct fetch website content
+      if (!markdown) try {
         // SSRF guard P1.4 — block private/internal hosts before fetching
         const safeUrl = assertSafePublicUrl(url);
         const fetchResp = await fetch(safeUrl.toString(), {
@@ -103,6 +130,14 @@ Deno.serve(async (req) => {
             .replace(/\s+/g, " ")
             .trim()
             .substring(0, 15000);
+          // Salva nel cache per le prossime invocazioni.
+          if (markdown.length > 50) {
+            try {
+              await supabase.from("scrape_cache").upsert({
+                url, mode: "static", payload: { markdown }, scraped_at: new Date().toISOString(),
+              }, { onConflict: "url" });
+            } catch (e) { swallowedError("enrich_partner_website.scrape_cache_write_failed", e); }
+          }
         }
       } catch (e) {
         swallowedError("enrich_partner_website.fetch_page_failed", e);
@@ -122,15 +157,32 @@ Deno.serve(async (req) => {
     }
 
 
-    // Analyze with Gemini via Lovable AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Audit Sez.1 — B: cache AI extract via hash(url + system + content slice).
+    const AI_MODEL = "google/gemini-3-flash-preview";
+    const aiContentSlice = markdown.substring(0, 8000);
+    const aiCacheKey = await sha256Hex(`enrich-partner-website|${AI_MODEL}|${url}|${aiContentSlice}`);
+    let enrichment: Record<string, unknown> | null = null;
+    try {
+      const { data: aiCached } = await supabase
+        .from("ai_extract_cache")
+        .select("result, expires_at")
+        .eq("cache_key", aiCacheKey)
+        .maybeSingle();
+      if (aiCached?.result && new Date(aiCached.expires_at).getTime() > Date.now()) {
+        enrichment = aiCached.result as Record<string, unknown>;
+      }
+    } catch (e) {
+      swallowedError("enrich_partner_website.ai_cache_read_failed", e);
+    }
+
+    const aiResponse = enrichment ? null : await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: AI_MODEL,
         messages: [
           {
             role: "system",
@@ -142,7 +194,7 @@ Deno.serve(async (req) => {
 Website: ${url}
 
 Contenuto del sito:
-${markdown.substring(0, 8000)}
+${aiContentSlice}
 
 Estrai queste informazioni (metti null se non trovate):
 {
@@ -198,7 +250,7 @@ Estrai queste informazioni (metti null se non trovate):
       }),
     });
 
-    if (!aiResponse.ok) {
+    if (aiResponse && !aiResponse.ok) {
       const errText = await aiResponse.text();
       const detail = aiResponse.status === 402 ? "Crediti AI esauriti. Riprova più tardi." : `AI analysis failed (${aiResponse.status})`;
       return new Response(JSON.stringify({ error: detail }), {
@@ -206,23 +258,23 @@ Estrai queste informazioni (metti null se non trovate):
       });
     }
 
-    const aiData = await aiResponse.json();
-
-    let enrichment: Record<string, unknown> | null = null;
-
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        enrichment = JSON.parse(toolCall.function.arguments);
-      } catch {
+    if (aiResponse && !enrichment) {
+      const aiData = await aiResponse.json();
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall?.function?.arguments) {
+        try { enrichment = JSON.parse(toolCall.function.arguments); } catch { /* ignore */ }
       }
-    }
-
-    if (!enrichment) {
-      const content = aiData.choices?.[0]?.message?.content || "";
-      try {
-        enrichment = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
-      } catch {
+      if (!enrichment) {
+        const content = aiData.choices?.[0]?.message?.content || "";
+        try { enrichment = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim()); } catch { /* ignore */ }
+      }
+      // Salva in cache solo se parsing OK.
+      if (enrichment) {
+        try {
+          await supabase.from("ai_extract_cache").upsert({
+            cache_key: aiCacheKey, result: enrichment, model: AI_MODEL,
+          }, { onConflict: "cache_key" });
+        } catch (e) { swallowedError("enrich_partner_website.ai_cache_write_failed", e); }
       }
     }
 
