@@ -1536,6 +1536,30 @@ export type Database = {
           },
         ]
       }
+      ai_extract_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          expires_at: string
+          model: string | null
+          result: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          expires_at?: string
+          model?: string | null
+          result: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          model?: string | null
+          result?: Json
+        }
+        Relationships: []
+      }
       ai_interaction_log: {
         Row: {
           agent_id: string | null
