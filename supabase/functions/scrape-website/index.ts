@@ -9,10 +9,11 @@ const FETCH_TIMEOUT_MS = 25_000;
 const MAX_RAW_TEXT = 8_000;
 const CACHE_TTL_DAYS = 7;
 
-// Default include set for legacy callers (no `include` param).
-const DEFAULT_INCLUDE = ["meta", "emails", "phones"] as const;
+// Default include set: TUTTO (backward-compat con caller esistenti che non passano `include`).
+// I nuovi caller (Sherlock pipeline) passano un set ristretto per ridurre i token.
 type IncludeKey = "meta" | "headings" | "links" | "rawText" | "emails" | "phones" | "selectors";
 const ALL_INCLUDE: IncludeKey[] = ["meta", "headings", "links", "rawText", "emails", "phones", "selectors"];
+const DEFAULT_INCLUDE: readonly IncludeKey[] = ALL_INCLUDE;
 
 /* ── in-memory rate limit: 1 req/sec per domain ── */
 const lastFetchByDomain = new Map<string, number>();
@@ -84,14 +85,15 @@ Deno.serve(async (req) => {
     const url = body.url as string | undefined;
     const mode = (body.mode as string) ?? "static";
     const selectors = Array.isArray(body.selectors) ? body.selectors as string[] : [];
-    // E (audit Sez.1): payload modulare per ridurre token AI a valle.
+    // E (audit Sez.1): payload modulare per ridurre token AI a valle (opt-in).
+    // Default = tutti i blocchi (backward-compat). Se `include` arriva, restringe.
     const includeRaw = Array.isArray(body.include) ? (body.include as string[]) : null;
+    const includeFiltered = includeRaw
+      ? (includeRaw.filter((k) => (ALL_INCLUDE as string[]).includes(k)) as IncludeKey[])
+      : null;
     const include = new Set<IncludeKey>(
-      includeRaw
-        ? (includeRaw.filter((k) => (ALL_INCLUDE as string[]).includes(k)) as IncludeKey[])
-        : DEFAULT_INCLUDE,
+      includeFiltered && includeFiltered.length > 0 ? includeFiltered : DEFAULT_INCLUDE,
     );
-    if (include.size === 0) for (const k of DEFAULT_INCLUDE) include.add(k);
     const rawTextCapRaw = Number(body.rawTextCap);
     const rawTextCap = Number.isFinite(rawTextCapRaw) && rawTextCapRaw > 500 && rawTextCapRaw <= MAX_RAW_TEXT
       ? Math.floor(rawTextCapRaw)
