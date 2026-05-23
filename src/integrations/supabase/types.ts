@@ -11459,6 +11459,57 @@ export type Database = {
         }
         Relationships: []
       }
+      system_loops: {
+        Row: {
+          activity_table: string | null
+          activity_timestamp_column: string | null
+          category: string
+          created_at: string
+          cron_schedule: string | null
+          deprecated: boolean
+          deprecation_reason: string | null
+          edge_function: string
+          enabled: boolean
+          id: string
+          name: string
+          notes: string | null
+          planned_removal_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_table?: string | null
+          activity_timestamp_column?: string | null
+          category: string
+          created_at?: string
+          cron_schedule?: string | null
+          deprecated?: boolean
+          deprecation_reason?: string | null
+          edge_function: string
+          enabled?: boolean
+          id?: string
+          name: string
+          notes?: string | null
+          planned_removal_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_table?: string | null
+          activity_timestamp_column?: string | null
+          category?: string
+          created_at?: string
+          cron_schedule?: string | null
+          deprecated?: boolean
+          deprecation_reason?: string | null
+          edge_function?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          notes?: string | null
+          planned_removal_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           key: string
@@ -12837,6 +12888,54 @@ export type Database = {
           partner_id: string | null
           since: string | null
           source: string | null
+        }
+        Relationships: []
+      }
+      v_system_loops_status: {
+        Row: {
+          activity_table: string | null
+          activity_timestamp_column: string | null
+          category: string | null
+          cron_schedule: string | null
+          deprecated: boolean | null
+          deprecation_reason: string | null
+          edge_function: string | null
+          enabled: boolean | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          planned_removal_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activity_table?: string | null
+          activity_timestamp_column?: string | null
+          category?: string | null
+          cron_schedule?: string | null
+          deprecated?: boolean | null
+          deprecation_reason?: string | null
+          edge_function?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          planned_removal_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activity_table?: string | null
+          activity_timestamp_column?: string | null
+          category?: string | null
+          cron_schedule?: string | null
+          deprecated?: boolean | null
+          deprecation_reason?: string | null
+          edge_function?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          planned_removal_date?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
