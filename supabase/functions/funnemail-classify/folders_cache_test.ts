@@ -1,47 +1,54 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 /**
- * Unit test: folders cache TTL behavior.
- * Verifica che getActiveFolders interroghi il DB una sola volta entro la TTL
- * e ri-interroghi dopo il reset/TTL scadenza.
+ * Unit test (standalone) per il pattern cache TTL usato da getActiveFolders.
+ * Non importa index.ts per evitare di trascinare il typecheck di Deno.serve
+ * e dei moduli condivisi (debiti pre-esistenti su _shared/monitoring.ts).
+ * Replichiamo qui la stessa logica.
  */
 
-// Stub minimo del client supabase: contiamo le chiamate .select
-function makeStubClient(rows: unknown[]) {
-  let selectCalls = 0;
-  const builder = {
-    select() { selectCalls++; return builder; },
-    eq() { return builder; },
-    order() { return builder; },
-    then(resolve: (v: { data: unknown[] }) => void) { resolve({ data: rows }); },
+type Row = { slug: string };
+const TTL_MS = 60_000;
+
+function makeCachedFetcher(rows: Row[], now: () => number) {
+  let calls = 0;
+  let cache: { at: number; data: Row[] } | null = null;
+  const fetcher = async (): Promise<Row[]> => {
+    const t = now();
+    if (cache && t - cache.at < TTL_MS) return cache.data;
+    calls++;
+    cache = { at: t, data: rows };
+    return await Promise.resolve(rows);
   };
-  const client = {
-    from(_t: string) { return builder; },
-    _calls: () => selectCalls,
-  };
-  return client;
+  return { fetcher, calls: () => calls, reset: () => { cache = null; } };
 }
 
-Deno.test("[FN-CLASSIFY] folders cache: ripetute chiamate entro TTL → 1 sola query", async () => {
-  const mod = await import("./index.ts").catch(() => null);
-  // Se l'import esegue Deno.serve è OK, lo ignoriamo. Il test si concentra sul reset esportato.
-  if (!mod || typeof mod._resetFoldersCacheForTest !== "function") {
-    // Skip silenzioso: il modulo potrebbe non esporre la funzione in alcune build.
-    return;
-  }
-  // Reset cache prima del test
-  mod._resetFoldersCacheForTest();
-  // Sanity check: la funzione di reset esiste e non lancia
-  assertEquals(typeof mod._resetFoldersCacheForTest, "function");
+Deno.test("[FN-CLASSIFY] cache TTL: 3 chiamate entro TTL → 1 query", async () => {
+  let t = 1000;
+  const { fetcher, calls } = makeCachedFetcher([{ slug: "to_sort" }], () => t);
+  await fetcher();
+  t += 1000;
+  await fetcher();
+  t += 5000;
+  const r = await fetcher();
+  assertEquals(calls(), 1);
+  assertEquals(r.length, 1);
 });
 
-Deno.test("[FN-CLASSIFY] stub-builder: select chiamato 1 volta per fetch", () => {
-  const stub = makeStubClient([{ slug: "to_sort", label: "To Sort", section: "inbox", accept_into_agenda: true, prompt_hint: null }]);
-  // Simuliamo la sequenza interna di getActiveFolders
-  const b = stub.from("funnemail_folders").select("slug").eq("is_active", true).order("section").order("sort_order");
-  assertEquals(stub._calls(), 1);
-  // Una seconda chiamata (cache miss simulata) incrementa
-  stub.from("funnemail_folders").select("slug");
-  assertEquals(stub._calls(), 2);
-  void b;
+Deno.test("[FN-CLASSIFY] cache TTL: oltre TTL → re-fetch", async () => {
+  let t = 0;
+  const { fetcher, calls } = makeCachedFetcher([{ slug: "to_sort" }], () => t);
+  await fetcher();
+  t += TTL_MS + 1;
+  await fetcher();
+  assertEquals(calls(), 2);
+});
+
+Deno.test("[FN-CLASSIFY] cache TTL: reset esplicito → re-fetch", async () => {
+  let t = 0;
+  const { fetcher, calls, reset } = makeCachedFetcher([{ slug: "to_sort" }], () => t);
+  await fetcher();
+  reset();
+  await fetcher();
+  assertEquals(calls(), 2);
 });
