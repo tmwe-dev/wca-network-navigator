@@ -4,6 +4,11 @@
  * Calculates a numeric lead_score for all imported_contacts based on data completeness,
  * interaction history, and engagement signals. Runs in batches of 500.
  *
+ * Audit Sez.2:
+ *  - Filtra `deleted_at IS NULL` (no scoring soft-deleted).
+ *  - Filtra `lead_score_updated_at` stale (>24h) salvo `force=true` nel body.
+ *  - Bulk UPSERT (1 round-trip per batch) invece di N+1 UPDATE.
+ *
  * @endpoint POST /functions/v1/calculate-lead-scores
  * @auth Required (Bearer token)
  * @rateLimit 10 requests/minute per user
@@ -43,6 +48,17 @@ Deno.serve(async (req: Request) => {
     const rl = checkRateLimit(`lead-scores:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
+    // Opzionale: body { force?: boolean } per ricalcolare tutto.
+    let force = false;
+    try {
+      const body = await req.json().catch(() => null);
+      if (body && typeof body === "object" && body !== null && (body as { force?: boolean }).force === true) {
+        force = true;
+      }
+    } catch (_e) { /* no body */ }
+    const STALE_HOURS = 24;
+    const staleCutoff = new Date(Date.now() - STALE_HOURS * 3600_000).toISOString();
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
@@ -53,10 +69,15 @@ Deno.serve(async (req: Request) => {
     let totalUpdated = 0;
 
     while (true) {
-      const { data: contacts, error } = await admin
+      let query = admin
         .from("imported_contacts")
         .select("id, email, phone, mobile, interaction_count, last_interaction_at, lead_status, origin, created_at")
-        .range(offset, offset + batchSize - 1);
+        .is("deleted_at", null);
+      if (!force) {
+        // OR: lead_score_updated_at è null o più vecchio della soglia.
+        query = query.or(`lead_score_updated_at.is.null,lead_score_updated_at.lt.${staleCutoff}`);
+      }
+      const { data: contacts, error } = await query.range(offset, offset + batchSize - 1);
 
       if (error) throw error;
       if (!contacts || contacts.length === 0) break;
@@ -85,6 +106,13 @@ Deno.serve(async (req: Request) => {
       const bcSet = new Set((businessCards || []).map(bc => bc.matched_contact_id));
 
       const now = Date.now();
+      const nowIso = new Date().toISOString();
+      const updates: Array<{
+        id: string;
+        lead_score: number;
+        lead_score_breakdown: Record<string, number>;
+        lead_score_updated_at: string;
+      }> = [];
 
       for (const c of contacts) {
         let score = 0;
@@ -129,16 +157,21 @@ Deno.serve(async (req: Request) => {
 
         score = Math.min(score, 100);
 
-        await admin
-          .from("imported_contacts")
-          .update({
-            lead_score: score,
-            lead_score_breakdown: breakdown,
-            lead_score_updated_at: new Date().toISOString(),
-          })
-          .eq("id", c.id);
+        updates.push({
+          id: c.id,
+          lead_score: score,
+          lead_score_breakdown: breakdown,
+          lead_score_updated_at: nowIso,
+        });
+      }
 
-        totalUpdated++;
+      // Bulk upsert: 1 round-trip per batch invece di N.
+      if (updates.length > 0) {
+        const { error: upsertErr } = await admin
+          .from("imported_contacts")
+          .upsert(updates, { onConflict: "id" });
+        if (upsertErr) throw upsertErr;
+        totalUpdated += updates.length;
       }
 
       offset += batchSize;
