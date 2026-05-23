@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { createPauseChecker } from "./index.ts";
+import { createPauseChecker } from "./pauseChecker.ts";
 
 Deno.test("createPauseChecker — single user_id triggers lookup once", async () => {
   let calls = 0;
