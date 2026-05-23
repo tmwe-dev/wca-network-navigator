@@ -21,7 +21,7 @@ function makeAction(overrides: Record<string, unknown> = {}) {
 }
 
 Deno.test("dispatch-integrity: no executed actions yields zero report", () => {
-  const actions: unknown[] = [];
+  const actions: Record<string, unknown>[] = [];
   const report = computeReport(actions, [], [], []);
   assertEquals(report.total_executed, 0);
   assertEquals(report.missing_channel_message, 0);
@@ -44,7 +44,7 @@ Deno.test("dispatch-integrity: all coherent yields zero misses", () => {
 
 Deno.test("dispatch-integrity: missing channel_message detected", () => {
   const action = makeAction();
-  const channelMessages: unknown[] = []; // nothing
+  const channelMessages: Record<string, unknown>[] = []; // nothing
   const activities = [{ partner_id: action.partner_id, created_at: action.executed_at }];
   const partners = [{ id: action.partner_id, last_outbound_at: action.executed_at }];
 
@@ -54,7 +54,8 @@ Deno.test("dispatch-integrity: missing channel_message detected", () => {
   assertEquals(report.missing_activity, 0);
   assertEquals(report.missing_partner_touch, 0);
   assertEquals(report.details.length, 1);
-  assertEquals(report.details[0].issues.includes("missing_channel_message"), true);
+  const firstDetail = report.details[0] as { issues: string[] };
+  assertEquals(firstDetail.issues.includes("missing_channel_message"), true);
 });
 
 // Pure computation logic extracted for testability
