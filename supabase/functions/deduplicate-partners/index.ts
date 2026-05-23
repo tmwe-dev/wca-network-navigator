@@ -28,17 +28,18 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
+    // Audit Sez.2: getUser() di rete → getClaims() locale (allineato standard auth).
     const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: authError } = await anonClient.auth.getUser(token);
-    if (authError || !userData?.user?.id) {
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "AUTH_INVALID" }), {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
-    const userId = userData.user.id;
+    const userId = claimsData.claims.sub as string;
 
     // Rate limit
     const rl = checkRateLimit(`dedup:${userId}`, { maxTokens: 5, refillRate: 0.1 });
@@ -71,10 +72,10 @@ Deno.serve(async (req) => {
     let totalMerged = 0;
     let totalDeleted = 0;
 
+    type ScoredPartner = Record<string, unknown> & { score: number; id: string; company_name: string; country_code: string };
     for (const [key, members] of duplicateGroups) {
       // Score each member: higher = more complete
-      // deno-lint-ignore no-explicit-any
-      const scored: any[] = members.map((m: Record<string, unknown>) => {
+      const scored: ScoredPartner[] = members.map((m: Record<string, unknown>) => {
         let score = 0;
         if (m.logo_url) score += 10;
         if (m.enrichment_data) score += 10;
@@ -85,10 +86,10 @@ Deno.serve(async (req) => {
         if (m.rating) score += 2;
         if (m.member_since) score += 2;
         if (m.wca_id) score += 1;
-        return { ...m, score };
+        return { ...m, score } as ScoredPartner;
       });
 
-      scored.sort((a, b) => (b.score as number) - (a.score as number));
+      scored.sort((a, b) => b.score - a.score);
       const keeper = scored[0];
       const toDelete = scored.slice(1);
       const deleteIds = toDelete.map((d) => d.id);
@@ -147,12 +148,6 @@ Deno.serve(async (req) => {
         log.push(`MERGED: "${scored[0].company_name}" (${scored[0].country_code}) — kept ${keeper.id}, deactivated ${deleteIds.length} dupes`);
       }
     }
-
-    // Deduplicate relations on the keeper (remove duplicate services/networks/certs)
-    // For partner_services: remove duplicate service_category per partner
-    const { data: _dupServices } = await supabase.rpc("get_directory_counts"); // dummy - we do it manually
-    // Actually let's do a manual cleanup query approach
-    // We'll handle this in a follow-up if needed
 
     return new Response(
       JSON.stringify({
