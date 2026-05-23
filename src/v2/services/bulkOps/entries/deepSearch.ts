@@ -2,7 +2,7 @@
  * Entry: deepsearch.sherlock
  * Delega a Sherlock (3 livelli). Single source of truth Deep Search.
  */
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { BulkEntry } from "../types";
 import { assertCalledFromRunner } from "./_internal";
 
@@ -20,9 +20,10 @@ export const deepSearchEntry: BulkEntry<DeepSearchItem, { ok: boolean }> = {
   continueOnError: true,
   handler: async (item) => {
     assertCalledFromRunner("deepsearch.sherlock");
-    await invokeEdge("sherlock-extract", {
+    await invokeAi("sherlock-extract", {
+      scope: "sherlock",
       body: { entity_type: item.entityType, entity_id: item.entityId, level: item.level },
-      context: "bulkOps.deepSearch",
+      context: { source: "bulkOps.deepSearch", mode: "bulk" },
     });
     return { ok: true };
   },
