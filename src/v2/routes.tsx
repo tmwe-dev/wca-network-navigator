@@ -95,6 +95,7 @@ const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPag
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
 const PromptLabPage = lazy(() => import("./ui/pages/PromptLabPage").then((m) => ({ default: m.PromptLabPage })));
+const BrainPage = lazy(() => import("./ui/pages/BrainPage").then((m) => ({ default: m.BrainPage })));
 const AgentAtlasPage = lazy(() => import("./ui/pages/prompt-lab/atlas/AgentAtlasPage"));
 const SuggestionsReviewPage = lazy(() => import("./ui/pages/prompt-lab/SuggestionsReviewPage"));
 const ProposalsReviewPage = lazy(() => import("./ui/pages/prompt-lab/ProposalsReviewPage"));
@@ -224,6 +225,9 @@ export function V2Routes(): React.ReactElement {
           <Route path="command" element={guardedPage(CommandPage, "Command")} />
           <Route path="command/help" element={guardedPage(CommandHelpPage, "CommandHelp")} />
           <Route path="dashboard" element={guardedPage(DashboardPage, "Dashboard")} />
+
+          {/* Brain — pagina unificata cervello AI (F5 2026-05-23) */}
+          <Route path="brain" element={guardedPage(BrainPage, "Brain")} />
 
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
           {/* Pipeline rimossa dal menu — redirect verso Agenda dove ora vive il Kanban */}
