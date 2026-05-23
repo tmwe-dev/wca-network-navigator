@@ -639,6 +639,7 @@ export type Database = {
           notes: string | null
           operator_id: string | null
           preferred_model: string | null
+          routing_rules: Json
           step_timeout_ms: number
           temperature: number
           updated_at: string
@@ -658,6 +659,7 @@ export type Database = {
           notes?: string | null
           operator_id?: string | null
           preferred_model?: string | null
+          routing_rules?: Json
           step_timeout_ms?: number
           temperature?: number
           updated_at?: string
@@ -677,6 +679,7 @@ export type Database = {
           notes?: string | null
           operator_id?: string | null
           preferred_model?: string | null
+          routing_rules?: Json
           step_timeout_ms?: number
           temperature?: number
           updated_at?: string
@@ -12744,6 +12747,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_ai_routing_config: {
+        Row: {
+          model: string | null
+          notes: string | null
+          provider: string | null
+          scope: string | null
+          tier: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          model?: string | null
+          notes?: string | null
+          provider?: string | null
+          scope?: string | null
+          tier?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          model?: string | null
+          notes?: string | null
+          provider?: string | null
+          scope?: string | null
+          tier?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       v_brand_voice_outcomes: {
         Row: {
