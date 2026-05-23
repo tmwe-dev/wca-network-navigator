@@ -122,7 +122,7 @@ serve(async (req) => {
         .select("*")
         .eq("id", task_id)
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       if (taskErr || !task) {
         endMetrics(metrics, false, 404);
