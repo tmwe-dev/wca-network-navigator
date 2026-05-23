@@ -36,23 +36,23 @@ Deno.serve(async (req) => {
       Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000,
     ).toISOString();
 
-    // Trova candidati: inbound recenti senza classificazione.
-    const { data: pending, error: selErr } = await supabase
+    // ── Pass 1: solo IDs (payload minimo) per scartare già classificati ──
+    const { data: idRows, error: idErr } = await supabase
       .from("channel_messages")
-      .select("id, channel, from_address, subject, body_text, body_html, partner_id, user_id, raw_payload")
+      .select("id")
       .eq("direction", "inbound")
       .gte("created_at", sinceIso)
       .order("created_at", { ascending: false })
       .limit(500);
 
-    if (selErr) {
+    if (idErr) {
       return new Response(
-        JSON.stringify({ error: "select_failed", details: selErr.message }),
+        JSON.stringify({ error: "select_failed", details: idErr.message }),
         { status: 500, headers },
       );
     }
 
-    const candidateIds = (pending ?? []).map((m) => m.id as string);
+    const candidateIds = (idRows ?? []).map((r) => r.id as string);
     if (candidateIds.length === 0) {
       return new Response(
         JSON.stringify({ success: true, processed: 0, candidates: 0 }),
@@ -69,14 +69,27 @@ Deno.serve(async (req) => {
       (alreadyClassified ?? []).map((r) => r.message_id as string),
     );
 
-    const toProcess = (pending ?? [])
-      .filter((m) => !classifiedSet.has(m.id as string))
+    const unclassifiedIds = candidateIds
+      .filter((id) => !classifiedSet.has(id))
       .slice(0, BATCH_SIZE);
 
-    if (toProcess.length === 0) {
+    if (unclassifiedIds.length === 0) {
       return new Response(
         JSON.stringify({ success: true, processed: 0, candidates: candidateIds.length }),
         { status: 200, headers },
+      );
+    }
+
+    // ── Pass 2: payload completo solo per i 50 effettivi ──
+    const { data: toProcess, error: fullErr } = await supabase
+      .from("channel_messages")
+      .select("id, channel, from_address, subject, body_text, body_html, partner_id, user_id, raw_payload")
+      .in("id", unclassifiedIds);
+
+    if (fullErr || !toProcess) {
+      return new Response(
+        JSON.stringify({ error: "select_full_failed", details: fullErr?.message ?? "no rows" }),
+        { status: 500, headers },
       );
     }
 
