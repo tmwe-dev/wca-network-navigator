@@ -99,8 +99,13 @@ serve(async (req) => {
           }).eq("id", schedule.id);
           processed++;
 
-          // Schedule followups if applicable
-          await scheduleFollowups(supabase, schedule);
+          // Schedule followups if applicable (reuse mission already loaded in
+          // processSchedule when present → -1 query per "send" action)
+          await scheduleFollowups(
+            supabase,
+            schedule,
+            (result as { _mission?: Record<string, unknown> })._mission,
+          );
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
@@ -128,13 +133,12 @@ serve(async (req) => {
       }
     }
 
-    // Update mission progress
+    // Update mission progress in parallel (best-effort, allSettled swallows
+    // individual failures preserving existing semantics)
     const missionIds = [...new Set(batch.map((s: { mission_id: string }) => s.mission_id))];
-    for (const mId of missionIds) {
-      try {
-        await supabase.rpc("update_mission_progress", { p_mission_id: mId });
-      } catch (_) { /* mission progress is best-effort */ }
-    }
+    await Promise.allSettled(
+      missionIds.map((mId) => supabase.rpc("update_mission_progress", { p_mission_id: mId })),
+    );
 
     const summary = { processed, failed, skipped, batch_size: batch.length };
     endMetrics(metrics, true, 200);
@@ -183,7 +187,7 @@ async function processSchedule(
     .from("outreach_missions")
     .select("id, channel, status, template_id, ai_prompt, schedule_config")
     .eq("id", schedule.mission_id)
-    .single();
+    .maybeSingle();
 
   if (!mission) {
     return { skipped: true, reason: "Mission not found" };
@@ -195,7 +199,7 @@ async function processSchedule(
 
   switch (schedule.action) {
     case "send":
-      return await executeSendAction(supabase, schedule, mission);
+      return { ...(await executeSendAction(supabase, schedule, mission)), _mission: mission };
     case "followup":
       return await executeFollowupAction(supabase, schedule, mission);
     case "check_reply":
@@ -310,7 +314,7 @@ async function executeCheckReplyAction(
     .from("imported_contacts")
     .select("email")
     .eq("id", schedule.contact_id)
-    .single();
+    .maybeSingle();
 
   if (!contact?.email) {
     return { skipped: true, reason: "Contact has no email" };
@@ -332,15 +336,20 @@ async function executeCheckReplyAction(
 // ━━━ Schedule followups based on mission config ━━━
 async function scheduleFollowups(
   supabase: ReturnType<typeof createClient>,
-  schedule: ScheduleRow
+  schedule: ScheduleRow,
+  preloadedMission?: Record<string, unknown>,
 ): Promise<void> {
   if (schedule.action !== "send") return;
 
-  const { data: mission } = await supabase
-    .from("outreach_missions")
-    .select("schedule_config")
-    .eq("id", schedule.mission_id)
-    .single();
+  let mission: Record<string, unknown> | null = preloadedMission ?? null;
+  if (!mission) {
+    const { data } = await supabase
+      .from("outreach_missions")
+      .select("schedule_config")
+      .eq("id", schedule.mission_id)
+      .maybeSingle();
+    mission = data;
+  }
 
   if (!mission?.schedule_config) return;
 
