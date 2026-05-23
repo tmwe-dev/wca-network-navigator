@@ -10,50 +10,9 @@ import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 // o leggere i dati esistenti via readUnifiedEnrichment (vedi _shared/enrichmentAdapter.ts).
 // Generate-email / improve-email / generate-outreach / Command tools NON devono più invocarla.
 
-// ── Credit helpers ──
-// deno-lint-ignore no-explicit-any
-async function getUserId(req: Request, supabase: any): Promise<string | null> {
-  const auth = req.headers.get("Authorization");
-  if (!auth) return null;
-  const token = auth.replace("Bearer ", "");
-  const { data } = await supabase.auth.getUser(token);
-  return data?.user?.id || null;
-}
-
-// deno-lint-ignore no-explicit-any
-async function isByok(userId: string, supabase: any): Promise<boolean> {
-  const { data } = await supabase
-    .from("user_api_keys")
-    .select("api_key")
-    .eq("user_id", userId)
-    .eq("provider", "google")
-    .eq("is_active", true)
-    .maybeSingle();
-  return !!data?.api_key;
-}
-
-// deno-lint-ignore no-explicit-any
-async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: any) {
-  const inputCost = Math.ceil(usage.prompt_tokens / 1000 * 1);
-  const outputCost = Math.ceil(usage.completion_tokens / 1000 * 2);
-  const total = inputCost + outputCost;
-  if (total <= 0) return;
-
-  const { data: credits } = await supabase.from("user_credits").select("balance, total_consumed").eq("user_id", userId).single();
-  if (!credits) return;
-
-  await supabase.from("user_credits").update({
-    balance: Math.max(0, credits.balance - total),
-    total_consumed: credits.total_consumed + total,
-  }).eq("user_id", userId);
-
-  await supabase.from("credit_transactions").insert({
-    user_id: userId,
-    amount: -total,
-    operation: "ai_call",
-    description: `enrich-partner-website: ${usage.prompt_tokens} in + ${usage.completion_tokens} out`,
-  });
-}
+// Audit Sez.1 — G: rimosso credit/BYOK dead-code.
+// AI usage limits sono globalmente disattivati (kill-switch AI_USAGE_LIMITS_ENABLED).
+// In caso di riattivazione futura, la contabilità centralizzata vive in `_shared/callLLM.ts`.
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -94,20 +53,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
         status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
       });
-    }
-
-    // ── Auth & BYOK check ──
-    const userId = await getUserId(req, supabase);
-    const byok = userId ? await isByok(userId, supabase) : false;
-
-    const usageLimitsEnabled = Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
-    if (usageLimitsEnabled && userId && !byok) {
-      const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
-      if (!credits || credits.balance < 5) {
-        return new Response(JSON.stringify({ error: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API." }), {
-          status: 402, headers: { ...dynCors, "Content-Type": "application/json" },
-        });
-      }
     }
 
     // Get partner
@@ -262,14 +207,6 @@ Estrai queste informazioni (metti null se non trovate):
     }
 
     const aiData = await aiResponse.json();
-
-    // ── Consume credits ──
-    if (userId && !byok && aiData.usage) {
-      await consumeCredits(userId, {
-        prompt_tokens: aiData.usage.prompt_tokens || 0,
-        completion_tokens: aiData.usage.completion_tokens || 0,
-      }, supabase);
-    }
 
     let enrichment: Record<string, unknown> | null = null;
 
