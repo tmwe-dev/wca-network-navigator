@@ -8,7 +8,6 @@
  * fase: le modifiche restano sui pannelli specialistici esistenti.
  */
 import * as React from "react";
-import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -32,13 +31,14 @@ export function BrainPage() {
   const agentsQ = useBrainAgents();
   const promptsQ = useBrainPrompts(selectedChannel?.contexts ?? []);
 
+  React.useEffect(() => {
+    const prev = document.title;
+    document.title = "Cervello AI — Configuratore unificato";
+    return () => { document.title = prev; };
+  }, []);
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-6xl">
-      <Helmet>
-        <title>Cervello AI — Configuratore unificato</title>
-        <meta name="description" content="Configuratore unico del cervello AI: canali, toni, prompt e agenti in un'unica vista." />
-      </Helmet>
-
       <header className="mb-6">
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Cervello AI</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
