@@ -57,6 +57,28 @@ type Folder = {
   prompt_hint: string | null;
 };
 
+// Cache module-level per le folders attive (TTL 60s).
+// Ogni inbound altrimenti rileggerebbe la stessa tabella read-only.
+const FOLDERS_TTL_MS = 60_000;
+let _foldersCache: { at: number; data: Folder[] } | null = null;
+async function getActiveFolders(supabase: ReturnType<typeof createClient>): Promise<Folder[]> {
+  const now = Date.now();
+  if (_foldersCache && now - _foldersCache.at < FOLDERS_TTL_MS) {
+    return _foldersCache.data;
+  }
+  const { data } = await supabase
+    .from("funnemail_folders")
+    .select("slug,label,section,accept_into_agenda,prompt_hint")
+    .eq("is_active", true)
+    .order("section")
+    .order("sort_order");
+  const folders = (data ?? []) as Folder[];
+  _foldersCache = { at: now, data: folders };
+  return folders;
+}
+// Esportato per i test (reset cache fra Deno.test).
+export function _resetFoldersCacheForTest() { _foldersCache = null; }
+
 function fallback(folders: Folder[]): z.infer<typeof ResultSchema> {
   const hasToSort = folders.find((f) => f.slug === "to_sort");
   return {
@@ -115,14 +137,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, decision: existing, cached: true }), { status: 200, headers });
     }
 
-    // Carica cartelle attive (no hardcode)
-    const { data: foldersRaw } = await supabase
-      .from("funnemail_folders")
-      .select("slug,label,section,accept_into_agenda,prompt_hint")
-      .eq("is_active", true)
-      .order("section")
-      .order("sort_order");
-    const folders = (foldersRaw ?? []) as Folder[];
+    // Carica cartelle attive (no hardcode, cached 60s)
+    const folders = await getActiveFolders(supabase);
     if (folders.length === 0) {
       const dec = fallback([]);
       await supabase.from("funnemail_decisions").insert({
