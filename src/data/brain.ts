@@ -7,7 +7,7 @@
  * comportamento nel tempo.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/integrations/supabase/untyped";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface BrainAgentRow {
   agent_id: string;
