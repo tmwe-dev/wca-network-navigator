@@ -6,27 +6,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
+import { createPauseChecker } from "./pauseChecker.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-/**
- * createPauseChecker — fabbrica memoized del check `ai_automations_paused`.
- * Esportato per test: garantisce che lookup ripetuti sullo stesso user_id
- * facciano UNA sola query DB per ciclo.
- */
-export function createPauseChecker(
-  lookup: (userId: string) => Promise<boolean>,
-): (userId: string) => Promise<boolean> {
-  const cache = new Map<string, boolean>();
-  return async (userId: string) => {
-    const hit = cache.get(userId);
-    if (hit !== undefined) return hit;
-    const paused = await lookup(userId);
-    cache.set(userId, paused);
-    return paused;
-  };
-}
 
 interface CadenceRule {
   delay_days?: number;
