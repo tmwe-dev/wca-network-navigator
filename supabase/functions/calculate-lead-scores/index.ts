@@ -165,13 +165,25 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // Bulk upsert: 1 round-trip per batch invece di N.
-      if (updates.length > 0) {
-        const { error: upsertErr } = await admin
-          .from("imported_contacts")
-          .upsert(updates, { onConflict: "id" });
-        if (upsertErr) throw upsertErr;
-        totalUpdated += updates.length;
+      // Parallel UPDATE con concurrency cap (chunk 25) — N round-trip ma in parallelo.
+      // Upsert non praticabile: imported_contacts ha colonne NOT NULL non incluse nello scoring.
+      const CONCURRENCY = 25;
+      for (let i = 0; i < updates.length; i += CONCURRENCY) {
+        const slice = updates.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(
+          slice.map((u) =>
+            admin
+              .from("imported_contacts")
+              .update({
+                lead_score: u.lead_score,
+                lead_score_breakdown: u.lead_score_breakdown,
+                lead_score_updated_at: u.lead_score_updated_at,
+              })
+              .eq("id", u.id)
+              .then((r) => (r.error ? 0 : 1)),
+          ),
+        );
+        totalUpdated += results.reduce((a, b) => a + b, 0);
       }
 
       offset += batchSize;
