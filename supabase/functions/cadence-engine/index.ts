@@ -64,17 +64,29 @@ Deno.serve(async (req) => {
 
     let executed = 0, pendingReview = 0, cancelled = 0;
 
+    // SC:DEFENSE — per-cycle cache for ai_automations_paused. Cadence-engine
+    // processes up to 50 actions/cycle and many share the same user_id. Without
+    // cache: 50 lookups on app_settings. With cache: 1 lookup per distinct user.
+    // Locale al request, nessun side-effect persistente (rollback = rimuovi 8 righe).
+    const pauseCache = new Map<string, boolean>();
+    const isUserPaused = async (userId: string): Promise<boolean> => {
+      const cached = pauseCache.get(userId);
+      if (cached !== undefined) return cached;
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "ai_automations_paused")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const paused = data?.value === "true";
+      pauseCache.set(userId, paused);
+      return paused;
+    };
+
     for (const action of actions as ActionRow[]) {
       try {
         // LOVABLE-93: global pause check
-        const { data: pauseSettings } = await supabase
-          .from("app_settings")
-          .select("value")
-          .eq("key", "ai_automations_paused")
-          .eq("user_id", action.user_id)
-          .maybeSingle();
-
-        if (pauseSettings?.value === "true") {
+        if (await isUserPaused(action.user_id)) {
           continue;
         }
 
