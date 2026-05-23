@@ -9,6 +9,11 @@ const FETCH_TIMEOUT_MS = 25_000;
 const MAX_RAW_TEXT = 8_000;
 const CACHE_TTL_DAYS = 7;
 
+// Default include set for legacy callers (no `include` param).
+const DEFAULT_INCLUDE = ["meta", "emails", "phones"] as const;
+type IncludeKey = "meta" | "headings" | "links" | "rawText" | "emails" | "phones" | "selectors";
+const ALL_INCLUDE: IncludeKey[] = ["meta", "headings", "links", "rawText", "emails", "phones", "selectors"];
+
 /* ── in-memory rate limit: 1 req/sec per domain ── */
 const lastFetchByDomain = new Map<string, number>();
 
@@ -79,6 +84,18 @@ Deno.serve(async (req) => {
     const url = body.url as string | undefined;
     const mode = (body.mode as string) ?? "static";
     const selectors = Array.isArray(body.selectors) ? body.selectors as string[] : [];
+    // E (audit Sez.1): payload modulare per ridurre token AI a valle.
+    const includeRaw = Array.isArray(body.include) ? (body.include as string[]) : null;
+    const include = new Set<IncludeKey>(
+      includeRaw
+        ? (includeRaw.filter((k) => (ALL_INCLUDE as string[]).includes(k)) as IncludeKey[])
+        : DEFAULT_INCLUDE,
+    );
+    if (include.size === 0) for (const k of DEFAULT_INCLUDE) include.add(k);
+    const rawTextCapRaw = Number(body.rawTextCap);
+    const rawTextCap = Number.isFinite(rawTextCapRaw) && rawTextCapRaw > 500 && rawTextCapRaw <= MAX_RAW_TEXT
+      ? Math.floor(rawTextCapRaw)
+      : MAX_RAW_TEXT;
 
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "url required" }), { status: 400, headers });
@@ -112,8 +129,8 @@ Deno.serve(async (req) => {
     if (cached) {
       const age = Date.now() - new Date(cached.scraped_at).getTime();
       if (age < CACHE_TTL_DAYS * 86_400_000) {
-        
-        return new Response(JSON.stringify({ ...cached.payload, fromCache: true }), { headers });
+        const filtered = filterPayloadByInclude(cached.payload as Record<string, unknown>, include, rawTextCap);
+        return new Response(JSON.stringify({ ...filtered, fromCache: true }), { headers });
       }
     }
 
@@ -217,7 +234,7 @@ Deno.serve(async (req) => {
     // raw text (capped)
     const rawText = $("body").text().replace(/\s+/g, " ").trim().slice(0, MAX_RAW_TEXT);
 
-    const payload = {
+    const fullPayload = {
       url,
       mode,
       title,
@@ -238,14 +255,48 @@ Deno.serve(async (req) => {
     /* ── upsert cache ── */
     await supabaseAdmin
       .from("scrape_cache")
-      .upsert({ url, mode, payload, scraped_at: new Date().toISOString() }, { onConflict: "url" });
+      .upsert({ url, mode, payload: fullPayload, scraped_at: new Date().toISOString() }, { onConflict: "url" });
 
-    
-
-    return new Response(JSON.stringify(payload), { headers });
+    const filtered = filterPayloadByInclude(fullPayload, include, rawTextCap);
+    return new Response(JSON.stringify(filtered), { headers });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "scrape failed";
     console.error(JSON.stringify({ fn: "scrape-website", error: msg }));
     return new Response(JSON.stringify({ error: msg }), { status: 500, headers });
   }
 });
+
+/**
+ * Filtra il payload completo in base ai blocchi richiesti dal chiamante.
+ * Cache shared tra chiamanti con include diversi: salviamo sempre full,
+ * serviamo solo i blocchi richiesti per ridurre token AI a valle.
+ */
+function filterPayloadByInclude(
+  payload: Record<string, unknown>,
+  include: Set<IncludeKey>,
+  rawTextCap: number,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    url: payload.url,
+    mode: payload.mode,
+    length: payload.length,
+    durationMs: payload.durationMs,
+    timestamp: payload.timestamp,
+  };
+  if (include.has("meta")) {
+    out.title = payload.title;
+    out.description = payload.description;
+    out.ogTitle = payload.ogTitle;
+    out.ogDescription = payload.ogDescription;
+  }
+  if (include.has("headings")) out.headings = payload.headings;
+  if (include.has("links")) out.links = payload.links;
+  if (include.has("emails")) out.emails = payload.emails;
+  if (include.has("phones")) out.phones = payload.phones;
+  if (include.has("selectors")) out.selectorResults = payload.selectorResults;
+  if (include.has("rawText")) {
+    const rt = typeof payload.rawText === "string" ? payload.rawText : "";
+    out.rawText = rt.length > rawTextCap ? rt.slice(0, rawTextCap) : rt;
+  }
+  return out;
+}
