@@ -92,20 +92,20 @@ serve(async (req) => {
           }).eq("id", schedule.id);
           skipped++;
         } else {
+          // Estrai mission preloaded prima di persistere (non sporcare il
+          // record DB con il payload della mission)
+          const { _mission: preloadedMission, ...resultToPersist } = result as
+            { _mission?: Record<string, unknown> } & Record<string, unknown>;
           await supabase.from("outreach_schedules").update({
             status: "done",
-            result: result as unknown as Record<string, unknown>,
+            result: resultToPersist as Record<string, unknown>,
             updated_at: new Date().toISOString(),
           }).eq("id", schedule.id);
           processed++;
 
-          // Schedule followups if applicable (reuse mission already loaded in
-          // processSchedule when present → -1 query per "send" action)
-          await scheduleFollowups(
-            supabase,
-            schedule,
-            (result as { _mission?: Record<string, unknown> })._mission,
-          );
+          // Schedule followups if applicable (reuse mission already loaded
+          // in processSchedule → -1 query per "send" action)
+          await scheduleFollowups(supabase, schedule, preloadedMission);
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
