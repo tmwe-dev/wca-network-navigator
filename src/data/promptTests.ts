@@ -157,17 +157,16 @@ export async function runTests(args: {
   prompt_id?: string;
   trigger_source?: string;
 }): Promise<RunnerResponse> {
-  const { data, error } = await supabase.functions.invoke("prompt-test-runner", {
+  const { invokeAi } = await import("@/lib/ai/invokeAi");
+  const data = await invokeAi<RunnerResponse>("prompt-test-runner", {
+    scope: "lab",
     body: {
       ...args,
       trigger_source: args.trigger_source ?? "prompt_lab_ui",
-      // Charter R1+R2
-      scope: "lab",
-      context: { source: "promptTests.runTests", mode: "run-tests" },
     },
+    context: { source: "promptTests.runTests", mode: "run-tests" },
   });
-  if (error) throw error;
-  return data as RunnerResponse;
+  return data;
 }
 
 export async function listVersionsForPrompt(promptId: string, limit = 20): Promise<PromptVersion[]> {

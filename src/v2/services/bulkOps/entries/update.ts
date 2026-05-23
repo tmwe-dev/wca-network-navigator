@@ -1,4 +1,5 @@
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { BulkEntry } from "../types";
 import { assertCalledFromRunner } from "./_internal";
 
@@ -67,9 +68,10 @@ export const updateAnalyzeAiEntry: BulkEntry<AnalyzeAiItem, { ok: boolean }> = {
   continueOnError: true,
   handler: async (item, ctx) => {
     assertCalledFromRunner("update.analyzeAi");
-    await invokeEdge("suggest-email-groups", {
+    await invokeAi("suggest-email-groups", {
+      scope: "classify",
       body: { email_addresses: [item.emailAddress], user_id: ctx.userId },
-      context: "bulkOps.analyzeAi",
+      context: { source: "bulkOps.analyzeAi", mode: "bulk" },
     });
     return { ok: true };
   },
