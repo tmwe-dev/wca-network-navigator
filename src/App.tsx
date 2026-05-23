@@ -27,6 +27,7 @@ import { TraceConsole } from "@/v2/observability/TraceConsole";
 import { traceCollector } from "@/v2/observability/traceCollector";
 import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
 import { GlobalSherlockLauncher } from "@/components/global/GlobalSherlockLauncher";
+const SimpleHomePage = lazyRetry(() => import("@/v2/ui/pages/SimpleHomePage"));
 
 // Init observability layer (idempotent, safe before any render)
 traceCollector.init();
@@ -133,6 +134,9 @@ const App = () => (
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                   <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
+
+                  {/* Nuovo menu esclusivo del sistema semplificato (non tocca /v2/*). */}
+                  <Route path="/app" element={<SimpleHomePage />} />
 
                   {/* Public routes */}
                   <Route path="/auth" element={<LegacyRedirect to="/v2/login" />} />
