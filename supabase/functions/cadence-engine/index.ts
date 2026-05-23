@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
+import { createPauseChecker } from "./pauseChecker.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,17 +65,24 @@ Deno.serve(async (req) => {
 
     let executed = 0, pendingReview = 0, cancelled = 0;
 
+    // SC:DEFENSE — per-cycle cache for ai_automations_paused. Cadence-engine
+    // processes up to 50 actions/cycle and many share the same user_id. Without
+    // cache: 50 lookups on app_settings. With cache: 1 lookup per distinct user.
+    // Locale al request, nessun side-effect persistente (rollback = rimuovi 8 righe).
+    const isUserPaused = createPauseChecker(async (userId) => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "ai_automations_paused")
+        .eq("user_id", userId)
+        .maybeSingle();
+      return data?.value === "true";
+    });
+
     for (const action of actions as ActionRow[]) {
       try {
         // LOVABLE-93: global pause check
-        const { data: pauseSettings } = await supabase
-          .from("app_settings")
-          .select("value")
-          .eq("key", "ai_automations_paused")
-          .eq("user_id", action.user_id)
-          .maybeSingle();
-
-        if (pauseSettings?.value === "true") {
+        if (await isUserPaused(action.user_id)) {
           continue;
         }
 
