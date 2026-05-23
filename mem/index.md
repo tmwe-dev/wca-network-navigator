@@ -33,3 +33,4 @@
 - [Lean Mode 2026-05-19](mem://ui/lean-mode-2026-05-19) — Flag VITE_LEAN_MODE (default ON): sidebar a 7 voci filtrate via LEAN_NAV_PATHS in featureFlags.ts. Rotte non eliminate.
 - [Comms Unified Page 2026-05-19](mem://features/comms-unified-page-2026-05-19) — /v2/comms guscio Tabs (Inbox/Email/WA/LinkedIn/Smistamento) monta pagine canale esistenti senza modificarle.
 - [Prompt Lab 5 Macro 2026-05-19](mem://features/prompt-lab-5-macro-2026-05-19) — PROMPT_LAB_GROUPS in 5 macroaree (prompts/personas/capabilities/tests/health). Zero modifiche ai tab.
+- [Brain Simplification Plan 2026-05-23](mem://standards/brain-simplification-plan-2026-05-23) — Piano F0-F7 per collassare cervello AI in `/v2/brain` (avatar canale + icona tono). Eseguire una fase per turno con codex protocol.
