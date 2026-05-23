@@ -105,5 +105,9 @@ export const aiAndAnalyticsKeys = {
     outcomes: ["brand-voice-outcomes"] as const,
     recentAudits: (limit: number) => ["brand-voice-recent-audits", limit] as const,
   },
+  brain: {
+    agents: ["brain", "agents"] as const,
+    prompts: (contexts: readonly string[]) => ["brain", "prompts", [...contexts].sort()] as const,
+  },
   noop: ["noop"] as const,
 } as const;
