@@ -226,6 +226,9 @@ export function V2Routes(): React.ReactElement {
           <Route path="command/help" element={guardedPage(CommandHelpPage, "CommandHelp")} />
           <Route path="dashboard" element={guardedPage(DashboardPage, "Dashboard")} />
 
+          {/* Brain — pagina unificata cervello AI (F5 2026-05-23) */}
+          <Route path="brain" element={guardedPage(BrainPage, "Brain")} />
+
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
           {/* Pipeline rimossa dal menu — redirect verso Agenda dove ora vive il Kanban */}
           {/* Pipeline → Agenda (canonical Fase 4): tutte le sotto-rotte legacy reindirizzano */}
