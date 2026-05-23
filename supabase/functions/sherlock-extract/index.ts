@@ -7,9 +7,14 @@ import "../_shared/llmFetchInterceptor.ts";
  * Output: { findings: {...}, confidence: 0-1, suggested_next_url?: string, reasoning?: string }
  *
  * Implementa tool calling: schema dinamico generato da target_fields.
+ *
+ * Audit Sez.1 — B: cache risultati via `ai_extract_cache` (TTL 7gg).
+ * Chiave = sha256(extract_prompt + sorted(target_fields) + hash(markdown)).
+ * Cache hit ritorna senza chiamare AI gateway.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface ReqBody {
   markdown: string;
@@ -17,6 +22,8 @@ interface ReqBody {
   target_fields?: string[];
   prior_findings?: Record<string, unknown>;
   label?: string;
+  /** Opt-in: salta la cache anche se hit. */
+  bypass_cache?: boolean;
 }
 
 const SYSTEM_PROMPT = `Sei "Sherlock", un investigatore commerciale digitale.
@@ -70,6 +77,21 @@ function buildSchema(targetFields: string[]) {
   };
 }
 
+/** Hash SHA-256 hex di una stringa. */
+async function sha256(s: string): Promise<string> {
+  const buf = new TextEncoder().encode(s);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Genera cache key deterministica per stessi input → stessa key. */
+async function buildCacheKey(body: ReqBody): Promise<string> {
+  const fields = [...(body.target_fields ?? [])].sort().join("|");
+  const mdHash = await sha256(body.markdown);
+  const promptHash = await sha256(body.extract_prompt);
+  return `sherlock:${promptHash.slice(0, 16)}:${await sha256(fields)}:${mdHash.slice(0, 32)}`;
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
@@ -91,6 +113,33 @@ serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ── Cache lookup (B) ──
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAdmin = (SUPABASE_URL && SERVICE_KEY)
+      ? createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+      : null;
+
+    let cacheKey: string | null = null;
+    if (supabaseAdmin && !body.bypass_cache) {
+      try {
+        cacheKey = await buildCacheKey(body);
+        const { data: cached } = await supabaseAdmin
+          .from("ai_extract_cache")
+          .select("result, expires_at")
+          .eq("cache_key", cacheKey)
+          .maybeSingle();
+        if (cached && new Date(cached.expires_at).getTime() > Date.now()) {
+          return new Response(
+            JSON.stringify({ ...(cached.result as Record<string, unknown>), fromCache: true }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      } catch (e) {
+        console.warn("[sherlock-extract] cache lookup failed:", (e as Error).message);
+      }
     }
 
     const targetFields = body.target_fields ?? [];
@@ -173,6 +222,21 @@ serve(async (req) => {
         JSON.stringify({ error: "Parse JSON tool call fallito", detail: String(e) }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // ── Cache write (best-effort) ──
+    if (supabaseAdmin && cacheKey) {
+      try {
+        await supabaseAdmin.from("ai_extract_cache").upsert({
+          cache_key: cacheKey,
+          result: parsed,
+          model: "google/gemini-3-flash-preview",
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+        }, { onConflict: "cache_key" });
+      } catch (e) {
+        console.warn("[sherlock-extract] cache write failed:", (e as Error).message);
+      }
     }
 
     return new Response(JSON.stringify(parsed), {

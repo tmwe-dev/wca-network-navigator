@@ -13,7 +13,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 
-const BATCH_SIZE = 5;
+// Audit Sez.1 — F: batch + sleep adattivo per migliorare throughput cron.
+const BATCH_SIZE = 8;
 const RATE_LIMIT_MS = 10_000;
 const WALL_CLOCK_CAP_MS = 50_000;
 
@@ -100,18 +101,9 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
-      // Re-check: skip se è stato arricchito da qualcun altro nel frattempo
-      const { data: fresh } = await supabase
-        .from("partners")
-        .select("enrichment_data")
-        .eq("id", partner.id)
-        .maybeSingle();
-      const ed = fresh?.enrichment_data as Record<string, unknown> | null;
-      if (ed && Object.keys(ed).length > 0) {
-        log.skipped++;
-        continue;
-      }
-
+      // (F) Re-check rimosso: la SELECT iniziale ha già filtrato per
+      // enrichment_data NULL/{}. Risparmio: 1 query per partner.
+      const callStart = Date.now();
       try {
         // Invoca enrich-partner-website senza userId → no consumo crediti utente,
         // usa LOVABLE_API_KEY del progetto.
@@ -138,9 +130,15 @@ Deno.serve(async (req: Request) => {
         console.error(`[batch-enrichment] partner ${partner.id} exception: ${msg}`);
       }
 
-      // Rate limit tra chiamate
-      if (Date.now() - startedAt + RATE_LIMIT_MS < WALL_CLOCK_CAP_MS) {
-        await sleep(RATE_LIMIT_MS);
+      // (F) Rate limit adattivo: se la chiamata ha già impiegato >= RATE_LIMIT_MS,
+      // la finestra è di fatto rispettata → skip sleep. Cap globale wall-clock invariato.
+      const callElapsed = Date.now() - callStart;
+      const remainingWindow = RATE_LIMIT_MS - callElapsed;
+      if (
+        remainingWindow > 0 &&
+        Date.now() - startedAt + remainingWindow < WALL_CLOCK_CAP_MS
+      ) {
+        await sleep(remainingWindow);
       }
     }
 
