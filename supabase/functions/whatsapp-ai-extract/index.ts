@@ -70,10 +70,6 @@ serve(async (req) => {
     const wasTruncated = html.length > 30000;
     const trimmedHtml = wasTruncated ? html.slice(0, 30000) : html;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY)
-      throw new Error("LOVABLE_API_KEY not configured");
-
     let systemPrompt: string;
     let userPrompt: string;
     let toolName: string;

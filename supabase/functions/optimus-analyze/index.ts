@@ -299,18 +299,13 @@ Deno.serve(async (req) => {
       }), { status: 200, headers });
     }
 
-    // Need to call AI
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "INTERNAL_ERROR", message: "LOVABLE_API_KEY not configured" }), { status: 500, headers });
-    }
-
+    // Need to call AI (api key gestita da aiCallShim via AI_PROVIDER)
     const sysPrompt = buildSystemPrompt(body, memory?.extraction_plan ?? null);
 
     let aiResult: AIResult | null = null;
     let aiError: string | null = null;
     try {
-      aiResult = await callAI(sysPrompt, body, apiKey);
+      aiResult = await callAI(sysPrompt, body);
     } catch (e) {
       aiError = e instanceof Error ? e.message : String(e);
     }
