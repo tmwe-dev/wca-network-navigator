@@ -34,7 +34,7 @@ export async function executeChatMode(
   let processedMessages = chatMessages.map((m: ChatMessage) => ({ role: m.role, content: m.content })) as Record<string, unknown>[];
   if (processedMessages.length > 8) {
     try {
-      const compressed = await compressMessages(supabase, processedMessages, LOVABLE_API_KEY || "", userId);
+      const compressed = await compressMessages(supabase, processedMessages, "", userId);
       processedMessages = compressed;
     } catch (compressErr) {
       console.warn("[chat-mode] Compression failed, using original:", compressErr);
