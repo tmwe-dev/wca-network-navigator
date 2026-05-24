@@ -46,7 +46,7 @@ export async function resolveAiEndpoint(opts: {
   const apiKey =
     Deno.env.get(config.envKey) ||
     Deno.env.get("AI_API_KEY") ||
-    Deno.env.get("LOVABLE_API_KEY") ||
+    (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) ||
     "";
   if (!apiKey) {
     throw new Error(`${config.envKey} not configured for provider '${provider}'`);

@@ -5,6 +5,7 @@
 import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { executeTool } from "./toolHandlers.ts";
 import { compressMessages } from "../_shared/messageCompression.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 type SupabaseClient = BaseSupabaseClient<any, "public", any>;
 
@@ -27,16 +28,13 @@ export async function executeChatMode(
   authHeader: string,
   apiKey: string
 ): Promise<Response> {
-  const LOVABLE_API_KEY = apiKey || Deno.env.get("LOVABLE_API_KEY");
-  const aiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
   // Compress long histories (threshold: 8 messages)
   let processedMessages = chatMessages.map((m: ChatMessage) => ({ role: m.role, content: m.content })) as Record<string, unknown>[];
   if (processedMessages.length > 8) {
     try {
-      const compressed = await compressMessages(supabase, processedMessages, LOVABLE_API_KEY || "", userId);
+      const compressed = await compressMessages(supabase, processedMessages, "", userId);
       processedMessages = compressed;
     } catch (compressErr) {
       console.warn("[chat-mode] Compression failed, using original:", compressErr);
@@ -53,17 +51,12 @@ export async function executeChatMode(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45_000);
     try {
-      response = await fetch(aiUrl, {
-        method: "POST",
-        headers: aiHeaders,
-        body: JSON.stringify({
-          model,
-          messages: allMessages,
-          ...(agentTools.length > 0 ? { tools: agentTools } : {}),
-          max_tokens: 4000,
-        }),
-        signal: controller.signal,
-      });
+      response = await aiFetch({
+        model,
+        messages: allMessages,
+        ...(agentTools.length > 0 ? { tools: agentTools } : {}),
+        max_tokens: 4000,
+      }, { signal: controller.signal });
       if (response.ok) {
         clearTimeout(timeoutId);
         break;
@@ -108,15 +101,11 @@ export async function executeChatMode(
 
     let loopOk = false;
     for (const model of fallbackModels) {
-      response = await fetch(aiUrl, {
-        method: "POST",
-        headers: aiHeaders,
-        body: JSON.stringify({
-          model,
-          messages: allMessages,
-          ...(agentTools.length > 0 ? { tools: agentTools } : {}),
-          max_tokens: 4000,
-        }),
+      response = await aiFetch({
+        model,
+        messages: allMessages,
+        ...(agentTools.length > 0 ? { tools: agentTools } : {}),
+        max_tokens: 4000,
       });
       if (response!.ok) {
         loopOk = true;

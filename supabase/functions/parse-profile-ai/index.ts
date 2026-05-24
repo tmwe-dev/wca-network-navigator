@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -90,13 +91,7 @@ ${truncated}`
 
     
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'Sei un esperto di parsing dati logistici. Rispondi sempre con JSON strutturato tramite tool call.' },
@@ -174,8 +169,7 @@ ${truncated}`
           },
         }],
         tool_choice: { type: 'function', function: { name: 'extract_wca_profile' } },
-      }),
-    })
+      })
 
     if (!response.ok) {
       const errText = await response.text()

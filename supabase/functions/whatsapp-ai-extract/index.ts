@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const jsonHeaders = (headers: Record<string, string>) => ({
   ...headers,
@@ -68,10 +69,6 @@ serve(async (req) => {
     // Trim HTML to avoid token limits (keep max ~30k chars)
     const wasTruncated = html.length > 30000;
     const trimmedHtml = wasTruncated ? html.slice(0, 30000) : html;
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY)
-      throw new Error("LOVABLE_API_KEY not configured");
 
     let systemPrompt: string;
     let userPrompt: string;
@@ -235,14 +232,8 @@ REGOLE:
     const aiTimeout = setTimeout(() => aiController.abort(), 30000);
     let retried = false;
 
-    const gatewayUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const gatewayHeaders = {
-      "Lovable-API-Key": LOVABLE_API_KEY,
-      "X-Lovable-AIG-SDK": "raw-fetch",
-      "Content-Type": "application/json",
-    };
     const selectedModel = mode === "learnDom" ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
-    const gatewayBody = JSON.stringify({
+    const gatewayBody = {
       model: selectedModel,
       messages: [
         { role: "system", content: systemPrompt },
@@ -262,16 +253,11 @@ REGOLE:
         type: "function",
         function: { name: toolName },
       },
-    });
+    };
 
     let aiResponse: Response;
     try {
-      aiResponse = await fetch(gatewayUrl, {
-        method: "POST",
-        headers: gatewayHeaders,
-        body: gatewayBody,
-        signal: aiController.signal,
-      });
+      aiResponse = await aiFetch(gatewayBody, { signal: aiController.signal });
       clearTimeout(aiTimeout);
     } catch (fetchErr) {
       clearTimeout(aiTimeout);
@@ -293,12 +279,7 @@ REGOLE:
         const retryController = new AbortController();
         const retryTimer = setTimeout(() => retryController.abort(), 30000);
         try {
-          const retryResponse = await fetch(gatewayUrl, {
-            method: "POST",
-            headers: gatewayHeaders,
-            body: gatewayBody,
-            signal: retryController.signal,
-          });
+          const retryResponse = await aiFetch(gatewayBody, { signal: retryController.signal });
           clearTimeout(retryTimer);
           if (retryResponse.ok) {
             aiResponse = retryResponse;

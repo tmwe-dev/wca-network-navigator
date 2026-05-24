@@ -16,6 +16,7 @@ import {
 } from "../_shared/agentCapabilitiesLoader.ts";
 import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const TOOL_DEFINITIONS = [
   {
@@ -150,7 +151,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
         status: 500,
@@ -217,20 +218,13 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
       ...(Array.isArray(history) ? history.slice(-30) : []),
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: effectiveModel,
         messages,
         tools: effectiveTools,
         temperature: effectiveTemperature,
         max_tokens: effectiveMaxTokens,
-      }),
-    });
+      });
 
     if (!response.ok) {
       const errText = await response.text();

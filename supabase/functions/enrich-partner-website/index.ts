@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { swallowedError } from "../_shared/swallowedError.ts";
 import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // LOVABLE-75 — LEGACY
 // Questa funzione è mantenuta solo per useAcquisitionPipeline.
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -175,13 +176,7 @@ Deno.serve(async (req) => {
       swallowedError("enrich_partner_website.ai_cache_read_failed", e);
     }
 
-    const aiResponse = enrichment ? null : await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiResponse = enrichment ? null : await aiFetch({
         model: AI_MODEL,
         messages: [
           {
@@ -247,8 +242,7 @@ Estrai queste informazioni (metti null se non trovate):
           },
         ],
         tool_choice: { type: "function", function: { name: "extract_company_data" } },
-      }),
-    });
+      });
 
     if (aiResponse && !aiResponse.ok) {
       const errText = await aiResponse.text();

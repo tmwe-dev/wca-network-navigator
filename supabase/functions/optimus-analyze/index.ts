@@ -7,6 +7,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface AnalyzeInput {
   channel: "whatsapp" | "linkedin";
@@ -32,7 +33,6 @@ interface MemoryRow {
   consecutive_failures: number;
 }
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-3-flash-preview";
 const AI_TIMEOUT_MS = 15000;
 
@@ -162,7 +162,7 @@ interface AIResult {
   latencyMs: number;
 }
 
-async function callAI(systemPrompt: string, input: AnalyzeInput, apiKey: string): Promise<AIResult> {
+async function callAI(systemPrompt: string, input: AnalyzeInput): Promise<AIResult> {
   const userContent: Array<Record<string, unknown>> = [
     { type: "text", text: `DOM SNAPSHOT (truncato a 30k char):\n${input.dom_snapshot.slice(0, 30000)}` },
   ];
@@ -179,19 +179,14 @@ async function callAI(systemPrompt: string, input: AnalyzeInput, apiKey: string)
 
   let resp: Response;
   try {
-    resp = await fetch(AI_GATEWAY_URL, {
-      method: "POST",
-      signal: ac.signal,
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
+    resp = await aiFetch({
+      model: AI_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      response_format: { type: "json_object" },
+    }, { signal: ac.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -304,18 +299,13 @@ Deno.serve(async (req) => {
       }), { status: 200, headers });
     }
 
-    // Need to call AI
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "INTERNAL_ERROR", message: "LOVABLE_API_KEY not configured" }), { status: 500, headers });
-    }
-
+    // Need to call AI (api key gestita da aiCallShim via AI_PROVIDER)
     const sysPrompt = buildSystemPrompt(body, memory?.extraction_plan ?? null);
 
     let aiResult: AIResult | null = null;
     let aiError: string | null = null;
     try {
-      aiResult = await callAI(sysPrompt, body, apiKey);
+      aiResult = await callAI(sysPrompt, body);
     } catch (e) {
       aiError = e instanceof Error ? e.message : String(e);
     }

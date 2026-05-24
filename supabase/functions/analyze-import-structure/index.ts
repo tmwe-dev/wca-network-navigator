@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 
 const TARGET_SCHEMA = {
@@ -210,7 +211,7 @@ serve(async (req) => {
       });
     }
 
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    const lovableApiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const { sample_rows, input_type, raw_text } = await req.json();
@@ -219,13 +220,7 @@ serve(async (req) => {
     const prompt = isPaste ? PASTE_PROMPT : CONTEXT_PROMPT;
     const userContent = isPaste ? (raw_text || "") : JSON.stringify(sample_rows || [], null, 2);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: prompt },
@@ -298,8 +293,7 @@ serve(async (req) => {
           },
         ],
         tool_choice: { type: "function", function: { name: "return_import_structure" } },
-      }),
-    });
+      });
 
     if (!response.ok) {
       if (response.status === 429) {

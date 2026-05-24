@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseAiJson, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const BusinessCardSchema = z.object({
   company_name: z.string().nullish(),
@@ -78,16 +79,10 @@ serve(async (req) => {
     }
 
     // Call Gemini vision via Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY non configurata");
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiResp = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           {
@@ -142,8 +137,7 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
           },
         ],
         tool_choice: { type: "function", function: { name: "extract_business_card" } },
-      }),
-    });
+      });
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();

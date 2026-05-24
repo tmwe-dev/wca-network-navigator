@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { resolveCaller } from "../_shared/ownership.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const VALID_SERVICES = [
   'air_freight', 'ocean_fcl', 'ocean_lcl', 'road_freight', 'rail_freight',
@@ -143,13 +144,7 @@ Gold Medallion: ${profileData.gold_medallion || false}
 
 IMPORTANT: Only use service codes from the exact list above. Be conservative - only assign services clearly indicated by the profile.`
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'You are a logistics classification expert. Always respond with valid JSON.' },
@@ -194,8 +189,7 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
           },
         }],
         tool_choice: { type: 'function', function: { name: 'classify_partner' } },
-      }),
-    })
+      })
 
     if (!response.ok) {
       const errText = await response.text()

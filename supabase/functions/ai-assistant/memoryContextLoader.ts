@@ -9,6 +9,7 @@
  */
 
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -170,11 +171,7 @@ async function generateAndSaveSummary(supabase: SupabaseClient, olderMessages: R
   const summaryPrompt = `Riassumi in modo conciso (3-5 righe) il contesto operativo di questa conversazione. Cattura: decisioni prese, azioni eseguite, dati importanti menzionati, richieste pendenti.\n\n${olderMessages.map((m) => `${m.role}: ${String(m.content || "").substring(0, 300)}`).join("\n")}`;
 
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "user", content: summaryPrompt }], max_tokens: 300 }),
-    });
+    const resp = await aiFetch({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "user", content: summaryPrompt }], max_tokens: 300 });
 
     if (resp.ok) {
       const data = await resp.json();

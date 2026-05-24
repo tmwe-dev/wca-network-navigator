@@ -3,6 +3,7 @@ import { resolvePartnerId, type ExecuteContext } from "../shared.ts";
 import { evaluatePartner } from "../../_shared/decisionEngine.ts";
 import { processAllDecisionActions, undoAction, getApprovalDashboard } from "../../_shared/approvalFlow.ts";
 import { z, safeParseAiJson } from "../../_shared/aiJsonValidator.ts";
+import { aiFetch } from "../../_shared/aiCallShim.ts";
 
 const EmailAnalysisSchema = z.object({
   sentiment: z.enum(["positive", "neutral", "negative"]).default("neutral"),
@@ -200,19 +201,15 @@ export async function handleAnalyzeIncomingEmail(
     }
   }
 
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const analysisRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+  const analysisRes = await aiFetch({
       model: "google/gemini-2.5-flash-lite",
       messages: [
         { role: "system", content: "Analizza questa email e rispondi SOLO con un JSON valido: {\"sentiment\": \"positive|neutral|negative\", \"intent\": \"interest|info_request|refusal|ooo|auto_reply|spam|other\", \"suggested_action\": \"follow_up|escalation|close|schedule_call|respond_info|ignore\", \"urgency\": 1-5, \"summary\": \"breve riassunto in italiano\"}" },
         { role: "user", content: `Da: ${msg.from_address}\nOggetto: ${msg.subject}\n\n${msg.body_text?.substring(0, 2000) || "(vuoto)"}` },
       ],
       max_tokens: 500,
-    }),
-  });
+    });
 
   if (!analysisRes.ok) return { error: "Errore analisi AI" };
   const analysisData = await analysisRes.json();

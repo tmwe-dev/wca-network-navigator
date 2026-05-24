@@ -19,6 +19,7 @@ import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { createTracer, newTraceId } from "../_shared/pipelineTrace.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const CLASSIFICATIONS = [
   "interested", "not_interested", "neutral", "question",
@@ -167,7 +168,7 @@ Deno.serve(async (req) => {
     const userPrompt = `Channel: ${channel}\nFrom: ${from}\nSubject: ${normSubject.text || "(none)"}\nBody:\n${bodyWrapped}`;
 
     const t4 = Date.now();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     const model = "google/gemini-3-flash-preview";
     let classification: Record<string, unknown> = {
       classification: "neutral", confidence: 0, sentiment: "neutral",
@@ -176,10 +177,7 @@ Deno.serve(async (req) => {
     let aiError: string | null = null;
     if (LOVABLE_API_KEY && !blocked) {
       try {
-        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const r = await aiFetch({
             model,
             messages: [
               { role: "system", content: systemPrompt },
@@ -205,8 +203,7 @@ Deno.serve(async (req) => {
               },
             }],
             tool_choice: { type: "function", function: { name: "classify_message" } },
-          }),
-        });
+          });
         const j = await r.json();
         const args = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
         if (args) classification = JSON.parse(args);

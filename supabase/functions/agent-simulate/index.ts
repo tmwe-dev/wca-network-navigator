@@ -21,6 +21,7 @@ import {
 } from "../_shared/agentCapabilitiesLoader.ts";
 import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
 import { EDGE_FN_REGISTRY, getEdgeFnSpec, isEdgeFnAgentId } from "../_shared/edgeFnPromptRegistry.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // Mirror of agent-loop tool registry. Kept here so the simulator stays
 // in sync without importing the live function (each edge fn is isolated).
@@ -119,15 +120,12 @@ serve(async (req: Request) => {
 
       let dryRun: Record<string, unknown> | null = null;
       if (dryRunAI) {
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
         if (!LOVABLE_API_KEY) {
           dryRun = { error: "LOVABLE_API_KEY non configurata" };
         } else {
           const start = Date.now();
-          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
+          const resp = await aiFetch({
               model: spec.defaultModel.startsWith("claude") ? "google/gemini-2.5-flash" : spec.defaultModel,
               messages: [
                 { role: "system", content: systemPrompt },
@@ -135,8 +133,7 @@ serve(async (req: Request) => {
               ],
               temperature: 0.2,
               max_tokens: 500,
-            }),
-          });
+            });
           const elapsed = Date.now() - start;
           if (!resp.ok) {
             const txt = await resp.text();
@@ -240,19 +237,13 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
     // ── 6. Optional dry-run AI call (single iteration, NO execution) ──
     let dryRun: Record<string, unknown> | null = null;
     if (dryRunAI) {
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
       if (!LOVABLE_API_KEY) {
         dryRun = { error: "LOVABLE_API_KEY non configurata" };
       } else {
         const model = capabilities.preferredModel ?? "google/gemini-2.5-flash";
         const start = Date.now();
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        const resp = await aiFetch({
             model,
             messages: [
               { role: "system", content: systemPrompt },
@@ -261,8 +252,7 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
             tools: effectiveTools,
             temperature: capabilities.temperature ?? 0.2,
             max_tokens: capabilities.maxTokensPerCall ?? 500,
-          }),
-        });
+          });
         const elapsed = Date.now() - start;
         if (!resp.ok) {
           const txt = await resp.text();

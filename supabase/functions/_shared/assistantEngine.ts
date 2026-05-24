@@ -28,7 +28,7 @@ export interface AssistantResult {
 }
 
 export async function runAssistant(config: AssistantConfig): Promise<AssistantResult> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
   const model = config.model || "google/gemini-3-flash-preview";

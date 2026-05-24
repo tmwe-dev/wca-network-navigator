@@ -22,6 +22,7 @@ import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createTracer } from "../_shared/pipelineTrace.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface RequestBody {
   message_id: string;
@@ -226,7 +227,7 @@ Deno.serve(async (req) => {
     }
 
     // 4) Chiedi all'AI in quale gruppo va la mail
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
       endMetrics(metrics, true, 200);
       return new Response(JSON.stringify({ ok: true, skipped: "no_ai_key" }), { status: 200, headers });
@@ -256,10 +257,7 @@ Deno.serve(async (req) => {
 
     let chosen: z.infer<typeof ResultSchema> | null = null;
     try {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const resp = await aiFetch({
           model: "google/gemini-3-flash-preview",
           messages: [
             { role: "system", content: systemPrompt },
@@ -283,8 +281,7 @@ Deno.serve(async (req) => {
             },
           }],
           tool_choice: { type: "function", function: { name: "assign_to_group" } },
-        }),
-      });
+        });
       if (resp.ok) {
         const data = await resp.json();
         const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;

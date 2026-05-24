@@ -106,7 +106,7 @@ serve(async (req) => {
         agent.name as string,
         userId,
         authHeader,
-        Deno.env.get("LOVABLE_API_KEY") || ""
+        (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) || ""
       );
       endMetrics(metrics, true, 200);
       return new Response(response.body, {
@@ -158,7 +158,7 @@ serve(async (req) => {
           agent.name as string,
           userId,
           authHeader,
-          Deno.env.get("LOVABLE_API_KEY") || ""
+          (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) || ""
         );
 
         endMetrics(metrics, true, 200);

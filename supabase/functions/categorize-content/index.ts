@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 
 serve(async (req) => {
@@ -19,7 +20,7 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ category: "altro" }), {
         headers: { ...dynCors, "Content-Type": "application/json" },
@@ -30,13 +31,7 @@ serve(async (req) => {
       ? ["proposta_servizi", "partnership", "altro"]
       : ["primo_contatto", "follow_up", "richiesta", "partnership", "altro"];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: "google/gemini-3-flash-preview",
         messages: [
           {
@@ -66,8 +61,7 @@ serve(async (req) => {
           },
         ],
         tool_choice: { type: "function", function: { name: "classify" } },
-      }),
-    });
+      });
 
     if (!response.ok) {
       console.error("AI gateway error:", response.status);

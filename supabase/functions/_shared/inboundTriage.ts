@@ -32,7 +32,7 @@ export interface TriageResult {
 export async function runInboundTriage(input: TriageInput): Promise<TriageResult | null> {
   // Solo email per ora (alert WhatsApp richiede contesto email).
   if (input.channel !== "email") return null;
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   if (!apiKey) return null;
 
   // Carica il prompt operativo "Inbound Triage TMWE" dal Prompt Lab.

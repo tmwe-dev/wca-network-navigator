@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -24,7 +25,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Risolvi user_id (per caricare le regole dal Prompt Lab personali).
@@ -109,10 +110,7 @@ const TOOL_DEF = {
 };
 
 async function callAI(apiKey: string, items: Array<Record<string, unknown>>, systemPrompt: string) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const response = await aiFetch({
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
@@ -120,8 +118,7 @@ async function callAI(apiKey: string, items: Array<Record<string, unknown>>, sys
       ],
       tools: [TOOL_DEF],
       tool_choice: { type: "function", function: { name: "save_aliases" } },
-    }),
-  });
+    });
 
   if (!response.ok) {
     const errText = await response.text();
@@ -286,10 +283,7 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
       };
     }).filter((p) => p.needs_company_alias || p.contacts.length > 0);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
@@ -297,8 +291,7 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
         ],
         tools: [PARTNER_TOOL],
         tool_choice: { type: "function", function: { name: "save_aliases" } },
-      }),
-    });
+      });
 
     if (!response.ok) {
       const errText = await response.text();

@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 
 serve(async (req) => {
@@ -83,7 +84,7 @@ serve(async (req) => {
     }
 
     // Call AI to match
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const prompt = `You are an expert at matching business card company names to a partner database.
@@ -110,13 +111,7 @@ Return ONLY a JSON array. Each element:
 
 confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidates per card. If no match, return empty candidates array.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiResponse = await aiFetch({
         model: "google/gemini-3-flash-preview",
         messages: [{ role: "user", content: prompt }],
         tools: [{
@@ -155,8 +150,7 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
           },
         }],
         tool_choice: { type: "function", function: { name: "return_matches" } },
-      }),
-    });
+      });
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
