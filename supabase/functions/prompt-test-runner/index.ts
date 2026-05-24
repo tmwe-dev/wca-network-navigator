@@ -25,6 +25,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sanitizeForPrompt, summarizeFindings } from "../_shared/promptSanitizer.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
