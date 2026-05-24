@@ -1,109 +1,88 @@
+# Migrazione totale AI → chiavi OpenAI dell'utente
 
-# Sezione 1 — Implementazione Full (codex + test)
+## Obiettivo
+Far sì che **tutte** le edge function (44 file) usino la tua chiave OpenAI (`OPENAI_API_KEY`) invece del gateway Lovable AI (`LOVABLE_API_KEY`). Risultato: il budget AI Lovable smette di essere consumato.
 
-## Stato
+> Nota importante: questo **non** risolve l'avviso "Cloud & AI balance esaurito" sul lato infrastruttura (DB + runtime edge function). Quel budget va comunque ricaricato perché copre l'esecuzione delle funzioni stesse e il database. Le tue chiavi sostituiscono solo l'inferenza AI.
 
-- Migration `ai_extract_cache` già applicata (tabella tecnica, RLS lockdown, service_role only).
-- Resto da implementare in 3 commit atomici (Enterprise Method Vol II: mai mescolare refactor + fix).
+## Strategia: shim drop-in, niente refactor
 
----
+Tocchiamo **un solo file nuovo** e **una riga per ciascuna delle 44 function**.
 
-## Commit 1 — Pulizia low-risk (Step B + E + F + G)
+### Fase 1 — Nuovo helper `_shared/aiCallShim.ts`
 
-### E. `scrape-website` payload modulare
-- Parametro nuovo `include?: Array<'meta'|'headings'|'links'|'rawText'|'emails'|'phones'|'selectors'>` (default `['meta','emails','phones']`).
-- Parametro nuovo `rawTextCap?: number` (default 8000, Sherlock passerà 4000).
-- Parsing HTML resta full (la cache `scrape_cache` salva sempre payload completo), ma la risposta è filtrata.
-- Backward-compat totale: chiamanti senza `include` ricevono i campi che usavano prima (meta+emails+phones, headings/links/rawText spariscono dalla risposta default → verificheremo callers).
+Espone una funzione `aiGatewayFetch(body, options)` che:
 
-### B. `sherlock-extract` cache via `ai_extract_cache`
-- Cache key = `sha256(url + extract_prompt + sorted(target_fields))`.
-- Cache hit → ritorna risultato senza chiamare AI. Marca `fromCache: true`.
-- Cache miss → chiama AI, salva risultato con TTL 7gg.
+1. Se `AI_PROVIDER === "openai"` e `OPENAI_API_KEY` presente → POST a `https://api.openai.com/v1/chat/completions` con `Authorization: Bearer ${OPENAI_API_KEY}`.
+2. Mappa automaticamente il modello richiesto (`google/gemini-3-flash-preview`, `openai/gpt-5-mini`, ecc.) sull'equivalente OpenAI (`gpt-4o-mini`, `gpt-4o`, ecc.) riusando `MODEL_MAP` di `aiGatewayConfig.ts`.
+3. Rimuove campi non supportati da OpenAI (es. `reasoning`).
+4. Fallback al gateway Lovable solo se `AI_PROVIDER` non è impostato (back-compat per ambienti dev).
+5. Risposta sempre nello stesso formato (compatibile OpenAI/Lovable già lo è).
 
-### F. `batch-enrichment-worker` snello
-- Rimuovi re-check per-row (filtro `enrichment_data IS NULL` già nella SELECT iniziale).
-- `BATCH_SIZE`: 5 → 8.
-- Sleep adattivo: salta sleep se chiamata enrich ha richiesto > `RATE_LIMIT_MS`.
-- Wall-clock cap invariato a 50s.
+Vantaggio: ogni call-site cambia di 2 righe. Nessuna modifica al flusso, ai prompt, ai tool, alla telemetria, ai retry o all'editorial review.
 
-### G. Dead code BYOK/credit
-- Rimuovi `getUserId`/`isByok`/`consumeCredits` da `enrich-partner-website` (~60 LOC).
-- Kill-switch `AI_USAGE_LIMITS_ENABLED` rende questo codice morto già adesso; resta `callLLM` shared se mai si riattiva.
+### Fase 2 — Sostituzione meccanica nelle 44 function
 
-### Test Commit 1
-- `supabase/functions/scrape-website/index_test.ts` (nuovo): `include=['meta']` → no `rawText`; `include` invalid → default; cache hit ritorna filtrato.
-- `supabase/functions/sherlock-extract/index_test.ts` (nuovo): cache miss → AI call; cache hit → no AI call (mock fetch contatore).
-- `supabase/functions/batch-enrichment-worker/index_test.ts` (nuovo): BATCH_SIZE rispettato; sleep adattivo skippato se durata > RATE_LIMIT_MS.
+Per ogni file della lista, si sostituisce il pattern:
 
----
+```ts
+const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+  body: JSON.stringify({ model, messages, ... }),
+});
+```
 
-## Commit 2 — Loader operative_prompts (Step D)
+con:
 
-### Modifiche a `_shared/operativePromptsLoader.ts`
-- Aggiungo scope `"partner-enrichment"` e `"inbound-enrichment"` a `PromptScope` + `SCOPE_MAP`.
+```ts
+import { aiGatewayFetch } from "../_shared/aiCallShim.ts";
+const resp = await aiGatewayFetch({ model, messages, ... });
+```
 
-### Migration #2 (rows in `operative_prompts`)
-- Seed 2 prompt:
-  - `"Partner Website Analyst"` (scope `partner-enrichment`, tag `OBBLIGATORIA`) — sostituisce system prompt inline in enrich-partner-website (e poi sherlock-extract chiamato da pipeline enrichment).
-  - `"Inbound Email Classifier"` (scope `inbound-enrichment`, tag `OBBLIGATORIA`) — sostituisce `PROMPT_SYSTEM` di `process-inbound-enrichment`.
-- Entrambi seguono Standard Professore (Identità/Obiettivo/Metodo/Guardrail/Output).
+File interessati (44, raggruppati per area):
 
-### Codice
-- `process-inbound-enrichment`: carica prompt via loader, fallback al testo attuale se DB vuoto (zero downtime).
-- `sherlock-extract`: opzionale — accetta `scope?: PromptScope`; se passato, prepende prompt operativi al system. Default invariato.
+- **Agenti / orchestrazione**: `agent-execute/*`, `agent-loop`, `agent-simulate`, `agent-prompt-refiner`, `agentic-decide`, `super-mario/*`, `optimus-analyze`
+- **Email / outreach**: `generate-aliases`, `harmonize-proposal-chat`, `prompt-copilot-chat`, `suggest-email-groups`, `learn-from-group-correction`, `refine-classification-rule`
+- **Funnemail**: `funnemail-auto-route`, `funnemail-classify`, `funnemail-scout-sender`, `simulate-funnemail-classify`, `run-funnemail-eval`
+- **Classificazione inbound**: `classify-inbound-content`, `classify-inbound-message/stages/stageClassifyAi`, `whatsapp-ai-extract`, `refresh-conversation-context`
+- **Enrichment / scraping**: `analyze-partner`, `enrich-partner-website`, `batch-enrichment-worker`, `analyze-import-structure`, `process-ai-import`, `parse-business-card`, `ai-match-business-cards`, `parse-profile-ai`, `sherlock-extract`, `kb-intake-analyze`, `categorize-content`
+- **Altro**: `finder-api-chat`, `prompt-test-runner`, `health-check`, `ai-assistant/memoryContextLoader`, `_shared/messageCompression`
 
-### Test Commit 2
-- `process-inbound-enrichment` test: prompt caricato sostituisce default; loader vuoto → fallback.
-- Loader test esistente (`operativePromptsLoader`?) — se non esiste, skip (loader già coperto da uso in altri 6 edge).
+### Fase 3 — Verifica
 
----
+1. `bun run typecheck` (CI già attiva).
+2. Deploy delle function modificate.
+3. Smoke test su 3 endpoint critici: `ai-assistant`, `generate-email`, `classify-email-response`.
+4. Lettura log: nessun errore `LOVABLE_API_KEY 402`, presenza di `api.openai.com` nei log gateway.
 
-## Commit 3 — Kill `enrich-partner-website` (Step A)
+## Cosa NON cambia
 
-### Trasformazione in thin proxy
-- `enrich-partner-website/index.ts` resta come endpoint per compatibilità (`batch-enrichment-worker`, `useAcquisitionPipeline`).
-- Internamente:
-  1. Carica partner (id, company_name, website, country, city).
-  2. Chiama `scrape-website` con `include=['meta','headings','rawText']`, `rawTextCap=4000`.
-  3. Chiama `sherlock-extract` con `target_fields=['revenue_estimate','employee_count','founding_year','has_own_fleet','fleet_details','has_warehouses','warehouse_sqm','warehouse_details','additional_services','key_markets','key_routes','summary_it']` e prompt da Prompt Lab (scope `partner-enrichment`).
-  4. Salva `enrichment_data` + trigger `triggerQualityScoreRecalculation` (invariato).
-- Risultato: ~336 LOC → ~120 LOC. AI call duplicata eliminata. Cache Sherlock copre re-run.
+- Editorial review (`journalistReview`) resta obbligatorio e identico.
+- Tool whitelist, hard guards, prompt sanitizer, injection guard restano intatti.
+- Telemetria (`edge_metrics`, `ai_interaction_log`) continua a registrare con lo stesso schema.
+- I prompt operativi non vengono toccati.
+- Nessuna modifica al frontend.
 
-### `batch-enrichment-worker`
-- Invariato (chiama lo stesso endpoint, ora più leggero).
+## Rischi e mitigazioni
 
-### Test Commit 3
-- Adatta `enrich-partner-website/index_test.ts` esistente al nuovo flusso (mock di scrape-website + sherlock-extract).
-- Smoke test end-to-end via `curl_edge_functions` su 1 partner reale (post-deploy).
+| Rischio | Mitigazione |
+|---|---|
+| Modello mappato su OpenAI con costi diversi | `MODEL_MAP.openai` già definito (gemini-flash → gpt-4o-mini, gemini-pro → gpt-4o) |
+| Campi specifici (`reasoning`, `safety_settings`) rifiutati da OpenAI | Lo shim li droppa silenziosamente |
+| Function in `email-imap-proxy`/`check-inbox`/`mark-imap-seen` | Non toccate (memoria di progetto le protegge) |
+| Tool-calling format leggermente diverso | OpenAI è il riferimento del formato Lovable AI → nessuna differenza pratica |
+| Rate limit OpenAI sulla tua chiave | Lo shim propaga 429/402 con lo stesso codice attuale, niente regressioni |
 
----
+## Tempi stimati
 
-## Out of scope (rinviato a P2)
+- Fase 1 (shim): 1 step.
+- Fase 2 (44 file): 1 sweep parallelo.
+- Fase 3 (verifica): smoke test + log.
 
-**Step C (consolidamento hook frontend)** — `useDeepSearchLocal`, `useDeepSearchRunner`, `useDeepSearchExtraSources`, `useFireScrapeExtensionBridge`, `useSherlock` toccano UI live (FireScrape Canvas, Deep Search Panel, Sherlock 3-livelli). Richiede QA visuale dedicato. Lo apriremo dopo Sezione 8 dell'audit.
+Totale: una singola sessione, end-to-end senza chiedere conferme intermedie (come da preferenze utente).
 
----
+## Prerequisito già soddisfatto
 
-## Stima impatto consolidato
-
-| Metrica | Prima | Dopo Commit 1-3 | Δ |
-|---|---|---|---|
-| LOC edge functions Sez.1 | ~2 437 | ~1 720 | −30% |
-| Token medio enrichment partner | ~12 000 | ~6 000 | −50% |
-| AI call duplicate per partner | 2 (scrape→AI + enrich→AI) | 1 | −50% |
-| Throughput cron enrichment | 4-5/ciclo | 8-10/ciclo | +60% |
-| Prompt editabili da Prompt Lab | 0/3 | 3/3 | governance allineata |
-
----
-
-## Memorie da aggiornare al termine
-
-- Nuova memoria: `mem://architecture/enrichment-pipeline-unified-2026-05-23` — pipeline scrape→sherlock unica, cache `ai_extract_cache`, `enrich-partner-website` proxy.
-- Update index: marca `enrich-partner-website` come PROXY (non più LEGACY).
-
----
-
-## Esecuzione
-
-Procedo autonomamente Commit 1 → 2 → 3 con test verdi tra l'uno e l'altro. Mi fermo solo se un test fallisce o un caller non documentato si rompe (in tal caso rollback del singolo commit e segnalazione).
+- `AI_PROVIDER=openai` ✅
+- `OPENAI_API_KEY` valida ✅ (già corretta nella sessione precedente)
