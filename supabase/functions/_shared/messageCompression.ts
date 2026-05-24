@@ -3,6 +3,7 @@
 // can import without depending on another function's directory.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { aiFetch } from "./aiCallShim.ts";
 
 function extractErrorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
@@ -52,14 +53,10 @@ async function generateAndSaveSummary(
   const summaryPrompt = `Riassumi in modo conciso (3-5 righe) il contesto operativo di questa conversazione. Cattura: decisioni prese, azioni eseguite, dati importanti menzionati, richieste pendenti.\n\n${olderMessages.map((m) => `${m.role}: ${String(m.content || "").substring(0, 300)}`).join("\n")}`;
 
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [{ role: "user", content: summaryPrompt }],
-        max_tokens: 300,
-      }),
+    const resp = await aiFetch({
+      model: "google/gemini-2.5-flash-lite",
+      messages: [{ role: "user", content: summaryPrompt }],
+      max_tokens: 300,
     });
 
     if (resp.ok) {
