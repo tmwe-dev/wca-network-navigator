@@ -35,6 +35,44 @@ export async function resolveAiProvider(supabase: SupabaseClient, userId: string
     }
   }
 
+  // Global override via AI_PROVIDER env var (e.g. "openai" → uses OPENAI_API_KEY).
+  // Permette di instradare TUTTE le chiamate ai-assistant sulle proprie chiavi
+  // senza dover popolare user_api_keys per ogni utente.
+  const globalProvider = Deno.env.get("AI_PROVIDER");
+  if (globalProvider === "openai") {
+    const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (OPENAI_KEY) {
+      return {
+        url: "https://api.openai.com/v1/chat/completions",
+        apiKey: OPENAI_KEY,
+        model: "gpt-4o-mini",
+        isUserKey: true,
+      };
+    }
+  }
+  if (globalProvider === "anthropic") {
+    const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (ANTHROPIC_KEY) {
+      return {
+        url: "https://api.anthropic.com/v1/messages",
+        apiKey: ANTHROPIC_KEY,
+        model: "claude-haiku-4-5",
+        isUserKey: true,
+      };
+    }
+  }
+  if (globalProvider === "google") {
+    const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (GEMINI_KEY) {
+      return {
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        apiKey: GEMINI_KEY,
+        model: "gemini-2.5-flash",
+        isUserKey: true,
+      };
+    }
+  }
+
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
   return { url: "https://ai.gateway.lovable.dev/v1/chat/completions", apiKey: LOVABLE_API_KEY, model: "google/gemini-3-flash-preview", isUserKey: false };
