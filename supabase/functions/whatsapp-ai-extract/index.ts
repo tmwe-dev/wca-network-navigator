@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const jsonHeaders = (headers: Record<string, string>) => ({
   ...headers,

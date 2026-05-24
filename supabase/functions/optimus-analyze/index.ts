@@ -7,6 +7,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface AnalyzeInput {
   channel: "whatsapp" | "linkedin";
