@@ -235,7 +235,6 @@ async function callAI(
       { role: "system", content: system },
       { role: "user", content: user },
     ],
-    }),
   });
 
   if (!res.ok) {
