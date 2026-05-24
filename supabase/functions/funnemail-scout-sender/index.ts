@@ -21,6 +21,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface RequestBody {
   from_address: string;
@@ -102,18 +103,14 @@ async function scoutDomainViaAi(
   const prompt = `Stima rapidamente che tipo di azienda si nasconde dietro al dominio email.\n\nDOMINIO: ${domain}\nESEMPIO MITTENTE: ${fromAddress}\n\nRispondi SOLO con JSON nel formato:\n{"company_type":"freight_forwarder|client|supplier|carrier|service_provider|software|public_authority|unknown","country":"ISO2 o null","website":"https://... o null","role_guess":"potential_partner|potential_client|vendor|notification|unknown","reasoning":"max 200 char"}\n\nRegole:\n- Se il dominio sembra di un forwarder/agente logistico → company_type=freight_forwarder, role_guess=potential_partner\n- Se sembra software/SaaS → role_guess=vendor\n- Se domini noreply/notification → role_guess=notification\n- Se incerto → company_type=unknown, role_guess=unknown\n- NON inventare. Se non sai, "unknown".`;
 
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const resp = await aiFetch({
         model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: "Sei uno scout: rispondi solo con il JSON richiesto, niente testo." },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
-      }),
-    });
+      });
     if (!resp.ok) return {};
     const data = await resp.json();
     const raw = data.choices?.[0]?.message?.content;

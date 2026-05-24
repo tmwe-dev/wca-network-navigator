@@ -10,6 +10,7 @@ import {
   type RequestBody,
 } from "./types.ts";
 import { buildClassificationPrompt } from "./aiPromptBuilder.ts";
+import { aiFetch } from "../../_shared/aiCallShim.ts";
 
 // deno-lint-ignore no-explicit-any
 type Sb = any;
@@ -35,13 +36,7 @@ export async function runAiClassification(
   const { systemPrompt: finalSystemPrompt, userPrompt } = await buildClassificationPrompt(supabase, body);
 
   try {
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiResp = await aiFetch({
         model,
         messages: [
           { role: "system", content: finalSystemPrompt },
@@ -68,8 +63,7 @@ export async function runAiClassification(
           },
         }],
         tool_choice: { type: "function", function: { name: "classify_message" } },
-      }),
-    });
+      });
 
     if (aiResp.ok) {
       const aiData = await aiResp.json();

@@ -16,6 +16,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const DEBOUNCE_MS = 5 * 60 * 1000; // 5 min
 
@@ -157,10 +158,7 @@ Deno.serve(async (req) => {
     const model = "google/gemini-3-flash-preview";
     let parsed: z.infer<typeof SummarySchema> | null = null;
     try {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const resp = await aiFetch({
           model,
           messages: [
             { role: "system", content: systemPrompt },
@@ -198,8 +196,7 @@ Deno.serve(async (req) => {
             },
           }],
           tool_choice: { type: "function", function: { name: "build_summary" } },
-        }),
-      });
+        });
       if (resp.ok) {
         const data = await resp.json();
         const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;

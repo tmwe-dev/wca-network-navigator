@@ -17,6 +17,7 @@ import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface RequestBody {
   message_id: string;
@@ -191,10 +192,7 @@ Deno.serve(async (req) => {
     if (LOVABLE_API_KEY) {
       const validSlugs = folders.map((f) => f.slug);
       try {
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const resp = await aiFetch({
             model,
             messages: [
               { role: "system", content: systemPrompt },
@@ -222,8 +220,7 @@ Deno.serve(async (req) => {
               },
             }],
             tool_choice: { type: "function", function: { name: "classify_into_folder" } },
-          }),
-        });
+          });
         if (resp.ok) {
           const data = await resp.json();
           const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;

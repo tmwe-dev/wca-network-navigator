@@ -29,6 +29,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const DecideSchema = z.object({
   stop: z.boolean().default(false),
@@ -152,13 +153,7 @@ serve(async (req) => {
       .filter(Boolean)
       .join("\n\n");
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiRes = await aiFetch({
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -175,8 +170,7 @@ serve(async (req) => {
           },
         ],
         tool_choice: { type: "function", function: { name: "decide_next" } },
-      }),
-    });
+      });
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();

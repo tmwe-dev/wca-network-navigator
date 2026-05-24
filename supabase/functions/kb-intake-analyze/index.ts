@@ -12,6 +12,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface Body {
   raw_content: string;
@@ -82,18 +83,14 @@ Deno.serve(async (req) => {
     const aiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!aiKey) throw new Error("LOVABLE_API_KEY non configurata");
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${aiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiResp = await aiFetch({
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userMsg },
         ],
         response_format: { type: "json_object" },
-      }),
-    });
+      });
 
     if (!aiResp.ok) {
       const status = aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 500;

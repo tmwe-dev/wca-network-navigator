@@ -17,6 +17,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const InputSchema = z.union([
   z.object({ case_id: z.string().uuid(), prompt_version_id: z.string().uuid().optional() }),
@@ -53,18 +54,14 @@ async function classifyDryRun(payload: EvalCase["inbound_payload"]): Promise<{ r
   if (!apiKey) return { result: {}, latency_ms: 0, error: "LOVABLE_API_KEY missing" };
   const t0 = Date.now();
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const resp = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "Sei il classificatore Funnemail. Rispondi solo JSON con {suggested_action, confidence, reasoning}. suggested_action ∈ {reply,archive,escalate,ignore,deep_search,crm_update,autoresponder}." },
           { role: "user", content: `MITTENTE: ${payload.from_address ?? ""}\nOGGETTO: ${payload.subject ?? ""}\nCORPO:\n${payload.body_text ?? ""}` },
         ],
         response_format: { type: "json_object" },
-      }),
-    });
+      });
     const latency_ms = Date.now() - t0;
     if (!resp.ok) return { result: {}, latency_ms, error: `gateway ${resp.status}` };
     const data = await resp.json();

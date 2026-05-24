@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 /**
  * Refiner: quando l'utente sceglie un gruppo diverso dal suggerimento AI,
@@ -154,10 +155,7 @@ serve(async (req) => {
       "Produci la modifica più utile per evitare lo stesso errore in futuro.",
     ].filter(Boolean).join("\n");
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiResp = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
@@ -182,8 +180,7 @@ serve(async (req) => {
           },
         }],
         tool_choice: { type: "function", function: { name: "propose_rule_refinement" } },
-      }),
-    });
+      });
 
     if (!aiResp.ok) {
       const txt = await aiResp.text();

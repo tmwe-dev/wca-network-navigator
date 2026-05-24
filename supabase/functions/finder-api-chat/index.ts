@@ -10,6 +10,7 @@
  */
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface ChatMsg {
   role: "user" | "assistant" | "system" | "tool";
@@ -277,19 +278,12 @@ Deno.serve(async (req) => {
     let spoken = "";
 
     for (let i = 0; i < 8; i++) {
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const aiRes = await aiFetch({
           model: "google/gemini-2.5-pro",
           messages: convo,
           tools: TOOLS,
           tool_choice: "auto",
-        }),
-      });
+        });
 
       if (aiRes.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit AI (riprova tra poco)." }), {

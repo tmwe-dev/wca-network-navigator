@@ -13,6 +13,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -218,13 +219,7 @@ Rispondi SOLO con un array JSON valido, stesso numero di elementi dell'input. Se
     zip_code: c.zip_code,
   });
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const response = await aiFetch({
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: prompt },
@@ -266,8 +261,7 @@ Rispondi SOLO con un array JSON valido, stesso numero di elementi dell'input. Se
         },
       ],
       tool_choice: { type: "function", function: { name: "return_normalized_contacts" } },
-    }),
-  });
+    });
 
   if (!response.ok) {
     const text = await response.text();
@@ -352,13 +346,7 @@ Rispondi con un array dove ogni elemento ha:
     error_type: e.error_type,
   }));
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const response = await aiFetch({
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: prompt },
@@ -403,8 +391,7 @@ Rispondi con un array dove ogni elemento ha:
         },
       }],
       tool_choice: { type: "function", function: { name: "return_corrections" } },
-    }),
-  });
+    });
 
   if (!response.ok) {
     const text = await response.text();

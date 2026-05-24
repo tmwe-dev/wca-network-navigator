@@ -29,6 +29,7 @@ import { preflightAudit } from "./preflightAudit.ts";
 import { postflightAudit } from "./postflightAudit.ts";
 import { applyHardGuards } from "./hardGuards.ts";
 import { logInvocation } from "./auditLogger.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -147,21 +148,14 @@ Deno.serve(async (req) => {
   let promptTokens = 0;
   let completionTokens = 0;
   try {
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiResp = await aiFetch({
         model,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-      }),
-    });
+      });
     if (!aiResp.ok) {
       const errBody = await aiResp.text();
       throw new Error(`ai_gateway_${aiResp.status}: ${errBody.slice(0, 300)}`);

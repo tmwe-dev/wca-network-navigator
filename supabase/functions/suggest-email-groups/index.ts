@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const ClassificationsSchema = z.object({
   classifications: z
@@ -275,10 +276,7 @@ serve(async (req) => {
       operativeBlock || "",
     ].filter(Boolean).join("\n\n");
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiResponse = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           {
@@ -319,8 +317,7 @@ serve(async (req) => {
           }
         }],
         tool_choice: { type: "function", function: { name: "classify_email_addresses" } },
-      }),
-    });
+      });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();

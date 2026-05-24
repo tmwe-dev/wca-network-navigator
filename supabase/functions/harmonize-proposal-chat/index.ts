@@ -9,6 +9,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 interface ChatRow { role: "user" | "assistant"; content: string; ts?: string }
 
@@ -213,11 +214,7 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI_NOT_CONFIGURED" }), { status: 500, headers });
     }
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages, stream: false }),
-    });
+    const aiRes = await aiFetch({ model: "google/gemini-3-flash-preview", messages, stream: false });
 
     if (aiRes.status === 429) {
       return new Response(JSON.stringify({ error: "RATE_LIMIT", message: "Troppe richieste, riprova tra un minuto." }), { status: 429, headers });

@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 /**
  * learn-from-group-correction
@@ -133,17 +134,13 @@ COMPITO:
 
 Rispondi SOLO con il testo dell'istruzione, niente preamboli.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiResponse = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "Sei un classificatore email che impara dagli errori. Scrivi istruzioni concise e operative." },
           { role: "user", content: prompt },
         ],
-      }),
-    });
+      });
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);

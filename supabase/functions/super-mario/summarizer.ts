@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/aiCallShim.ts";
 /**
  * summarizer.ts — Riassume i turni meno recenti in `conversation_summaries`
  * (versionato, coverage esplicita).
@@ -99,20 +100,13 @@ async function callSummarizer(turns: TurnLike[], model: string): Promise<string 
   const systemMsg = `Sei un riassuntore di conversazioni operative CRM. Riassumi in 3-6 righe IN ITALIANO il senso narrativo di questi turni: cosa l'utente ha cercato, cosa ha deciso, quali entità/numeri sono emersi. Niente preamboli, solo il riassunto.`;
 
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const resp = await aiFetch({
         model,
         messages: [
           { role: "system", content: systemMsg },
           { role: "user", content: transcript },
         ],
-      }),
-    });
+      });
     if (!resp.ok) {
       console.warn("[super-mario] summarizer http error", resp.status);
       return null;
