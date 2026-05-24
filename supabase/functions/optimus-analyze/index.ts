@@ -162,7 +162,7 @@ interface AIResult {
   latencyMs: number;
 }
 
-async function callAI(systemPrompt: string, input: AnalyzeInput, apiKey: string): Promise<AIResult> {
+async function callAI(systemPrompt: string, input: AnalyzeInput): Promise<AIResult> {
   const userContent: Array<Record<string, unknown>> = [
     { type: "text", text: `DOM SNAPSHOT (truncato a 30k char):\n${input.dom_snapshot.slice(0, 30000)}` },
   ];
