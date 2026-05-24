@@ -235,14 +235,8 @@ REGOLE:
     const aiTimeout = setTimeout(() => aiController.abort(), 30000);
     let retried = false;
 
-    const gatewayUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const gatewayHeaders = {
-      "Lovable-API-Key": LOVABLE_API_KEY,
-      "X-Lovable-AIG-SDK": "raw-fetch",
-      "Content-Type": "application/json",
-    };
     const selectedModel = mode === "learnDom" ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
-    const gatewayBody = JSON.stringify({
+    const gatewayBody = {
       model: selectedModel,
       messages: [
         { role: "system", content: systemPrompt },
@@ -262,16 +256,11 @@ REGOLE:
         type: "function",
         function: { name: toolName },
       },
-    });
+    };
 
     let aiResponse: Response;
     try {
-      aiResponse = await fetch(gatewayUrl, {
-        method: "POST",
-        headers: gatewayHeaders,
-        body: gatewayBody,
-        signal: aiController.signal,
-      });
+      aiResponse = await aiFetch(gatewayBody, { signal: aiController.signal });
       clearTimeout(aiTimeout);
     } catch (fetchErr) {
       clearTimeout(aiTimeout);
@@ -293,12 +282,7 @@ REGOLE:
         const retryController = new AbortController();
         const retryTimer = setTimeout(() => retryController.abort(), 30000);
         try {
-          const retryResponse = await fetch(gatewayUrl, {
-            method: "POST",
-            headers: gatewayHeaders,
-            body: gatewayBody,
-            signal: retryController.signal,
-          });
+          const retryResponse = await aiFetch(gatewayBody, { signal: retryController.signal });
           clearTimeout(retryTimer);
           if (retryResponse.ok) {
             aiResponse = retryResponse;
