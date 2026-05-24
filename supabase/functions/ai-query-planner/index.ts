@@ -16,8 +16,7 @@ import "../_shared/llmFetchInterceptor.ts";
  */
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { loadLiveSchema } from "../_shared/liveSchemaLoader.ts";
-
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 
 /**
  * Lista tabelle business consultabili dall'AI. Unica fonte di verità: questa
@@ -116,13 +115,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    if (!LOVABLE_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     const body = await req.json().catch(() => ({}));
     const prompt = typeof body?.prompt === "string" ? body.prompt : "";
     const history = Array.isArray(body?.history) ? body.history : [];
@@ -149,29 +141,31 @@ Deno.serve(async (req: Request) => {
       { role: "user", content: prompt },
     ];
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!aiResp.ok) {
-      const txt = await aiResp.text();
-      return new Response(
-        JSON.stringify({ error: `AI gateway error: ${aiResp.status}`, detail: txt.slice(0, 500) }),
-        { status: aiResp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    let content = "";
+    try {
+      const r = await aiChat({
+        models: ["google/gemini-2.5-flash"],
+        messages: messages as { role: "system" | "user" | "assistant"; content: string }[],
+        context: "ai-query-planner",
+        functionName: "ai-query-planner",
+        scope: "query_planning",
+        temperature: 0.1,
+      });
+      content = r.content ?? "";
+    } catch (e) {
+      if (e instanceof AiGatewayError) {
+        const userMsg =
+          e.kind === "credits_exhausted" ? "Crediti AI esauriti."
+          : e.kind === "rate_limited" ? "Troppe richieste, riprova tra qualche secondo."
+          : e.kind === "unauthorized" ? "Chiave AI non valida o scaduta."
+          : `Errore AI: ${e.kind}`;
+        return new Response(
+          JSON.stringify({ error: userMsg, kind: e.kind }),
+          { status: e.status ?? 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      throw e;
     }
-
-    const aiJson = await aiResp.json();
-    const content: string = aiJson?.choices?.[0]?.message?.content ?? "";
 
     let parsed: Record<string, unknown> | null;
     try {
