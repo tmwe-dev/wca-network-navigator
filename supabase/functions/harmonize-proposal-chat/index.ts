@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     ];
 
     // 5) Chiama Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI_NOT_CONFIGURED" }), { status: 500, headers });
     }

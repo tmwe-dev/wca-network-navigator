@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
       : "SENDER_INTEL: (non disponibile)";
     const userPrompt = `FOLDERS:\n${foldersList}\n\n${senderIntelLine}\n\nMITTENTE: ${body.from_address}\nOGGETTO: ${subjNorm || "(vuoto)"}\nCORPO:\n${wrappedBody}\n\nClassifica usando lo strumento.`;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     let decision: z.infer<typeof ResultSchema> = fallback(folders);
     let model = "google/gemini-3-flash-preview";
 

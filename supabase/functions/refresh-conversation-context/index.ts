@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       if (op.block) opBlock = op.block;
     } catch (_) { /* fail-safe */ }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
       endMetrics(metrics, false, 500);
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), { status: 500, headers });

@@ -120,7 +120,7 @@ serve(async (req: Request) => {
 
       let dryRun: Record<string, unknown> | null = null;
       if (dryRunAI) {
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
         if (!LOVABLE_API_KEY) {
           dryRun = { error: "LOVABLE_API_KEY non configurata" };
         } else {
@@ -237,7 +237,7 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
     // ── 6. Optional dry-run AI call (single iteration, NO execution) ──
     let dryRun: Record<string, unknown> | null = null;
     if (dryRunAI) {
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
       if (!LOVABLE_API_KEY) {
         dryRun = { error: "LOVABLE_API_KEY non configurata" };
       } else {

@@ -211,7 +211,7 @@ serve(async (req) => {
       });
     }
 
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    const lovableApiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const { sample_rows, input_type, raw_text } = await req.json();

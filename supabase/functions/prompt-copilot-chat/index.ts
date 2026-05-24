@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
     ];
 
     // 3. Chiamata Lovable AI Gateway
-    const aiKey = Deno.env.get("LOVABLE_API_KEY");
+    const aiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!aiKey) throw new Error("LOVABLE_API_KEY non configurata");
 
     const aiResp = await aiFetch({ model: "google/gemini-3-flash-preview", messages });

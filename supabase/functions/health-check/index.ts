@@ -53,7 +53,7 @@ Deno.serve(async (req: Request) => {
 
   // 4. AI Gateway — check env key exists (lightweight)
   checks.ai_gateway = await runCheck(async () => {
-    const key = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY");
+    const key = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) || Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY");
     return !!key;
   });
 

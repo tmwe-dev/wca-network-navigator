@@ -201,7 +201,7 @@ export async function handleAnalyzeIncomingEmail(
     }
   }
 
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   const analysisRes = await aiFetch({
       model: "google/gemini-2.5-flash-lite",
       messages: [

@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
     }
 
     // 4) Chiedi all'AI in quale gruppo va la mail
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
       endMetrics(metrics, true, 200);
       return new Response(JSON.stringify({ ok: true, skipped: "no_ai_key" }), { status: 200, headers });

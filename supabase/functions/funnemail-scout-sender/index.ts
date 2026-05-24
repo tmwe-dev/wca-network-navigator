@@ -97,7 +97,7 @@ async function scoutDomainViaAi(
   domain: string,
   fromAddress: string,
 ): Promise<Partial<IntelResult>> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   if (!apiKey) return {};
 
   const prompt = `Stima rapidamente che tipo di azienda si nasconde dietro al dominio email.\n\nDOMINIO: ${domain}\nESEMPIO MITTENTE: ${fromAddress}\n\nRispondi SOLO con JSON nel formato:\n{"company_type":"freight_forwarder|client|supplier|carrier|service_provider|software|public_authority|unknown","country":"ISO2 o null","website":"https://... o null","role_guess":"potential_partner|potential_client|vendor|notification|unknown","reasoning":"max 200 char"}\n\nRegole:\n- Se il dominio sembra di un forwarder/agente logistico → company_type=freight_forwarder, role_guess=potential_partner\n- Se sembra software/SaaS → role_guess=vendor\n- Se domini noreply/notification → role_guess=notification\n- Se incerto → company_type=unknown, role_guess=unknown\n- NON inventare. Se non sai, "unknown".`;

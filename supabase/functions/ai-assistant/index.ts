@@ -264,7 +264,7 @@ serve(async (req) => {
     // ── Message compression ──
     // Bypass per scope ingestion (kb-supervisor): è single-shot, niente
     // conversazione storica → niente riassunti/scritture su ai_memory.
-    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || provider.apiKey;
+    const LOVABLE_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) || provider.apiKey;
     const compressedMessages = scope === "kb-supervisor"
       ? messages
       : await compressMessages(

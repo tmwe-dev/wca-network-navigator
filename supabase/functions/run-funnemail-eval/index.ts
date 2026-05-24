@@ -50,7 +50,7 @@ function diffDecisions(expected: EvalCase["expected_decision"], actual: Record<s
 }
 
 async function classifyDryRun(payload: EvalCase["inbound_payload"]): Promise<{ result: Record<string, unknown>; latency_ms: number; error?: string }> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   if (!apiKey) return { result: {}, latency_ms: 0, error: "LOVABLE_API_KEY missing" };
   const t0 = Date.now();
   try {

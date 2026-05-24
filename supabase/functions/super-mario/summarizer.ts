@@ -87,7 +87,7 @@ export async function ensureSummaryCoverage(opts: {
 }
 
 async function callSummarizer(turns: TurnLike[], model: string): Promise<string | null> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   if (!apiKey) {
     console.warn("[super-mario] LOVABLE_API_KEY mancante, skip summarizer");
     return null;

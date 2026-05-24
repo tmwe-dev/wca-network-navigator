@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
     const userPrompt = `Channel: ${channel}\nFrom: ${from}\nSubject: ${normSubject.text || "(none)"}\nBody:\n${bodyWrapped}`;
 
     const t4 = Date.now();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     const model = "google/gemini-3-flash-preview";
     let classification: Record<string, unknown> = {
       classification: "neutral", confidence: 0, sentiment: "neutral",

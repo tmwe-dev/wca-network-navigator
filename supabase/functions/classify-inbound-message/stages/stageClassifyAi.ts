@@ -19,7 +19,7 @@ export async function runAiClassification(
   supabase: Sb,
   body: RequestBody,
 ): Promise<{ result: ClassifyResult; model: string }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   const model = "google/gemini-3-flash-preview";
 
   let result: ClassifyResult = {
