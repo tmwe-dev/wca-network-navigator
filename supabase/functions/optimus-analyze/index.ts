@@ -32,7 +32,6 @@ interface MemoryRow {
   consecutive_failures: number;
 }
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-3-flash-preview";
 const AI_TIMEOUT_MS = 15000;
 
@@ -179,19 +178,14 @@ async function callAI(systemPrompt: string, input: AnalyzeInput, apiKey: string)
 
   let resp: Response;
   try {
-    resp = await fetch(AI_GATEWAY_URL, {
-      method: "POST",
-      signal: ac.signal,
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
+    resp = await aiFetch({
+      model: AI_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      response_format: { type: "json_object" },
+    }, { signal: ac.signal });
   } finally {
     clearTimeout(timer);
   }

@@ -28,8 +28,7 @@ import { cronPausedResponse } from "../_shared/cronGate.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+// AI gateway: gestito da _shared/aiCallShim.ts (rispetta AI_PROVIDER)
 
 interface TestCaseRow {
   id: string;
@@ -229,19 +228,13 @@ async function callAI(
   user: string,
   temperature: number,
 ): Promise<{ text: string; tokensIn: number | null; tokensOut: number | null }> {
-  const res = await fetch(AI_GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
+  const res = await aiFetch({
+    model,
+    temperature,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
     }),
   });
 

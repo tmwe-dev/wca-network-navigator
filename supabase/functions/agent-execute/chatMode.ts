@@ -27,9 +27,6 @@ export async function executeChatMode(
   authHeader: string,
   apiKey: string
 ): Promise<Response> {
-  const LOVABLE_API_KEY = apiKey || Deno.env.get("LOVABLE_API_KEY");
-  const aiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
   // Compress long histories (threshold: 8 messages)
@@ -53,17 +50,12 @@ export async function executeChatMode(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45_000);
     try {
-      response = await fetch(aiUrl, {
-        method: "POST",
-        headers: aiHeaders,
-        body: JSON.stringify({
-          model,
-          messages: allMessages,
-          ...(agentTools.length > 0 ? { tools: agentTools } : {}),
-          max_tokens: 4000,
-        }),
-        signal: controller.signal,
-      });
+      response = await aiFetch({
+        model,
+        messages: allMessages,
+        ...(agentTools.length > 0 ? { tools: agentTools } : {}),
+        max_tokens: 4000,
+      }, { signal: controller.signal });
       if (response.ok) {
         clearTimeout(timeoutId);
         break;
@@ -108,15 +100,11 @@ export async function executeChatMode(
 
     let loopOk = false;
     for (const model of fallbackModels) {
-      response = await fetch(aiUrl, {
-        method: "POST",
-        headers: aiHeaders,
-        body: JSON.stringify({
-          model,
-          messages: allMessages,
-          ...(agentTools.length > 0 ? { tools: agentTools } : {}),
-          max_tokens: 4000,
-        }),
+      response = await aiFetch({
+        model,
+        messages: allMessages,
+        ...(agentTools.length > 0 ? { tools: agentTools } : {}),
+        max_tokens: 4000,
       });
       if (response!.ok) {
         loopOk = true;

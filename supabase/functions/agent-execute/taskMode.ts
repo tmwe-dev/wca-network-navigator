@@ -99,9 +99,6 @@ export async function handleGeneralTask(
   authHeader: string,
   apiKey: string
 ): Promise<{ success: boolean; result: string }> {
-  const LOVABLE_API_KEY = apiKey || Deno.env.get("LOVABLE_API_KEY");
-  const aiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
   // Build sequence instructions for sequence_step tasks
@@ -123,15 +120,11 @@ export async function handleGeneralTask(
 
   let response: Response | null = null;
   for (const model of fallbackModels) {
-    response = await fetch(aiUrl, {
-      method: "POST",
-      headers: aiHeaders,
-      body: JSON.stringify({
-        model,
-        messages: allMessages,
-        ...(agentTools.length > 0 ? { tools: agentTools } : {}),
-        max_tokens: 4000,
-      }),
+    response = await aiFetch({
+      model,
+      messages: allMessages,
+      ...(agentTools.length > 0 ? { tools: agentTools } : {}),
+      max_tokens: 4000,
     });
     if (response.ok) break;
     await response.text();
@@ -156,15 +149,11 @@ export async function handleGeneralTask(
       allMessages.push(...toolResults);
       let loopOk = false;
       for (const model of fallbackModels) {
-        response = await fetch(aiUrl, {
-          method: "POST",
-          headers: aiHeaders,
-          body: JSON.stringify({
-            model,
-            messages: allMessages,
-            ...(agentTools.length > 0 ? { tools: agentTools } : {}),
-            max_tokens: 4000,
-          }),
+        response = await aiFetch({
+          model,
+          messages: allMessages,
+          ...(agentTools.length > 0 ? { tools: agentTools } : {}),
+          max_tokens: 4000,
         });
         if (response!.ok) {
           loopOk = true;
