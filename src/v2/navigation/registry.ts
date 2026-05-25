@@ -73,7 +73,8 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
       {
         title: "Missioni",
         items: [
-          { label: "Missioni Autopilot",   path: "/v2/agents/autopilot" },
+          // "Missioni Autopilot" (/v2/agents/autopilot) è già in navItemsDef
+          // come voce pinned principale: rimossa qui per evitare il duplicato.
           { label: "Mission Builder",      path: "/v2/agents/missions" },
           { label: "AI Arena 3D",          path: "/v2/ai-arena" },
         ],

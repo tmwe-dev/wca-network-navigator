@@ -25,7 +25,20 @@ import {
 } from "@/v2/navigation/registry";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 
-const DEV_PAGE_GROUPS = SECONDARY_NAV;
+/**
+ * Dedup difensiva: rimuove dai gruppi secondari qualunque path che sia
+ * già una voce pinned del menu principale (`navItemsDef`). Garantisce
+ * che ogni rotta compaia UNA sola volta nel popover unificato.
+ */
+const MAIN_PATHS = new Set(navItemsDef.map((i) => i.path));
+const DEV_PAGE_GROUPS = SECONDARY_NAV.map((g) => ({
+  ...g,
+  items: (g.items ?? []).filter((it) => !MAIN_PATHS.has(it.path)),
+  subGroups: (g.subGroups ?? []).map((sg) => ({
+    ...sg,
+    items: sg.items.filter((it) => !MAIN_PATHS.has(it.path)),
+  })).filter((sg) => sg.items.length > 0),
+})).filter((g) => (g.items?.length ?? 0) > 0 || (g.subGroups?.length ?? 0) > 0);
 
 /**
  * Mappa pagine principali con sotto-cartelle navigabili inline nel popover
