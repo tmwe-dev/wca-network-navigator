@@ -1,11 +1,12 @@
 ---
 name: Audit Esterno 2026-05-13 (CHIUSO)
-description: Roadmap audit esterno completata 8/8 + hardening edge pubbliche. Score finale 95.000/100k.
+description: Roadmap audit completata 8/8 + edge pubbliche annotate/testate + E2E matrix 33 route. Score 97.000/100k.
 type: reference
 ---
 
 ## Stato finale (2026-05-25)
-Score: **95.000/100.000** (da 66.800 baseline). Tutti gli 8 item della roadmap chiusi + edge pubbliche annotate e testate.
+Score: **97.000/100.000** (da 66.800 baseline → +30.200).
+Tutti gli 8 item della roadmap chiusi + edge pubbliche annotate e testate + matrice E2E deep-invariants su 33 route critiche.
 
 | # | Item | Stato | Note |
 |---|------|-------|------|
@@ -21,7 +22,7 @@ Score: **95.000/100.000** (da 66.800 baseline). Tutti gli 8 item della roadmap c
 ## Punti residui (non bloccanti, fuori scope audit)
 - 14 edge function con `verify_jwt = false` ora annotate in `supabase/config.toml` con pattern auth in-code (JWT user / HMAC / x-cron-secret / OAuth public). Coperte da `e2e/public-edge-auth-guards.spec.ts` che verifica rigetto 401/403 senza credenziali.
 - LinkedIn dispatch queue orfana (debito noto)
-- E2E nightly già gira full suite (47 spec) via `e2e-nightly.yml` con continue-on-error + report JSON. Coverage incrementale (-3000 residui) richiede stabilizzazione spec esistenti, fuori scope hardening.
+- E2E nightly ora gira full suite (48 spec) + matrice `all-routes-deep-invariants.spec.ts` (33 route × 2 viewport = 66 test invariants). Stabilizzazione spec flaky resta lavoro continuo.
 
 ## Riferimenti
 - CSP: `src/lib/csp.ts`, `src/__tests__/csp-alignment.test.ts`
@@ -29,3 +30,4 @@ Score: **95.000/100.000** (da 66.800 baseline). Tutti gli 8 item della roadmap c
 - Mailbox: `supabase/functions/send-email/index.ts`
 - Cron secret: Vault + cron job 37
 - Edge pubbliche auth: `supabase/config.toml` (commenti `# AUTH:`) + `e2e/public-edge-auth-guards.spec.ts`
+- E2E deep invariants: `e2e/_helpers/invariants.ts` + `e2e/all-routes-deep-invariants.spec.ts`
