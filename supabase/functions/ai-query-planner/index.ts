@@ -180,10 +180,7 @@ Deno.serve(async (req: Request) => {
           : e.kind === "rate_limited" ? "Troppe richieste, riprova tra qualche secondo."
           : e.kind === "unauthorized" ? "Chiave AI non valida o scaduta."
           : `Errore AI: ${e.kind}`;
-        return new Response(
-          JSON.stringify({ error: userMsg, kind: e.kind }),
-          { status: e.status ?? 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return plannerFallbackResponse(corsHeaders, userMsg, e.kind);
       }
       throw e;
     }
@@ -243,9 +240,10 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    return plannerFallbackResponse(
+      corsHeaders,
+      e instanceof Error ? e.message : "Planner temporaneamente non disponibile.",
+      "planner_failed",
     );
   }
 });
