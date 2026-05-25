@@ -4,22 +4,22 @@ project_id = "zrbditqddhjkutzjycgi"
 verify_jwt = false
 
 [functions.ai-utility]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-partner]
-verify_jwt = false
+verify_jwt = true
 
 [functions.email-delivery-webhook]
 verify_jwt = false
 
 [functions.enrich-partner-website]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-download-job]
-verify_jwt = false
+verify_jwt = true
 
 [functions.parse-profile-ai]
-verify_jwt = false
+verify_jwt = true
 
 
 [functions.save-wca-cookie]
@@ -38,10 +38,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-aliases]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-email]
 verify_jwt = true
@@ -50,7 +50,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.generate-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.save-linkedin-cookie]
 verify_jwt = false
@@ -62,19 +62,19 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.analyze-import-structure]
-verify_jwt = false
+verify_jwt = true
 
 [functions.deduplicate-partners]
 verify_jwt = true
 
 [functions.agent-execute]
-verify_jwt = false
+verify_jwt = true
 
 [functions.elevenlabs-conversation-token]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sync-business-cards]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-inbox]
 verify_jwt = true
@@ -83,10 +83,10 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.analyze-email-edit]
-verify_jwt = false
+verify_jwt = true
 
 [functions.pending-action-executor]
-verify_jwt = false
+verify_jwt = true
 
 [functions.replay-domain-events]
 verify_jwt = false
