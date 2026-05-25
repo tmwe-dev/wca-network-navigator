@@ -45,6 +45,7 @@ jobs:
             e2e/prompt-injection-high-block.spec.ts \
             e2e/lead-status-guard.spec.ts \
             e2e/auth-guard.spec.ts \
+            e2e/public-edge-auth-guards.spec.ts \
             --reporter=html
 
       - name: Upload test results
