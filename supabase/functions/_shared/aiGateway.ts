@@ -51,6 +51,22 @@ export {
 
 type ToolCallRaw = { id?: string; function?: { name?: string; arguments?: string } };
 
+const USER_PROVIDER_PRIORITY: readonly ProviderKey[] = ["openai", "google", "anthropic", "openrouter", "grok", "qwen"];
+
+function normalizeProviderKey(raw: unknown): ProviderKey | null {
+  const value = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return value in PROVIDER_CONFIG ? (value as ProviderKey) : null;
+}
+
+function hasProviderKey(provider: ProviderKey): boolean {
+  return Boolean(Deno.env.get(PROVIDER_CONFIG[provider].envKey));
+}
+
+function firstConfiguredUserProvider(preferred?: ProviderKey | null): ProviderKey | null {
+  if (preferred && preferred !== "lovable" && hasProviderKey(preferred)) return preferred;
+  return USER_PROVIDER_PRIORITY.find((provider) => hasProviderKey(provider)) ?? null;
+}
+
 export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
   const startedAt = Date.now();
   const metricsLog = createLogger(opts.functionName ?? opts.context ?? "ai_gateway", {
@@ -65,18 +81,21 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
   //   3. "anthropic" default (post-Lovable migration)
   // ---------------------------------------------------------------------------
   const scopeRoute = await resolveScopeRoute(opts.scope);
+  const routeProvider = normalizeProviderKey(scopeRoute?.provider);
+  const envProvider = normalizeProviderKey(Deno.env.get("AI_PROVIDER"));
   const provider: ProviderKey =
-    (scopeRoute?.provider as ProviderKey | undefined) ||
-    ((Deno.env.get("AI_PROVIDER") as ProviderKey | undefined) ?? "anthropic");
-  const config = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.anthropic;
+    firstConfiguredUserProvider(routeProvider) ||
+    firstConfiguredUserProvider(envProvider) ||
+    "lovable";
+  const config = PROVIDER_CONFIG[provider];
   const gatewayUrl = Deno.env.get("AI_GATEWAY_URL") || config.url;
   // Per-provider env key (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, …).
-  // Fallback chain: explicit opts.apiKey → provider-specific env → legacy AI_API_KEY → LOVABLE_API_KEY.
+  // Fallback chain: explicit opts.apiKey → provider-specific env → legacy AI_API_KEY → LOVABLE_API_KEY solo su provider Lovable.
   const apiKey =
     opts.apiKey ||
     Deno.env.get(config.envKey) ||
     Deno.env.get("AI_API_KEY") ||
-    Deno.env.get("LOVABLE_API_KEY");
+    (provider === "lovable" ? Deno.env.get("LOVABLE_API_KEY") : undefined);
 
   if (!apiKey) {
     throw new AiGatewayError(
