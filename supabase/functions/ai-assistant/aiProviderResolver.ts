@@ -17,6 +17,58 @@ export interface ResolvedAiProvider {
   isUserKey: boolean;
 }
 
+type OpenAiCompatibleProvider = "openai" | "google" | "openrouter" | "grok" | "qwen";
+
+const OPENAI_COMPATIBLE_PROVIDERS: readonly OpenAiCompatibleProvider[] = [
+  "openai",
+  "google",
+  "openrouter",
+  "grok",
+  "qwen",
+];
+
+const PROVIDER_SETTINGS: Record<OpenAiCompatibleProvider, { envKey: string; url: string; model: string }> = {
+  openai: {
+    envKey: "OPENAI_API_KEY",
+    url: "https://api.openai.com/v1/chat/completions",
+    model: "gpt-4o-mini",
+  },
+  google: {
+    envKey: "GEMINI_API_KEY",
+    url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    model: "gemini-2.5-flash",
+  },
+  openrouter: {
+    envKey: "OPENROUTER_API_KEY",
+    url: "https://openrouter.ai/api/v1/chat/completions",
+    model: "google/gemini-2.5-flash",
+  },
+  grok: {
+    envKey: "GROK_API_KEY",
+    url: "https://api.x.ai/v1/chat/completions",
+    model: "grok-3-mini-fast",
+  },
+  qwen: {
+    envKey: "QWEN_API_KEY",
+    url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    model: "qwen-turbo",
+  },
+};
+
+function normalizeProvider(raw: string | undefined): OpenAiCompatibleProvider | null {
+  const value = (raw ?? "").trim().toLowerCase();
+  return (OPENAI_COMPATIBLE_PROVIDERS as readonly string[]).includes(value)
+    ? (value as OpenAiCompatibleProvider)
+    : null;
+}
+
+function providerFromEnv(provider: OpenAiCompatibleProvider): ResolvedAiProvider | null {
+  const cfg = PROVIDER_SETTINGS[provider];
+  const apiKey = Deno.env.get(cfg.envKey);
+  if (!apiKey) return null;
+  return { url: cfg.url, apiKey, model: cfg.model, isUserKey: true };
+}
+
 export async function resolveAiProvider(supabase: SupabaseClient, userId: string): Promise<ResolvedAiProvider> {
   const { data: userKeys } = await supabase
     .from("user_api_keys")
@@ -35,42 +87,20 @@ export async function resolveAiProvider(supabase: SupabaseClient, userId: string
     }
   }
 
-  // Global override via AI_PROVIDER env var (e.g. "openai" → uses OPENAI_API_KEY).
-  // Permette di instradare TUTTE le chiamate ai-assistant sulle proprie chiavi
-  // senza dover popolare user_api_keys per ogni utente.
-  const globalProvider = Deno.env.get("AI_PROVIDER");
-  if (globalProvider === "openai") {
-    const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (OPENAI_KEY) {
-      return {
-        url: "https://api.openai.com/v1/chat/completions",
-        apiKey: OPENAI_KEY,
-        model: "gpt-4o-mini",
-        isUserKey: true,
-      };
-    }
+  // Global override via AI_PROVIDER env var (case/space tolerant).
+  // ai-assistant usa un payload OpenAI-compatible: scegliamo solo provider con
+  // endpoint chat/completions compatibile. Se AI_PROVIDER è assente o non valido,
+  // preferiamo comunque una chiave utente configurata prima di Lovable AI.
+  const preferredProvider = normalizeProvider(Deno.env.get("AI_PROVIDER"));
+  if (preferredProvider) {
+    const configured = providerFromEnv(preferredProvider);
+    if (configured) return configured;
   }
-  if (globalProvider === "anthropic") {
-    const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (ANTHROPIC_KEY) {
-      return {
-        url: "https://api.anthropic.com/v1/messages",
-        apiKey: ANTHROPIC_KEY,
-        model: "claude-haiku-4-5",
-        isUserKey: true,
-      };
-    }
-  }
-  if (globalProvider === "google") {
-    const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (GEMINI_KEY) {
-      return {
-        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        apiKey: GEMINI_KEY,
-        model: "gemini-2.5-flash",
-        isUserKey: true,
-      };
-    }
+
+  for (const provider of OPENAI_COMPATIBLE_PROVIDERS) {
+    if (provider === preferredProvider) continue;
+    const configured = providerFromEnv(provider);
+    if (configured) return configured;
   }
 
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
