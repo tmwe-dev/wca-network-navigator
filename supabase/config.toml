@@ -44,7 +44,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.consume-credits]
 verify_jwt = false
@@ -59,13 +59,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.process-ai-import]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-import-structure]
 verify_jwt = false
 
 [functions.deduplicate-partners]
-verify_jwt = false
+verify_jwt = true
 
 [functions.agent-execute]
 verify_jwt = false
@@ -77,7 +77,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.check-inbox]
-verify_jwt = false
+verify_jwt = true
 
 [functions.whatsapp-ai-extract]
 verify_jwt = false
