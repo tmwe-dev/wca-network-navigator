@@ -36,4 +36,16 @@ test.describe("csp-header-presence", () => {
     await page.waitForTimeout(1500);
     expect(page.url()).not.toContain("/auth");
   });
+
+  test("CSP report-only header is present on document response", async ({ authedPage: page }) => {
+    const response = await page.goto("/v2/settings");
+    expect(response).not.toBeNull();
+    const headers = response!.headers();
+    const csp = headers["content-security-policy-report-only"] || headers["content-security-policy"];
+    // P1 audit 2026-05-13: CSP report-only deve essere presente.
+    // Tolleriamo l'assenza solo in dev locale (preview Vite) loggando, ma in CI deve esserci.
+    if (process.env.CI) {
+      expect(csp, "CSP header missing in CI").toBeTruthy();
+    }
+  });
 });
