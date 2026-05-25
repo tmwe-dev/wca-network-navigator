@@ -7,16 +7,24 @@
 
 const CSP_DIRECTIVES: Record<string, string[]> = {
   "default-src": ["'self'"],
-  "script-src": ["'self'", "'unsafe-inline'", "https://*.supabase.co"],
-  "style-src": ["'self'", "'unsafe-inline'"],
+  "script-src": ["'self'", "'unsafe-inline'", "https://*.supabase.co", "https://*.lovable.app", "https://*.lovable.dev"],
+  "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
   "img-src": ["'self'", "data:", "blob:", "https:"],
-  "font-src": ["'self'", "data:"],
-  "connect-src": ["'self'", "https://*.supabase.co", "https://*.lovable.app", "https://ai.gateway.lovable.dev"],
-  "frame-ancestors": ["'none'"],
+  "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
+  "connect-src": [
+    "'self'",
+    "https://*.supabase.co",
+    "wss://*.supabase.co",
+    "https://*.lovable.app",
+    "https://*.lovable.dev",
+    "https://ai.gateway.lovable.dev",
+    "https://fonts.googleapis.com",
+    "https://fonts.gstatic.com",
+  ],
+  "frame-ancestors": ["'self'", "https://*.lovable.app", "https://*.lovable.dev"],
   "base-uri": ["'self'"],
   "form-action": ["'self'"],
   "object-src": ["'none'"],
-  "upgrade-insecure-requests": [],
 };
 
 /**
