@@ -67,9 +67,9 @@ function firstConfiguredUserProvider(preferred?: ProviderKey | null): ProviderKe
   return USER_PROVIDER_PRIORITY.find((provider) => hasProviderKey(provider)) ?? null;
 }
 
-function selectProvider(routeProvider: ProviderKey | null, envProvider: ProviderKey | null): ProviderKey {
-  if (routeProvider && routeProvider !== "lovable" && hasProviderKey(routeProvider)) return routeProvider;
-  if (envProvider && envProvider !== "lovable" && hasProviderKey(envProvider)) return envProvider;
+function selectProvider(routeProvider: ProviderKey | null, envProvider: ProviderKey | null, hasOverrideKey: boolean): ProviderKey {
+  if (routeProvider && routeProvider !== "lovable" && (hasOverrideKey || hasProviderKey(routeProvider))) return routeProvider;
+  if (envProvider && envProvider !== "lovable" && (hasOverrideKey || hasProviderKey(envProvider))) return envProvider;
   return firstConfiguredUserProvider(null) || "lovable";
 }
 
@@ -89,7 +89,7 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
   const scopeRoute = await resolveScopeRoute(opts.scope);
   const routeProvider = normalizeProviderKey(scopeRoute?.provider);
   const envProvider = normalizeProviderKey(Deno.env.get("AI_PROVIDER"));
-  const provider = selectProvider(routeProvider, envProvider);
+  const provider = selectProvider(routeProvider, envProvider, Boolean(opts.apiKey));
   const config = PROVIDER_CONFIG[provider];
   const gatewayUrl = Deno.env.get("AI_GATEWAY_URL") || config.url;
   // Per-provider env key (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, …).
