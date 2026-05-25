@@ -108,6 +108,27 @@ LIBERTÀ:
 - Zero risultati è un risultato valido, NON un errore.`;
 }
 
+function plannerFallbackResponse(
+  corsHeaders: Record<string, string>,
+  rationale: string,
+  kind = "ai_unavailable",
+): Response {
+  return new Response(
+    JSON.stringify({
+      plans: [{
+        table: "INVALID",
+        filters: [],
+        limit: 1,
+        title: "AI Query non disponibile",
+        rationale,
+      }],
+      fallback: true,
+      kind,
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
