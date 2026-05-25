@@ -1,16 +1,12 @@
 ---
 name: Lovable Codex Protocol
-description: Quando l'utente scrive `codex`, `applica codex`, `modalità codex` o `quick codex` applico il protocollo in docs/governance/lovable-quick-codex.md. Per CRITICAL leggo anche docs/governance/lovable-codex.md. Output sempre con `CLASSE | OBIETTIVO` in cima e `CHANGELOG` con registri `[VERIFICATO]/[ATTESO]/[ASSUNTO]` in fondo per STANDARD/CRITICAL.
+description: Protocollo Codex SEMPRE ATTIVO di default su ogni intervento (richiesta utente 2026-05-25). Applico docs/governance/lovable-quick-codex.md ad ogni messaggio. Per CRITICAL leggo anche docs/governance/lovable-codex.md. Output sempre con `CLASSE | OBIETTIVO` in cima e `CHANGELOG` con registri `[VERIFICATO]/[ATTESO]/[ASSUNTO]` in fondo per STANDARD/CRITICAL.
 type: preference
 ---
 
-**Trigger di attivazione**: l'utente scrive una di queste parole/frasi nel messaggio:
-- `codex`
-- `applica codex`
-- `modalità codex`
-- `quick codex`
+**Attivazione**: SEMPRE ATTIVO di default su ogni intervento (richiesta utente "usa sempre codex come guida" — 2026-05-25). Non serve più un trigger esplicito.
 
-**Default permanente** (anche senza trigger): per ogni intervento classificato CRITICAL il protocollo è automaticamente attivo.
+I trigger esplciti restano validi come rinforzo: `codex`, `applica codex`, `modalità codex`, `quick codex`.
 
 **Cosa fare quando attivo**:
 1. Leggo `docs/governance/lovable-quick-codex.md` come riferimento.
