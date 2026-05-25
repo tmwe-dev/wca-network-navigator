@@ -35,7 +35,17 @@ jobs:
         run: npm run build
 
       - name: Run E2E smoke tests
-        run: npx playwright test e2e/smoke/ --reporter=html
+        run: |
+          npx playwright test \
+            e2e/smoke/ \
+            e2e/csp-header-presence.spec.ts \
+            e2e/mailbox-access-guard.spec.ts \
+            e2e/cron-secret-validation.spec.ts \
+            e2e/editorial-review-block.spec.ts \
+            e2e/prompt-injection-high-block.spec.ts \
+            e2e/lead-status-guard.spec.ts \
+            e2e/auth-guard.spec.ts \
+            --reporter=html
 
       - name: Upload test results
         if: always()
