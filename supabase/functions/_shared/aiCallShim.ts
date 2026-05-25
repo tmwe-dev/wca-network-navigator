@@ -24,6 +24,13 @@ function resolveProvider(): ProviderKey {
   if (raw === "openrouter" && Deno.env.get("OPENROUTER_API_KEY")) return "openrouter";
   if (raw === "grok" && Deno.env.get("GROK_API_KEY")) return "grok";
   if (raw === "qwen" && Deno.env.get("QWEN_API_KEY")) return "qwen";
+
+  if (Deno.env.get("OPENAI_API_KEY")) return "openai";
+  if (Deno.env.get("GEMINI_API_KEY")) return "google";
+  if (Deno.env.get("ANTHROPIC_API_KEY")) return "anthropic";
+  if (Deno.env.get("OPENROUTER_API_KEY")) return "openrouter";
+  if (Deno.env.get("GROK_API_KEY")) return "grok";
+  if (Deno.env.get("QWEN_API_KEY")) return "qwen";
   return "lovable";
 }
 

@@ -35,6 +35,34 @@ const entH = createEnterpriseHandlers(supabase);
 
 const toolDeps: ToolExecutorDeps = { supabase, readH, writeH, entH };
 
+function aiAssistantFailureResponse(
+  statusCode: number,
+  message: string,
+  corsHeaders: Record<string, string>,
+): Response {
+  const isActionable = statusCode === 401 || statusCode === 402 || statusCode === 429;
+  const safeMessage = statusCode === 401 ? "Chiave AI non valida o scaduta. Aggiorna la chiave API nelle impostazioni."
+    : statusCode === 402 ? "Crediti AI esauriti. Aggiorna la chiave API o ricarica il saldo AI."
+    : statusCode === 429 ? "Troppe richieste AI. Attendi qualche secondo e riprova."
+    : message || "Motore AI temporaneamente non disponibile. Riprova tra qualche secondo.";
+
+  return new Response(
+    JSON.stringify({
+      ok: false,
+      error: safeMessage,
+      code: statusCode === 401 ? "AI_UNAUTHORIZED"
+        : statusCode === 402 ? "AI_CREDITS_EXHAUSTED"
+        : statusCode === 429 ? "AI_RATE_LIMITED"
+        : "AI_SERVICE_UNAVAILABLE",
+      content: safeMessage,
+      response: safeMessage,
+      fallback: !isActionable,
+      user_action_required: isActionable,
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // MAIN HANDLER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -291,10 +319,7 @@ serve(async (req) => {
       const statusCode = initialResponse.statusCode || 500;
       const msg = initialResponse.error || "Errore AI gateway";
       endMetrics(metrics, false, statusCode);
-      return new Response(JSON.stringify({ error: msg }), {
-        status: statusCode,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return aiAssistantFailureResponse(statusCode, msg, dynCors);
     }
 
     // deno-lint-ignore no-explicit-any
@@ -431,6 +456,6 @@ serve(async (req) => {
     logEdgeError("ai-assistant", e);
     endMetrics(metrics, false, 500);
     console.error("ai-assistant error:", extractErrorMessage(e));
-    return edgeError("INTERNAL_ERROR", extractErrorMessage(e), undefined, dynCors);
+    return aiAssistantFailureResponse(500, extractErrorMessage(e), dynCors);
   }
 });
