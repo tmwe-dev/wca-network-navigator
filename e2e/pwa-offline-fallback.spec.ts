@@ -36,4 +36,25 @@ test.describe("pwa-offline-fallback", () => {
     await page.waitForTimeout(1500);
     expect(page.url()).not.toContain("/auth");
   });
+
+  test("service worker is registered", async ({ authedPage: page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(3000);
+    const hasSW = await page.evaluate(async () => {
+      if (!("serviceWorker" in navigator)) return false;
+      const regs = await navigator.serviceWorker.getRegistrations();
+      return regs.length > 0;
+    });
+    // In preview Vite il SW potrebbe non essere attivo; in build prod sì.
+    if (process.env.CI) {
+      expect(hasSW, "Service Worker not registered in CI build").toBe(true);
+    }
+  });
+
+  test("offline fallback page is reachable", async ({ authedPage: page }) => {
+    const response = await page.goto("/offline.html");
+    expect(response?.status()).toBeLessThan(400);
+    const body = await page.content();
+    expect(body.toLowerCase()).toMatch(/offline|connessione|connection/);
+  });
 });
