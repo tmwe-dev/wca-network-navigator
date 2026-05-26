@@ -12,12 +12,12 @@
 import { execSync } from "node:child_process";
 
 // ── Baseline: update ONLY when you intentionally reduce debt ──
-// Snapshot 2026-05-26 (post quickwin 100k + test eslint override) — ratchet-down only.
+// Snapshot 2026-05-26 (Sprint 100k — Fase 2: production-only debt count, test files escluded).
 // Never raise these numbers. To reduce: lower after a successful migration PR.
 const BASELINE = {
-  any: 171,
-  eslintDisable: 53,
-  console: 22,
+  any: 53,
+  eslintDisable: 50,
+  console: 10,
 };
 
 function count(pattern) {
