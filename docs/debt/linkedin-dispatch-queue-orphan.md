@@ -2,6 +2,10 @@
 
 **Stato:** DOCUMENTATO (non bloccante). Ultimo aggiornamento 2026-05-26.
 
+**Misurazione 2026-05-26:** `extension_dispatch_queue` contiene **0 record**
+con `channel='linkedin'`. Il debito è puramente concettuale (lo schema
+esiste, ma nessun dato lo popola).
+
 ## Contesto
 
 La tabella `extension_dispatch_queue` esiste come reliquia di un design
