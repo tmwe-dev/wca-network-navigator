@@ -5,6 +5,9 @@
  * del contenuto delle mail in arrivo. NESSUNA logica, solo SELECT.
  */
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("emailContentIntelligence");
 
 export interface SuggestedAction {
   type: string;
