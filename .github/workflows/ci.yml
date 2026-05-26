@@ -58,9 +58,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Bundle size guard (warn-only baseline)
+      - name: Bundle size guard (blocking)
         env:
-          BUNDLE_GUARD_WARN_ONLY: "1"
+          BUNDLE_GUARD_WARN_ONLY: "0"
           BUNDLE_MAX_KB: "3500"
         run: npm run bundle:check
       - uses: actions/upload-artifact@v4
