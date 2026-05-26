@@ -29,7 +29,7 @@ export class PageErrorBoundary extends React.Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    log.error("[PageErrorBoundary]", { detail: error, info.componentStack });
+    log.error("PageErrorBoundary caught", { error, componentStack: info.componentStack });
     Sentry.captureException(error, {
       tags: { boundary: "page" },
       extra: { componentStack: info.componentStack },

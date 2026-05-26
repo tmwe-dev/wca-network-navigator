@@ -35,7 +35,7 @@ export class DrawerErrorBoundary extends React.Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    log.error(`[DrawerErrorBoundary:${this.props.scope}]`, { detail: error, info.componentStack });
+    log.error("DrawerErrorBoundary caught", { scope: this.props.scope, error, componentStack: info.componentStack });
     Sentry.captureException(error, {
       tags: { boundary: "drawer", scope: this.props.scope },
       extra: { componentStack: info.componentStack },
