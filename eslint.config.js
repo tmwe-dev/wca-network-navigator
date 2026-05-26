@@ -30,6 +30,20 @@ export default tseslint.config(
       "eqeqeq": ["error", "always"],
     },
   },
+  // ── Test files override: mocks & console-based assertions are legitimate ──
+  // Allow `any` and `console` in test code; production rules still enforced elsewhere.
+  {
+    files: [
+      "src/test/**/*.{ts,tsx}",
+      "src/**/*.test.{ts,tsx}",
+      "src/__tests__/**/*.{ts,tsx}",
+      "src/**/__tests__/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-console": "off",
+    },
+  },
   // ── DAL enforcement: ban supabase.from() outside src/data/ ──
   {
     files: [
