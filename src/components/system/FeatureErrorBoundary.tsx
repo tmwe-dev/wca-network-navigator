@@ -18,11 +18,11 @@ interface State {
 export class FeatureErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null };
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
+  override static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     log.error(`[${this.props.featureName}] component error`, {
       message: error.message,
       stack: error.stack,
@@ -34,7 +34,7 @@ export class FeatureErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  render() {
+  override render() {
     if (!this.state.hasError) return this.props.children;
 
     if (this.props.fallback) return this.props.fallback;

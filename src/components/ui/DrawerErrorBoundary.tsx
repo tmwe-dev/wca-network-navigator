@@ -26,11 +26,11 @@ interface Props {
 export class DrawerErrorBoundary extends React.Component<Props, State> {
   state: State = { hasError: false };
 
-  static getDerivedStateFromError(error: Error): State {
+  override static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+  override componentDidCatch(error: Error, info: React.ErrorInfo): void {
     console.error(`[DrawerErrorBoundary:${this.props.scope}]`, error, info.componentStack);
     Sentry.captureException(error, {
       tags: { boundary: "drawer", scope: this.props.scope },
@@ -64,7 +64,7 @@ export class DrawerErrorBoundary extends React.Component<Props, State> {
     this.props.onReset?.();
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center gap-3 p-6 text-center">

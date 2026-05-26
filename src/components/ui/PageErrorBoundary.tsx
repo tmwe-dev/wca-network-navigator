@@ -20,11 +20,11 @@ interface Props {
 export class PageErrorBoundary extends React.Component<Props, State> {
   state: State = { hasError: false };
 
-  static getDerivedStateFromError(error: Error): State {
+  override static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+  override componentDidCatch(error: Error, info: React.ErrorInfo): void {
     console.error("[PageErrorBoundary]", error, info.componentStack);
     Sentry.captureException(error, {
       tags: { boundary: "page" },
@@ -32,7 +32,7 @@ export class PageErrorBoundary extends React.Component<Props, State> {
     });
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       return (
