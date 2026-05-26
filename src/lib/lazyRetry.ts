@@ -20,7 +20,7 @@ export function lazyRetry<T extends ComponentType<any>>(
 ) {
   return lazy(() =>
     factory().catch((err) => {
-      log.warn("[lazyRetry] dynamic import failed, { detail: retrying in", retryDelay, "ms", err });
+      log.warn("dynamic import failed, retrying", { retryDelayMs: retryDelay, error: err });
       return new Promise<{ default: T }>((resolve, reject) => {
         setTimeout(() => {
           factory()
