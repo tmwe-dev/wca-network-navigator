@@ -15,7 +15,7 @@ export class PageErrorBoundary extends React.Component<
 > {
   state: State = { hasError: false };
 
-  override static getDerivedStateFromError(error: Error): State {
+  static override getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 

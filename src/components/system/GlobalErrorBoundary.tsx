@@ -17,7 +17,7 @@ interface State {
 export class GlobalErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null, errorInfo: null };
 
-  override static getDerivedStateFromError(error: Error): Partial<State> {
+  static override getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
