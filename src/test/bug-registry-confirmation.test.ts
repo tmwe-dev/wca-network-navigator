@@ -319,7 +319,7 @@ describe("BF-008: DB failure after successful send leaves inconsistent state", (
 describe("BF-011: High-stakes tasks must always require approval", () => {
   it("D05: isHighStakes correctly identifies high-stakes scenarios", () => {
     // Replicates isHighStakes function from lines 41-46
-    function isHighStakes(item: unknown): boolean {
+    function isHighStakes(item: any): boolean {
       if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
       if (item.source === "ex_client") return true;
       if (item.rating && item.rating >= 4) return true;
@@ -368,7 +368,7 @@ describe("BF-011: High-stakes tasks must always require approval", () => {
     // Since isHighStakes checks source === "ex_client", this means
     // ex_client partners are NEVER detected as high-stakes in Phase 2
     
-    function isHighStakes(item: unknown): boolean {
+    function isHighStakes(item: any): boolean {
       if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
       if (item.source === "ex_client") return true;
       if (item.rating && item.rating >= 4) return true;

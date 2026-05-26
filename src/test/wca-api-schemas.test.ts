@@ -120,7 +120,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   });
 
   describe("safeParse* — best-effort, no throw", () => {
-    let warnSpy: unknown;
+    let warnSpy: any;
 
     beforeEach(() => {
       warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

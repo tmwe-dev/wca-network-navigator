@@ -18,7 +18,7 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("ContentPicker");
 
-const ICON_MAP: Record<string, unknown> = {
+const ICON_MAP: Record<string, any> = {
   Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target,
 };
 

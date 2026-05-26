@@ -104,7 +104,7 @@ async function callExtractAI(args: {
   const { invokeAi } = await import("@/lib/ai/invokeAi");
   let data: unknown;
   try {
-    data = await invokeAi<any>("sherlock-extract", {
+    data = await invokeAi<unknown>("sherlock-extract", {
       scope: "sherlock",
       context: { source: "sherlock.callExtractAI", mode: "extract" },
       body: {

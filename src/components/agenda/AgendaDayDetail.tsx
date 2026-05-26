@@ -415,7 +415,7 @@ function ActivityRow({
   );
 }
 
-function ReminderList({ reminders }: { reminders: Array<Record<string, unknown>> }) {
+function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) {
   if (reminders.length === 0) return null;
   return (
     <section className="pt-2">

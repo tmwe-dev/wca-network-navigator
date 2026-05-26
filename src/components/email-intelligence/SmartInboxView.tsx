@@ -181,7 +181,7 @@ export function SmartInboxView() {
               {classifications.map((c) => {
                 const cat = CATEGORIES[c.category] ?? CATEGORIES.uncategorized;
                 const CatIcon = cat.icon;
-                const partnerName = (c as Record<string, unknown>).partners?.company_name;
+                const partnerName = (c as Record<string, any>).partners?.company_name;
                 const isSelected = selectedId === c.id;
 
                 return (

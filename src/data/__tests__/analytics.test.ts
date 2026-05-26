@@ -18,7 +18,7 @@ const chainBuilder = (result: () => { data: unknown; error: unknown }) => {
   b.gte = vi.fn().mockReturnValue(b);
   b.lte = vi.fn().mockReturnValue(b);
   b.is = vi.fn().mockReturnValue(b);
-  b.then = (resolve: unknown) => resolve(result());
+  b.then = (resolve: any) => resolve(result());
   return b;
 };
 
@@ -44,7 +44,7 @@ vi.mock("@/integrations/supabase/client", () => ({
       };
       // Make the builder itself thenable (await resolves to result)
       Object.defineProperty(b, "then", {
-        value: (resolve: unknown) => Promise.resolve(getResult()).then(resolve),
+        value: (resolve: any) => Promise.resolve(getResult()).then(resolve),
         writable: true,
       });
       return b;
@@ -60,7 +60,7 @@ vi.mock("@/lib/typedSupabase", () => ({
     b.gte = vi.fn().mockReturnValue(b);
     b.lte = vi.fn().mockReturnValue(b);
     Object.defineProperty(b, "then", {
-      value: (resolve: unknown) => {
+      value: (resolve: any) => {
         const result = table === "deals" ? mockDealsResult : mockLogsResult;
         return Promise.resolve(result).then(resolve);
       },

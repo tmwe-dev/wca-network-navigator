@@ -39,7 +39,7 @@ describe("Agent Task Stats Consistency (logic)", () => {
   });
 
   it("should handle missing stats gracefully", () => {
-    const stats: unknown = {};
+    const stats: any = {};
     const taskStatus = "completed";
 
     const updated = { ...stats };

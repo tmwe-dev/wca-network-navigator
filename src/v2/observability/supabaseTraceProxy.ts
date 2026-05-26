@@ -12,9 +12,9 @@ import { traceCollector } from "./traceCollector";
 let installed = false;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type AnyFn = (...args: unknown[]) => any;
+type AnyFn = (...args: any[]) => any;
 
-function wrapBuilder(table: string, builder: unknown): unknown {
+function wrapBuilder(table: string, builder: any): any {
   // I metodi che terminano la query e ritornano una Promise sono `then`-able.
   // Strategy: wrap la `then` del builder.
   if (!builder || typeof builder.then !== "function") return builder;
@@ -26,7 +26,7 @@ function wrapBuilder(table: string, builder: unknown): unknown {
   for (const verb of ["select", "insert", "update", "delete", "upsert"] as const) {
     if (typeof builder[verb] === "function") {
       const orig: AnyFn = builder[verb].bind(builder);
-      builder[verb] = (...args: unknown[]) => {
+      builder[verb] = (...args: any[]) => {
         ops.push(verb);
         return wrapBuilder(table, orig(...args));
       };
@@ -36,7 +36,7 @@ function wrapBuilder(table: string, builder: unknown): unknown {
   builder.then = (onFulfilled?: AnyFn, onRejected?: AnyFn) => {
     const start = Date.now();
     return originalThen(
-      (res: unknown) => {
+      (res: any) => {
         const route = typeof window !== "undefined" ? window.location.pathname : undefined;
         const op = ops[ops.length - 1] ?? "select";
         const count = Array.isArray(res?.data) ? res.data.length : res?.data ? 1 : 0;
@@ -52,7 +52,7 @@ function wrapBuilder(table: string, builder: unknown): unknown {
         });
         return onFulfilled ? onFulfilled(res) : res;
       },
-      (err: unknown) => {
+      (err: any) => {
         const route = typeof window !== "undefined" ? window.location.pathname : undefined;
         traceCollector.push({
           type: "db.query",
@@ -81,14 +81,14 @@ export function installSupabaseTraceProxy(): void {
   sb.from = (table: string) => wrapBuilder(table, originalFrom(table));
 
   const originalRpc = sb.rpc.bind(supabase);
-  sb.rpc = (fnName: string, params?: unknown) => {
+  sb.rpc = (fnName: string, params?: any) => {
     const start = Date.now();
     const result = originalRpc(fnName, params);
     if (result && typeof result.then === "function") {
       const original = result.then.bind(result);
       result.then = (ok?: AnyFn, ko?: AnyFn) =>
         original(
-          (r: unknown) => {
+          (r: any) => {
             traceCollector.push({
               type: "db.query",
               scope: "db",
@@ -101,7 +101,7 @@ export function installSupabaseTraceProxy(): void {
             });
             return ok ? ok(r) : r;
           },
-          (err: unknown) => {
+          (err: any) => {
             traceCollector.push({
               type: "db.query",
               scope: "db",

@@ -17,7 +17,7 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("ContentSelect");
 
-const ICON_MAP: Record<string, unknown> = {
+const ICON_MAP: Record<string, any> = {
   Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target,
 };
 const CYCLE_ICONS = [Target, Handshake, Briefcase, Search, Globe, RefreshCw, FileText];
