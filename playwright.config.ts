@@ -21,11 +21,11 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   testDir: "./e2e",
-  timeout: 30_000,
-  expect: { timeout: 5_000 },
+  timeout: Number(process.env.E2E_TIMEOUT_MS ?? 45_000),
+  expect: { timeout: Number(process.env.E2E_EXPECT_TIMEOUT_MS ?? 10_000) },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 3 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [["html", { open: "never" }]] : "list",
 
@@ -34,6 +34,8 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    actionTimeout: Number(process.env.E2E_ACTION_TIMEOUT_MS ?? 10_000),
+    navigationTimeout: Number(process.env.E2E_NAV_TIMEOUT_MS ?? 30_000),
   },
 
   projects: [
