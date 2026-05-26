@@ -33,14 +33,5 @@
   },
   "include": [
     "src"
-  ],
-  "exclude": [
-    "src/__tests__/token-logger.test.ts",
-    "src/v2/ui/pages/command/hooks/useCommandSubmit.ts",
-    "src/v2/ui/pages/command/hooks/useScenarioFlow.ts",
-    "src/v2/ui/pages/command/hooks/useToolExecution.ts",
-    "src/v2/ui/pages/command/components/CommandOutput.tsx",
-    "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
-    "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts"
   ]
 }
