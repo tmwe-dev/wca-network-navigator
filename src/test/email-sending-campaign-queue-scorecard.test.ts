@@ -44,13 +44,13 @@ describe("Email Sending — False positive detection", () => {
 describe("Email Sending — Recipient validation", () => {
   it("missing 'to' field returns 400", () => {
     const body = { subject: "Test", html: "<p>Hi</p>" };
-    const hasRequiredFields = !!(body as any).to && !!(body as any).subject && !!(body as any).html;
+    const hasRequiredFields = !!(body as unknown).to && !!(body as unknown).subject && !!(body as unknown).html;
     expect(hasRequiredFields).toBe(false);
   });
 
   it("missing 'subject' field returns 400", () => {
     const body = { to: "test@test.com", html: "<p>Hi</p>" };
-    const hasRequiredFields = !!(body as any).to && !!(body as any).subject && !!(body as any).html;
+    const hasRequiredFields = !!(body as unknown).to && !!(body as unknown).subject && !!(body as unknown).html;
     expect(hasRequiredFields).toBe(false);
   });
 

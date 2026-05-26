@@ -75,7 +75,7 @@ describe("Routing correctness", () => {
 
     let assigned: string | null = null;
     if (clientAssignment) {
-      assigned = (clientAssignment as any).agent_id;
+      assigned = (clientAssignment as unknown).agent_id;
     } else {
       const cc = partnerCountry.toUpperCase();
       const terAgent = agents.find(a => a.territory_codes?.some(t => t.toUpperCase() === cc));
@@ -88,7 +88,7 @@ describe("Routing correctness", () => {
 
 // ── Test 3: Approval discipline ──
 describe("Approval discipline", () => {
-  function isHighStakes(partner: any): boolean {
+  function isHighStakes(partner: unknown): boolean {
     if (partner.lead_status === "in_progress" || partner.lead_status === "negotiation") return true;
     if (partner.source === "ex_client") return true;
     if (partner.rating && partner.rating >= 4) return true;

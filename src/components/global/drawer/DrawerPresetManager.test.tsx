@@ -14,13 +14,13 @@ import { DrawerPresetManager } from "./DrawerPresetManager";
 const PRESETS = [
   { id: "p1", name: "Default", base_proposal: null, created_at: null, document_ids: [], goal: null, reference_links: [], updated_at: null, user_id: "u1" },
   { id: "p2", name: "Enterprise", base_proposal: null, created_at: null, document_ids: [], goal: null, reference_links: [], updated_at: null, user_id: "u1" },
-] as any;
+] as unknown;
 
 describe("DrawerPresetManager", () => {
   const baseProps = {
     presets: PRESETS,
     activePresetId: null as string | null,
-    quality: "balanced" as any,
+    quality: "balanced" as unknown,
     onLoadPreset: vi.fn(),
     onSavePreset: vi.fn(),
     onDeletePreset: vi.fn(),

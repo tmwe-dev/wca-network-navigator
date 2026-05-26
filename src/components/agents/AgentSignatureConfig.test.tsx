@@ -23,7 +23,7 @@ const AGENT = {
   is_active: true, signature_html: "<p>Best regards</p>", signature_image_url: "",
   voice_call_url: "", user_id: "u1", assigned_tools: [], knowledge_base: {}, stats: {},
   schedule_config: {}, created_at: "", updated_at: "",
-} as any;
+} as unknown;
 
 describe("AgentSignatureConfig", () => {
   it("renders section title", () => {

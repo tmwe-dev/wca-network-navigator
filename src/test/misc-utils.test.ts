@@ -61,7 +61,7 @@ describe("capitalizeFirst", () => {
 
   it("ritorna input invariato su empty/null", () => {
     expect(capitalizeFirst("")).toBe("");
-    expect(capitalizeFirst(null as any)).toBeNull();
+    expect(capitalizeFirst(null as unknown)).toBeNull();
   });
 
   it("preserva il resto della stringa", () => {

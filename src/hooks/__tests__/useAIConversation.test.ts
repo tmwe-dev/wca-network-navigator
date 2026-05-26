@@ -31,7 +31,7 @@ beforeEach(() => {
 
 describe("useAIConversation", () => {
   it("initializes with empty messages", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     vi.mocked(findConversations).mockResolvedValue([]);
     const { result } = renderHook(() => useAIConversation("dashboard"));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -40,8 +40,8 @@ describe("useAIConversation", () => {
 
   it("loads existing conversation on mount", async () => {
     const existing = { id: "c1", messages: [{ role: "user", content: "hi" }], title: "Test" };
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
-    vi.mocked(findConversations).mockResolvedValue([existing] as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
+    vi.mocked(findConversations).mockResolvedValue([existing] as unknown);
     const { result } = renderHook(() => useAIConversation("dashboard"));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.messages).toHaveLength(1);
@@ -49,20 +49,20 @@ describe("useAIConversation", () => {
   });
 
   it("shows loading=true initially", () => {
-    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as unknown);
     const { result } = renderHook(() => useAIConversation("test"));
     expect(result.current.loading).toBe(true);
   });
 
   it("handles unauthenticated user", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as unknown);
     const { result } = renderHook(() => useAIConversation("test"));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.messages).toEqual([]);
   });
 
   it("exposes addMessages function", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     vi.mocked(findConversations).mockResolvedValue([]);
     const { result } = renderHook(() => useAIConversation("test"));
     await waitFor(() => expect(result.current.loading).toBe(false));

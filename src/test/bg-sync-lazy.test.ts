@@ -82,7 +82,7 @@ describe("lazyRetry", () => {
     const Lazy = lazyRetry(factory);
     expect(Lazy).toBeDefined();
     // React.lazy restituisce un object con $$typeof
-    expect((Lazy as any).$$typeof).toBeDefined();
+    expect((Lazy as unknown).$$typeof).toBeDefined();
   });
 
   it("invoca la factory al primo accesso", async () => {
@@ -90,7 +90,7 @@ describe("lazyRetry", () => {
     const factory = vi.fn().mockResolvedValue({ default: Comp });
     const Lazy = lazyRetry(factory);
     // Force resolve via internal _payload
-    const payload = (Lazy as any)._payload;
+    const payload = (Lazy as unknown)._payload;
     if (payload && typeof payload._result === "function") {
       try { await payload._result(); } catch { /* ignore */ }
     }
@@ -108,10 +108,10 @@ describe("lazyRetry", () => {
     });
     const Lazy = lazyRetry(factory, 10);
     // Trigger underlying load via React.lazy payload
-    const payload = (Lazy as any)._payload;
+    const payload = (Lazy as unknown)._payload;
     // payload._result is the original promise factory wrapper
     try {
-      await (payload._result as any)();
+      await (payload._result as unknown)();
     } catch { /* ignore */ }
     // Wait a tick + retry delay
     await new Promise((r) => setTimeout(r, 50));

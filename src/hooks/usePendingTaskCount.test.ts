@@ -54,7 +54,7 @@ describe("usePendingTaskCount", () => {
   });
   it("sets up realtime subscription on mount", async () => {
     const mod = await import("@/integrations/supabase/client");
-    const channelSpy = vi.spyOn(mod.supabase, "channel" as any);
+    const channelSpy = vi.spyOn(mod.supabase, "channel" as unknown);
     renderHookWithProviders(() => usePendingTaskCount());
     expect(channelSpy).toHaveBeenCalledWith("pending-tasks-badge");
     channelSpy.mockRestore();

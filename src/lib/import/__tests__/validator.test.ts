@@ -23,7 +23,7 @@ describe("validator - applyTransformation", () => {
   });
 
   it("handles null-ish values gracefully", () => {
-    expect(applyTransformation(undefined as any, "trim")).toBe("");
+    expect(applyTransformation(undefined as unknown, "trim")).toBe("");
   });
 });
 

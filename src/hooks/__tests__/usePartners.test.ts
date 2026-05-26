@@ -30,7 +30,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("usePartners", () => {
   it("fetches partners list", async () => {
-    vi.mocked(findPartners).mockResolvedValue([{ id: "p1", company_name: "Acme" }] as any);
+    vi.mocked(findPartners).mockResolvedValue([{ id: "p1", company_name: "Acme" }] as unknown);
     const { result } = renderHook(() => usePartners(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toHaveLength(1);
@@ -44,7 +44,7 @@ describe("usePartners", () => {
 
   it("passes filters through", async () => {
     vi.mocked(findPartners).mockResolvedValue([]);
-    renderHook(() => usePartners({ country: "IT" } as any), { wrapper });
+    renderHook(() => usePartners({ country: "IT" } as unknown), { wrapper });
     await waitFor(() => expect(findPartners).toHaveBeenCalledWith({ country: "IT" }));
   });
 
@@ -57,7 +57,7 @@ describe("usePartners", () => {
 
 describe("usePartner", () => {
   it("fetches single partner by id", async () => {
-    vi.mocked(getPartner).mockResolvedValue({ id: "p1", company_name: "Acme" } as any);
+    vi.mocked(getPartner).mockResolvedValue({ id: "p1", company_name: "Acme" } as unknown);
     const { result } = renderHook(() => usePartner("p1"), { wrapper });
     await waitFor(() => expect(result.current.data?.company_name).toBe("Acme"));
   });

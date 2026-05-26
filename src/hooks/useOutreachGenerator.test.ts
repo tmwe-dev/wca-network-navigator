@@ -76,7 +76,7 @@ describe("useOutreachGenerator", () => {
     let generated: unknown;
     await act(async () => {
       generated = await result.current.generate({
-        channel: "" as any,
+        channel: "" as unknown,
         contact_name: "X",
         company_name: "Y",
       });

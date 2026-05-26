@@ -32,8 +32,8 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("useAgents", () => {
   it("returns agents list on success", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
-    vi.mocked(findAgents).mockResolvedValue([{ id: "a1", name: "Agent A" }] as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as unknown }, error: null } as unknown);
+    vi.mocked(findAgents).mockResolvedValue([{ id: "a1", name: "Agent A" }] as unknown);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.agents).toHaveLength(1);
@@ -41,7 +41,7 @@ describe("useAgents", () => {
   });
 
   it("returns empty array when no agents", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as unknown }, error: null } as unknown);
     vi.mocked(findAgents).mockResolvedValue([]);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -49,20 +49,20 @@ describe("useAgents", () => {
   });
 
   it("throws when user is not authenticated", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: null }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: null }, error: null } as unknown);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.agents).toEqual([]);
   });
 
   it("exposes isLoading=true initially", () => {
-    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as unknown);
     const { result } = renderHook(() => useAgents(), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });
 
   it("exposes createAgent mutation", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as unknown }, error: null } as unknown);
     vi.mocked(findAgents).mockResolvedValue([]);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -71,7 +71,7 @@ describe("useAgents", () => {
   });
 
   it("exposes deleteAgent mutation", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as any }, error: null } as any);
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({ data: { user: mockUser as unknown }, error: null } as unknown);
     vi.mocked(findAgents).mockResolvedValue([]);
     const { result } = renderHook(() => useAgents(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));

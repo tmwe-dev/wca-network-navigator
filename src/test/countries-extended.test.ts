@@ -23,7 +23,7 @@ describe("countries helpers", () => {
       expect(getCountryFlag("")).toBe("🌍");
       expect(getCountryFlag("X")).toBe("🌍");
       expect(getCountryFlag("ITA")).toBe("🌍");
-      expect(getCountryFlag(null as any)).toBe("🌍");
+      expect(getCountryFlag(null as unknown)).toBe("🌍");
     });
   });
 

@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
  */
 
 // Replicate the validation schema inline (since Zod runs in browser)
-function validatePartnerData(data: any): { valid: boolean; errors: string[] } {
+function validatePartnerData(data: unknown): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
   if (!data.company_name || typeof data.company_name !== "string" || data.company_name.length < 2) {

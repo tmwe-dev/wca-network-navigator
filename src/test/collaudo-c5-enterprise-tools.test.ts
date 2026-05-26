@@ -112,7 +112,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
       index: 0, description: "Search KB", tool: "search_kb",
       args: { query: "servizi marittimi" }, status: "pending", result: null,
     };
-    const result = simulateCurrentExecution(step) as any;
+    const result = simulateCurrentExecution(step) as unknown;
     expect(result.note).toContain("da eseguire");
     // It says "to be executed" but doesn't actually execute
     expect(result).not.toHaveProperty("matches");
@@ -129,7 +129,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
       index: 0, description: "Search KB", tool: "search_kb",
       args: { query: "servizi marittimi" }, status: "pending", result: null,
     };
-    const result = simulateCorrectExecution(step, handlers) as any;
+    const result = simulateCorrectExecution(step, handlers) as unknown;
     expect(result.matches).toBeDefined();
     expect(result.matches).toHaveLength(1);
   });
@@ -139,7 +139,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
       index: 0, description: "Call custom API", tool: "custom_api_call",
       args: {}, status: "pending", result: null,
     };
-    const result = simulateCorrectExecution(step, {}) as any;
+    const result = simulateCorrectExecution(step, {}) as unknown;
     expect(result.note).toContain("manuale");
   });
 });
@@ -253,7 +253,7 @@ describe("Collaudo B2 — tool-decision Mode", () => {
   };
 
   it("C8.14 — BUG: code reads provider.baseUrl but property is 'url'", () => {
-    expect((provider as any).baseUrl).toBeUndefined();
+    expect((provider as unknown).baseUrl).toBeUndefined();
     expect(provider.url).toBeDefined();
   });
 
