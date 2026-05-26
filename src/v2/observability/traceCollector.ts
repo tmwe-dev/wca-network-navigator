@@ -12,6 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { TraceEvent, TraceRow } from "./traceTypes";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("traceCollector");
+
 const MAX_BUFFER = 500;
 const FLUSH_BATCH = 25;
 const FLUSH_INTERVAL_MS = 5000;
@@ -156,10 +160,10 @@ class TraceCollector {
       if (error) {
         // Re-queue se errore transient (max 1 retry implicito al prossimo tick)
         // Per non loopare in modo aggressivo, droppiamo dopo log.
-        console.warn("[traceCollector] flush failed:", error.message);
+        log.warn("[traceCollector] flush failed:", { detail: error.message });
       }
     } catch (err) {
-      console.warn("[traceCollector] flush threw:", err);
+      log.warn("[traceCollector] flush threw:", { detail: err });
     }
   }
 }

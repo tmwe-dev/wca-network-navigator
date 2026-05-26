@@ -1,4 +1,8 @@
 /**
+
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("bulkOps");
  * Marker interno per le entry: in DEV blocca chiamate dirette
  * (chi importa l'entry deve passare dal runner).
  */
@@ -16,7 +20,7 @@ export function assertCalledFromRunner(scope: string): void {
       // usiamo console.warn perché è dev-only e parte di un guardrail
 
        
-      console.warn(`[bulkOps] entry "${scope}" invocata fuori dal runner. Usa runBulkOp().`);
+      log.warn(`[bulkOps] entry "${scope}" invocata fuori dal runner. Usa runBulkOp().`);
     }
   }
 }

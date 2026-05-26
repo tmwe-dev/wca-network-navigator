@@ -30,6 +30,10 @@ import { createKbEntryProposal } from "@/data/kbProposals";
 import { DiffViewer } from "./components/DiffViewer";
 import { buildDiffText } from "@/lib/textDiff";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("PromptCopilotPanel");
+
 type ChatMsg = {
   role: "user" | "assistant";
   content: string;
@@ -331,7 +335,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
             okCount++;
           }
         } catch (err) {
-          console.error("global save fail", r.source_id, err);
+          log.error("global save fail", { detail: r.source_id, err });
         }
       }
       toast.success(`${okCount}/${globalProposal.global_replacements.length} proposte salvate (batch ${batchId.slice(0, 8)})`);
