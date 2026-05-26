@@ -15,13 +15,13 @@ interface State {
 }
 
 export class GlobalErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null, errorInfo: null };
+  override state: State = { hasError: false, error: null, errorInfo: null };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
     log.error("unhandled react error", {
       message: error.message,
@@ -85,7 +85,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
-  render() {
+  override render() {
     if (!this.state.hasError) return this.props.children;
 
     return (

@@ -22,6 +22,9 @@ jobs:
       - run: npm run debt:check
       - run: npm run audit:security
       - run: npm run i18n:check
+      - run: npm run audit:function-auth
+      - run: npm run typecheck:public
+      - run: npm run format:check
 
   test:
     runs-on: ubuntu-latest

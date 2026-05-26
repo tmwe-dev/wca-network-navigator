@@ -1,88 +1,138 @@
-# Migrazione totale AI → chiavi OpenAI dell'utente
 
-## Obiettivo
-Far sì che **tutte** le edge function (44 file) usino la tua chiave OpenAI (`OPENAI_API_KEY`) invece del gateway Lovable AI (`LOVABLE_API_KEY`). Risultato: il budget AI Lovable smette di essere consumato.
+# Piano: da 72.800 a 100.000 / 100.000
 
-> Nota importante: questo **non** risolve l'avviso "Cloud & AI balance esaurito" sul lato infrastruttura (DB + runtime edge function). Quel budget va comunque ricaricato perché copre l'esecuzione delle funzioni stesse e il database. Le tue chiavi sostituiscono solo l'inferenza AI.
+Obiettivo: chiudere ogni eccezione tollerata (debito, warn-only, esclusioni typecheck, auth manuale non verificata, aree non misurate). Ogni fase è **atomica, reversibile, con CI verde prima di passare alla successiva** (Metodo Enterprise Vol II — niente refactor + fix insieme).
 
-## Strategia: shim drop-in, niente refactor
+## Vincoli da rispettare (nodi critici)
 
-Tocchiamo **un solo file nuovo** e **una riga per ciascuna delle 44 function**.
+Le seguenti aree NON vanno toccate in modo opportunistico durante questo lavoro: `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, cockpit submit, composer, AI draft, journalistReview, agent-loop. Se una fase richiede modifiche qui, va isolata in plan dedicato.
 
-### Fase 1 — Nuovo helper `_shared/aiCallShim.ts`
+## Fase 1 — TypeScript blindato (+7.000 → 79.800)
 
-Espone una funzione `aiGatewayFetch(body, options)` che:
+1. Rimuovere `exclude[]` da `tsconfig.app.json` (7 file: 5 hooks `command/`, 1 component, 1 test, 1 prompt-lab hook).
+2. Per ognuno: tipizzare o spostare in `.test-only` se davvero non riparabile.
+3. Aggiungere flag a `tsconfig.app.json` **uno alla volta**, ognuno con commit separato:
+   - `noUncheckedIndexedAccess`
+   - `noImplicitOverride`
+   - `noPropertyAccessFromIndexSignature`
+   - `noUnusedLocals` + `noUnusedParameters`
+   - `exactOptionalPropertyTypes` (ultimo, è il più invasivo)
+4. CI: `typecheck` e `typecheck:strict` già bloccanti.
 
-1. Se `AI_PROVIDER === "openai"` e `OPENAI_API_KEY` presente → POST a `https://api.openai.com/v1/chat/completions` con `Authorization: Bearer ${OPENAI_API_KEY}`.
-2. Mappa automaticamente il modello richiesto (`google/gemini-3-flash-preview`, `openai/gpt-5-mini`, ecc.) sull'equivalente OpenAI (`gpt-4o-mini`, `gpt-4o`, ecc.) riusando `MODEL_MAP` di `aiGatewayConfig.ts`.
-3. Rimuove campi non supportati da OpenAI (es. `reasoning`).
-4. Fallback al gateway Lovable solo se `AI_PROVIDER` non è impostato (back-compat per ambienti dev).
-5. Risposta sempre nello stesso formato (compatibile OpenAI/Lovable già lo è).
+Rischio: medio. Reversibile: sì (revert tsconfig).
 
-Vantaggio: ogni call-site cambia di 2 righe. Nessuna modifica al flusso, ai prompt, ai tool, alla telemetria, ai retry o all'editorial review.
+## Fase 2 — Azzeramento debito (+9.000 → 88.800)
 
-### Fase 2 — Sostituzione meccanica nelle 44 function
+Sprint a ratchet-down sulla baseline in `scripts/debt-budget.js`. Target finale `{any:0, eslintDisable:0, console:0}` ma in 4 sprint:
 
-Per ogni file della lista, si sostituisce il pattern:
+| Sprint | any | eslint-disable | console |
+|--------|-----|----------------|---------|
+| S1     | 300 | 45             | 15      |
+| S2     | 200 | 25             | 8       |
+| S3     | 100 | 10             | 3       |
+| S4     | 0   | 0              | 0       |
 
-```ts
-const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-  body: JSON.stringify({ model, messages, ... }),
-});
-```
+Per ogni sprint:
+- Migrare `any` → `unknown`/tipi specifici o `untypedFrom`.
+- Rimuovere `eslint-disable` motivando con refactor o tipi.
+- Migrare `console.*` → `createLogger`.
+- Abbassare baseline a fine sprint.
 
-con:
+Rischio: basso (incrementale). Reversibile: sì per ogni file.
 
-```ts
-import { aiGatewayFetch } from "../_shared/aiCallShim.ts";
-const resp = await aiGatewayFetch({ model, messages, ... });
-```
+## Fase 3 — CI completamente bloccante (+5.000 → 93.800)
 
-File interessati (44, raggruppati per area):
+In `.github/workflows/ci.yml`:
+1. `BUNDLE_GUARD_WARN_ONLY: "0"` (dopo aver verificato il valore reale del bundle e settato `BUNDLE_MAX_KB` correttamente).
+2. Aggiungere step: `npm run test:edge`, `npm run format:check`, `npm run typecheck:public` (creare gli script mancanti in `package.json`).
+3. Nuovi workflow separati:
+   - `.github/workflows/codeql.yml`
+   - `.github/workflows/secret-scan.yml` (gitleaks)
+   - `.github/workflows/edge-smoke.yml`
+   - `.github/workflows/migration-lint.yml` (squawk o sqlfluff su `supabase/migrations/`)
+   - `dependency-review.yml` esiste già — verificare `fail-on-severity: high`.
 
-- **Agenti / orchestrazione**: `agent-execute/*`, `agent-loop`, `agent-simulate`, `agent-prompt-refiner`, `agentic-decide`, `super-mario/*`, `optimus-analyze`
-- **Email / outreach**: `generate-aliases`, `harmonize-proposal-chat`, `prompt-copilot-chat`, `suggest-email-groups`, `learn-from-group-correction`, `refine-classification-rule`
-- **Funnemail**: `funnemail-auto-route`, `funnemail-classify`, `funnemail-scout-sender`, `simulate-funnemail-classify`, `run-funnemail-eval`
-- **Classificazione inbound**: `classify-inbound-content`, `classify-inbound-message/stages/stageClassifyAi`, `whatsapp-ai-extract`, `refresh-conversation-context`
-- **Enrichment / scraping**: `analyze-partner`, `enrich-partner-website`, `batch-enrichment-worker`, `analyze-import-structure`, `process-ai-import`, `parse-business-card`, `ai-match-business-cards`, `parse-profile-ai`, `sherlock-extract`, `kb-intake-analyze`, `categorize-content`
-- **Altro**: `finder-api-chat`, `prompt-test-runner`, `health-check`, `ai-assistant/memoryContextLoader`, `_shared/messageCompression`
+Rischio: alto sul bundle guard (può rompere PR). Mitigazione: prima misurare baseline reale, poi attivare.
 
-### Fase 3 — Verifica
+## Fase 4 — Edge Function auth audit automatico (+5.500 → 99.300… ma in realtà serve riservare a fasi successive)
 
-1. `bun run typecheck` (CI già attiva).
-2. Deploy delle function modificate.
-3. Smoke test su 3 endpoint critici: `ai-assistant`, `generate-email`, `classify-email-response`.
-4. Lettura log: nessun errore `LOVABLE_API_KEY 402`, presenza di `api.openai.com` nei log gateway.
+Nuovo script `scripts/audit-function-auth.mjs`:
+1. Parsa `supabase/config.toml`.
+2. Per ogni `[functions.X]` con `verify_jwt = false`:
+   - DEVE essere in allowlist hard-coded (health-check, webhook firmati, oauth callback, cron con `x-cron-secret`, extension con `x-extension-key`).
+   - DEVE avere commento `# AUTH:` nel toml.
+   - DEVE avere test in `e2e/public-edge-auth-guards.spec.ts` o test Deno dedicato.
+3. Aggiungere a `package.json`: `"audit:function-auth": "node scripts/audit-function-auth.mjs"`.
+4. Aggiungere step bloccante in CI.
 
-## Cosa NON cambia
+Rischio: basso (read-only audit). Reversibile: sì.
 
-- Editorial review (`journalistReview`) resta obbligatorio e identico.
-- Tool whitelist, hard guards, prompt sanitizer, injection guard restano intatti.
-- Telemetria (`edge_metrics`, `ai_interaction_log`) continua a registrare con lo stesso schema.
-- I prompt operativi non vengono toccati.
-- Nessuna modifica al frontend.
+## Fase 5 — Test coverage 80%+ (+6.000)
 
-## Rischi e mitigazioni
+1. In `vitest.config.ts` impostare thresholds: `statements:80, branches:70, functions:80, lines:80`.
+2. Identificare i file sotto soglia con `vitest run --coverage`.
+3. Aggiungere unit test mirati su: DAL (`src/data/`), business logic (`src/lib/`), hooks critici.
+4. Separare suite:
+   - `vitest` → unit
+   - `e2e/smoke/*` → smoke (già esistente)
+   - `e2e/*.spec.ts` full → nightly
+   - test sicurezza già esistenti (`auth-guard`, `mailbox-access-guard`, `lead-status-guard`) → mantenere in CI obbligatoria
+5. Step CI: `vitest run --coverage` bloccante.
 
-| Rischio | Mitigazione |
-|---|---|
-| Modello mappato su OpenAI con costi diversi | `MODEL_MAP.openai` già definito (gemini-flash → gpt-4o-mini, gemini-pro → gpt-4o) |
-| Campi specifici (`reasoning`, `safety_settings`) rifiutati da OpenAI | Lo shim li droppa silenziosamente |
-| Function in `email-imap-proxy`/`check-inbox`/`mark-imap-seen` | Non toccate (memoria di progetto le protegge) |
-| Tool-calling format leggermente diverso | OpenAI è il riferimento del formato Lovable AI → nessuna differenza pratica |
-| Rate limit OpenAI sulla tua chiave | Lo shim propaga 429/402 con lo stesso codice attuale, niente regressioni |
+Rischio: alto (richiede settimane di lavoro). Suggerimento: target intermedio 70% per chiudere fase, poi ratchet-up.
 
-## Tempi stimati
+## Fase 6 — Spezzare monoliti (+4.500)
 
-- Fase 1 (shim): 1 step.
-- Fase 2 (44 file): 1 sweep parallelo.
-- Fase 3 (verifica): smoke test + log.
+Solo file non critici, uno alla volta, senza toccare submit/cockpit/composer/AI draft:
+- `src/v2/routes.tsx` → split per dominio (public/command/crm/email/ai/settings/legacy).
+- Componenti >500 LOC non critici: `HarmonizeSystemDialog`, etc.
+- Pagine Prompt Lab (non toccano submit).
 
-Totale: una singola sessione, end-to-end senza chiedere conferme intermedie (come da preferenze utente).
+Per ognuno: plan dedicato + E2E pre/post.
 
-## Prerequisito già soddisfatto
+Rischio: alto se applicato ai nodi critici. Vincolo: **mai più di un file per PR**.
 
-- `AI_PROVIDER=openai` ✅
-- `OPENAI_API_KEY` valida ✅ (già corretta nella sessione precedente)
+## Fase 7 — Security hardening completo (+7.000)
+
+1. CodeQL workflow (Fase 3).
+2. Gitleaks workflow (Fase 3).
+3. CSP senza `unsafe-inline` in `src/lib/csp.ts`: spostare a nonce-based + hash. Richiede rimozione di tutti gli inline style/script. **Alto rischio** — fare ultimo.
+4. Audit RLS automatico: script `scripts/audit-rls.mjs` che query `pg_policies` e verifica ownership clauses.
+5. Test RBAC automatici: estendere `e2e/auth-guard.spec.ts`.
+6. Test su ogni funzione service-role: censimento in `_shared/` e wrapper.
+7. Log sanitization: regex check in CI che nessun `log.*` contenga `password`, `token`, `secret`, `cookie`.
+
+## Fase 8 — PWA prudente + Documentazione (+2.500 + 2.000 → 100.000)
+
+PWA:
+1. Verificare `vite.config.ts` — Workbox runtime caching DEVE escludere `*.supabase.co/rest/*`.
+2. Hook logout: pulire `localStorage`, `sessionStorage`, `caches.keys() → delete`, `navigator.serviceWorker.getRegistrations() → unregister`.
+3. Test E2E: `e2e/pwa-offline-fallback.spec.ts` già presente, estendere con logout-cleanup.
+
+Documentazione (`docs/governance/`):
+- `SECURITY.md` (esiste già in root — spostare/aggiornare)
+- `THREAT_MODEL.md`
+- `DATA_MODEL.md`
+- `RBAC_MATRIX.md`
+- `AI_GOVERNANCE.md` (esiste `docs/ai/AI_INVOCATION_CHARTER.md` — estendere)
+- `DEPLOYMENT_CHECKLIST.md`
+- `INCIDENT_RESPONSE.md`
+- `BACKUP_RESTORE.md`
+- `TEST_STRATEGY.md`
+
+## Sequenza esecuzione consigliata
+
+Fasi 1 → 2 → 3 → 4 → 5 (target 70%) → 8-doc → 7 (senza CSP nonce) → 6 → 5 (target 80%+) → 7 (CSP nonce) → 8 PWA finale.
+
+Motivazione: i quick win (1, 3, 4, 8-doc) sbloccano +20.000 punti in pochi giorni. Le fasi pesanti (2, 5, 6, 7-CSP) richiedono settimane e vanno spalmate.
+
+## Cosa serve dall'utente
+
+Prima di partire serve la decisione su:
+
+1. **Scope**: tutte le 8 fasi end-to-end (settimane), oppure solo le quick-win (Fase 1+3+4+8-doc, ~3-4 giorni)?
+2. **Tolleranza ratchet-down debito** (Fase 2): mantenere 4 sprint o accettare baseline finale `{any:50, eslint-disable:10, console:0}` come "98.000-friendly"?
+3. **CSP senza unsafe-inline** (Fase 7): è invasiva su molti componenti shadcn. OK procedere o accettare CSP attuale (-1.000 punti)?
+4. **Esclusioni tsconfig** (Fase 1): i 7 file esclusi vanno riparati o cancellati? Alcuni sembrano feature in pausa (`useCommandSubmit`, `useScenarioFlow`).
+
+Una volta confermati questi 4 punti, parto **end-to-end senza ulteriori conferme** secondo memoria utente.
