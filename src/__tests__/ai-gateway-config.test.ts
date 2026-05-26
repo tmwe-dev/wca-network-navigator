@@ -158,12 +158,12 @@ describe("aiGatewayConfig", () => {
       expect(MODEL_MAP.openai["openai/gpt-5"]).toBe("gpt-4o");
     });
 
-    it("anthropic should map openai/gpt-5 to claude-sonnet-4-20250514", () => {
-      expect(MODEL_MAP.anthropic["openai/gpt-5"]).toBe("claude-sonnet-4-20250514");
+    it("anthropic should map openai/gpt-5 to claude-sonnet-4-5", () => {
+      expect(MODEL_MAP.anthropic["openai/gpt-5"]).toBe("claude-sonnet-4-5");
     });
 
-    it("anthropic should map google/gemini-2.5-flash to claude-haiku-4-20250514", () => {
-      expect(MODEL_MAP.anthropic["google/gemini-2.5-flash"]).toBe("claude-haiku-4-20250514");
+    it("anthropic should map google/gemini-2.5-flash to claude-haiku-4-5", () => {
+      expect(MODEL_MAP.anthropic["google/gemini-2.5-flash"]).toBe("claude-haiku-4-5");
     });
 
     it("google should map google/gemini-2.5-flash to gemini-2.5-flash", () => {
