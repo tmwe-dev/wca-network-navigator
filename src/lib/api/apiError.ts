@@ -1,8 +1,4 @@
 /**
-
-import { createLogger } from "@/lib/log";
-
-const log = createLogger("apiError");
  * apiError — Risposta di errore standardizzata per i contratti API.
  *
  * Vol. II §5.3 "Gestione degli errori nelle API":
@@ -16,6 +12,9 @@ const log = createLogger("apiError");
  * I chiamanti possono fare `instanceof ApiError` e leggere `code`,
  * `httpStatus`, `details` senza parsing di stringhe.
  */
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("apiError");
 
 export type ApiErrorCode =
   | "NETWORK_ERROR"           // Connessione fallita / timeout

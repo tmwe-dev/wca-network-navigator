@@ -1,11 +1,10 @@
 /**
-
-import { createLogger } from "@/lib/log";
-
-const log = createLogger("bulkOps");
  * Marker interno per le entry: in DEV blocca chiamate dirette
  * (chi importa l'entry deve passare dal runner).
  */
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("bulkOps");
 export const BULK_OPS_INTERNAL = Symbol.for("bulkOps.internal");
 
 /**
