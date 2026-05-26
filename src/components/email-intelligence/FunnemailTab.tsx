@@ -20,6 +20,10 @@ import { Settings2, Mail, CheckCircle2, AlertCircle, Clock } from "lucide-react"
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
+
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("FunnemailTab");
 import {
   listFunnemailGroups,
   updateFunnemailGroupPolicy,
@@ -52,8 +56,7 @@ export default function FunnemailTab(): React.ReactElement {
 
   React.useEffect(() => {
     if (groupsError) {
-      // eslint-disable-next-line no-console
-      console.error("[FunnemailTab] listFunnemailGroups failed", groupsError);
+      log.error("[FunnemailTab] listFunnemailGroups failed", { detail: groupsError });
     }
   }, [groupsError]);
 

@@ -1,4 +1,8 @@
 /**
+
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("apiError");
  * apiError — Risposta di errore standardizzata per i contratti API.
  *
  * Vol. II §5.3 "Gestione degli errori nelle API":
@@ -100,7 +104,7 @@ export class ApiError extends Error {
         details = b;
       }
     } catch (_e) {
-      console.debug("operation failed");
+      log.debug("operation failed");
       /* body non JSON o vuoto: lascia il default */
     }
 

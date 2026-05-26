@@ -32,8 +32,7 @@ export function useDeepSearch(): DeepSearchState {
   // non è ancora montato (es. transizioni di mount/HMR). I metodi di
   // mutazione mostrano un warning solo in dev.
   if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
-    console.warn("[useDeepSearch] DeepSearchProvider non montato — uso stub no-op");
+    log.warn("[useDeepSearch] DeepSearchProvider non montato — uso stub no-op");
   }
   return {
     running: false,
