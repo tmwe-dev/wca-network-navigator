@@ -18,9 +18,9 @@ interface Props {
 }
 
 export class PageErrorBoundary extends React.Component<Props, State> {
-  state: State = { hasError: false };
+  override state: State = { hasError: false };
 
-  static override getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
