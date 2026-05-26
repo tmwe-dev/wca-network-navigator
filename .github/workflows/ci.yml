@@ -21,6 +21,7 @@ jobs:
       - run: npx eslint . --max-warnings 0
       - run: npm run debt:check
       - run: npm run audit:security
+      - run: npm run i18n:check
 
   test:
     runs-on: ubuntu-latest
@@ -54,6 +55,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Bundle size guard (warn-only baseline)
+        env:
+          BUNDLE_GUARD_WARN_ONLY: "1"
+          BUNDLE_MAX_KB: "3500"
+        run: npm run bundle:check
       - uses: actions/upload-artifact@v4
         with:
           name: build-output
