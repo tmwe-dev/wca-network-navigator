@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   Plane, Ship, Container, Truck, TrainFront, Package, AlertTriangle,
   Snowflake, Pill, ShoppingCart, Home, FileCheck, Warehouse, Anchor, Box,
@@ -6,7 +7,7 @@ import {
   Wine, Fuel, Car, Sprout, Leaf, Hammer, Microscope, BookOpen, MonitorSmartphone,
 } from "lucide-react";
 
-export const SERVICE_ICONS: Record<string, unknown> = {
+export const SERVICE_ICONS: Record<string, LucideIcon> = {
   air_freight: Plane,
   ocean_fcl: Ship,
   ocean_lcl: Container,
@@ -46,7 +47,7 @@ export const SERVICE_ICONS: Record<string, unknown> = {
   office: Building2,
 };
 
-export const PARTNER_TYPE_ICONS: Record<string, unknown> = {
+export const PARTNER_TYPE_ICONS: Record<string, LucideIcon> = {
   freight_forwarder: Truck,
   customs_broker: FileCheck,
   carrier: Ship,
@@ -71,7 +72,7 @@ export function resolveServiceIcon(label: string) {
   const direct = SERVICE_ICONS[s.replace(/[\s-]+/g, "_")];
   if (direct) return direct;
 
-  const rules: ReadonlyArray<readonly [RegExp, any]> = [
+  const rules: ReadonlyArray<readonly [RegExp, LucideIcon]> = [
     [/\b(air|aer|aviation|cargo aere)/, Plane],
     [/\b(sea|ocean|mare|maritt|marit|fcl|lcl|naval)/, Ship],
     [/\b(port|porto|terminal|banchina)/, Sailboat],
