@@ -22,7 +22,7 @@ describe("ai/agentResponse", () => {
 
     it("ritorna stringa vuota su input vuoto", () => {
       expect(sanitizeVisibleAiText("")).toBe("");
-      expect(sanitizeVisibleAiText(null as unknown)).toBe("");
+      expect(sanitizeVisibleAiText(null as any)).toBe("");
     });
 
     it("collassa più newline consecutivi", () => {
@@ -105,7 +105,7 @@ describe("ai/agentResponse", () => {
 
   describe("dispatchAiUiActions / dispatchAiAgentEffects", () => {
     let dispatched: CustomEvent[] = [];
-    let dispatchSpy: unknown;
+    let dispatchSpy: any;
 
     beforeEach(() => {
       dispatched = [];
@@ -126,7 +126,7 @@ describe("ai/agentResponse", () => {
       ]);
       expect(dispatched).toHaveLength(2);
       expect(dispatched[0].type).toBe("ai-ui-action");
-      expect((dispatched[0] as unknown).detail.action_type).toBe("navigate");
+      expect((dispatched[0] as any).detail.action_type).toBe("navigate");
     });
 
     it("dispatchAiAgentEffects auto-aggiunge start_download_job dal jobCreated", () => {
@@ -144,7 +144,7 @@ describe("ai/agentResponse", () => {
         },
       });
       expect(dispatched).toHaveLength(1);
-      const detail = (dispatched[0] as unknown).detail;
+      const detail = (dispatched[0] as any).detail;
       expect(detail.action_type).toBe("start_download_job");
       expect(detail.job_id).toBe("j99");
     });

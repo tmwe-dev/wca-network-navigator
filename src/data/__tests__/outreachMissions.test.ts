@@ -10,7 +10,7 @@ describe("DAL — outreachMissions", () => {
     expect(exported.length).toBeGreaterThan(0);
     // Key functions should exist
     for (const fn of exported) {
-      expect(typeof (missions as Record<string, unknown>)[fn]).toBe("function");
+      expect(typeof (missions as Record<string, any>)[fn]).toBe("function");
     }
   });
 });

@@ -14,7 +14,7 @@ const _mockSingle = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 
 vi.mock("@/lib/log", () => ({
@@ -82,9 +82,9 @@ type Chain = {
   order: MockFn;
   range: MockFn;
   single: MockFn;
-  then: (resolve: ((value: unknown) => unknown) | null | undefined, reject?: ((reason: unknown) => unknown) | null | undefined) => Promise<unknown>;
+  then: (resolve: ((value: any) => unknown) | null | undefined, reject?: ((reason: any) => unknown) | null | undefined) => Promise<any>;
 };
-function buildChain(terminal: unknown): Chain {
+function buildChain(terminal: any): Chain {
   const chain = {} as Chain;
   const self = () => chain;
   chain.select = vi.fn().mockImplementation(self);

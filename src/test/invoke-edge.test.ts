@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { ApiError, isApiError } from "@/lib/api/apiError";
 
-const invokeMock = supabase.functions.invoke as unknown as ReturnType<typeof vi.fn>;
+const invokeMock = supabase.functions.invoke as any as ReturnType<typeof vi.fn>;
 
 describe("invokeEdge", () => {
   beforeEach(() => {

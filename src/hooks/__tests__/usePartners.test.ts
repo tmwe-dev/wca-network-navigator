@@ -13,7 +13,7 @@ vi.mock("@/data/partners", () => ({
 }));
 vi.mock("@/lib/queryKeys", () => ({
   queryKeys: {
-    partners: { filtered: (f: unknown) => ["partners", f] },
+    partners: { filtered: (f: any) => ["partners", f] },
     partner: (id: string) => ["partner", id],
   },
 }));
@@ -30,7 +30,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("usePartners", () => {
   it("fetches partners list", async () => {
-    vi.mocked(findPartners).mockResolvedValue([{ id: "p1", company_name: "Acme" }] as unknown);
+    vi.mocked(findPartners).mockResolvedValue([{ id: "p1", company_name: "Acme" }] as any);
     const { result } = renderHook(() => usePartners(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toHaveLength(1);
@@ -44,7 +44,7 @@ describe("usePartners", () => {
 
   it("passes filters through", async () => {
     vi.mocked(findPartners).mockResolvedValue([]);
-    renderHook(() => usePartners({ country: "IT" } as unknown), { wrapper });
+    renderHook(() => usePartners({ country: "IT" } as any), { wrapper });
     await waitFor(() => expect(findPartners).toHaveBeenCalledWith({ country: "IT" }));
   });
 
@@ -57,7 +57,7 @@ describe("usePartners", () => {
 
 describe("usePartner", () => {
   it("fetches single partner by id", async () => {
-    vi.mocked(getPartner).mockResolvedValue({ id: "p1", company_name: "Acme" } as unknown);
+    vi.mocked(getPartner).mockResolvedValue({ id: "p1", company_name: "Acme" } as any);
     const { result } = renderHook(() => usePartner("p1"), { wrapper });
     await waitFor(() => expect(result.current.data?.company_name).toBe("Acme"));
   });

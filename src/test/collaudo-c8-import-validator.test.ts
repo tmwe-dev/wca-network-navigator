@@ -200,7 +200,7 @@ describe("Collaudo C1 — applyTransformation", () => {
   });
 
   it("C1.T8 — unknown transformation returns trimmed value", () => {
-    expect(applyTransformation("  hello  ", "unknown" as unknown)).toBe("hello");
+    expect(applyTransformation("  hello  ", "unknown" as any)).toBe("hello");
   });
 
   it("C1.T9 — empty input returns empty string", () => {
@@ -208,8 +208,8 @@ describe("Collaudo C1 — applyTransformation", () => {
   });
 
   it("C1.T10 — null/undefined input returns empty string", () => {
-    expect(applyTransformation(null as unknown, "trim")).toBe("");
-    expect(applyTransformation(undefined as unknown, "trim")).toBe("");
+    expect(applyTransformation(null as any, "trim")).toBe("");
+    expect(applyTransformation(undefined as any, "trim")).toBe("");
   });
 });
 

@@ -11,10 +11,10 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
       insert: mockInsert,
-      select: (...args: unknown[]) => {
+      select: (...args: any[]) => {
         mockSelect(...args);
         return {
-          eq: (...eqArgs: unknown[]) => {
+          eq: (...eqArgs: any[]) => {
             mockEq(...eqArgs);
             return { count: 5, error: null };
           },

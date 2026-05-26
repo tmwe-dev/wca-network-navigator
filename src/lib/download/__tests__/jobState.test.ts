@@ -22,7 +22,7 @@ describe("jobState", () => {
 
   it("claimJob returns false when job is already claimed", async () => {
     const { claimDownloadJob } = await import("@/data/downloadJobs");
-    (claimDownloadJob as unknown).mockResolvedValueOnce(false);
+    (claimDownloadJob as any).mockResolvedValueOnce(false);
     const { claimJob } = await import("@/lib/download/jobState");
     const result = await claimJob("job-456");
     expect(result).toBe(false);
@@ -30,7 +30,7 @@ describe("jobState", () => {
 
   it("updateItem increments attempt_count", async () => {
     const { getJobItemById, updateJobItem } = await import("@/data/downloadJobs");
-    (getJobItemById as unknown).mockResolvedValueOnce({ attempt_count: 2 });
+    (getJobItemById as any).mockResolvedValueOnce({ attempt_count: 2 });
     const { updateItem } = await import("@/lib/download/jobState");
     await updateItem("item-1", "success");
     expect(updateJobItem).toHaveBeenCalled();

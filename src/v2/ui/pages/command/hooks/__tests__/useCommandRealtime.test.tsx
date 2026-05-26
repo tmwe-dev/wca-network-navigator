@@ -13,9 +13,9 @@ const getSession = vi.fn().mockResolvedValue({
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getSession: (...a: unknown[]) => getSession(...a) },
+    auth: { getSession: (...a: any[]) => getSession(...a) },
     channel: vi.fn(() => channelMock),
-    removeChannel: (c: unknown) => removeChannel(c),
+    removeChannel: (c: any) => removeChannel(c),
   },
 }));
 
@@ -27,7 +27,7 @@ describe("useCommandRealtime", () => {
     channelMock.on.mockClear();
     channelMock.subscribe.mockClear();
     removeChannel.mockClear();
-    (supabase.channel as unknown as ReturnType<typeof vi.fn>).mockClear();
+    (supabase.channel as any as ReturnType<typeof vi.fn>).mockClear();
   });
 
   it("subscribes to the command_live channel with 5 listeners", async () => {
@@ -56,7 +56,7 @@ describe("useCommandRealtime", () => {
 
   it("does not subscribe when there is no authenticated user", async () => {
     getSession.mockResolvedValueOnce({ data: { session: null }, error: null });
-    (supabase.channel as unknown as ReturnType<typeof vi.fn>).mockClear();
+    (supabase.channel as any as ReturnType<typeof vi.fn>).mockClear();
     renderHook(() => useCommandRealtime());
     await new Promise((r) => setTimeout(r, 30));
     expect(supabase.channel).not.toHaveBeenCalled();

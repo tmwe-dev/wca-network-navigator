@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockSendLinkedIn = vi.fn();
 vi.mock("@/lib/inbox/sendMessage", () => ({
-  sendLinkedIn: (...args: unknown[]) => mockSendLinkedIn(...args),
+  sendLinkedIn: (...args: any[]) => mockSendLinkedIn(...args),
 }));
 
 vi.mock("@/lib/linkedinSearch", () => ({
@@ -20,7 +20,7 @@ const mockSupabaseFrom = vi.fn().mockReturnValue({ insert: mockSupabaseInsert })
 const mockGetSession = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...args: unknown[]) => mockSupabaseFrom(...args),
+    from: (...args: any[]) => mockSupabaseFrom(...args),
     auth: { getSession: () => mockGetSession() },
   },
 }));

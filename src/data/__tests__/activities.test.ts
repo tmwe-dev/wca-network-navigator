@@ -14,7 +14,7 @@ const mockOr = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 vi.mock("@/lib/queryKeys", () => ({
   queryKeys: { activities: { all: ["activities"] } },

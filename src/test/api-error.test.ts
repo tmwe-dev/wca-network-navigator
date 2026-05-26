@@ -84,7 +84,7 @@ describe("ApiError", () => {
   });
 
   describe("ApiError.fromResponse", () => {
-    function mockResponse(status: number, body?: unknown): Response {
+    function mockResponse(status: number, body?: any): Response {
       const json = body !== undefined ? JSON.stringify(body) : "";
       return new Response(json, {
         status,

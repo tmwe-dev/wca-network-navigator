@@ -4,7 +4,7 @@ import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const mockIsNull = vi.fn();
 const mockEqDir = vi.fn().mockReturnValue({
-  is: (...a: unknown[]) => {
+  is: (...a: any[]) => {
     mockIsNull(...a);
     return { count: 3, error: null };
   },

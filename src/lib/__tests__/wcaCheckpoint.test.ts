@@ -5,7 +5,7 @@ vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(
 
 describe("wcaCheckpoint", () => {
   beforeEach(() => {
-    delete (window as unknown).__wcaCheckpoint__;
+    delete (window as any).__wcaCheckpoint__;
     setGreenZoneDelay(20);
   });
 

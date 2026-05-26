@@ -4,21 +4,21 @@ const mockFrom = vi.fn();
 const mockUntypedFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: unknown[]) => mockUntypedFrom(...a),
+  untypedFrom: (...a: any[]) => mockUntypedFrom(...a),
 }));
 
 import { findEmailAddressRules, updateEmailAddressRule } from "@/data/emailAddressRules";
 
-function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
-  const c: Record<string, unknown> = {};
+function chain(terminal: { data?: any; error?: any } = { data: [], error: null }) {
+  const c: Record<string, any> = {};
   c.select = vi.fn().mockReturnValue(c);
   c.eq = vi.fn().mockReturnValue(c);
   c.order = vi.fn().mockReturnValue(c);
   c.update = vi.fn().mockReturnValue(c);
-  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }
 

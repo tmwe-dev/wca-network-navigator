@@ -5,20 +5,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockFrom = vi.fn();
-let mockActivitiesResult: { data: unknown; error: unknown };
-let mockChannelsResult: { data: unknown; error: unknown };
-let mockPartnersResult: { data: unknown; error: unknown };
-let mockDealsResult: { data: unknown; error: unknown };
-let mockLogsResult: { data: unknown; error: unknown };
+let mockActivitiesResult: { data: any; error: any };
+let mockChannelsResult: { data: any; error: any };
+let mockPartnersResult: { data: any; error: any };
+let mockDealsResult: { data: any; error: any };
+let mockLogsResult: { data: any; error: any };
 
-const chainBuilder = (result: () => { data: unknown; error: unknown }) => {
+const chainBuilder = (result: () => { data: any; error: any }) => {
   const b: Record<string, any> = {};
   b.select = vi.fn().mockReturnValue(b);
   b.eq = vi.fn().mockReturnValue(b);
   b.gte = vi.fn().mockReturnValue(b);
   b.lte = vi.fn().mockReturnValue(b);
   b.is = vi.fn().mockReturnValue(b);
-  b.then = (resolve: unknown) => resolve(result());
+  b.then = (resolve: any) => resolve(result());
   return b;
 };
 
@@ -44,7 +44,7 @@ vi.mock("@/integrations/supabase/client", () => ({
       };
       // Make the builder itself thenable (await resolves to result)
       Object.defineProperty(b, "then", {
-        value: (resolve: unknown) => Promise.resolve(getResult()).then(resolve),
+        value: (resolve: any) => Promise.resolve(getResult()).then(resolve),
         writable: true,
       });
       return b;
@@ -60,7 +60,7 @@ vi.mock("@/lib/typedSupabase", () => ({
     b.gte = vi.fn().mockReturnValue(b);
     b.lte = vi.fn().mockReturnValue(b);
     Object.defineProperty(b, "then", {
-      value: (resolve: unknown) => {
+      value: (resolve: any) => {
         const result = table === "deals" ? mockDealsResult : mockLogsResult;
         return Promise.resolve(result).then(resolve);
       },

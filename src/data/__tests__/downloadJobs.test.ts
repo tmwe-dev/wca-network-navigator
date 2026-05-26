@@ -5,7 +5,7 @@ const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
 import { findDownloadJobs, getDownloadJob, findActiveJobs as _findActiveJobs } from "@/data/downloadJobs";
 void _findActiveJobs;
 describe("DAL — downloadJobs", () => {

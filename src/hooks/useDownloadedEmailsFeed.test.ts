@@ -13,13 +13,13 @@ const mockOrder1 = vi.fn().mockReturnValue({ order: mockOrder2 });
 const mockEq = vi.fn().mockReturnValue({ order: mockOrder1 });
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
 
-const channelSubs: Array<{ callback: (payload: unknown) => void }> = [];
+const channelSubs: Array<{ callback: (payload: any) => void }> = [];
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => ({ select: (...a: unknown[]) => mockSelect(...a) }),
+    from: () => ({ select: (...a: any[]) => mockSelect(...a) }),
     channel: () => ({
-      on: (_: string, __: unknown, cb: (payload: unknown) => void) => {
+      on: (_: string, __: any, cb: (payload: any) => void) => {
         channelSubs.push({ callback: cb });
         return { subscribe: vi.fn().mockReturnThis(), on: vi.fn().mockReturnThis() };
       },

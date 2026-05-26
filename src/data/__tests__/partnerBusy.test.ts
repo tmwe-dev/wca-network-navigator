@@ -3,16 +3,16 @@ import { describe, it, expect, vi } from "vitest";
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: unknown[]) => mockFrom(...a),
+  untypedFrom: (...a: any[]) => mockFrom(...a),
 }));
 
 import { findBusyPartnerIds, findBusyPartnerRows } from "@/data/partnerBusy";
 
-function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
-  const c: Record<string, unknown> = {};
+function chain(terminal: { data?: any; error?: any } = { data: [], error: null }) {
+  const c: Record<string, any> = {};
   c.select = vi.fn().mockReturnValue(c);
   c.in = vi.fn().mockReturnValue(c);
-  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }
 

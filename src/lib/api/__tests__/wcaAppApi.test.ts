@@ -25,11 +25,11 @@ beforeEach(() => {
 
 import { wcaScrape, wcaCheckIds, wcaSave, wcaJobStatus, wcaVerify } from "@/lib/api/wcaAppApi";
 
-function okJson(body: unknown) {
+function okJson(body: any) {
   return { ok: true, status: 200, json: async () => body, clone: () => ({ json: async () => body }) };
 }
 
-function errorResponse(status: number, body?: unknown) {
+function errorResponse(status: number, body?: any) {
   const json = body ? JSON.stringify(body) : "{}";
   return new Response(json, { status, headers: { "Content-Type": "application/json" } });
 }

@@ -4,7 +4,7 @@ const mockDelete = vi.fn();
 const mockEq = vi.fn();
 const mockOrder = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
 vi.mock("@/lib/queryKeys", () => ({ queryKeys: { v2: { kbEntries: () => ["v2", "kbEntries"] } } }));
 import { findKbEntries, countKbEntries, deleteKbEntry } from "@/data/kbEntries";
 describe("DAL — kbEntries", () => {

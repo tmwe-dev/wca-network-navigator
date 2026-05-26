@@ -7,13 +7,13 @@ const mockUpdate = vi.fn();
 const mockUpdateEq = vi.fn().mockReturnValue({ error: null });
 
 vi.mock("@/lib/checkInbox", () => ({
-  callCheckInbox: (...args: unknown[]) => mockCallCheckInbox(...args),
+  callCheckInbox: (...args: any[]) => mockCallCheckInbox(...args),
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      update: (...a: unknown[]) => {
+      update: (...a: any[]) => {
         mockUpdate(...a);
         return { eq: mockUpdateEq };
       },

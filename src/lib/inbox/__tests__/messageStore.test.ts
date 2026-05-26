@@ -3,7 +3,7 @@ import { mergeMessages, prependMessage, countUnread } from "@/lib/inbox/messageS
 import type { ChannelMessage } from "@/lib/inbox/types";
 
 const msg = (id: string, created_at: string, read_at: string | null = null) =>
-  ({ id, created_at, read_at, message_id_external: null, channel: "email", direction: "inbound", user_id: "u1" }) as unknown as ChannelMessage<"email">;
+  ({ id, created_at, read_at, message_id_external: null, channel: "email", direction: "inbound", user_id: "u1" }) as any as ChannelMessage<"email">;
 
 describe("mergeMessages", () => {
   it("merges two lists and deduplicates by id", () => {

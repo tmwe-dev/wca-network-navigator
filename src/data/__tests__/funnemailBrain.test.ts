@@ -3,7 +3,7 @@ const mockSelect = vi.fn();
 const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
 import { listFunnemailBrain } from "@/data/funnemailBrain";
 describe("DAL — funnemailBrain", () => {
   beforeEach(() => {

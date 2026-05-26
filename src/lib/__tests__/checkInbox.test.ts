@@ -46,7 +46,7 @@ describe("callCheckInbox", () => {
 
   it("deduplicates overlapping invocations", async () => {
     vi.mocked(invokeEdge).mockClear();
-    let resolveInvoke: (value: unknown) => void = () => undefined;
+    let resolveInvoke: (value: any) => void = () => undefined;
     vi.mocked(invokeEdge).mockImplementationOnce(() => new Promise((resolve) => { resolveInvoke = resolve; }));
 
     const first = callCheckInbox();

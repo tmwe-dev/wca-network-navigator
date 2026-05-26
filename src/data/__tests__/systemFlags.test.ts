@@ -4,7 +4,7 @@ const mockEq = vi.fn();
 const mockOrder = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
 import { getCronPaused, listSystemFlags } from "@/data/systemFlags";
 describe("DAL — systemFlags", () => {
   beforeEach(() => {

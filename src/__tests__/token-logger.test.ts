@@ -146,24 +146,24 @@ describe("tokenLogger", () => {
             })),
           })),
         })),
-      } as unknown as MockSupabaseClient;
+      } as any as MockSupabaseClient;
     });
 
     /** Build a mock supabase that chains: from().select().eq().eq().maybeSingle() */
-    function buildMockSupabase(maybeSingleResult: unknown) {
+    function buildMockSupabase(maybeSingleResult: any) {
       const mockMaybeSingle = vi.fn().mockResolvedValue(maybeSingleResult);
       const mockEq2 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
       const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
       const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
       const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-      return { from: mockFrom } as unknown as MockSupabaseClient;
+      return { from: mockFrom } as any as MockSupabaseClient;
     }
 
     it("should return default value when no setting is found", async () => {
       const supabase = buildMockSupabase({ data: null, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase as unknown,
+        supabase as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -176,7 +176,7 @@ describe("tokenLogger", () => {
       const supabase = buildMockSupabase({ data: { value: "2048" }, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase as unknown,
+        supabase as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -189,7 +189,7 @@ describe("tokenLogger", () => {
       const supabase = buildMockSupabase({ data: { value: "not-a-number" }, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase as unknown,
+        supabase as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -202,7 +202,7 @@ describe("tokenLogger", () => {
       const supabaseZero = buildMockSupabase({ data: { value: "0" }, error: null });
 
       const resultZero = await getMaxTokensForFunction(
-        supabaseZero as unknown,
+        supabaseZero as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -214,7 +214,7 @@ describe("tokenLogger", () => {
       const supabaseNeg = buildMockSupabase({ data: { value: "-100" }, error: null });
 
       const resultNeg = await getMaxTokensForFunction(
-        supabaseNeg as unknown,
+        supabaseNeg as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -227,7 +227,7 @@ describe("tokenLogger", () => {
       const supabase = buildMockSupabase({ data: null, error: new Error("Query failed") });
 
       const result = await getMaxTokensForFunction(
-        supabase as unknown,
+        supabase as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -243,10 +243,10 @@ describe("tokenLogger", () => {
       const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
       const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
       const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-      const supabase = { from: mockFrom } as unknown as MockSupabaseClient;
+      const supabase = { from: mockFrom } as any as MockSupabaseClient;
 
       const result = await getMaxTokensForFunction(
-        supabase as unknown,
+        supabase as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -259,7 +259,7 @@ describe("tokenLogger", () => {
       const supabase = buildMockSupabase({ data: { value: "8192" }, error: null });
 
       const result = await getMaxTokensForFunction(
-        supabase as unknown,
+        supabase as any,
         "user-123",
         "ai_max_tokens_generate_email",
         4096,
@@ -281,7 +281,7 @@ describe("tokenLogger", () => {
       ];
 
       for (const key of keys) {
-        const result = await getMaxTokensForFunction(supabase as unknown, "user-123", key, 4096);
+        const result = await getMaxTokensForFunction(supabase as any, "user-123", key, 4096);
         expect(result).toBe(1024);
       }
     });
@@ -293,7 +293,7 @@ describe("tokenLogger", () => {
 
       for (const defaultVal of defaults) {
         const result = await getMaxTokensForFunction(
-          supabase as unknown,
+          supabase as any,
           "user-123",
           "ai_max_tokens_generate_email",
           defaultVal,
@@ -315,7 +315,7 @@ describe("tokenLogger", () => {
         const supabase = buildMockSupabase({ data: { value: testCase.value }, error: null });
 
         const result = await getMaxTokensForFunction(
-          supabase as unknown,
+          supabase as any,
           "user-123",
           "ai_max_tokens_generate_email",
           4096,

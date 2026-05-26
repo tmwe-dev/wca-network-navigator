@@ -4,11 +4,11 @@ import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const mockInvokeEdge = vi.fn();
 vi.mock("@/lib/api/invokeEdge", () => ({
-  invokeEdge: (...args: unknown[]) => mockInvokeEdge(...args),
+  invokeEdge: (...args: any[]) => mockInvokeEdge(...args),
 }));
 
 vi.mock("@/lib/api/apiError", () => ({
-  isApiError: (e: unknown) => e instanceof Error && "code" in e,
+  isApiError: (e: any) => e instanceof Error && "code" in e,
   ApiError: class extends Error { code = "TEST"; },
 }));
 
@@ -40,7 +40,7 @@ describe("useOutreachGenerator", () => {
     mockInvokeEdge.mockResolvedValue(outreach);
 
     const { result } = renderHookWithProviders(() => useOutreachGenerator());
-    let generated: unknown;
+    let generated: any;
     await act(async () => {
       generated = await result.current.generate({
         channel: "email",
@@ -58,7 +58,7 @@ describe("useOutreachGenerator", () => {
     const { toast } = await import("@/hooks/use-toast");
 
     const { result } = renderHookWithProviders(() => useOutreachGenerator());
-    let generated: unknown;
+    let generated: any;
     await act(async () => {
       generated = await result.current.generate({
         channel: "email",
@@ -73,10 +73,10 @@ describe("useOutreachGenerator", () => {
 
   it("returns null when channel is empty", async () => {
     const { result } = renderHookWithProviders(() => useOutreachGenerator());
-    let generated: unknown;
+    let generated: any;
     await act(async () => {
       generated = await result.current.generate({
-        channel: "" as unknown,
+        channel: "" as any,
         contact_name: "X",
         company_name: "Y",
       });
@@ -98,7 +98,7 @@ describe("useOutreachGenerator", () => {
   it("handles error in response body", async () => {
     mockInvokeEdge.mockResolvedValue({ error: "Credit limit exceeded" });
     const { result } = renderHookWithProviders(() => useOutreachGenerator());
-    let generated: unknown;
+    let generated: any;
     await act(async () => {
       generated = await result.current.generate({ channel: "email", contact_name: "A", company_name: "B" });
     });

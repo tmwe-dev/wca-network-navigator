@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 
 // Helper to get all query keys from queryKeys object
-function _getAllQueryKeys(obj: Record<string, unknown>, path: string[] = []): string[][] {
+function _getAllQueryKeys(obj: Record<string, any>, path: string[] = []): string[][] {
   const keys: string[][] = [];
 
   for (const [key, value] of Object.entries(obj)) {
@@ -18,7 +18,7 @@ function _getAllQueryKeys(obj: Record<string, unknown>, path: string[] = []): st
     } else if (typeof value === "function" || (typeof value === "object" && value !== null && !Array.isArray(value))) {
       // Recurse into nested objects
       if (typeof value === "object" && !Array.isArray(value)) {
-        keys.push(..._getAllQueryKeys(value as Record<string, unknown>, currentPath));
+        keys.push(..._getAllQueryKeys(value as Record<string, any>, currentPath));
       }
     }
   }
@@ -32,7 +32,7 @@ const testQueryKeys = {
   dealsList: ["deals-list"] as const,
   deals: {
     all: ["deals"] as const,
-    filtered: (filters?: Record<string, unknown>) => ["deals", "filtered", filters] as const,
+    filtered: (filters?: Record<string, any>) => ["deals", "filtered", filters] as const,
     byStage: ["deals-by-stage"] as const,
   },
   deal: (id: string) => ["deal", id] as const,
@@ -44,7 +44,7 @@ const testQueryKeys = {
 
   // ── Notifications ──
   notifications: {
-    list: (filters?: unknown) => ["notifications", filters] as const,
+    list: (filters?: any) => ["notifications", filters] as const,
     unreadCount: ["notifications-unread-count"] as const,
   },
 
@@ -64,8 +64,8 @@ const testQueryKeys = {
   // ── Contacts ──
   contacts: {
     all: ["contacts"] as const,
-    imported: (filters?: unknown) => ["imported-contacts", filters] as const,
-    paginated: (...args: unknown[]) => ["contacts-paginated", ...args] as const,
+    imported: (filters?: any) => ["imported-contacts", filters] as const,
+    paginated: (...args: any[]) => ["contacts-paginated", ...args] as const,
   },
 
   // ── Contact Merge ──
@@ -86,21 +86,21 @@ const testQueryKeys = {
   // ── Partners ──
   partners: {
     all: ["partners"] as const,
-    filtered: (filters?: Record<string, unknown>) => ["partners", filters] as const,
+    filtered: (filters?: Record<string, any>) => ["partners", filters] as const,
   },
 
   // ── Activities ──
   activities: {
     all: ["activities"] as const,
     today: ["today-activities"] as const,
-    outreach: (filters?: unknown) => ["activities-outreach", filters] as const,
+    outreach: (filters?: any) => ["activities-outreach", filters] as const,
   },
 
   // ── Email ──
   email: {
     count: ["email-count"] as const,
     templates: ["email-templates"] as const,
-    drafts: (filters?: unknown) => ["email-drafts", filters] as const,
+    drafts: (filters?: any) => ["email-drafts", filters] as const,
   },
 } as const;
 

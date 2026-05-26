@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const created: Array<Record<string, unknown>> = [];
-const updated: Array<Record<string, unknown>> = [];
-const events: Array<Record<string, unknown>> = [];
+const created: Array<Record<string, any>> = [];
+const updated: Array<Record<string, any>> = [];
+const events: Array<Record<string, any>> = [];
 
 vi.mock("@/data/bulkJobs", () => ({
-  createBulkJob: vi.fn(async (input: Record<string, unknown>) => {
+  createBulkJob: vi.fn(async (input: Record<string, any>) => {
     const row = { id: "job-1", ...input };
     created.push(row);
     return row;
   }),
-  updateBulkJob: vi.fn(async (id: string, patch: Record<string, unknown>) => {
+  updateBulkJob: vi.fn(async (id: string, patch: Record<string, any>) => {
     updated.push({ id, ...patch });
   }),
-  appendBulkJobEvent: vi.fn(async (jobId: string, ev: string, payload: Record<string, unknown>) => {
+  appendBulkJobEvent: vi.fn(async (jobId: string, ev: string, payload: Record<string, any>) => {
     events.push({ jobId, ev, payload });
   }),
   getBulkJob: vi.fn(),

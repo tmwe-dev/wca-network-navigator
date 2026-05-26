@@ -4,7 +4,7 @@ const mockGte = vi.fn();
 const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: unknown[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
 import { fetchEmailSendLogStats } from "@/data/emailSendLog";
 describe("DAL — emailSendLog", () => {
   beforeEach(() => {

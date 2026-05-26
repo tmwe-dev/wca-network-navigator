@@ -12,7 +12,7 @@ const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => ({ select: (...a: unknown[]) => mockSelect(...a) }),
+    from: () => ({ select: (...a: any[]) => mockSelect(...a) }),
   },
 }));
 

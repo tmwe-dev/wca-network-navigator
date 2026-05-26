@@ -17,7 +17,7 @@ import { describe, it, expect } from "vitest";
 
 interface PendingAction {
   status: string;
-  action_payload: Record<string, unknown>;
+  action_payload: Record<string, any>;
   action_type: string;
   source: string;
 }
@@ -225,7 +225,7 @@ describe("Collaudo C6 — scheduleNextStep Context", () => {
     currentChannel: string,
     currentStep: number,
     sequenceLength: number
-  ): Record<string, unknown> {
+  ): Record<string, any> {
     return {
       partner_id: "uuid-123",
     };
@@ -236,7 +236,7 @@ describe("Collaudo C6 — scheduleNextStep Context", () => {
     currentChannel: string,
     currentStep: number,
     sequenceLength: number
-  ): Record<string, unknown> {
+  ): Record<string, any> {
     return {
       partner_id: "uuid-123",
       cadence_context: {
@@ -256,7 +256,7 @@ describe("Collaudo C6 — scheduleNextStep Context", () => {
   it("C6.19 — correct: nextStep has cadence_context with previous info", () => {
     const meta = simulateCorrectNextStep("email", 0, 3);
     expect(meta).toHaveProperty("cadence_context");
-    const ctx = meta.cadence_context as Record<string, unknown>;
+    const ctx = meta.cadence_context as Record<string, any>;
     expect(ctx.previous_channel).toBe("email");
     expect(ctx.previous_step).toBe(0);
     expect(ctx.sequence_position).toBe("2/3");

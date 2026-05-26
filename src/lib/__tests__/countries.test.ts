@@ -30,8 +30,8 @@ describe("getCountryFlag", () => {
     expect(getCountryFlag("A")).toBe("🌍");
   });
   it("returns globe for null-ish input", () => {
-    expect(getCountryFlag(null as unknown as string)).toBe("🌍");
-    expect(getCountryFlag(undefined as unknown as string)).toBe("🌍");
+    expect(getCountryFlag(null as any as string)).toBe("🌍");
+    expect(getCountryFlag(undefined as any as string)).toBe("🌍");
   });
 });
 

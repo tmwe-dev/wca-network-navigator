@@ -12,7 +12,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: () => ({
       insert: mockInsert,
       delete: () => ({
-        eq: (...args: unknown[]) => {
+        eq: (...args: any[]) => {
           mockEq(...args);
           return mockDelete();
         },

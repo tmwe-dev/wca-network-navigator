@@ -12,7 +12,7 @@ import {
 // Mock supabase client
 const mockFrom = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
@@ -39,7 +39,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTodayUsage("user123");
 
@@ -55,7 +55,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTodayUsage("user123");
 
@@ -69,7 +69,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTodayUsage("user123");
 
@@ -83,7 +83,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTodayUsage("user123");
 
@@ -100,7 +100,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTodayUsage("user123");
 
@@ -118,7 +118,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getMonthUsage("user123");
 
@@ -134,7 +134,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getMonthUsage("user123");
 
@@ -148,7 +148,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getMonthUsage("user123");
 
@@ -172,7 +172,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getUsageByFunction("user123", 7);
 
@@ -191,7 +191,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       await getUsageByFunction("user123", 30);
 
@@ -205,7 +205,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getUsageByFunction("user123");
 
@@ -219,7 +219,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getUsageByFunction("user123");
 
@@ -240,7 +240,7 @@ describe("Token Usage Functions", () => {
         gte: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getUsageByFunction("user123");
 
@@ -265,7 +265,7 @@ describe("Token Usage Functions", () => {
         in: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTokenSettings("user123");
 
@@ -285,7 +285,7 @@ describe("Token Usage Functions", () => {
         in: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTokenSettings("user123");
 
@@ -304,7 +304,7 @@ describe("Token Usage Functions", () => {
         in: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTokenSettings("user123");
 
@@ -321,7 +321,7 @@ describe("Token Usage Functions", () => {
         in: vi.fn().mockResolvedValue({ data: null, error: new Error("DB error") }),
       };
 
-      mockFrom.mockReturnValue(mockChain as unknown);
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await getTokenSettings("user123");
 
@@ -346,7 +346,7 @@ describe("Token Usage Functions", () => {
         update: vi.fn().mockReturnValue({ eq: mockEq1 }),
       };
 
-      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainUpdate as unknown);
+      mockFrom.mockReturnValueOnce(mockChainCheck as any).mockReturnValueOnce(mockChainUpdate as any);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).resolves.not.toThrow();
       expect(mockChainUpdate.update).toHaveBeenCalledWith({ value: "5000" });
@@ -363,7 +363,7 @@ describe("Token Usage Functions", () => {
         insert: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainInsert as unknown);
+      mockFrom.mockReturnValueOnce(mockChainCheck as any).mockReturnValueOnce(mockChainInsert as any);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).resolves.not.toThrow();
       expect(mockChainInsert.insert).toHaveBeenCalledWith({
@@ -388,7 +388,7 @@ describe("Token Usage Functions", () => {
         update: vi.fn().mockReturnValue({ eq: mockEq1 }),
       };
 
-      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainUpdate as unknown);
+      mockFrom.mockReturnValueOnce(mockChainCheck as any).mockReturnValueOnce(mockChainUpdate as any);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).rejects.toThrow("Update failed");
     });
@@ -406,7 +406,7 @@ describe("Token Usage Functions", () => {
         insert: vi.fn().mockResolvedValue({ error: dbError }),
       };
 
-      mockFrom.mockReturnValueOnce(mockChainCheck as unknown).mockReturnValueOnce(mockChainInsert as unknown);
+      mockFrom.mockReturnValueOnce(mockChainCheck as any).mockReturnValueOnce(mockChainInsert as any);
 
       await expect(updateTokenSetting("user123", "ai_daily_token_limit", "5000")).rejects.toThrow("Insert failed");
     });

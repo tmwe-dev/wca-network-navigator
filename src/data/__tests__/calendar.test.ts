@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: unknown[]) => mockFrom(...a),
+  untypedFrom: (...a: any[]) => mockFrom(...a),
 }));
 vi.mock("@/lib/queryKeys", () => ({
   queryKeys: { calendar: "calendar" },
@@ -18,8 +18,8 @@ import {
   getEventsForPartner,
 } from "@/data/calendar";
 
-function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
-  const c: Record<string, unknown> = {};
+function chain(terminal: { data?: any; error?: any } = { data: [], error: null }) {
+  const c: Record<string, any> = {};
   c.select = vi.fn().mockReturnValue(c);
   c.eq = vi.fn().mockReturnValue(c);
   c.gte = vi.fn().mockReturnValue(c);
@@ -31,7 +31,7 @@ function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error
   c.insert = vi.fn().mockReturnValue(c);
   c.update = vi.fn().mockReturnValue(c);
   c.delete = vi.fn().mockReturnValue(c);
-  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }
 

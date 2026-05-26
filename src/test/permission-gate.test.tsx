@@ -24,7 +24,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="create_user">
@@ -40,7 +40,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="create_user">
@@ -56,7 +56,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="delete_user">
@@ -72,7 +72,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="delete_user" fallback={<div>Access Denied</div>}>
@@ -89,7 +89,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: true,
         error: null,
-      } as unknown);
+      } as any);
 
       const { container } = render(
         <PermissionGate permission="create_user">
@@ -107,7 +107,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="specific_permission">
@@ -123,7 +123,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="view_dashboard">
@@ -143,7 +143,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       const CustomFallback = () => <div>Custom Fallback Message</div>;
 
@@ -163,12 +163,12 @@ describe("PermissionGate Component", () => {
           hasPermission: true,
           isLoading: false,
           error: null,
-        } as unknown)
+        } as any)
         .mockReturnValueOnce({
           hasPermission: false,
           isLoading: false,
           error: null,
-        } as unknown);
+        } as any);
 
       render(
         <PermissionGate permission="perm1">
@@ -190,7 +190,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       const { rerender: rerenderComponent } = render(
         <PermissionGate permission="test_perm">
@@ -204,7 +204,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       rerenderComponent(
         <PermissionGate permission="test_perm">
@@ -220,7 +220,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       const { container } = render(
         <PermissionGate permission="create_user">
@@ -237,7 +237,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       const { container } = render(
         <PermissionGate permission="sensitive_action">
@@ -256,7 +256,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <RequirePermission permission="edit_users">
@@ -272,7 +272,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <RequirePermission permission="edit_users">
@@ -288,7 +288,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: true,
         error: null,
-      } as unknown);
+      } as any);
 
       const { container } = render(
         <RequirePermission permission="edit_users">
@@ -305,7 +305,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <RequirePermission permission="test_permission">
@@ -322,7 +322,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       const TestComponent = () => <span>Rendered</span>;
 
@@ -342,7 +342,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="perm:scope/action">
@@ -359,7 +359,7 @@ describe("PermissionGate Component", () => {
         hasPermission: false,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       render(
         <PermissionGate permission="test" fallback="">
@@ -375,7 +375,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       const { container } = render(
         <PermissionGate permission="test">
@@ -391,7 +391,7 @@ describe("PermissionGate Component", () => {
         hasPermission: true,
         isLoading: false,
         error: null,
-      } as unknown);
+      } as any);
 
       const { rerender } = render(
         <PermissionGate permission="test_perm">

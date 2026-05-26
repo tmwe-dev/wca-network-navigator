@@ -13,7 +13,7 @@ const _mockLte = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 
 vi.mock("@/lib/log", () => ({
@@ -59,7 +59,7 @@ const mockActivityLogs = [
 /** Build a chainable mock that terminates at the given method with the given resolved value. */
 function buildChain(
   terminator: string,
-  resolvedValue: { data: unknown; error: unknown },
+  resolvedValue: { data: any; error: any },
   methods: string[] = ["select", "eq", "is", "gte", "lte"],
 ) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -158,7 +158,7 @@ describe("Analytics Data Layer", () => {
   // ─── getPartnerMetrics Tests ────────────────────────────
   describe("getPartnerMetrics", () => {
     // getPartnerMetrics chain: .from("partners").select(...).is("deleted_at", null)
-    function partnerChain(resolvedValue: { data: unknown; error: unknown }) {
+    function partnerChain(resolvedValue: { data: any; error: any }) {
       return buildChain("is", resolvedValue, ["select", "is"]);
     }
 
@@ -311,7 +311,7 @@ describe("Analytics Data Layer", () => {
   // ─── getActivityTimeline Tests ──────────────────────────
   describe("getActivityTimeline", () => {
     // chain: .from("activities").select().eq().gte()
-    function activityChain(resolvedValue: { data: unknown; error: unknown }) {
+    function activityChain(resolvedValue: { data: any; error: any }) {
       return buildChain("gte", resolvedValue, ["select", "eq", "gte"]);
     }
 

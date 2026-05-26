@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-let mockResult: { data?: unknown; count?: number | null; error: unknown };
+let mockResult: { data?: any; count?: number | null; error: any };
 
 const builder: Record<string, any> = {};
 builder.select = vi.fn().mockReturnValue(builder);

@@ -27,7 +27,7 @@ const mockSingle = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: unknown[]) => mockFrom(...a),
+  untypedFrom: (...a: any[]) => mockFrom(...a),
 }));
 
 vi.mock("@/lib/log", () => ({
@@ -74,7 +74,7 @@ describe("Calendar Data Layer", () => {
   // ── listEvents ───────────────────────────────────────
   // Chain: untypedFrom("calendar_events").select("*").eq("user_id", userId).gte("start_at", from).lte("start_at", to).order("start_at", { ascending: true })
   describe("listEvents", () => {
-    function setupListChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupListChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ gte: mockGte });
@@ -116,7 +116,7 @@ describe("Calendar Data Layer", () => {
   // ── getEvent ─────────────────────────────────────────
   // Chain: untypedFrom("calendar_events").select("*").eq("id", id).single()
   describe("getEvent", () => {
-    function setupGetChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupGetChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ single: mockSingle });
@@ -153,7 +153,7 @@ describe("Calendar Data Layer", () => {
   // ── createEvent ──────────────────────────────────────
   // Chain: untypedFrom("calendar_events").insert(event).select().single()
   describe("createEvent", () => {
-    function setupCreateChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupCreateChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ insert: mockInsert });
       mockInsert.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ single: mockSingle });
@@ -216,7 +216,7 @@ describe("Calendar Data Layer", () => {
   // ── updateEvent ──────────────────────────────────────
   // Chain: untypedFrom("calendar_events").update({...}).eq("id", id).select().single()
   describe("updateEvent", () => {
-    function setupUpdateChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupUpdateChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ update: mockUpdate });
       mockUpdate.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ select: mockSelect });
@@ -259,7 +259,7 @@ describe("Calendar Data Layer", () => {
   // ── deleteEvent ──────────────────────────────────────
   // Chain: untypedFrom("calendar_events").delete().eq("id", id)
   describe("deleteEvent", () => {
-    function setupDeleteChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupDeleteChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ delete: mockDelete });
       mockDelete.mockReturnValue({ eq: mockEq });
       mockEq.mockResolvedValue(resolvedValue);
@@ -287,7 +287,7 @@ describe("Calendar Data Layer", () => {
     const mockEq2 = vi.fn();
     const mockEq3 = vi.fn();
 
-    function setupUpcomingChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupUpcomingChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ eq: mockEq2 });
@@ -338,7 +338,7 @@ describe("Calendar Data Layer", () => {
   describe("getEventsForPartner", () => {
     const mockEq2 = vi.fn();
 
-    function setupPartnerChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupPartnerChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ eq: mockEq2 });
@@ -372,7 +372,7 @@ describe("Calendar Data Layer", () => {
   // ── getEventsForDeal ─────────────────────────────────
   // Chain: untypedFrom("calendar_events").select("*").eq("deal_id", dealId).order("start_at", { ascending: true })
   describe("getEventsForDeal", () => {
-    function setupDealChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupDealChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ order: mockOrder });
@@ -401,7 +401,7 @@ describe("Calendar Data Layer", () => {
   // ── getEventsForContact ──────────────────────────────
   // Chain: untypedFrom("calendar_events").select("*").eq("contact_id", contactId).order("start_at", { ascending: true })
   describe("getEventsForContact", () => {
-    function setupContactChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupContactChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ order: mockOrder });
@@ -425,7 +425,7 @@ describe("Calendar Data Layer", () => {
     const mockEq2 = vi.fn();
     const mockEq3 = vi.fn();
 
-    function setupTypeChain(resolvedValue: { data: unknown; error: unknown }) {
+    function setupTypeChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockEq.mockReturnValue({ eq: mockEq2 });

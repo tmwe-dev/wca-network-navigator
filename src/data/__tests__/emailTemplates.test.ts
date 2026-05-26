@@ -12,10 +12,10 @@ const mockEq = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      select: (...args: unknown[]) => {
+      select: (...args: any[]) => {
         mockSelect(...args);
         return {
-          eq: (...eqArgs: unknown[]) => {
+          eq: (...eqArgs: any[]) => {
             mockEq(...eqArgs);
             return {
               order: () => ({ data: [], error: null }),
@@ -26,16 +26,16 @@ vi.mock("@/integrations/supabase/client", () => ({
           order: () => ({ data: [], error: null }),
         };
       },
-      insert: (...args: unknown[]) => {
+      insert: (...args: any[]) => {
         mockInsert(...args);
         return { select: () => ({ single: () => ({ data: { id: "new" }, error: null }) }), error: null };
       },
-      update: (...args: unknown[]) => {
+      update: (...args: any[]) => {
         mockUpdate(...args);
         return { eq: () => ({ error: null }) };
       },
       delete: () => ({
-        eq: (...args: unknown[]) => {
+        eq: (...args: any[]) => {
           mockDelete(...args);
           return { error: null };
         },

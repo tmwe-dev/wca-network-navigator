@@ -9,7 +9,7 @@ describe("DAL — directoryCache", () => {
     const exported = Object.keys(dirCache);
     expect(exported.length).toBeGreaterThan(0);
     for (const fn of exported) {
-      expect(typeof (dirCache as Record<string, unknown>)[fn]).toBe("function");
+      expect(typeof (dirCache as Record<string, any>)[fn]).toBe("function");
     }
   });
 });

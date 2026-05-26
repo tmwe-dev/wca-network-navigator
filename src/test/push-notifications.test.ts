@@ -12,8 +12,8 @@ const mockChannel = vi.fn().mockReturnValue({ on: mockOn, subscribe: mockSubscri
 const mockRemoveChannel = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    channel: (...args: unknown[]) => mockChannel(...args),
-    removeChannel: (...args: unknown[]) => mockRemoveChannel(...args),
+    channel: (...args: any[]) => mockChannel(...args),
+    removeChannel: (...args: any[]) => mockRemoveChannel(...args),
   },
 }));
 
@@ -44,9 +44,9 @@ Object.defineProperty(global, "Notification", {
   writable: true,
   configurable: true,
   value: Object.assign(
-    vi.fn().mockImplementation((title: string, options: unknown) => ({
+    vi.fn().mockImplementation((title: string, options: any) => ({
       title,
-      ...((options as Record<string, unknown>) || {}),
+      ...((options as Record<string, any>) || {}),
     })),
     { permission: "default" as NotificationPermission, requestPermission: vi.fn() },
   ),
@@ -71,7 +71,7 @@ describe("usePushNotifications Hook", () => {
       configurable: true,
     });
 
-    (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn();
+    (global.Notification as any as Record<string, any>).requestPermission = vi.fn();
 
     // Mock navigator.serviceWorker
     Object.defineProperty(navigator, "serviceWorker", {
@@ -148,7 +148,7 @@ describe("usePushNotifications Hook", () => {
         created_at: "2024-01-15T10:00:00Z",
       } as never);
 
-      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("granted");
+      (global.Notification as any as Record<string, any>).requestPermission = vi.fn().mockResolvedValue("granted");
 
       const { result } = renderHook(() => usePushNotifications());
 
@@ -158,7 +158,7 @@ describe("usePushNotifications Hook", () => {
       });
 
       expect(granted).toBe(true);
-      expect((global.Notification as unknown as Record<string, unknown>).requestPermission).toHaveBeenCalled();
+      expect((global.Notification as any as Record<string, any>).requestPermission).toHaveBeenCalled();
     });
 
     it("should set hasPermission state when granted", async () => {
@@ -187,7 +187,7 @@ describe("usePushNotifications Hook", () => {
         created_at: "2024-01-15T10:00:00Z",
       } as never);
 
-      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("granted");
+      (global.Notification as any as Record<string, any>).requestPermission = vi.fn().mockResolvedValue("granted");
 
       const { result } = renderHook(() => usePushNotifications());
 
@@ -199,7 +199,7 @@ describe("usePushNotifications Hook", () => {
     });
 
     it("should return false when permission denied", async () => {
-      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi.fn().mockResolvedValue("denied");
+      (global.Notification as any as Record<string, any>).requestPermission = vi.fn().mockResolvedValue("denied");
 
       const { result } = renderHook(() => usePushNotifications());
 
@@ -213,7 +213,7 @@ describe("usePushNotifications Hook", () => {
     });
 
     it("should handle permission request errors gracefully", async () => {
-      (global.Notification as unknown as Record<string, unknown>).requestPermission = vi
+      (global.Notification as any as Record<string, any>).requestPermission = vi
         .fn()
         .mockRejectedValue(new Error("Permission request failed"));
 

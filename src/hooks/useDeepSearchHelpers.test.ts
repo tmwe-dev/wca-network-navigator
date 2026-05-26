@@ -25,7 +25,7 @@ describe("toWhatsAppNumber", () => {
     expect(toWhatsAppNumber("abc123def456")).toBe("abc123def456");
   });
   it("handles null-ish input — throws (no guard)", () => {
-    expect(() => toWhatsAppNumber(null as unknown as string)).toThrow();
+    expect(() => toWhatsAppNumber(null as any as string)).toThrow();
   });
 });
 

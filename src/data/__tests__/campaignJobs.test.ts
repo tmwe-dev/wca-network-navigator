@@ -4,7 +4,7 @@ const mockInsert = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 vi.mock("@/v2/hooks/useBusyPartners", () => ({
   emitBusyPartnersChanged: vi.fn(),

@@ -24,7 +24,7 @@ describe("jsonValidators", () => {
         future_field: "anything",
       });
       expect(res.ok).toBe(true);
-      expect((res.data as Record<string, unknown>).future_field).toBe("anything");
+      expect((res.data as Record<string, any>).future_field).toBe("anything");
     });
 
     it("returns ok=false on invalid type but does not throw", () => {

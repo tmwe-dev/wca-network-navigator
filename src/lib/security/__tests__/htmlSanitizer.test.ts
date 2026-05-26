@@ -60,8 +60,8 @@ describe("sanitizeHtml", () => {
 
   it("returns empty string for empty/null input", () => {
     expect(sanitizeHtml("")).toBe("");
-    expect(sanitizeHtml(null as unknown as string)).toBe("");
-    expect(sanitizeHtml(undefined as unknown as string)).toBe("");
+    expect(sanitizeHtml(null as any as string)).toBe("");
+    expect(sanitizeHtml(undefined as any as string)).toBe("");
   });
 
   it("strips HTML comments", () => {
@@ -97,7 +97,7 @@ describe("escapeHtml", () => {
 
   it("returns empty for empty/null", () => {
     expect(escapeHtml("")).toBe("");
-    expect(escapeHtml(null as unknown as string)).toBe("");
+    expect(escapeHtml(null as any as string)).toBe("");
   });
 
   it("preserves normal text", () => {
