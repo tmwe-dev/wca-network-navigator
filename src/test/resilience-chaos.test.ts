@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * RESILIENCE CHAOS TESTS — Scorecard Area F
  * Validates system behavior under failure conditions.

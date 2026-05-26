@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { groupByCountry } from "@/lib/groupByCountry";
 import {
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   addCockpitPreselection,
   consumeCockpitPreselection,
   getCockpitPreselection,

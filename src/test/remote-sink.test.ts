@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * remoteSink — Vol. II §11.4 + ADR-0003.
  * Verifica installazione env-gated, filtro per livello, flush per dimensione.

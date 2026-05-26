@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * WORKFLOW COHERENCE TESTS — Scorecard Area E
  * Validates UI/DB consistency, cross-module continuity, and auditability.

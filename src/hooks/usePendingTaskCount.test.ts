@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 const mockIn = vi.fn().mockReturnValue({ count: 5, error: null });
 const mockEq = vi.fn().mockReturnValue({ in: mockIn });
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });

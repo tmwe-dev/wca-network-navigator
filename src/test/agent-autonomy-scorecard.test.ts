@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * AGENT AUTONOMY TESTS — Scorecard Area D
  * Validates task creation, routing, approval, execution, stats, and compliance.

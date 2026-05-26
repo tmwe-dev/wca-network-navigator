@@ -26,12 +26,12 @@ function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
 
 describe("ErrorBoundary", () => {
   // Suppress React error boundary console output during tests
-  const _origError = console.error; // eslint-disable-line no-console
+  const _origError = console.error;
   beforeEach(() => {
-    console.error = vi.fn(); // eslint-disable-line no-console
+    console.error = vi.fn();
   });
   afterEach(() => {
-    console.error = _origError; // eslint-disable-line no-console
+    console.error = _origError;
   });
 
   it("renders children when no error", () => {

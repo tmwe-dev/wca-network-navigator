@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * Schema validation tests — ensuring scraped data is validated before DB save.
  * Tests the validation logic that should run on partner profile data.

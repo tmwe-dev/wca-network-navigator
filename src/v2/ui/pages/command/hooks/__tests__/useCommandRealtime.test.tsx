@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 const channelMock = {
   on: vi.fn().mockReturnThis(),
   subscribe: vi.fn().mockReturnThis(),

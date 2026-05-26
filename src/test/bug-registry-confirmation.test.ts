@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 /**
  * BUG REGISTRY CONFIRMATION TESTS
  * 

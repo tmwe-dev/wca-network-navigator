@@ -9,7 +9,6 @@
  * - La state machine ha gate corretti
  * - Nessun stato è ambiguo
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from "vitest";
 
 // ══════════════════════════════════════════════════════════

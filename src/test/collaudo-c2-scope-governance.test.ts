@@ -9,7 +9,6 @@
  *
  * Bug #1 (scope morto) e parte di #4 (governance agenti)
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from "vitest";
 
 // ══════════════════════════════════════════════════════════
