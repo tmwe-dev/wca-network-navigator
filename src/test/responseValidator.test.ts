@@ -25,8 +25,8 @@ describe("responseValidator", () => {
       throw new Error("should have thrown");
     } catch (e) {
       expect(isApiError(e)).toBe(true);
-      expect((e as any).code).toBe("SCHEMA_MISMATCH");
-      expect((e as any).message).toContain("age");
+      expect((e as unknown).code).toBe("SCHEMA_MISMATCH");
+      expect((e as unknown).message).toContain("age");
     }
   });
 
@@ -36,7 +36,7 @@ describe("responseValidator", () => {
       throw new Error("should have thrown");
     } catch (e) {
       expect(isApiError(e)).toBe(true);
-      expect((e as any).message).toContain("age");
+      expect((e as unknown).message).toContain("age");
     }
   });
 
@@ -45,7 +45,7 @@ describe("responseValidator", () => {
       validateResponse({ name: "Bob", age: 30, tags: "not-array" }, schema);
       throw new Error("should have thrown");
     } catch (e) {
-      expect((e as any).message).toContain("tags");
+      expect((e as unknown).message).toContain("tags");
     }
   });
 

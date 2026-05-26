@@ -45,14 +45,14 @@ beforeEach(() => {
 
 describe("useHoldingMessages", () => {
   it("returns empty array when user not authenticated", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as unknown);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual([]);
   });
 
   it("fetches holding messages for email channel", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     vi.mocked(getPartnersByLeadStatusFromView).mockResolvedValue([]);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -60,22 +60,22 @@ describe("useHoldingMessages", () => {
   });
 
   it("uses correct query key per channel", () => {
-    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as unknown);
     renderHook(() => useHoldingMessages("whatsapp"), { wrapper });
     // just ensure it doesn't throw
   });
 
   it("exposes loading state", () => {
-    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as unknown);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });
 
   it("handles partner fetch with statuses", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     vi.mocked(getPartnersByLeadStatusFromView).mockResolvedValue([
       { partner_id: "p1", company_name: "Test Co", email: "test@test.com", lead_status: "contacted" },
-    ] as any);
+    ] as unknown);
     const { result } = renderHook(() => useHoldingMessages("email"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });

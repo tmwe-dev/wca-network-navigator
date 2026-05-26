@@ -58,7 +58,7 @@ describe("AgentVoiceCall", () => {
 
   it("renders call button", async () => {
     const { AgentVoiceCall } = await import("@/components/agents/AgentVoiceCall");
-    render(React.createElement(AgentVoiceCall, { agent: mockAgent as any, onClose: vi.fn() }));
+    render(React.createElement(AgentVoiceCall, { agent: mockAgent as unknown, onClose: vi.fn() }));
     // Should have a call button
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
@@ -66,7 +66,7 @@ describe("AgentVoiceCall", () => {
 
   it("shows agent name or call UI elements", async () => {
     const { AgentVoiceCall } = await import("@/components/agents/AgentVoiceCall");
-    const { container } = render(React.createElement(AgentVoiceCall, { agent: mockAgent as any, onClose: vi.fn() }));
+    const { container } = render(React.createElement(AgentVoiceCall, { agent: mockAgent as unknown, onClose: vi.fn() }));
     expect(container.innerHTML.length).toBeGreaterThan(0);
   });
 });

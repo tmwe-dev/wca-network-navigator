@@ -39,7 +39,7 @@ function setupFromChain(finalResult: unknown) {
 
 describe("useAppSettings", () => {
   it("loads settings as key-value map", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     setupFromChain({
       data: [
         { key: "theme", value: "dark" },
@@ -53,14 +53,14 @@ describe("useAppSettings", () => {
   });
 
   it("returns empty object when user not authenticated", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as unknown);
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual({});
   });
 
   it("returns empty object when no settings exist", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     setupFromChain({ data: [], error: null });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -68,14 +68,14 @@ describe("useAppSettings", () => {
   });
 
   it("throws on supabase error", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     setupFromChain({ data: null, error: { message: "DB error" } });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it("has staleTime of 5 minutes", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
     setupFromChain({ data: [], error: null });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -83,7 +83,7 @@ describe("useAppSettings", () => {
   });
 
   it("exposes loading state", () => {
-    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as unknown);
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });

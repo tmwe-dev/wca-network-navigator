@@ -48,7 +48,7 @@ describe("groupByCountry", () => {
   });
 
   it("ritorna array vuoto su input vuoto", () => {
-    expect(groupByCountry([], (i: any) => i.code, (i: any) => i.name)).toEqual([]);
+    expect(groupByCountry([], (i: unknown) => i.code, (i: unknown) => i.name)).toEqual([]);
   });
 });
 

@@ -21,7 +21,7 @@ describe("heuristicMapper - autoMapColumns", () => {
   it("handles unknown headers gracefully", () => {
     const result = autoMapColumns(["XYZ_Random_Column_999"], []);
     expect(result.length).toBe(1);
-    const mapping = result[0] as any;
+    const mapping = result[0] as unknown;
     expect(mapping.confidence === undefined || mapping.confidence < 1).toBe(true);
   });
 });

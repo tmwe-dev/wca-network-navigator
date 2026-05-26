@@ -49,7 +49,7 @@ describe("activityConstants", () => {
 
   it("STATUS_LABELS / STATUS_ICONS in coppia per ogni status", () => {
     for (const k of Object.keys(STATUS_LABELS)) {
-      expect((STATUS_ICONS as any)[k]).toBeDefined();
+      expect((STATUS_ICONS as unknown)[k]).toBeDefined();
     }
   });
 

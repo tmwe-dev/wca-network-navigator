@@ -60,8 +60,8 @@ describe("remoteSink", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toBe("https://x.example.com");
-    expect((opts as any).method).toBe("POST");
-    const body = JSON.parse((opts as any).body);
+    expect((opts as unknown).method).toBe("POST");
+    const body = JSON.parse((opts as unknown).body);
     expect(body.records).toHaveLength(2);
     expect(body.records[0].level).toBe("warn");
     expect(body.records[1].level).toBe("error");
@@ -71,7 +71,7 @@ describe("remoteSink", () => {
     installRemoteSink({ endpoint: "https://x.example.com", token: "secret123", flushAt: 1 });
     createLogger("test").error("boom");
     const [, opts] = fetchMock.mock.calls[0];
-    expect((opts as any).headers.Authorization).toBe("Bearer secret123");
+    expect((opts as unknown).headers.Authorization).toBe("Bearer secret123");
   });
 
   it("rispetta il livello custom (error only)", () => {

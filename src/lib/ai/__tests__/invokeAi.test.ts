@@ -34,7 +34,7 @@ describe("invokeAi", () => {
     await expect(
       invokeAi("ai-assistant", {
         ...validOptions,
-        scope: "" as any,
+        scope: "" as unknown,
       }),
     ).rejects.toThrow("scope obbligatorio");
   });
