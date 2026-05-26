@@ -46,6 +46,7 @@ jobs:
             e2e/lead-status-guard.spec.ts \
             e2e/auth-guard.spec.ts \
             e2e/public-edge-auth-guards.spec.ts \
+            e2e/a11y-axe.spec.ts \
             --reporter=html
 
       - name: Upload test results
