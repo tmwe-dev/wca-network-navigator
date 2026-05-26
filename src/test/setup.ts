@@ -1,7 +1,6 @@
 import "@testing-library/jest-dom";
 
 // Polyfill File.prototype.text for jsdom (used by parsers)
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
 if (typeof File !== "undefined" && !File.prototype.text) {
   (File.prototype as unknown as Record<string, unknown>).text = function () {
     return new Promise<string>((resolve, reject) => {

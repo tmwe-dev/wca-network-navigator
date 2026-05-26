@@ -9,7 +9,6 @@
  *
  * Bug #3 (apply_playbook/execute_plan_step), #9 (search_kb), #10 (composer V2)
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from "vitest";
 
 // ══════════════════════════════════════════════════════════

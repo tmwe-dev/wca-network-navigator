@@ -9,7 +9,6 @@
  *
  * Bug #2 (cadence finge executed), E1, E2, E4
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from "vitest";
 
 // ══════════════════════════════════════════════════════════

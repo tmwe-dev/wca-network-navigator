@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   getCountryFlag,
   getYearsMember,
   formatPartnerType,

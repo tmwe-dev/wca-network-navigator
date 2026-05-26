@@ -9,7 +9,6 @@
  *
  * Bug #7 (stage contraddittori), #8 (playbook non guida), C1-C4
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from "vitest";
 
 // ══════════════════════════════════════════════════════════

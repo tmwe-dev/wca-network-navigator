@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
 vi.mock("@/data/partners", () => ({
-/* eslint-disable @typescript-eslint/no-explicit-any -- test file with mocks */
   findPartners: vi.fn(),
   findPartnersByCountry: vi.fn(),
   getPartner: vi.fn(),
