@@ -24,11 +24,11 @@ export default defineConfig({
         "src/i18n/**",
       ],
       thresholds: {
-        // Baseline 2026-05-26: misurato 8.12 / 55.17 / 25.42 / 8.12.
-        // Soglie tarate appena sotto il misurato per bloccare regressioni
-        // senza falsi positivi. Da alzare in modo incrementale.
+        // Baseline 2026-05-26 (ratchet #1): misurato 8.12 / 55.17 / 25.42 / 8.12.
+        // Soglie alzate vicino al misurato per bloccare regressioni reali.
+        // Da alzare incrementalmente man mano che aggiungiamo test.
         statements: 8,
-        branches: 50,
+        branches: 55,
         functions: 25,
         lines: 8,
       },
