@@ -34,5 +34,7 @@
   "include": [
     "src"
   ],
-  "exclude": []
+  "exclude": [
+    "src/__tests__/token-logger.test.ts"
+  ]
 }
