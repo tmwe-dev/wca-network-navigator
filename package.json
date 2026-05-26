@@ -36,6 +36,8 @@
     "validate": "npm run lint && npm run typecheck && npm run test",
     "debt:check": "node scripts/debt-budget.js",
     "audit:security": "npm audit --production --audit-level=high",
+    "i18n:check": "node scripts/i18n-coverage.mjs",
+    "bundle:check": "node scripts/bundle-size-guard.mjs",
     "prepare": "husky",
     "seed:kb": "tsx scripts/seed-kb.ts"
   },
