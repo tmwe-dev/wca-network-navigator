@@ -31,7 +31,7 @@ const LOCK_KEY = "__extractLock__";
 
 interface LockState {
   busy: boolean;
-  queue: Array<{ resolve: (v: unknown) => void; fn: () => Promise<unknown> }>;
+  queue: Array<{ resolve: (v: unknown) => void; fn: () => Promise<any> }>;
 }
 
 function getLock(): LockState {
@@ -50,7 +50,7 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
-    else lock.queue.push({ resolve: resolve as (v: unknown) => void, fn: run as () => Promise<unknown> });
+    else lock.queue.push({ resolve: resolve as (v: unknown) => void, fn: run as () => Promise<any> });
   });
 }
 

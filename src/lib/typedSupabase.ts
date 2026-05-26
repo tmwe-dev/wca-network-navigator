@@ -50,6 +50,6 @@ export type KnownUntypedTable = (typeof KNOWN_UNTYPED_TABLES)[number];
  * Alias breve di `untypedFrom` per ridurre verbosity nei call site.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function tFrom(table: KnownUntypedTable | string): any {
+export function tFrom(table: KnownUntypedTable | string): unknown {
   return untypedFrom(table);
 }

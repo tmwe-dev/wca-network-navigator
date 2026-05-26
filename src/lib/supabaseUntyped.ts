@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 // reasonably modelled with a hand-written `Record<string, ...>` type. This is
 // the SINGLE sanctioned `any` boundary in the codebase — see the file header.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function untypedFrom(table: string): any {
+export function untypedFrom(table: string): unknown {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (supabase as any).from(table);
 }

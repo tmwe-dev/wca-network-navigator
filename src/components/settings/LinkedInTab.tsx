@@ -22,7 +22,7 @@ interface LinkedInTabProps {
   setLiPass: (v: string) => void;
   liAtCookie: string;
   setLiAtCookie: (v: string) => void;
-  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<unknown> };
+  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<any> };
 }
 
 export function LinkedInTab({

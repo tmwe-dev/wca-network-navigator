@@ -60,7 +60,7 @@ describe("Email Draft Counter Consistency (logic)", () => {
   });
 
   it("should handle empty queue without incrementing", () => {
-    const items: any[] = [];
+    const items: unknown[] = [];
     let sentCount = 0;
     for (const _item of items) {
       sentCount++;

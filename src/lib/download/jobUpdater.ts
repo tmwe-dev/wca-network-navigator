@@ -19,7 +19,7 @@ export async function updateJobProgress(
     errorMessage?: string | null;
   },
 ) {
-  const payload: Record<string, any> = {};
+  const payload: Record<string, unknown> = {};
 
   if (updates.currentIndex !== undefined) payload.current_index = updates.currentIndex;
   if (updates.processedIds) payload.processed_ids = updates.processedIds as unknown as Record<string, unknown>;

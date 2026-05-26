@@ -14,7 +14,7 @@ const log = createLogger("RASettings");
 
 interface RASettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<unknown> };
+  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<any> };
 }
 
 export function RASettings({ settings, updateSetting }: RASettingsProps) {

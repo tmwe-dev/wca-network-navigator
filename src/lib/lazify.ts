@@ -13,11 +13,11 @@
  */
 import { lazy, ComponentType } from "react";
 
-export function lazify<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>, retries = 2) {
+export function lazify<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>, retries = 2) {
   return lazy(() => retryImport(factory, retries));
 }
 
-function retryImport<T extends ComponentType<unknown>>(
+function retryImport<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
   retriesLeft: number,
 ): Promise<{ default: T }> {

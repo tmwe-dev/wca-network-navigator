@@ -28,7 +28,7 @@ export const ContactRecordDrawer = forwardRef<HTMLDivElement>(function ContactRe
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen, close, goNext, goPrev]);
 
-  const handleSave = (updates: Record<string, any>) => {
+  const handleSave = (updates: Record<string, unknown>) => {
     if (!target) return;
     updateMutation.mutate(
       { sourceType: target.sourceType, sourceId: target.sourceId, updates },
