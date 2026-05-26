@@ -7,7 +7,7 @@ const mockFrom = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: { getSession: vi.fn() },
-    from: (...a: unknown[]) => mockFrom(...a),
+    from: (...a: any[]) => mockFrom(...a),
   },
 }));
 
@@ -21,7 +21,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 const mockUser = { id: "user-1" };
 
-function mockSession(user: unknown) {
+function mockSession(user: any) {
   return { data: { session: user ? { user } : null }, error: null };
 }
 
@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function setupFromChain(finalResult: unknown) {
+function setupFromChain(finalResult: any) {
   // The source does: supabase.from("app_settings").select("key, value").eq("user_id", user.id)
   const mockEq = vi.fn().mockResolvedValue(finalResult);
   const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
@@ -39,7 +39,7 @@ function setupFromChain(finalResult: unknown) {
 
 describe("useAppSettings", () => {
   it("loads settings as key-value map", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
     setupFromChain({
       data: [
         { key: "theme", value: "dark" },
@@ -53,14 +53,14 @@ describe("useAppSettings", () => {
   });
 
   it("returns empty object when user not authenticated", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as unknown);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(null) as any);
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual({});
   });
 
   it("returns empty object when no settings exist", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
     setupFromChain({ data: [], error: null });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -68,14 +68,14 @@ describe("useAppSettings", () => {
   });
 
   it("throws on supabase error", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
     setupFromChain({ data: null, error: { message: "DB error" } });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it("has staleTime of 5 minutes", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as unknown);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue(mockSession(mockUser) as any);
     setupFromChain({ data: [], error: null });
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -83,7 +83,7 @@ describe("useAppSettings", () => {
   });
 
   it("exposes loading state", () => {
-    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as unknown);
+    vi.mocked(supabase.auth.getSession).mockReturnValue(new Promise(() => {}) as any);
     const { result } = renderHook(() => useAppSettings(), { wrapper });
     expect(result.current.isLoading).toBe(true);
   });

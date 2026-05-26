@@ -63,12 +63,12 @@ describe("Result monad", () => {
   });
 
   it("fromPromise wraps resolved promise", async () => {
-    const r = await fromPromise(Promise.resolve(42), (caught: unknown) => domainError("VALIDATION_FAILED", String(caught)));
+    const r = await fromPromise(Promise.resolve(42), (caught: any) => domainError("VALIDATION_FAILED", String(caught)));
     expect(isOk(r) && r.value).toBe(42);
   });
 
   it("fromPromise wraps rejected promise", async () => {
-    const r = await fromPromise(Promise.reject(new Error("boom")), (caught: unknown) =>
+    const r = await fromPromise(Promise.reject(new Error("boom")), (caught: any) =>
       domainError("VALIDATION_FAILED", caught instanceof Error ? caught.message : "unknown"),
     );
     expect(isErr(r)).toBe(true);

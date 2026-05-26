@@ -7,7 +7,7 @@ const mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 
 import { listRecentE2ERuns, getLatestE2ERun } from "@/data/e2eRuns";

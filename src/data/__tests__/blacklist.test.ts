@@ -10,17 +10,17 @@ const mockInsert = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      select: (...args: unknown[]) => {
+      select: (...args: any[]) => {
         mockSelect(...args);
         return {
-          eq: (...eqArgs: unknown[]) => {
+          eq: (...eqArgs: any[]) => {
             mockEq(...eqArgs);
             return { data: [], error: null };
           },
           order: () => ({ data: [{ id: "b1", company_name: "BadCo" }], error: null }),
         };
       },
-      insert: (...args: unknown[]) => {
+      insert: (...args: any[]) => {
         mockInsert(...args);
         return { error: null };
       },

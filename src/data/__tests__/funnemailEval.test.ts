@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: unknown[]) => mockFrom(...a),
+  untypedFrom: (...a: any[]) => mockFrom(...a),
 }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { functions: { invoke: vi.fn().mockResolvedValue({ data: { ok: true }, error: null }) } },
@@ -22,8 +22,8 @@ import {
   fetchEvalRunById,
 } from "@/data/funnemailEval";
 
-function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
-  const c: Record<string, unknown> = {};
+function chain(terminal: { data?: any; error?: any } = { data: [], error: null }) {
+  const c: Record<string, any> = {};
   c.select = vi.fn().mockReturnValue(c);
   c.eq = vi.fn().mockReturnValue(c);
   c.is = vi.fn().mockReturnValue(c);
@@ -31,7 +31,7 @@ function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error
   c.limit = vi.fn().mockReturnValue(c);
   c.single = vi.fn().mockReturnValue(c);
   c.insert = vi.fn().mockReturnValue(c);
-  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }
 

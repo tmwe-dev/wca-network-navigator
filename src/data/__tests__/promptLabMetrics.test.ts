@@ -4,17 +4,17 @@ const mockUpsertAppSetting = vi.fn().mockResolvedValue(undefined);
 const _mockGetAppSetting = vi.fn();
 
 vi.mock("../appSettings", () => ({
-  upsertAppSetting: (...args: unknown[]) => mockUpsertAppSetting(...args),
-  getAppSetting: (...args: unknown[]) => _mockGetAppSetting(...args),
+  upsertAppSetting: (...args: any[]) => mockUpsertAppSetting(...args),
+  getAppSetting: (...args: any[]) => _mockGetAppSetting(...args),
 }));
 
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
 }));
 
-const mockTFromChain: Record<string, unknown> = {};
+const mockTFromChain: Record<string, any> = {};
 
-function resetTFromChain(returnData: unknown[] = []) {
+function resetTFromChain(returnData: any[] = []) {
   mockTFromChain.select = () => mockTFromChain;
   mockTFromChain.eq = () => mockTFromChain;
   mockTFromChain.order = () => Promise.resolve({ data: returnData, error: null });

@@ -41,7 +41,7 @@ describe("costTracker", () => {
       checkBudget();
     } catch (e) {
       expect(isApiError(e)).toBe(true);
-      expect((e as unknown).code).toBe("RATE_LIMITED");
+      expect((e as any).code).toBe("RATE_LIMITED");
     }
   });
 

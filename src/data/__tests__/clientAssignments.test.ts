@@ -5,7 +5,7 @@ const mockEq = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 
 import { findClientAssignmentsByUser } from "@/data/clientAssignments";

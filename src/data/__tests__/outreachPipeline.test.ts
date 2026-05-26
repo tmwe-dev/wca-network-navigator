@@ -5,7 +5,7 @@ const mockGetSession = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: unknown[]) => mockFrom(...a),
+    from: (...a: any[]) => mockFrom(...a),
     auth: { getSession: () => mockGetSession() },
   },
 }));
@@ -18,8 +18,8 @@ import {
   cancelMissionAction,
 } from "@/data/outreachPipeline";
 
-function chain(terminal: { data?: unknown; error?: unknown; count?: unknown } = { data: [], error: null }) {
-  const c: Record<string, unknown> = {};
+function chain(terminal: { data?: any; error?: any; count?: any } = { data: [], error: null }) {
+  const c: Record<string, any> = {};
   c.select = vi.fn().mockReturnValue(c);
   c.eq = vi.fn().mockReturnValue(c);
   c.in = vi.fn().mockReturnValue(c);
@@ -28,7 +28,7 @@ function chain(terminal: { data?: unknown; error?: unknown; count?: unknown } = 
   c.order = vi.fn().mockReturnValue(c);
   c.limit = vi.fn().mockReturnValue(c);
   c.update = vi.fn().mockReturnValue(c);
-  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }
 

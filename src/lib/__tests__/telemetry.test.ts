@@ -13,7 +13,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 vi.mock("@/data/telemetry", () => ({
-  insertPageEvent: (payload: unknown) => mockInsertPageEvent(payload),
+  insertPageEvent: (payload: any) => mockInsertPageEvent(payload),
 }));
 
 vi.mock("@/lib/log", () => ({

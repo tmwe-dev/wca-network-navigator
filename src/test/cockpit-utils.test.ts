@@ -48,7 +48,7 @@ describe("groupByCountry", () => {
   });
 
   it("ritorna array vuoto su input vuoto", () => {
-    expect(groupByCountry([], (i: unknown) => i.code, (i: unknown) => i.name)).toEqual([]);
+    expect(groupByCountry([], (i: any) => i.code, (i: any) => i.name)).toEqual([]);
   });
 });
 
@@ -205,7 +205,7 @@ describe("partnerUtils", () => {
 
     it("ritorna array vuoto se branch_cities mancante", () => {
       expect(getBranchCountries({ country_code: "IT" })).toEqual([]);
-      expect(getBranchCountries({ country_code: "IT", branch_cities: null as unknown as undefined })).toEqual([]);
+      expect(getBranchCountries({ country_code: "IT", branch_cities: null as any as undefined })).toEqual([]);
     });
   });
 

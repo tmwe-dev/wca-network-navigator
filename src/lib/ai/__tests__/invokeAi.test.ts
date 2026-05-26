@@ -34,7 +34,7 @@ describe("invokeAi", () => {
     await expect(
       invokeAi("ai-assistant", {
         ...validOptions,
-        scope: "" as unknown,
+        scope: "" as any,
       }),
     ).rejects.toThrow("scope obbligatorio");
   });
@@ -51,7 +51,7 @@ describe("invokeAi", () => {
   it("enriches body with scope and context", async () => {
     await invokeAi("ai-assistant", validOptions);
 
-    const callBody = mockedInvokeEdge.mock.calls[0][1]?.body as Record<string, unknown>;
+    const callBody = mockedInvokeEdge.mock.calls[0][1]?.body as Record<string, any>;
     expect(callBody.scope).toBe("outreach");
     expect(callBody.context).toEqual({
       source: "TestComponent",

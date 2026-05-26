@@ -10,18 +10,18 @@ const mockGetPartnerStats = vi.fn();
 const mockInvalidatePartnerCache = vi.fn();
 
 vi.mock("@/data/partners", () => ({
-  findPartners: (...args: unknown[]) => mockFindPartners(...args),
-  findPartnersByCountry: (...args: unknown[]) => mockFindPartnersByCountry(...args),
-  getPartner: (...args: unknown[]) => mockGetPartner(...args),
-  toggleFavorite: (...args: unknown[]) => mockToggleFavorite(...args),
-  getPartnerStats: (...args: unknown[]) => mockGetPartnerStats(...args),
-  invalidatePartnerCache: (...args: unknown[]) => mockInvalidatePartnerCache(...args),
+  findPartners: (...args: any[]) => mockFindPartners(...args),
+  findPartnersByCountry: (...args: any[]) => mockFindPartnersByCountry(...args),
+  getPartner: (...args: any[]) => mockGetPartner(...args),
+  toggleFavorite: (...args: any[]) => mockToggleFavorite(...args),
+  getPartnerStats: (...args: any[]) => mockGetPartnerStats(...args),
+  invalidatePartnerCache: (...args: any[]) => mockInvalidatePartnerCache(...args),
 }));
 
 vi.mock("@/lib/queryKeys", () => ({
   queryKeys: {
     partners: {
-      filtered: (f: unknown) => ["partners", f],
+      filtered: (f: any) => ["partners", f],
       byCountry: (code: string | null) => ["partners-by-country", code],
     },
     partner: (id: string) => ["partner", id],

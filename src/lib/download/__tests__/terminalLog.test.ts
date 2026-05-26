@@ -13,7 +13,7 @@ vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(
 describe("terminalLog", () => {
   beforeEach(() => {
     // Clear the global buffer
-    delete (window as unknown).__terminalLogBuffer__;
+    delete (window as any).__terminalLogBuffer__;
   });
 
   it("exports appendLog function", async () => {

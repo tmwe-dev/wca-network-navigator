@@ -35,7 +35,7 @@ describe("useResetSync", () => {
   });
 
   it("throws when not authenticated", async () => {
-    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as unknown);
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as any);
     const { result } = renderHook(() => useResetSync(), { wrapper });
     await expect(result.current.mutateAsync()).rejects.toThrow("Non autenticato");
   });

@@ -8,10 +8,10 @@ const mockEq = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      select: (...args: unknown[]) => {
+      select: (...args: any[]) => {
         mockSelect(...args);
         return {
-          eq: (...eqArgs: unknown[]) => {
+          eq: (...eqArgs: any[]) => {
             mockEq(...eqArgs);
             return { count: 42, error: null };
           },

@@ -6,13 +6,13 @@ const mockGetSession = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: unknown[]) => mockFrom(...a),
+    from: (...a: any[]) => mockFrom(...a),
     auth: { getSession: () => mockGetSession() },
   },
 }));
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: unknown[]) => mockFrom(...a),
+  untypedFrom: (...a: any[]) => mockFrom(...a),
 }));
 
 vi.mock("@/lib/log", () => ({
@@ -61,12 +61,12 @@ function mockSession(userId: string | null) {
  * The chain is also a thenable that resolves to `resolvedValue`, so awaiting
  * any tail of the chain yields the mocked result.
  */
-function chain(_terminal: string, resolvedValue: unknown) {
+function chain(_terminal: string, resolvedValue: any) {
   const methods = ["select", "insert", "update", "delete", "eq", "in", "or", "order", "single", "maybeSingle", "limit"];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const obj: Record<string, any> = {};
   // Make it thenable so `await untypedFrom("x").delete().eq().eq()` resolves
-  obj.then = (resolve: (v: unknown) => void) => Promise.resolve(resolvedValue).then(resolve);
+  obj.then = (resolve: (v: any) => void) => Promise.resolve(resolvedValue).then(resolve);
   for (const m of methods) {
     obj[m] = vi.fn().mockReturnValue(obj);
   }

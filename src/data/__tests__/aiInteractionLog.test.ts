@@ -15,7 +15,7 @@ const mockGetSession = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: unknown[]) => mockFrom(...a),
+    from: (...a: any[]) => mockFrom(...a),
     auth: { getSession: () => mockGetSession() },
   },
 }));
@@ -39,7 +39,7 @@ describe("DAL — aiInteractionLog", () => {
       insert: mockInsert,
       upsert: vi.fn().mockResolvedValue({ error: null }),
       delete: () => ({
-        eq: (...a: unknown[]) => {
+        eq: (...a: any[]) => {
           mockEq(...a);
           return { eq: mockEq };
         },

@@ -9,10 +9,10 @@ const mockUpsertAppSetting = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      select: (...a: unknown[]) => {
+      select: (...a: any[]) => {
         mockSelect(...a);
         return {
-          eq: (...b: unknown[]) => {
+          eq: (...b: any[]) => {
             mockEq(...b);
             return { maybeSingle: () => mockMaybeSingle() };
           },
@@ -24,7 +24,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 vi.mock("@/data/appSettings", () => ({
-  upsertAppSetting: (...args: unknown[]) => mockUpsertAppSetting(...args),
+  upsertAppSetting: (...args: any[]) => mockUpsertAppSetting(...args),
 }));
 
 vi.mock("@/lib/log", () => ({

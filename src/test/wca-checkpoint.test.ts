@@ -17,7 +17,7 @@ describe("wcaCheckpoint — global rate-limit gate", () => {
   beforeEach(() => {
     // Reset state on window
     if (typeof window !== "undefined") {
-      delete (window as unknown).__wcaCheckpoint__;
+      delete (window as any).__wcaCheckpoint__;
     }
     setGreenZoneDelay(20); // reset to default
   });

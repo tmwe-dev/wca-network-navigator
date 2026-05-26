@@ -12,7 +12,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 describe("Edge Function Response Shapes [A03]", () => {
-  const safeFetch = async (path: string, body: Record<string, unknown> = {}) => {
+  const safeFetch = async (path: string, body: Record<string, any> = {}) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/${path}`, {
         method: "POST",

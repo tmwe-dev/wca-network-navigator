@@ -14,7 +14,7 @@ const mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...args: unknown[]) => mockFrom(...args) },
+  supabase: { from: (...args: any[]) => mockFrom(...args) },
 }));
 
 import {
@@ -114,7 +114,7 @@ describe("DAL — agents", () => {
       const agent = { id: "a1", name: "New Agent" };
       mockInsert.mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) });
       mockSingle.mockResolvedValue({ data: agent, error: null });
-      const result = await createAgent({ name: "New Agent" } as unknown);
+      const result = await createAgent({ name: "New Agent" } as any);
       expect(mockFrom).toHaveBeenCalledWith("agents");
       expect(result).toEqual(agent);
     });
@@ -122,7 +122,7 @@ describe("DAL — agents", () => {
     it("throws on insert error", async () => {
       mockInsert.mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) });
       mockSingle.mockResolvedValue({ data: null, error: { message: "dup" } });
-      await expect(createAgent({ name: "Dup" } as unknown)).rejects.toEqual({ message: "dup" });
+      await expect(createAgent({ name: "Dup" } as any)).rejects.toEqual({ message: "dup" });
     });
   });
 
@@ -144,7 +144,7 @@ describe("DAL — agents", () => {
   describe("invalidateAgents", () => {
     it("calls invalidateQueries with correct key", () => {
       const mockQc = { invalidateQueries: vi.fn() };
-      invalidateAgents(mockQc as unknown);
+      invalidateAgents(mockQc as any);
       expect(mockQc.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["agents"] });
     });
   });

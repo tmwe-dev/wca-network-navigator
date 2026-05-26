@@ -15,13 +15,13 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
       upsert: mockUpsert,
-      select: (...args: unknown[]) => {
+      select: (...args: any[]) => {
         mockSelect(...args);
         return {
-          eq: (...eqArgs: unknown[]) => {
+          eq: (...eqArgs: any[]) => {
             mockEq(...eqArgs);
             return {
-              eq: (...eqArgs2: unknown[]) => {
+              eq: (...eqArgs2: any[]) => {
                 mockEq(...eqArgs2);
                 return { maybeSingle: mockMaybeSingle };
               },
@@ -31,7 +31,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         };
       },
       insert: mockInsert,
-      update: (...args: unknown[]) => {
+      update: (...args: any[]) => {
         mockUpdate(...args);
         return {
           eq: () => ({ eq: () => ({ error: null }) }),

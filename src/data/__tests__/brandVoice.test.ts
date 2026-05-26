@@ -6,7 +6,7 @@ const mockLimit = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 
 import { fetchBrandVoiceOutcomes, fetchRecentBrandVoiceAudits, topDeviations } from "@/data/brandVoice";
@@ -78,7 +78,7 @@ describe("DAL — brandVoice", () => {
           outreach_message_id: null,
         },
       ] as const;
-      const result = topDeviations(audits as unknown as Parameters<typeof topDeviations>[0]);
+      const result = topDeviations(audits as any as Parameters<typeof topDeviations>[0]);
       expect(result[0].code).toBe("tone_too_casual");
       expect(result[0].count).toBe(2);
     });

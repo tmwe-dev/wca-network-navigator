@@ -21,8 +21,8 @@ describe("Collaudo C4 — search_kb Fallback Integrity", () => {
   function simulateSearchKb(
     query: string,
     userId: string,
-    embeddingResults: unknown[]
-  ): { matches: unknown[]; method: string; error?: string } {
+    embeddingResults: any[]
+  ): { matches: any[]; method: string; error?: string } {
     if (!query) return { matches: [], method: "error", error: "query è obbligatoria" };
 
     // Embedding search
@@ -79,13 +79,13 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
     index: number;
     description: string;
     tool: string | null;
-    args: Record<string, unknown>;
+    args: Record<string, any>;
     status: string;
-    result: unknown;
+    result: any;
   }
 
   // Current behavior: just logs a note
-  function simulateCurrentExecution(step: PlanStep): unknown {
+  function simulateCurrentExecution(step: PlanStep): any {
     if (step.tool && typeof step.tool === "string") {
       return { note: `Tool "${step.tool}" da eseguire con args: ${JSON.stringify(step.args || {})}` };
     }
@@ -95,8 +95,8 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
   // Correct behavior: calls real handler
   function simulateCorrectExecution(
     step: PlanStep,
-    toolHandlers: Record<string, (args: unknown) => any>
-  ): unknown {
+    toolHandlers: Record<string, (args: any) => any>
+  ): any {
     if (step.tool && typeof step.tool === "string") {
       const handler = toolHandlers[step.tool];
       if (handler) {
@@ -112,7 +112,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
       index: 0, description: "Search KB", tool: "search_kb",
       args: { query: "servizi marittimi" }, status: "pending", result: null,
     };
-    const result = simulateCurrentExecution(step) as unknown;
+    const result = simulateCurrentExecution(step) as any;
     expect(result.note).toContain("da eseguire");
     // It says "to be executed" but doesn't actually execute
     expect(result).not.toHaveProperty("matches");
@@ -120,7 +120,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
 
   it("C4.6 — correct: executes the tool handler and returns real data", () => {
     const handlers = {
-      search_kb: (args: unknown) => ({
+      search_kb: (args: any) => ({
         matches: [{ title: "Servizi FCL", content: "..." }],
         method: "embedding",
       }),
@@ -129,17 +129,17 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
       index: 0, description: "Search KB", tool: "search_kb",
       args: { query: "servizi marittimi" }, status: "pending", result: null,
     };
-    const result = simulateCorrectExecution(step, handlers) as unknown;
+    const result = simulateCorrectExecution(step, handlers) as any;
     expect(result.matches).toBeDefined();
     expect(result.matches).toHaveLength(1);
   });
 
-  it("C4.7 — correct: unknown tool returns manual note (no crash)", () => {
+  it("C4.7 — correct: any tool returns manual note (no crash)", () => {
     const step: PlanStep = {
       index: 0, description: "Call custom API", tool: "custom_api_call",
       args: {}, status: "pending", result: null,
     };
-    const result = simulateCorrectExecution(step, {}) as unknown;
+    const result = simulateCorrectExecution(step, {}) as any;
     expect(result.note).toContain("manuale");
   });
 });
@@ -204,7 +204,7 @@ describe("Collaudo G1 — Composer V2 Response Handling", () => {
   // ai-assistant returns { content: "..." }
   // useEmailComposerV2 reads data.response (WRONG KEY)
 
-  function simulateAiAssistantResponse(): Record<string, unknown> {
+  function simulateAiAssistantResponse(): Record<string, any> {
     return {
       content: "Gentile partner, le scrivo per proporre una collaborazione...",
       // Note: there is no "response" key
@@ -232,7 +232,7 @@ describe("Collaudo G1 — Composer V2 Response Handling", () => {
   });
 
   it("C7.4 — handles missing both keys gracefully", () => {
-    const data: Record<string, unknown> = {};
+    const data: Record<string, any> = {};
     const body = (data.response as string) || (data.content as string) || "";
     expect(body).toBe("");
   });
@@ -253,7 +253,7 @@ describe("Collaudo B2 — tool-decision Mode", () => {
   };
 
   it("C8.14 — BUG: code reads provider.baseUrl but property is 'url'", () => {
-    expect((provider as unknown).baseUrl).toBeUndefined();
+    expect((provider as any).baseUrl).toBeUndefined();
     expect(provider.url).toBeDefined();
   });
 

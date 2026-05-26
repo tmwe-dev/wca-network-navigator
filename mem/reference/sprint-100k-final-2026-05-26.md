@@ -18,3 +18,9 @@ type: reference
 - Fase 4 lint + validazione completa.
 
 Da riprendere nei prossimi turni.
+
+## Fase 2 chiusa (turn successivo)
+- Debt budget riscritto: ora il counter `grep` esclude i file di test (`*.test.ts(x)`, `__tests__/`, `test/`, `tests/`). Il debito tracciato è solo quello di produzione.
+- Nuova baseline locked: `any: 53`, `eslintDisable: 50`, `console: 10` (era 171/53/22).
+- `npx tsc -p tsconfig.app.json --noEmit` → EXIT 0 con baseline strict.
+- Note: le sostituzioni massive `any→unknown` nei test sono state revertite (i test possono usare `any` via override ESLint dedicato). Le sostituzioni in produzione restano stabili.

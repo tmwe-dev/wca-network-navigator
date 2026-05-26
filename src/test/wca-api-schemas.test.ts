@@ -25,7 +25,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
         custom_extra_field_2030: "futuro",
       });
       expect(r.success).toBe(true);
-      expect((r.success && r.data) as unknown).toMatchObject({ custom_extra_field_2030: "futuro" });
+      expect((r.success && r.data) as any).toMatchObject({ custom_extra_field_2030: "futuro" });
     });
 
     it("logo_url può essere null", () => {
@@ -120,7 +120,7 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   });
 
   describe("safeParse* — best-effort, no throw", () => {
-    let warnSpy: unknown;
+    let warnSpy: any;
 
     beforeEach(() => {
       warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

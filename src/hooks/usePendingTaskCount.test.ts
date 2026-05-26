@@ -8,7 +8,7 @@ const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => ({ select: (...a: unknown[]) => mockSelect(...a) }),
+    from: () => ({ select: (...a: any[]) => mockSelect(...a) }),
     auth: {
       getSession: vi.fn().mockResolvedValue({
         data: { session: { user: { id: "test-user" } } },
@@ -54,7 +54,7 @@ describe("usePendingTaskCount", () => {
   });
   it("sets up realtime subscription on mount", async () => {
     const mod = await import("@/integrations/supabase/client");
-    const channelSpy = vi.spyOn(mod.supabase, "channel" as unknown);
+    const channelSpy = vi.spyOn(mod.supabase, "channel" as any);
     renderHookWithProviders(() => usePendingTaskCount());
     expect(channelSpy).toHaveBeenCalledWith("pending-tasks-badge");
     channelSpy.mockRestore();

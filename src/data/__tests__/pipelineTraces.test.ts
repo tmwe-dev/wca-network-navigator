@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: unknown[]) => mockFrom(...a) },
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 
 import {
@@ -13,8 +13,8 @@ import {
   listDistinctStepNames,
 } from "@/data/pipelineTraces";
 
-function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
-  const c: Record<string, unknown> = {};
+function chain(terminal: { data?: any; error?: any } = { data: [], error: null }) {
+  const c: Record<string, any> = {};
   c.select = vi.fn().mockReturnValue(c);
   c.eq = vi.fn().mockReturnValue(c);
   c.gte = vi.fn().mockReturnValue(c);
@@ -22,7 +22,7 @@ function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error
   c.or = vi.fn().mockReturnValue(c);
   c.order = vi.fn().mockReturnValue(c);
   c.limit = vi.fn().mockReturnValue(c);
-  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }
 

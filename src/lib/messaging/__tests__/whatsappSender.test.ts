@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockSendWhatsApp = vi.fn();
 vi.mock("@/lib/inbox/sendMessage", () => ({
-  sendWhatsApp: (...args: unknown[]) => mockSendWhatsApp(...args),
+  sendWhatsApp: (...args: any[]) => mockSendWhatsApp(...args),
 }));
 
 const mockSupabaseInsert = vi.fn();
@@ -10,7 +10,7 @@ const mockSupabaseFrom = vi.fn().mockReturnValue({ insert: mockSupabaseInsert })
 const mockGetSession = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...args: unknown[]) => mockSupabaseFrom(...args),
+    from: (...args: any[]) => mockSupabaseFrom(...args),
     auth: { getSession: () => mockGetSession() },
   },
 }));

@@ -4,11 +4,11 @@ import { renderHookWithProviders } from "@/test/hookTestUtils";
 const mockToast = vi.fn();
 
 vi.mock("@/hooks/use-toast", () => ({
-  toast: (...args: unknown[]) => mockToast(...args),
+  toast: (...args: any[]) => mockToast(...args),
 }));
 
 vi.mock("@/lib/errors", () => ({
-  extractErrorMessage: (e: unknown) => e instanceof Error ? e.message : String(e),
+  extractErrorMessage: (e: any) => e instanceof Error ? e.message : String(e),
 }));
 
 import { useErrorToast } from "./useErrorToast";

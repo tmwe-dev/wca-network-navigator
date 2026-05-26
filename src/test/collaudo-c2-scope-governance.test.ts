@@ -211,7 +211,7 @@ describe("Collaudo C6 — Cadence Engine mapActionType", () => {
     // After fix 1.6: should be "send_linkedin"
   });
 
-  it("C6.4 — BUG: unknown types default to send_email (dangerous)", () => {
+  it("C6.4 — BUG: any types default to send_email (dangerous)", () => {
     // An unknown action type like "sms" or garbage defaults to "send_email"
     // This is dangerous — should default to "create_task" (safe) instead
     expect(mapActionType("sms")).toBe("send_email");

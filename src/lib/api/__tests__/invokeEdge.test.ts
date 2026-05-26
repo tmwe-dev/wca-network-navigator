@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api/apiError";
 const mockInvoke = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    functions: { invoke: (...args: unknown[]) => mockInvoke(...args) },
+    functions: { invoke: (...args: any[]) => mockInvoke(...args) },
   },
 }));
 
@@ -22,7 +22,7 @@ vi.mock("@/lib/api/costTracker", () => ({
 }));
 
 vi.mock("@/lib/api/responseValidator", () => ({
-  validateResponse: vi.fn((data: unknown) => data),
+  validateResponse: vi.fn((data: any) => data),
 }));
 
 import { invokeEdge } from "@/lib/api/invokeEdge";

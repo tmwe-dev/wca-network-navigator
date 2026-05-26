@@ -7,7 +7,7 @@ import { describe, it, expect } from "vitest";
 
 // ─── CSV Field Escaping ──────────────────────────────────
 
-function escapeCSVField(field: unknown): string {
+function escapeCSVField(field: any): string {
   const str = String(field ?? "");
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
     return `"${str.replace(/"/g, '""')}"`;
@@ -15,7 +15,7 @@ function escapeCSVField(field: unknown): string {
   return str;
 }
 
-function convertToCSV(headers: string[], rows: Record<string, unknown>[]): string {
+function convertToCSV(headers: string[], rows: Record<string, any>[]): string {
   const headerRow = headers.map(escapeCSVField).join(",");
   const dataRows = rows.map((row) => headers.map((h) => escapeCSVField(row[h])).join(","));
   return [headerRow, ...dataRows].join("\n");
@@ -30,7 +30,7 @@ interface _ExportRow {
   phone: string | null;
   company: string | null;
   created_at: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 // ─── Tests ──────────────────────────────────────────────
@@ -120,7 +120,7 @@ describe("Export Generation", () => {
 
     it("should handle empty rows array", () => {
       const headers = ["id", "name", "email"];
-      const rows: Record<string, unknown>[] = [];
+      const rows: Record<string, any>[] = [];
 
       const csv = convertToCSV(headers, rows);
       const lines = csv.split("\n");
@@ -318,7 +318,7 @@ describe("Export Generation", () => {
   describe("Empty Data Handling", () => {
     it("should handle completely empty dataset", () => {
       const headers = ["id", "name", "email"];
-      const rows: Record<string, unknown>[] = [];
+      const rows: Record<string, any>[] = [];
 
       const csv = convertToCSV(headers, rows);
       expect(csv).toBe("id,name,email");
@@ -326,7 +326,7 @@ describe("Export Generation", () => {
 
     it("should handle dataset with only headers", () => {
       const headers = ["id", "name", "email"];
-      const rows: Record<string, unknown>[] = [];
+      const rows: Record<string, any>[] = [];
 
       const csv = convertToCSV(headers, rows);
       const lines = csv.split("\n");

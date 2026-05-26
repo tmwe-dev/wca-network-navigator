@@ -25,8 +25,8 @@ describe("lazyRetry", () => {
     // React.lazy stores factory in _payload[1] or _init/_payload
     // Instead, just call the factory wrapper that lazy wraps:
     // We can access the internal init function
-    const payload = (LazyComp as unknown as Record<string, unknown>)._payload;
-    const init = (LazyComp as unknown as Record<string, (p: unknown) => unknown>)._init;
+    const payload = (LazyComp as any as Record<string, any>)._payload;
+    const init = (LazyComp as any as Record<string, (p: any) => unknown>)._init;
 
     // Call init to trigger the factory — this starts the promise chain
     try {

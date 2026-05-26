@@ -19,8 +19,8 @@ const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq });
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      select: (...a: unknown[]) => mockSelect(...a),
-      update: (...a: unknown[]) => mockUpdate(...a),
+      select: (...a: any[]) => mockSelect(...a),
+      update: (...a: any[]) => mockUpdate(...a),
     }),
   },
 }));

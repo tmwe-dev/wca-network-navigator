@@ -4,7 +4,7 @@ const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: unknown[]) => mockFrom(...a),
+    from: (...a: any[]) => mockFrom(...a),
     auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: "u1" } } } }) },
     functions: { invoke: vi.fn().mockResolvedValue({ data: { runs: [] }, error: null }) },
     rpc: vi.fn().mockResolvedValue({ error: null }),
@@ -13,8 +13,8 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import { listTestCasesForPrompt, listRunsForPrompt, deleteTestCase } from "@/data/promptTests";
 
-function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error: null }) {
-  const c: Record<string, unknown> = {};
+function chain(terminal: { data?: any; error?: any } = { data: [], error: null }) {
+  const c: Record<string, any> = {};
   c.select = vi.fn().mockReturnValue(c);
   c.eq = vi.fn().mockReturnValue(c);
   c.order = vi.fn().mockReturnValue(c);
@@ -23,7 +23,7 @@ function chain(terminal: { data?: unknown; error?: unknown } = { data: [], error
   c.delete = vi.fn().mockReturnValue(c);
   c.single = vi.fn().mockResolvedValue(terminal);
   c.maybeSingle = vi.fn().mockResolvedValue(terminal);
-  c.then = (resolve: (v: unknown) => void) => resolve(terminal);
+  c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }
 

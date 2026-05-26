@@ -18,7 +18,7 @@ describe("sanitizeVisibleAiText", () => {
 
   it("returns empty string for empty input", () => {
     expect(sanitizeVisibleAiText("")).toBe("");
-    expect(sanitizeVisibleAiText(null as unknown as string)).toBe("");
+    expect(sanitizeVisibleAiText(null as any as string)).toBe("");
   });
 
   it("preserves normal text without markers", () => {

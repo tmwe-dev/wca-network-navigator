@@ -11,9 +11,9 @@ const mockGetSession = vi.fn().mockResolvedValue({
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => ({ insert: (...a: unknown[]) => mockInsert(...a) }),
+    from: () => ({ insert: (...a: any[]) => mockInsert(...a) }),
     auth: { getSession: () => mockGetSession() },
-    functions: { invoke: (...a: unknown[]) => mockInvoke(...a) },
+    functions: { invoke: (...a: any[]) => mockInvoke(...a) },
   },
 }));
 
@@ -26,7 +26,7 @@ vi.mock("@/lib/api/invokeEdge", () => ({
 }));
 
 vi.mock("@/lib/api/rateLimiter", () => ({
-  withRateLimit: vi.fn((_key: string, fn: () => Promise<unknown>) => fn()),
+  withRateLimit: vi.fn((_key: string, fn: () => Promise<any>) => fn()),
   RateLimitedError: class extends Error {
     retryAfterMs = 1000;
     constructor(k: string) {

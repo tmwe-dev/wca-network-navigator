@@ -9,33 +9,33 @@ describe("useKeyboardNavigation", () => {
 
   it("moves down on ArrowDown", () => {
     const { result } = renderHook(() => useKeyboardNavigation(5));
-    act(() => { result.current.handleKeyDown({ key: "ArrowDown", preventDefault: vi.fn() } as unknown as React.KeyboardEvent); });
+    act(() => { result.current.handleKeyDown({ key: "ArrowDown", preventDefault: vi.fn() } as any as React.KeyboardEvent); });
     expect(result.current.focusedIndex).toBe(1);
   });
 
   it("moves up on ArrowUp", () => {
     const { result } = renderHook(() => useKeyboardNavigation(5));
     act(() => { result.current.setFocusedIndex(3); });
-    act(() => { result.current.handleKeyDown({ key: "ArrowUp", preventDefault: vi.fn() } as unknown as React.KeyboardEvent); });
+    act(() => { result.current.handleKeyDown({ key: "ArrowUp", preventDefault: vi.fn() } as any as React.KeyboardEvent); });
     expect(result.current.focusedIndex).toBeGreaterThanOrEqual(0);
   });
 
   it("goes to first on Home", () => {
     const { result } = renderHook(() => useKeyboardNavigation(5));
     act(() => { result.current.setFocusedIndex(3); });
-    act(() => { result.current.handleKeyDown({ key: "Home", preventDefault: vi.fn() } as unknown as React.KeyboardEvent); });
+    act(() => { result.current.handleKeyDown({ key: "Home", preventDefault: vi.fn() } as any as React.KeyboardEvent); });
     expect(result.current.focusedIndex).toBeGreaterThanOrEqual(0);
   });
 
   it("goes to last on End", () => {
     const { result } = renderHook(() => useKeyboardNavigation(5));
-    act(() => { result.current.handleKeyDown({ key: "End", preventDefault: vi.fn() } as unknown as React.KeyboardEvent); });
+    act(() => { result.current.handleKeyDown({ key: "End", preventDefault: vi.fn() } as any as React.KeyboardEvent); });
     expect(result.current.focusedIndex).toBe(4);
   });
 
   it("wraps at boundaries", () => {
     const { result } = renderHook(() => useKeyboardNavigation(3));
-    act(() => { result.current.handleKeyDown({ key: "ArrowUp", preventDefault: vi.fn() } as unknown as React.KeyboardEvent); });
+    act(() => { result.current.handleKeyDown({ key: "ArrowUp", preventDefault: vi.fn() } as any as React.KeyboardEvent); });
     expect(result.current.focusedIndex).toBeGreaterThanOrEqual(0);
   });
 });
