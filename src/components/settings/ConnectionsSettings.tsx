@@ -17,7 +17,7 @@ const log = createLogger("ConnectionsSettings");
 
 interface ConnectionsSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<unknown> };
+  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<any> };
 }
 
 export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSettingsProps) {

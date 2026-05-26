@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Block } from "../types";
 
-export function usePromptLabBlocks(initialLoader: () => Promise<Block[]>, deps: ReadonlyArray<unknown> = []) {
+export function usePromptLabBlocks(initialLoader: () => Promise<Block[]>, deps: ReadonlyArray<any> = []) {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

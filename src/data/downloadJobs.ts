@@ -174,7 +174,7 @@ export async function getJobItemsByJobId(jobId: string, select = "status, contac
   return (data ?? []) as unknown as Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>;
 }
 
-export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<unknown> {
+export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<any> {
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)

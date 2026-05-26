@@ -3,7 +3,7 @@ import { invokeAi } from "@/lib/ai/invokeAi";
 import type { BulkEntry } from "../types";
 import { assertCalledFromRunner } from "./_internal";
 
-type AnyAsync = (...a: unknown[]) => Promise<unknown>;
+type AnyAsync = (...a: unknown[]) => Promise<any>;
 
 export interface UpdateOriginItem { readonly contactId: string; readonly origin: string; }
 export const updateOriginEntry: BulkEntry<UpdateOriginItem, { ok: boolean }> = {

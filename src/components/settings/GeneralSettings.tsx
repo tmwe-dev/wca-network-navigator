@@ -19,7 +19,7 @@ const log = createLogger("GeneralSettings");
 
 interface GeneralSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<unknown> };
+  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<any> };
 }
 
 export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProps) {

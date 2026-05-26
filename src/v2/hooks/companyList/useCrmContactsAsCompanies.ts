@@ -77,7 +77,7 @@ export interface UseCrmContactsAsCompaniesResult {
   isLoading: boolean;
   error: unknown;
   hasMore: boolean;
-  fetchNextPage: () => Promise<unknown>;
+  fetchNextPage: () => Promise<any>;
   totalContacts: number;
 }
 

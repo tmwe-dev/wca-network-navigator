@@ -5,7 +5,7 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("callCheckInbox");
 
-const inFlightCheckInbox = new Map<string, Promise<unknown>>();
+const inFlightCheckInbox = new Map<string, Promise<any>>();
 
 function inFlightKey(mailboxId: string | null, unreadOnly: boolean): string {
   return `${mailboxId ?? "personal"}|${unreadOnly ? "u" : "all"}`;
@@ -58,7 +58,7 @@ export interface CallCheckInboxOptions {
 export async function callCheckInbox(
   mailboxId?: string | null,
   opts: CallCheckInboxOptions = {},
-): Promise<unknown> {
+): Promise<any> {
   const key = inFlightKey(mailboxId ?? null, !!opts.unreadOnly);
   const existing = inFlightCheckInbox.get(key);
   if (existing) {
@@ -76,12 +76,12 @@ export async function callCheckInbox(
 async function callCheckInboxOnce(
   mailboxId: string | null,
   opts: CallCheckInboxOptions,
-): Promise<unknown> {
+): Promise<any> {
   try {
     const headers: Record<string, string> = {};
     if (mailboxId) headers["x-mailbox-id"] = mailboxId;
     if (opts.unreadOnly) headers["x-unread-only"] = "1";
-    const json = await invokeEdge<unknown>("check-inbox", {
+    const json = await invokeEdge<any>("check-inbox", {
       body: {},
       context: "callCheckInbox",
       headers: Object.keys(headers).length > 0 ? headers : undefined,

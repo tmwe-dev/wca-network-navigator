@@ -10,11 +10,11 @@ const log = createLogger("lazyRetry");
  * This prevents white screens when users have stale chunks cached or when the
  * Lovable Preview proxy intermittently fails to serve a chunk.
  *
- * Signature mirrors React.lazy itself (ComponentType<unknown>) so callers don't have
+ * Signature mirrors React.lazy itself (ComponentType<any>) so callers don't have
  * to constrain props to Record<string, unknown>.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function lazyRetry<T extends ComponentType<unknown>>(
+export function lazyRetry<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
   retryDelay = 1500
 ) {
