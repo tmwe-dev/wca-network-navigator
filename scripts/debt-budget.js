@@ -15,7 +15,7 @@ import { execSync } from "node:child_process";
 // Snapshot 2026-05-26 (Sprint 100k — Fase 2: production-only debt count, test files escluded).
 // Never raise these numbers. To reduce: lower after a successful migration PR.
 const BASELINE = {
-  any: 53,
+  any: 47,
   eslintDisable: 50,
   console: 10,
 };
@@ -23,7 +23,7 @@ const BASELINE = {
 function count(pattern) {
   try {
     const out = execSync(
-      `grep -rE ${JSON.stringify(pattern)} src --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" --exclude-dir="__tests__" --exclude-dir="test" --exclude-dir="tests" | wc -l`,
+      `grep -rE ${JSON.stringify(pattern)} src --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" --exclude="*.d.ts" --exclude-dir="__tests__" --exclude-dir="test" --exclude-dir="tests" | wc -l`,
       { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
     );
     return parseInt(out.trim(), 10) || 0;

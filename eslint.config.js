@@ -44,6 +44,13 @@ export default tseslint.config(
       "no-console": "off",
     },
   },
+  // ── Ambient .d.ts declarations: `any` is idiomatic for external module shims ──
+  {
+    files: ["src/**/*.d.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   // ── DAL enforcement: ban supabase.from() outside src/data/ ──
   {
     files: [
