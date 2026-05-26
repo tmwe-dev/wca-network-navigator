@@ -14,7 +14,7 @@ let installed = false;
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type AnyFn = (...args: unknown[]) => any;
 
-function wrapBuilder(table: string, builder: any): any {
+function wrapBuilder(table: string, builder: unknown): unknown {
   // I metodi che terminano la query e ritornano una Promise sono `then`-able.
   // Strategy: wrap la `then` del builder.
   if (!builder || typeof builder.then !== "function") return builder;
@@ -36,7 +36,7 @@ function wrapBuilder(table: string, builder: any): any {
   builder.then = (onFulfilled?: AnyFn, onRejected?: AnyFn) => {
     const start = Date.now();
     return originalThen(
-      (res: any) => {
+      (res: unknown) => {
         const route = typeof window !== "undefined" ? window.location.pathname : undefined;
         const op = ops[ops.length - 1] ?? "select";
         const count = Array.isArray(res?.data) ? res.data.length : res?.data ? 1 : 0;
@@ -52,7 +52,7 @@ function wrapBuilder(table: string, builder: any): any {
         });
         return onFulfilled ? onFulfilled(res) : res;
       },
-      (err: any) => {
+      (err: unknown) => {
         const route = typeof window !== "undefined" ? window.location.pathname : undefined;
         traceCollector.push({
           type: "db.query",
@@ -81,14 +81,14 @@ export function installSupabaseTraceProxy(): void {
   sb.from = (table: string) => wrapBuilder(table, originalFrom(table));
 
   const originalRpc = sb.rpc.bind(supabase);
-  sb.rpc = (fnName: string, params?: any) => {
+  sb.rpc = (fnName: string, params?: unknown) => {
     const start = Date.now();
     const result = originalRpc(fnName, params);
     if (result && typeof result.then === "function") {
       const original = result.then.bind(result);
       result.then = (ok?: AnyFn, ko?: AnyFn) =>
         original(
-          (r: any) => {
+          (r: unknown) => {
             traceCollector.push({
               type: "db.query",
               scope: "db",
@@ -101,7 +101,7 @@ export function installSupabaseTraceProxy(): void {
             });
             return ok ? ok(r) : r;
           },
-          (err: any) => {
+          (err: unknown) => {
             traceCollector.push({
               type: "db.query",
               scope: "db",

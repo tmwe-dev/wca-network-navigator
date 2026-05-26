@@ -21,7 +21,7 @@ import { findConversations } from "@/data/aiConversations";
 
 const mockUser = { id: "user-1" };
 
-function mockSession(user: any) {
+function mockSession(user: unknown) {
   return { data: { session: user ? { user } : null }, error: null };
 }
 

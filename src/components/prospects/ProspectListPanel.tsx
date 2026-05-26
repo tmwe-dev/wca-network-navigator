@@ -59,7 +59,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
     queryKey: queryKeys.prospects.byAteco(atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters),
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = await queryProspects((query: any) => {
+      const data = await queryProspects((query: unknown) => {
         if (quickSearch && quickSearch.length >= 2) {
           query = query.or(`company_name.ilike.%${quickSearch}%,partita_iva.ilike.%${quickSearch}%,codice_fiscale.ilike.%${quickSearch}%`);
         } else if (atecoCodes.length > 0) {

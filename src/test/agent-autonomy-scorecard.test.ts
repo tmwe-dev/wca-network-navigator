@@ -88,7 +88,7 @@ describe("Routing correctness", () => {
 
 // ── Test 3: Approval discipline ──
 describe("Approval discipline", () => {
-  function isHighStakes(partner: any): boolean {
+  function isHighStakes(partner: unknown): boolean {
     if (partner.lead_status === "in_progress" || partner.lead_status === "negotiation") return true;
     if (partner.source === "ex_client") return true;
     if (partner.rating && partner.rating >= 4) return true;

@@ -117,7 +117,7 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
 
   // Query builder for whitelisted tables (cast required for dynamic table names)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q: any = (supabase as unknown as { from: (t: string) => any })
+  let q: unknown = (supabase as unknown as { from: (t: string) => any })
     .from(plan.table)
     .select(selectCols, { count: "exact" });
 

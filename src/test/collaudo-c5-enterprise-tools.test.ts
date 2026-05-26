@@ -21,8 +21,8 @@ describe("Collaudo C4 — search_kb Fallback Integrity", () => {
   function simulateSearchKb(
     query: string,
     userId: string,
-    embeddingResults: any[]
-  ): { matches: any[]; method: string; error?: string } {
+    embeddingResults: unknown[]
+  ): { matches: unknown[]; method: string; error?: string } {
     if (!query) return { matches: [], method: "error", error: "query è obbligatoria" };
 
     // Embedding search
@@ -95,7 +95,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
   // Correct behavior: calls real handler
   function simulateCorrectExecution(
     step: PlanStep,
-    toolHandlers: Record<string, (args: any) => any>
+    toolHandlers: Record<string, (args: unknown) => any>
   ): unknown {
     if (step.tool && typeof step.tool === "string") {
       const handler = toolHandlers[step.tool];
@@ -120,7 +120,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
 
   it("C4.6 — correct: executes the tool handler and returns real data", () => {
     const handlers = {
-      search_kb: (args: any) => ({
+      search_kb: (args: unknown) => ({
         matches: [{ title: "Servizi FCL", content: "..." }],
         method: "embedding",
       }),

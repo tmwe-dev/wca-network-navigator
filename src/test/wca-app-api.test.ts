@@ -14,7 +14,7 @@ import { clearWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 
 const originalFetch = global.fetch;
 
-function mockFetch(response: any, ok = true, status = 200) {
+function mockFetch(response: unknown, ok = true, status = 200) {
   return vi.fn().mockResolvedValue({
     ok,
     status,
@@ -97,7 +97,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
       try {
         await wcaDiscover("IT");
         throw new Error("expected to throw");
-      } catch (err: any) {
+      } catch (err: unknown) {
         expect(err.name).toBe("ApiError");
         expect(err.code).toBe("SERVER_ERROR");
         expect(err.httpStatus).toBe(500);

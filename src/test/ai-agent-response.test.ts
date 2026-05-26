@@ -105,7 +105,7 @@ describe("ai/agentResponse", () => {
 
   describe("dispatchAiUiActions / dispatchAiAgentEffects", () => {
     let dispatched: CustomEvent[] = [];
-    let dispatchSpy: any;
+    let dispatchSpy: unknown;
 
     beforeEach(() => {
       dispatched = [];

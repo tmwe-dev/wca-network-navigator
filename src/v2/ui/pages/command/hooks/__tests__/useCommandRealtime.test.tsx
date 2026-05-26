@@ -13,7 +13,7 @@ const getSession = vi.fn().mockResolvedValue({
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getSession: (...a: any[]) => getSession(...a) },
+    auth: { getSession: (...a: unknown[]) => getSession(...a) },
     channel: vi.fn(() => channelMock),
     removeChannel: (c: unknown) => removeChannel(c),
   },
