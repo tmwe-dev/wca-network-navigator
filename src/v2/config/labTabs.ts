@@ -52,7 +52,7 @@ export interface LabTabConfig {
   label: string;
   icon: LucideIcon;
   group: LabTabGroup;
-  Component: LazyExoticComponent<ComponentType<any>>;
+  Component: LazyExoticComponent<ComponentType<unknown>>;
   legacyPath?: string;
 }
 

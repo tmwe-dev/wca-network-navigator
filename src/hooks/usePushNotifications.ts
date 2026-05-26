@@ -69,7 +69,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       // Save subscription to database
       const savedSubscription = await savePushSubscription(
         user.id,
-        subscription.toJSON() as any,
+        subscription.toJSON() as unknown as Parameters<typeof savePushSubscription>[1],
         navigator.userAgent
       );
 

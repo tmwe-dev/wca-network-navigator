@@ -79,7 +79,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --reporter=blob
+      # Core blocking suite: solo smoke (8 spec) — fail = PR bloccata.
+      # La full suite (66 spec) gira ogni notte in e2e-nightly.yml.
+      - run: npx playwright test e2e/smoke --reporter=blob
       - uses: actions/upload-artifact@v4
         if: always()
         with:

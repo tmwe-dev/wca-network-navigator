@@ -91,7 +91,7 @@ export function useCreateEvent() {
         color: input.color || "#3B82F6",
         reminder_minutes: input.reminder_minutes ?? 15,
         status: "scheduled" as const,
-      } as any);
+      } as unknown as Parameters<typeof calendarData.createEvent>[0]);
 
       return event;
     },

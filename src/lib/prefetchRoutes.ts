@@ -3,7 +3,7 @@
  * Each entry returns ALL chunks needed to display the route, so when the user
  * actually clicks no further network round-trips are required.
  */
-type Loader = () => Promise<any>;
+type Loader = () => Promise<unknown>;
 
 const routePrefetchMap: Record<string, readonly Loader[]> = {
   // Dashboard: V2 standalone
