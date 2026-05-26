@@ -18,7 +18,7 @@ interface GenericRecordTabProps {
   tabLabel: string;
   loader: () => Promise<Block[]>;
   saver: (block: Block) => Promise<{ table: string; id: string }>;
-  loaderDeps?: ReadonlyArray<any>;
+  loaderDeps?: ReadonlyArray<unknown>;
   emptyMessage?: string;
 }
 

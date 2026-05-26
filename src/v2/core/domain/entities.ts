@@ -108,8 +108,8 @@ export interface Agent {
   readonly systemPrompt: string;
   readonly isActive: boolean;
   readonly territoryCodes: ReadonlyArray<string>;
-  readonly assignedTools: ReadonlyArray<any>;
-  readonly knowledgeBase: ReadonlyArray<any>;
+  readonly assignedTools: ReadonlyArray<unknown>;
+  readonly knowledgeBase: ReadonlyArray<unknown>;
   readonly stats: Readonly<Record<string, unknown>>;
   readonly scheduleConfig: Readonly<Record<string, unknown>>;
   readonly signatureHtml: string | null;

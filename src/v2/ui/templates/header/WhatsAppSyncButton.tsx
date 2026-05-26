@@ -65,7 +65,7 @@ export function GlobalSyncButton(): React.ReactElement {
     try {
       // Email: chiamata diretta single-flight. WA/LI: trigger event ai loro
       // adaptive-sync (non resettano sequenza). Tutto in parallelo.
-      const tasks: Array<Promise<any>> = [];
+      const tasks: Array<Promise<unknown>> = [];
       tasks.push(
         callCheckInbox().catch((e) => {
           log.warn("email sync failed", { error: e instanceof Error ? e.message : String(e) });

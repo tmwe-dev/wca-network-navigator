@@ -44,7 +44,7 @@ export function useAgentTasks(agentId?: string) {
 
   const executeTask = useMutation({
     mutationFn: async (taskId: string) => {
-      return invokeEdge<any>("agent-execute", {
+      return invokeEdge<unknown>("agent-execute", {
         body: { agent_id: agentId, task_id: taskId },
         context: "useAgentTasks.executeTask",
       });

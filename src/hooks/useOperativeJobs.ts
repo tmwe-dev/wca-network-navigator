@@ -29,7 +29,7 @@ export function useOperativeJobs() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      return findWorkPlans(user.id, [TAG]) as Promise<any> as Promise<OperativeJob[]>;
+      return findWorkPlans(user.id, [TAG]) as unknown as Promise<OperativeJob[]>;
     },
   });
 
@@ -42,7 +42,7 @@ export function useOperativeJobs() {
         title: input.title, description: input.description,
         steps: JSON.parse(JSON.stringify(steps)), metadata: JSON.parse("{}"),
         tags: [TAG], status: "running", user_id: user.id,
-      }) as Promise<any> as Promise<OperativeJob>;
+      }) as unknown as Promise<OperativeJob>;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job creato"); },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore creazione job"),
