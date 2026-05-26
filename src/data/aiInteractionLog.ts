@@ -4,6 +4,10 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("aiInteractionLog");
+
 export type AiInteractionType =
   | "chat_text"
   | "voice_tts"
@@ -70,14 +74,12 @@ export async function logAiInteraction(input: AiInteractionLogInput): Promise<st
       .select("id")
       .maybeSingle();
     if (error) {
-      // eslint-disable-next-line no-console
-      console.warn("[aiInteractionLog] insert failed", error.message);
+      log.warn("[aiInteractionLog] insert failed", { detail: error.message });
       return null;
     }
     return (data as { id: string } | null)?.id ?? null;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[aiInteractionLog] threw", err);
+    log.warn("[aiInteractionLog] threw", { detail: err });
     return null;
   }
 }

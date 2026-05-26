@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StepOperatorIdentity, type OperatorIdentityValues } from "./StepOperatorIdentity";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("onboarding");
+
 function describeSaveError(err: unknown): string {
   if (!err) return "errore sconosciuto";
   if (err instanceof Error) return err.message;
@@ -117,7 +121,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           .update(operatorPatch, { count: "exact" })
           .eq("user_id", user.id);
         if (opErr) {
-          console.warn("[onboarding] operator update non-blocking:", describeSaveError(opErr));
+          log.warn("[onboarding] operator update non-blocking:", { detail: describeSaveError(opErr) });
         } else if ((count ?? 0) === 0) {
           // Nessuna riga operator esistente: il trigger non l'ha creata
           // (probabile email duplicata su un'altra utenza). Non blocchiamo:

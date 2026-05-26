@@ -9,6 +9,10 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { invokeAi } from "@/lib/ai/invokeAi";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useGroupAssignment");
+
 export function useGroupAssignment(
   groups: EmailSenderGroup[],
   onSendersChange: (fn: (prev: SenderAnalysis[]) => SenderAnalysis[]) => void,
@@ -126,7 +130,7 @@ export function useGroupAssignment(
             toast.success("AI aggiornata: nuova istruzione salvata in KB", { duration: 3500 });
           }
         }).catch((e) => {
-          console.warn("[learn-from-group-correction] failed", e);
+          log.warn("[learn-from-group-correction] failed", { detail: e });
         });
       }
     },

@@ -1,5 +1,9 @@
 import { lazy, type ComponentType } from "react";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("lazyRetry");
+
 /**
  * Wrapper around React.lazy that retries the dynamic import once after a delay
  * if the initial fetch fails (e.g., chunk load error after a deploy or proxy hiccup).
@@ -16,15 +20,13 @@ export function lazyRetry<T extends ComponentType<any>>(
 ) {
   return lazy(() =>
     factory().catch((err) => {
-      // eslint-disable-next-line no-console
-      console.warn("[lazyRetry] dynamic import failed, retrying in", retryDelay, "ms", err);
+      log.warn("dynamic import failed, retrying", { retryDelayMs: retryDelay, error: err });
       return new Promise<{ default: T }>((resolve, reject) => {
         setTimeout(() => {
           factory()
             .then(resolve)
             .catch((err2) => {
-              // eslint-disable-next-line no-console
-              console.error("[lazyRetry] retry failed", err2);
+              log.error("[lazyRetry] retry failed", { detail: err2 });
               reject(err2);
             });
         }, retryDelay);

@@ -36,6 +36,10 @@ import { ClassificationInsightsPanel } from "./ClassificationInsightsPanel";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AISuggestionsTab");
+
 interface AddressRow {
   id: string;
   email_address: string;
@@ -460,7 +464,7 @@ export default function AISuggestionsTab() {
         }).then(() => {
           qc.invalidateQueries({ queryKey: queryKeys.ai.classificationInsights("pending") });
         }).catch((err: Error) => {
-          console.warn("[refine] skipped:", err.message);
+          log.warn("[refine] skipped:", { detail: err.message });
         });
       }
       return row.id;

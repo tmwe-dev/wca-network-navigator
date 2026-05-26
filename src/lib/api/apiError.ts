@@ -13,6 +13,9 @@
  * `httpStatus`, `details` senza parsing di stringhe.
  */
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("apiError");
+
 export type ApiErrorCode =
   | "NETWORK_ERROR"           // Connessione fallita / timeout
   | "UNAUTHENTICATED"         // 401 — sessione assente/scaduta
@@ -100,7 +103,7 @@ export class ApiError extends Error {
         details = b;
       }
     } catch (_e) {
-      console.debug("operation failed");
+      log.debug("operation failed");
       /* body non JSON o vuoto: lascia il default */
     }
 

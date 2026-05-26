@@ -6,6 +6,10 @@ import * as React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ErrorBoundary");
+
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
@@ -24,7 +28,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    console.error("[ErrorBoundary]", error, info.componentStack); // eslint-disable-line no-console
+    log.error("ErrorBoundary caught", { error, componentStack: info.componentStack });
   }
 
   private handleRetry = (): void => {

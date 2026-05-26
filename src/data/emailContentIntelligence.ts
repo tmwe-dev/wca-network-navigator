@@ -5,6 +5,9 @@
  * del contenuto delle mail in arrivo. NESSUNA logica, solo SELECT.
  */
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("emailContentIntelligence");
 
 export interface SuggestedAction {
   type: string;
@@ -50,7 +53,7 @@ export async function fetchContentIntelligence(
     .eq("message_id", messageId)
     .maybeSingle();
   if (error) {
-    console.warn("[fetchContentIntelligence] error", error.message);
+    log.warn("fetchContentIntelligence error", { error: error.message });
     return null;
   }
   return (data as EmailContentIntelligenceRow | null) ?? null;
@@ -65,7 +68,7 @@ export async function fetchContentIntelligenceBulk(
     .select("*")
     .in("message_id", messageIds);
   if (error) {
-    console.warn("[fetchContentIntelligenceBulk] error", error.message);
+    log.warn("fetchContentIntelligenceBulk error", { error: error.message });
     return {};
   }
   const map: Record<string, EmailContentIntelligenceRow> = {};

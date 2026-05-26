@@ -6,6 +6,10 @@ import * as React from "react";
 import { AlertTriangle } from "lucide-react";
 import { Sentry } from "@/lib/sentry";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("DrawerErrorBoundary");
+
 const DYNAMIC_IMPORT_ERROR_RE = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError/i;
 const CHUNK_RELOAD_KEY = "__vite_chunk_reload_at__";
 const CHUNK_RELOAD_COOLDOWN_MS = 15000;
@@ -31,7 +35,7 @@ export class DrawerErrorBoundary extends React.Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    console.error(`[DrawerErrorBoundary:${this.props.scope}]`, error, info.componentStack);
+    log.error("DrawerErrorBoundary caught", { scope: this.props.scope, error, componentStack: info.componentStack });
     Sentry.captureException(error, {
       tags: { boundary: "drawer", scope: this.props.scope },
       extra: { componentStack: info.componentStack },

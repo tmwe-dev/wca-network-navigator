@@ -76,7 +76,7 @@ async function insert(
     await insertPageEvent(payload);
   } catch (e) {
     if (typeof console !== "undefined") {
-      console.debug("[telemetry] insert failed", e);
+      log.debug("[telemetry] insert failed", { detail: e });
     }
   }
 }

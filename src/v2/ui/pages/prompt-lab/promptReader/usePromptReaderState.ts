@@ -7,6 +7,10 @@ import { PANEL_ORDER_KEY, COPILOT_EXPANDED_KEY, readPanelOrder, readExpanded, ty
 import { kbForAgent, downloadText, slug } from "./utils";
 import { buildAgentMarkdown, buildToolsMarkdown } from "./markdown";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("promptReader");
+
 export function usePromptReaderState() {
   const allAgents = useMemo(() => Object.values(AGENT_REGISTRY), []);
   const [selectedId, setSelectedId] = useState<string>(allAgents[0]?.id ?? "");
@@ -91,7 +95,7 @@ export function usePromptReaderState() {
 
   useEffect(() => {
     findKbEntries().then(setKbAll).catch((e) => {
-      console.error("KB load failed", e);
+      log.error("KB load failed", { detail: e });
       toast.error("Caricamento KB fallito");
       setKbAll([]);
     });
@@ -131,7 +135,7 @@ export function usePromptReaderState() {
         try {
           sims[a.id] = await runAgentSimulator({ agentId: a.id, userMessage: "(export)", dryRunAI: false });
         } catch (e) {
-          console.warn("simulator failed for", a.id, e);
+          log.warn("simulator failed for", { detail: a.id, e });
         }
       }
       setCache(sims);
@@ -155,7 +159,7 @@ export function usePromptReaderState() {
         try {
           sims[a.id] = await runAgentSimulator({ agentId: a.id, userMessage: "(export)", dryRunAI: false });
         } catch (e) {
-          console.warn("simulator failed for", a.id, e);
+          log.warn("simulator failed for", { detail: a.id, e });
         }
       }
       setCache(sims);
