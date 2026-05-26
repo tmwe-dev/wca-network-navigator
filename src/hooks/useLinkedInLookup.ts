@@ -191,7 +191,7 @@ export function useLinkedInLookup() {
     }
 
     const toProcess = contacts.filter(c => {
-      const ed = (c.enrichment_data as Record<string, any>) || {};
+      const ed = (c.enrichment_data as Record<string, unknown>) || {};
       return !getExistingLinkedInUrl(ed);
     });
 

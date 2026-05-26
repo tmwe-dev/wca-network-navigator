@@ -12,7 +12,7 @@ import { traceCollector } from "./traceCollector";
 let installed = false;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type AnyFn = (...args: any[]) => any;
+type AnyFn = (...args: unknown[]) => any;
 
 function wrapBuilder(table: string, builder: any): any {
   // I metodi che terminano la query e ritornano una Promise sono `then`-able.
@@ -26,7 +26,7 @@ function wrapBuilder(table: string, builder: any): any {
   for (const verb of ["select", "insert", "update", "delete", "upsert"] as const) {
     if (typeof builder[verb] === "function") {
       const orig: AnyFn = builder[verb].bind(builder);
-      builder[verb] = (...args: any[]) => {
+      builder[verb] = (...args: unknown[]) => {
         ops.push(verb);
         return wrapBuilder(table, orig(...args));
       };

@@ -32,7 +32,7 @@ interface AgentAction {
   created_at: string;
   status: string;
   priority: string;
-  source_meta: Record<string, any>;
+  source_meta: Record<string, unknown>;
 }
 
 const CHANNEL_ICONS: Record<string, typeof Mail> = {

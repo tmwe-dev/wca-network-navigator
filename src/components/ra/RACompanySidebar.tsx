@@ -20,7 +20,7 @@ function formatDate(dateString: string) {
 }
 
 interface RACompanySidebarProps {
-  prospect: Record<string, any>;
+  prospect: Record<string, unknown>;
   contacts: RAContact[];
   interactions: RAInteraction[];
   onLeadStatusChange: (status: RALeadStatus) => void;

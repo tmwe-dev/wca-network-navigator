@@ -248,7 +248,7 @@ function detectTransformForTarget(targetCol: string): TransformationType {
 }
 
 /** 3-tier key lookup: exact → normalized → fuzzy substring */
-function findRowKey(row: Record<string, any>, targetKey: string): string | undefined {
+function findRowKey(row: Record<string, unknown>, targetKey: string): string | undefined {
   const keys = Object.keys(row);
   if (row[targetKey] !== undefined) return targetKey;
 

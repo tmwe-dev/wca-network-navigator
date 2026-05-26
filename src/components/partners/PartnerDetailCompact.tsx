@@ -137,7 +137,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   }, [partner, navigate]);
 
   // ── WhatsApp: send via extension bridge ──
-  const handleSendWhatsApp = useCallback(async (contact: Record<string, any>) => {
+  const handleSendWhatsApp = useCallback(async (contact: Record<string, unknown>) => {
     const phone = contact.mobile || contact.direct_phone;
     if (!phone) return;
     setWaSending(contact.id);
@@ -389,7 +389,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
           <div className="flex flex-wrap gap-1.5">
-            {services.map((s: Record<string, any>, i: number) => {
+            {services.map((s: Record<string, unknown>, i: number) => {
               const Icon = getServiceIcon(s.service_category);
               return (
                 <Tooltip key={i}>

@@ -1,6 +1,6 @@
 /**
  * Shared Partner view-model types for UI components.
- * These replace `Record<string, any>` across partner components.
+ * These replace `Record<string, unknown>` across partner components.
  */
 
 /** Service relation from Supabase join */

@@ -309,7 +309,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
         .select("*")
         .eq("prospect_id", prospect.id);
       if (error) throw error;
-      return data as Array<Record<string, any>>;
+      return data as Array<Record<string, unknown>>;
     },
   });
 

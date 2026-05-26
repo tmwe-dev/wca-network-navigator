@@ -68,7 +68,7 @@ function ContactUnifiedActions({ contact: c }: { contact: ContactDetail }) {
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = c.mobile || c.phone;
   const phone = c.phone || c.mobile;
-  const ed = c.enrichment_data as Record<string, any> | null;
+  const ed = c.enrichment_data as Record<string, unknown> | null;
   const linkedinUrl: string | undefined = ed?.linkedin_url || ed?.linkedin_profile_url;
   const partnerId = (c as { wca_partner_id?: string }).wca_partner_id;
 
@@ -221,7 +221,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
         </Section>
       )}
 
-      <ContactEnrichmentCard enrichmentData={(c.enrichment_data as Record<string, any> | undefined) ?? null} deepSearchAt={c.deep_search_at} />
+      <ContactEnrichmentCard enrichmentData={(c.enrichment_data as Record<string, unknown> | undefined) ?? null} deepSearchAt={c.deep_search_at} />
 
       <Collapsible open={state.detailsOpen} onOpenChange={(v) => dispatch({ type: "TOGGLE_DETAILS", value: v })}>
         <CollapsibleTrigger asChild>

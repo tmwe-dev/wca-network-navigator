@@ -6,7 +6,7 @@ import {
   Wine, Fuel, Car, Sprout, Leaf, Hammer, Microscope, BookOpen, MonitorSmartphone,
 } from "lucide-react";
 
-export const SERVICE_ICONS: Record<string, any> = {
+export const SERVICE_ICONS: Record<string, unknown> = {
   air_freight: Plane,
   ocean_fcl: Ship,
   ocean_lcl: Container,
@@ -46,7 +46,7 @@ export const SERVICE_ICONS: Record<string, any> = {
   office: Building2,
 };
 
-export const PARTNER_TYPE_ICONS: Record<string, any> = {
+export const PARTNER_TYPE_ICONS: Record<string, unknown> = {
   freight_forwarder: Truck,
   customs_broker: FileCheck,
   carrier: Ship,

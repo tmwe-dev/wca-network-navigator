@@ -476,7 +476,7 @@ function VariablesTab({ draft, goal, baseProposal }: { draft: DraftState; goal: 
   );
 }
 
-function ActionButtons({ draft, sending, waBridge, liBridge, _pcBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy, _onDraftChange }: Record<string, any>) {
+function ActionButtons({ draft, sending, waBridge, liBridge, _pcBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy, _onDraftChange }: Record<string, unknown>) {
   if (draft.channel === "email" && draft.contactEmail) {
     return (
       <button onClick={onSendEmail} disabled={sending} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50">

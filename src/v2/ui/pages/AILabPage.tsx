@@ -21,7 +21,7 @@ interface TestScenario {
   id: number;
   name: string;
   endpoint: "generate-email" | "generate-outreach" | "improve-email";
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   expectedChecks: {
     language?: string;
     hasKB?: boolean;

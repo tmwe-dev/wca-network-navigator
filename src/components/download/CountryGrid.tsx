@@ -203,7 +203,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
 
 function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelected, onToggle, isDark }: {
   country: { code: string; name: string };
-  stats: Record<string, any>;
+  stats: Record<string, unknown>;
   fallbackCount: number;
   hasPartnerStats: boolean;
   isSelected: boolean;

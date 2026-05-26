@@ -5,7 +5,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const typeIcon: Record<string, any> = {
+const typeIcon: Record<string, unknown> = {
   phone_call: Phone,
   meeting: Users,
   email: Mail,

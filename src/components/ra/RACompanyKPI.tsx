@@ -8,7 +8,7 @@ function formatCurrency(n: number | null) {
 }
 
 interface RACompanyKPIProps {
-  prospect: Record<string, any>;
+  prospect: Record<string, unknown>;
 }
 
 export function RACompanyKPI({ prospect }: RACompanyKPIProps) {
