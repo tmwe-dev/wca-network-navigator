@@ -15,8 +15,8 @@ import { execSync } from "node:child_process";
 // Snapshot 2026-05-26 (Sprint 100k — Fase 2: production-only debt count, test files escluded).
 // Never raise these numbers. To reduce: lower after a successful migration PR.
 const BASELINE = {
-  any: 26,
-  eslintDisable: 50,
+  any: 24,
+  eslintDisable: 49,
   console: 10,
 };
 
