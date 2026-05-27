@@ -32,6 +32,7 @@ import {
   type PlanExecutionState,
 } from "../planRunner";
 import { normalizePrompt } from "../lib/lexicalNormalizer";
+import { detectSmalltalk } from "../lib/smalltalkDetector";
 import {
   contextHint as buildContextHint,
   isContextFresh,
@@ -271,6 +272,24 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Show original (un-normalized) text in chat for UX honesty
       _addMessage({ role: "user", content: rawText, timestamp: ts() });
       resetForNewMessage();
+
+      // SMALLTALK SHORT-CIRCUIT: saluti / "c'è qualcuno?" / "grazie" non devono
+      // mai colpire il planner né ai-query. Risposta conversazionale del
+      // Direttore in < 1s, anche TTS per coerenza con la voce realtime.
+      const small = detectSmalltalk(rawText);
+      if (small) {
+        _addMessage({
+          role: "assistant",
+          content: small.reply,
+          agentName: "Direttore",
+          timestamp: ts(),
+          meta: `smalltalk · ${small.kind}`,
+        });
+        setFlowPhase("idle");
+        setShowTools(false);
+        try { ttsSpeak(small.reply); } catch { /* voce muta: ok */ }
+        return;
+      }
 
       // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
