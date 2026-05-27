@@ -4,7 +4,7 @@ const mockFrom = vi.fn();
 const mockUntypedFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: any[]) => mockFrom(...a) },
+  supabase: { from: (table: string) => mockFrom(table) },
 }));
 vi.mock("@/lib/supabaseUntyped", () => ({
   untypedFrom: (...a: any[]) => mockUntypedFrom(...a),

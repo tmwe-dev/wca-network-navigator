@@ -6,7 +6,7 @@ const mockInsert = vi.fn();
 const mockEq = vi.fn();
 const _mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (table: string) => mockFrom(table) } }));
 import { updateImportLog, deleteImportLog, deleteImportErrors } from "@/data/importLogs";
 describe("DAL — importLogs", () => {
   beforeEach(() => {

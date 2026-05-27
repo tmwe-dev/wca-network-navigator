@@ -5,7 +5,7 @@ const mockEq = vi.fn();
 const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (table: string) => mockFrom(table) } }));
 import { listWhatsAppAddresses, updateWhatsAppAddressNotes } from "@/data/whatsappAddresses";
 describe("DAL — whatsappAddresses", () => {
   beforeEach(() => {

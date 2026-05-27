@@ -5,7 +5,7 @@ const mockUpdate = vi.fn();
 const mockEq = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (table: string) => mockFrom(table) } }));
 import { getBulkJob } from "@/data/bulkJobs";
 describe("DAL — bulkJobs", () => {
   beforeEach(() => {

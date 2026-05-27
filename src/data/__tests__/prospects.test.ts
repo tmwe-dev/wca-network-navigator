@@ -3,7 +3,7 @@ const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
 const mockEq = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (table: string) => mockFrom(table) } }));
 import { updateProspectLeadStatus, updateProspect } from "@/data/prospects";
 describe("DAL — prospects", () => {
   beforeEach(() => {

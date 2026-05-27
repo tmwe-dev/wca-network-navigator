@@ -4,7 +4,7 @@ const mockInsert = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: any[]) => mockFrom(...a) },
+  supabase: { from: (table: string) => mockFrom(table) },
 }));
 
 import { insertContactInteraction } from "@/data/contactInteractions";

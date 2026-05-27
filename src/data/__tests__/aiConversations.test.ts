@@ -4,7 +4,7 @@ const mockDelete = vi.fn();
 const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (table: string) => mockFrom(table) } }));
 import { findConversations, deleteConversation } from "@/data/aiConversations";
 describe("DAL — aiConversations", () => {
   beforeEach(() => {
