@@ -234,8 +234,7 @@ export async function runAgenticHarmonizer(input: {
           id: `${session.id}-${entity.id}`,
           action,
           target: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            table: (d.proposal.table || entity.inferredTable) as any,
+            table: (d.proposal.table || entity.inferredTable) as HarmonizeProposal["target"]["table"],
             id: action === "UPDATE" ? d.matched_candidate_id ?? undefined : undefined,
           },
           before: action === "UPDATE" ? candidateContents.find((c) => c.id === d.matched_candidate_id)?.content ?? null : null,

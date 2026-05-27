@@ -51,7 +51,6 @@ export function CockpitPage() {
   // direttamente dal ComposeAiConfigContext, quindi qui basta triggerare.
   const handleOracleGenerate = (_config: OracleConfig) => {
     if (!draftState.contactId || !draftState.channel) {
-      // eslint-disable-next-line no-alert
       toast.info("Trascina prima un contatto su un canale per generare");
       return;
     }

@@ -83,9 +83,7 @@ export async function fetchPartnersByFilters(
   filters: ReadonlyArray<{ column: string; op: string; value: unknown }>,
 ): Promise<PartnerRow[]> {
   if (!filters.length) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q: any = supabase
-    .from("partners")
+  let q = untypedFrom("partners")
     .select(PARTNER_COLS)
     .eq("is_active", true)
     .neq("lead_status", "blacklisted")

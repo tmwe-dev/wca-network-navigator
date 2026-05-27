@@ -149,13 +149,6 @@ async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, u
   return data || [];
 }
 
-
-  const { data, error } = await query.limit(50000);
-  if (error) throw error;
-  return data || [];
-}
-*/
-
 // ── Hooks ──
 
 export function useExportCSV() {
