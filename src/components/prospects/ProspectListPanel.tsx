@@ -58,8 +58,16 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
   const { data: prospects, isLoading } = useQuery({
     queryKey: queryKeys.prospects.byAteco(atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters),
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = await queryProspects((query: any) => {
+      const data = await queryProspects((rawQuery) => {
+        // PostgREST chainable builder — fluent API, dynamic shape.
+        let query = rawQuery as {
+          or: (s: string) => typeof query;
+          in: (c: string, v: unknown[]) => typeof query;
+          eq: (c: string, v: unknown) => typeof query;
+          gte: (c: string, v: unknown) => typeof query;
+          lte: (c: string, v: unknown) => typeof query;
+          not: (c: string, op: string, v: unknown) => typeof query;
+        };
         if (quickSearch && quickSearch.length >= 2) {
           query = query.or(`company_name.ilike.%${quickSearch}%,partita_iva.ilike.%${quickSearch}%,codice_fiscale.ilike.%${quickSearch}%`);
         } else if (atecoCodes.length > 0) {
@@ -73,8 +81,8 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
         if (advFilters?.dipendenti_max) query = query.lte("dipendenti", parseInt(advFilters.dipendenti_max));
         if (advFilters?.anno_fondazione_min) query = query.gte("data_costituzione", `${advFilters.anno_fondazione_min}-01-01`);
         if (advFilters?.anno_fondazione_max) query = query.lte("data_costituzione", `${advFilters.anno_fondazione_max}-12-31`);
-        if (advFilters?.has_phone || advFilters?.has_phone_and_email) query = query.not("phone", "is", null);
-        if (advFilters?.has_email || advFilters?.has_phone_and_email) query = query.not("email", "is", null);
+        if (advFilters?.has_phone || advFilters?.has_phone_and_email) query = query.not("phone", "is", null as unknown);
+        if (advFilters?.has_email || advFilters?.has_phone_and_email) query = query.not("email", "is", null as unknown);
         return query;
       });
       return data as unknown as Prospect[];

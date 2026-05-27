@@ -191,7 +191,6 @@ export function EnrichmentRowList({
                     {/* Azienda con logo + nome + dominio + linkedin badge */}
                     <div className="flex items-center gap-3 min-w-0">
                       {row.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={row.logoUrl} alt={row.name} className="w-8 h-8 rounded object-contain bg-card border border-border/60 shrink-0" />
                       ) : (
                         <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-foreground/60 text-sm font-bold shrink-0">

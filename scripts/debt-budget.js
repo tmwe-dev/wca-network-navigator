@@ -12,11 +12,11 @@
 import { execSync } from "node:child_process";
 
 // ── Baseline: update ONLY when you intentionally reduce debt ──
-// Snapshot 2026-05-26 (Sprint 100k — Fase 2: production-only debt count, test files escluded).
+// Snapshot 2026-05-27 (Sprint 90k — Opzione A safe reduction: any 24→17, eslint-disable 49→41).
 // Never raise these numbers. To reduce: lower after a successful migration PR.
 const BASELINE = {
-  any: 24,
-  eslintDisable: 49,
+  any: 17,
+  eslintDisable: 41,
   console: 10,
 };
 

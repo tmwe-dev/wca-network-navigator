@@ -9,7 +9,7 @@
  *
  * Esegue via supabase.from() rispettando RLS. Solo SELECT.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { z } from "zod";
 import { ALLOWED_TABLES, ALLOWED_TABLES_LIST, findAllowedTable, type AllowedTable } from "./allowedTables";
 import { getLiveColumns } from "./liveSchemaClient";
@@ -115,11 +115,8 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
   // Cap limit
   const limit = Math.min(plan.limit ?? 50, HARD_LIMIT);
 
-  // Query builder for whitelisted tables (cast required for dynamic table names)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q: any = (supabase as unknown as { from: (t: string) => any })
-    .from(plan.table)
-    .select(selectCols, { count: "exact" });
+  // Query builder for whitelisted tables (dynamic table names → sanctioned untyped boundary).
+  let q = untypedFrom(plan.table).select(selectCols, { count: "exact" });
 
   for (const f of plan.filters) {
     switch (f.op) {

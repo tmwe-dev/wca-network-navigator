@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { ContactRow, PartnerRow } from "./types";
 
 const PARTNER_COLS = "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";
@@ -83,9 +84,7 @@ export async function fetchPartnersByFilters(
   filters: ReadonlyArray<{ column: string; op: string; value: unknown }>,
 ): Promise<PartnerRow[]> {
   if (!filters.length) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q: any = supabase
-    .from("partners")
+  let q = untypedFrom("partners")
     .select(PARTNER_COLS)
     .eq("is_active", true)
     .neq("lead_status", "blacklisted")

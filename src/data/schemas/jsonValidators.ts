@@ -64,12 +64,9 @@ export interface SafeParseResult<T> {
 }
 
 function logValidationError(field: string, errors: z.ZodIssue[]): void {
-  if (typeof console !== "undefined") {
-    // eslint-disable-next-line no-console
-    log.warn(`[jsonValidators] ${field} validation failed`, {
-      errors: errors.map((e) => ({ path: e.path.join("."), message: e.message })),
-    });
-  }
+  log.warn(`[jsonValidators] ${field} validation failed`, {
+    errors: errors.map((e) => ({ path: e.path.join("."), message: e.message })),
+  });
 }
 
 /**
