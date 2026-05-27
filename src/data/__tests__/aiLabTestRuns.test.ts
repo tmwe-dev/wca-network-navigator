@@ -3,7 +3,7 @@ const mockInsert = vi.fn();
 const mockFrom = vi.fn();
 const mockGetSession = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: any[]) => mockFrom(...a), auth: { getSession: () => mockGetSession() } },
+  supabase: { from: (table: string) => mockFrom(table), auth: { getSession: () => mockGetSession() } },
 }));
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }) }));
 import { insertTestRun } from "@/data/aiLabTestRuns";

@@ -14,12 +14,12 @@ const mockRpc = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: any[]) => mockFrom(...a),
+    from: (table: string) => mockFrom(table),
     rpc: (...a: any[]) => mockRpc(...a),
   },
 }));
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: any[]) => mockFrom(...a),
+  untypedFrom: (table: string) => mockFrom(table),
 }));
 
 import {

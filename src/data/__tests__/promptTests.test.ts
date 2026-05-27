@@ -4,7 +4,7 @@ const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: any[]) => mockFrom(...a),
+    from: (table: string) => mockFrom(table),
     auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: "u1" } } } }) },
     functions: { invoke: vi.fn().mockResolvedValue({ data: { runs: [] }, error: null }) },
     rpc: vi.fn().mockResolvedValue({ error: null }),

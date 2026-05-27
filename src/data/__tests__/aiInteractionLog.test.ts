@@ -15,7 +15,7 @@ const mockGetSession = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: any[]) => mockFrom(...a),
+    from: (table: string) => mockFrom(table),
     auth: { getSession: () => mockGetSession() },
   },
 }));

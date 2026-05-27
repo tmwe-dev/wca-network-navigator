@@ -33,7 +33,7 @@ const builder: any = {
 const mockFrom = vi.fn(() => builder);
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (...a: any[]) => mockFrom(...a),
+    from: (table: string) => mockFrom(table),
     rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
     auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null }), getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } }, error: null }) },
     functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
@@ -43,7 +43,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: any[]) => mockFrom(...a),
+  untypedFrom: (table: string) => mockFrom(table),
 }));
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) }));
 describe("DAL — promptLabGlobalRuns", () => {
