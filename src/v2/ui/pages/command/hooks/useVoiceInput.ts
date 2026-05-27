@@ -39,8 +39,19 @@ export function useVoiceInput({
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+  type MinimalRecognition = {
+    start: () => void;
+    stop: () => void;
+    abort?: () => void;
+    lang: string;
+    continuous: boolean;
+    interimResults: boolean;
+    onresult: ((e: SpeechRecognitionEvent) => void) | null;
+    onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
+    onend: (() => void) | null;
+    onstart: (() => void) | null;
+  };
+  const recognitionRef = useRef<MinimalRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef<string>("");
 
