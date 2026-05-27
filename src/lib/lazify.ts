@@ -13,10 +13,15 @@
  */
 import { lazy, ComponentType } from "react";
 
+// Generic `any` here is the standard React.lazy signature — props are erased
+// at the boundary and re-typed by callers via JSX. Sostituirlo con
+// `Record<string, unknown>` rompe i call site con prop tipizzate strict.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function lazify<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>, retries = 2) {
   return lazy(() => retryImport(factory, retries));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function retryImport<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
   retriesLeft: number,
