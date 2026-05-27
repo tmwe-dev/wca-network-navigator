@@ -7,7 +7,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (table: string) => mockFrom(table) },
 }));
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: any[]) => mockUntypedFrom(...a),
+  untypedFrom: (table: string) => mockUntypedFrom(table),
 }));
 
 import { findEmailAddressRules, updateEmailAddressRule } from "@/data/emailAddressRules";
