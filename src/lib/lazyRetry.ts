@@ -13,14 +13,15 @@ const log = createLogger("lazyRetry");
  * Signature mirrors React.lazy itself (ComponentType<any>) so callers don't have
  * to constrain props to Record<string, unknown>.
  */
-export function lazyRetry<P>(
-  factory: () => Promise<{ default: ComponentType<P> }>,
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function lazyRetry<T extends ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
   retryDelay = 1500
 ) {
   return lazy(() =>
     factory().catch((err) => {
       log.warn("dynamic import failed, retrying", { retryDelayMs: retryDelay, error: err });
-      return new Promise<{ default: ComponentType<P> }>((resolve, reject) => {
+      return new Promise<{ default: T }>((resolve, reject) => {
         setTimeout(() => {
           factory()
             .then(resolve)
