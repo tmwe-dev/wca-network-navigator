@@ -30,7 +30,7 @@ const builder: any = {
   then: (cb: any) => Promise.resolve({ data: [], error: null, count: 0 }).then(cb),
   count: vi.fn(() => builder),
 };
-const mockFrom = vi.fn(() => builder);
+const mockFrom = vi.fn((_table: string) => builder);
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => mockFrom(table),
