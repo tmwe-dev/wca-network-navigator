@@ -60,10 +60,13 @@ export default defineConfig(({ mode }) => {
           },
           {
             urlPattern: restPattern,
-            handler: "StaleWhileRevalidate",
+            // Hardening 2026-05-27: dati live, mai stale.
+            // NetworkFirst con timeout breve + cache di fallback minima per resilienza offline.
+            handler: "NetworkFirst",
             options: {
               cacheName: "supabase-rest",
-              expiration: { maxEntries: 100, maxAgeSeconds: 600 },
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 50, maxAgeSeconds: 30 },
             },
           },
           {
