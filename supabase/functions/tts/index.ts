@@ -5,8 +5,15 @@ import { checkDailyBudget, recordUsage, budgetExceededResponse } from "../_share
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY")!;
-const VOICE_ID_IT = Deno.env.get("ELEVENLABS_VOICE_ID_IT") ?? "21m00Tcm4TlvDq8ikWAM";
+const DEFAULT_VOICE_ID_IT = "JBFqnCBsd6RMkjVDRZzb";
+const ELEVENLABS_VOICE_ID_PATTERN = /^[A-Za-z0-9]{20}$/;
 const MODEL = "eleven_multilingual_v2";
+
+function resolveVoiceId(candidate?: unknown): string {
+  const value = typeof candidate === "string" ? candidate.trim() : "";
+  if (ELEVENLABS_VOICE_ID_PATTERN.test(value)) return value;
+  return DEFAULT_VOICE_ID_IT;
+}
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
@@ -48,13 +55,14 @@ serve(async (req) => {
     }
 
     const truncated = text.slice(0, 1500);
+    const resolvedVoiceId = resolveVoiceId(voiceId ?? Deno.env.get("ELEVENLABS_VOICE_ID_IT"));
 
     // Cost guardrail
     const budget = await checkDailyBudget(userId, "tts", truncated.length);
     if (!budget.allowed) return budgetExceededResponse(budget, corsHeaders);
 
     const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId ?? VOICE_ID_IT}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}?output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: {
