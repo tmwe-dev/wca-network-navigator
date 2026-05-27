@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { ContactRow, PartnerRow } from "./types";
 
 const PARTNER_COLS = "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";

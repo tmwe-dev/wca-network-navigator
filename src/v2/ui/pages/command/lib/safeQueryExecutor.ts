@@ -10,6 +10,7 @@
  * Esegue via supabase.from() rispettando RLS. Solo SELECT.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { z } from "zod";
 import { ALLOWED_TABLES, ALLOWED_TABLES_LIST, findAllowedTable, type AllowedTable } from "./allowedTables";
 import { getLiveColumns } from "./liveSchemaClient";
