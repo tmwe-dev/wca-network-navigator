@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (...a: any[]) => mockFrom(...a) },
+  supabase: { from: (table: string) => mockFrom(table) },
 }));
 
 import { findCommercialPlaybooks, updateCommercialPlaybook } from "@/data/commercialPlaybooks";

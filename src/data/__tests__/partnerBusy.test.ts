@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: any[]) => mockFrom(...a),
+  untypedFrom: (table: string) => mockFrom(table),
 }));
 
 import { findBusyPartnerIds, findBusyPartnerRows } from "@/data/partnerBusy";

@@ -7,7 +7,7 @@ const mockIn = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: any[]) => mockFrom(...a),
+  untypedFrom: (table: string) => mockFrom(table),
 }));
 
 import { fetchContentIntelligence, fetchContentIntelligenceBulk } from "@/data/emailContentIntelligence";

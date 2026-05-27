@@ -3,7 +3,7 @@ const mockSelect = vi.fn();
 const mockEq = vi.fn();
 const mockGte = vi.fn();
 const mockFrom = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (...a: any[]) => mockFrom(...a) } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (table: string) => mockFrom(table) } }));
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }) }));
 import { getTodayUsage } from "@/data/tokenUsage";
 describe("DAL — tokenUsage", () => {

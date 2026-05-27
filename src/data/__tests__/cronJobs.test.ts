@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockRpc = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { rpc: (...a: any[]) => mockRpc(...a) },
+  supabase: { rpc: (fn: string, args?: unknown) => mockRpc(fn, args) },
 }));
 
 import { listCronJobStatus, listCronRecentRuns } from "@/data/cronJobs";
