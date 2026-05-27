@@ -13,22 +13,24 @@
  */
 import { lazy, ComponentType } from "react";
 
-// Use prop-generic instead of `ComponentType<any>` so we keep full inference
-// without an `any` boundary. Callers' props remain strict via JSX.
-export function lazify<P>(factory: () => Promise<{ default: ComponentType<P> }>, retries = 2) {
+// Note: `ComponentType<any>` mirrors React.lazy's own signature.
+// A prop-generic alternative (`<P>`) breaks call sites that pass union
+// factories (es. fallback `{ default: () => null }`) perché TS collassa P a `never`.
+// Questi `any` sono boundary irriducibili — sanctionati e documentati.
+export function lazify<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>, retries = 2) {
   return lazy(() => retryImport(factory, retries));
 }
 
-function retryImport<P>(
-  factory: () => Promise<{ default: ComponentType<P> }>,
+function retryImport<T extends ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
   retriesLeft: number,
-): Promise<{ default: ComponentType<P> }> {
+): Promise<{ default: T }> {
   return factory().catch((error: unknown) => {
     if (retriesLeft <= 0) {
       throw error;
     }
     const delay = 500 * Math.pow(2, 2 - retriesLeft); // 500, 1000
-    return new Promise<{ default: ComponentType<P> }>((resolve) =>
+    return new Promise<{ default: T }>((resolve) =>
       setTimeout(() => resolve(retryImport(factory, retriesLeft - 1)), delay),
     );
   });
