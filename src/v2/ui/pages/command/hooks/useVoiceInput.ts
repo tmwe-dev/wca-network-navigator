@@ -21,15 +21,6 @@ interface UseVoiceInputReturn {
   error: string | null;
 }
 
-interface SpeechRecognitionEvent {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEvent {
-  error: string;
-}
-
 export function useVoiceInput({
   onTranscript,
   onAutoSubmit,
@@ -39,19 +30,7 @@ export function useVoiceInput({
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  type MinimalRecognition = {
-    start: () => void;
-    stop: () => void;
-    abort?: () => void;
-    lang: string;
-    continuous: boolean;
-    interimResults: boolean;
-    onresult: ((e: SpeechRecognitionEvent) => void) | null;
-    onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
-    onend: (() => void) | null;
-    onstart: (() => void) | null;
-  };
-  const recognitionRef = useRef<MinimalRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef<string>("");
 
