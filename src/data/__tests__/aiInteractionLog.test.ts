@@ -39,7 +39,7 @@ describe("DAL — aiInteractionLog", () => {
       insert: mockInsert,
       upsert: vi.fn().mockResolvedValue({ error: null }),
       delete: () => ({
-        eq: (..._a: unknown[]) => {
+        eq: (...a: unknown[]) => {
           mockEq(...a);
           return { eq: mockEq };
         },
