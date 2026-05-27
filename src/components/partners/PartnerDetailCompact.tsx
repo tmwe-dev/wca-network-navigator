@@ -316,7 +316,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                  {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Primary</span>}
                 <div className="ml-auto">
                   <PartnerContactActionMenu
-                    contact={c as any}
+                    contact={c as unknown as React.ComponentProps<typeof PartnerContactActionMenu>["contact"]}
                     partner={{ id: partner.id, company_name: partner.company_name }}
                     onSendEmail={handleSendEmail}
                     onSendWhatsApp={handleSendWhatsApp}
@@ -328,7 +328,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
               <div className="space-y-0.5 ml-6 mt-1">
                 {c.email && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleSendEmail(c as any); }}
+                    onClick={(e) => { e.stopPropagation(); handleSendEmail(c as unknown as Parameters<typeof handleSendEmail>[0]); }}
                      className="flex items-center gap-1.5 text-xs group w-full text-left hover:bg-primary/10 rounded px-1 -mx-1 py-0.5 transition-colors"
                    >
                      <Mail className="w-3.5 h-3.5 text-primary shrink-0" />

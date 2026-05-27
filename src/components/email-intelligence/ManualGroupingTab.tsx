@@ -142,8 +142,7 @@ export default function ManualGroupingTab() {
       .select()
       .single();
     if (error) { toast.error("Errore creazione"); throw error; }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setGroups((prev) => [...prev, created as any]);
+    setGroups((prev) => [...prev, created as unknown as (typeof prev)[number]]);
     toast.success(`${data.nome_gruppo} creato`);
   };
 

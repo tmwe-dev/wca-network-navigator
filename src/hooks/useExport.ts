@@ -149,35 +149,6 @@ async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, u
   return data || [];
 }
 
-// TODO: Email export functionality is dead code
-// The "emails" table referenced here does not exist in Supabase.
-// The closest table is "email_send_log" but it has different columns:
-// - missing: from_address, to_address, contact_id, campaign_id
-// - has instead: recipient_email, sent_at (not created_at), campaign_queue_id
-// Either implement proper email export using email_send_log or remove this function entirely.
-/*
-async function fetchEmailsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = (supabase as any)
-    .from("emails")
-    .select(
-      "id, from_address, to_address, subject, created_at, message_id, contact_id, campaign_id, status"
-    );
-
-  if (filters?.dateRange) {
-    query = query
-      .gte("created_at", filters.dateRange.from)
-      .lte("created_at", filters.dateRange.to);
-  }
-
-  if (filters?.status) {
-    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-    query = query.in("status", statuses);
-  }
-
-  if (filters?.search) {
-    const term = `%${filters.search}%`;
-    query = query.or(`subject.ilike.${term},from_address.ilike.${term},to_address.ilike.${term}`);
-  }
 
   const { data, error } = await query.limit(50000);
   if (error) throw error;
