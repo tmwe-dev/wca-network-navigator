@@ -90,6 +90,31 @@ const CommandPage = () => {
     if (voice.error) sonnerToast.error(voice.error);
   }, [voice.error]);
 
+  // AUTO-PRIME audio sulla PRIMA interazione utente con la pagina (qualsiasi
+  // gesto: click, tap, tasto). Necessario perché l'auto-submit del mic
+  // (silence-detection) chiama submit.sendMessage SENZA gesto sincrono, e
+  // senza un prime() preventivo il browser blocca audio.play() con
+  // NotAllowedError → la voce sembra "morta". Idempotente.
+  useEffect(() => {
+    let primed = false;
+    const handler = () => {
+      if (primed) return;
+      primed = true;
+      try { voiceOut.prime(); } catch { /* ignore */ }
+      window.removeEventListener("pointerdown", handler, true);
+      window.removeEventListener("keydown", handler, true);
+      window.removeEventListener("touchstart", handler, true);
+    };
+    window.addEventListener("pointerdown", handler, true);
+    window.addEventListener("keydown", handler, true);
+    window.addEventListener("touchstart", handler, true);
+    return () => {
+      window.removeEventListener("pointerdown", handler, true);
+      window.removeEventListener("keydown", handler, true);
+      window.removeEventListener("touchstart", handler, true);
+    };
+  }, [voiceOut]);
+
   useEffect(() => {
     state.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.messages, state.chatEndRef]);
