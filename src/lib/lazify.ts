@@ -13,6 +13,10 @@
  */
 import { lazy, ComponentType } from "react";
 
+// Note: `ComponentType<any>` mirrors React.lazy's own signature.
+// A prop-generic alternative (`<P>`) breaks call sites that pass union
+// factories (es. fallback `{ default: () => null }`) perché TS collassa P a `never`.
+// Questi `any` sono boundary irriducibili — sanctionati e documentati.
 export function lazify<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>, retries = 2) {
   return lazy(() => retryImport(factory, retries));
 }
