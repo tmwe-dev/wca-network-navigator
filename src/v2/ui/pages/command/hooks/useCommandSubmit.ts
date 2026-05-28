@@ -287,7 +287,8 @@ export function useCommandSubmit(state: CommandStateApi) {
         });
         setFlowPhase("idle");
         setShowTools(false);
-        try { ttsSpeak(small.reply); } catch { /* voce muta: ok */ }
+        // TTS gestito dall'effetto in CommandPage che parla i messaggi del
+        // Direttore: evitiamo doppio audio chiamando ttsSpeak qui.
         return;
       }
 
@@ -361,6 +362,22 @@ export function useCommandSubmit(state: CommandStateApi) {
         const plan = planRes.value;
 
         if (plan.steps.length === 0) {
+          // Cintura di sicurezza: se il prompt è in realtà smalltalk (es. il
+          // detector iniziale è stato bypassato dalla normalizzazione lessicale)
+          // rispondi come Direttore invece di mostrare "Nessun piano possibile".
+          const smallFallback = detectSmalltalk(rawText) ?? detectSmalltalk(text);
+          if (smallFallback) {
+            _addMessage({
+              role: "assistant",
+              content: smallFallback.reply,
+              agentName: "Direttore",
+              timestamp: ts(),
+              meta: `smalltalk · ${smallFallback.kind} · post-plan`,
+            });
+            setFlowPhase("idle");
+            setShowTools(false);
+            return;
+          }
           // ANTI-ALLUCINAZIONE (2026-04-28):
           // Se il planner non ha generato step ma il prompt sembra una ricerca
           // (verbo di lettura, sostantivo di dominio o nome proprio) NON stampiamo
