@@ -12,7 +12,8 @@ const SMALLTALK_PATTERNS: RegExp[] = [
   // Saluti
   /^(ciao|salve|hey|ehi|buongiorno|buonasera|buonanotte|hola|hi|hello)[\s!.?,]*$/i,
   // Test microfono / presenza
-  /^c['’]?\s*è\s+qualcun[oa]\s*(in\s+ascolto|li[ìi]|qui)?\??$/i,
+  /^c['’\s]*[èe]?\s*qualcun[oa]\s*(in\s+ascolto|li[ìi]|qui)?\??$/i,
+  /^c['’\s]*[èe]?\s*nessun[oa]?\s*(in\s+ascolto|li[ìi]|qui)?\??$/i,
   /^(mi\s+senti|ci\s+sei|sei\s+(li[ìi]|qui|attiv[oa])|funzion[ai])\??$/i,
   /^(prova|test|testing|hello\s+world|1\s*2\s*3)\??$/i,
   // Ringraziamenti / ack
@@ -40,7 +41,8 @@ export function detectSmalltalk(rawText: string): SmalltalkMatch | null {
 
   // Presenza / test mic
   if (
-    /^c['’]?\s*è\s+qualcun/i.test(t) ||
+    /^c['’\s]*[èe]?\s*qualcun/i.test(t) ||
+    /^c['’\s]*[èe]?\s*nessun/i.test(t) ||
     /^(mi\s+senti|ci\s+sei|sei\s+(li[ìi]|qui|attiv))/i.test(t) ||
     /^(prova|test|testing)\b/i.test(t)
   ) {
