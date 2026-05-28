@@ -1,75 +1,84 @@
+## Obiettivo
+Rendere la Command Page di nuovo affidabile: smalltalk, prompt AI, tool routing e fallback devono comportarsi in modo prevedibile senza rompere submit, memoria, TTS, planner, fast-lane e side-effect.
 
-# Sprint 90k — Chiusura debito residuo + coverage reale
+## Diagnosi preliminare
+- Il caso che hai mostrato è riproducibile a livello codice: `"C'è qualcuno in ascolto"` viene intercettato da `detectSmalltalk()`, mentre `"c'è nessuno in ascolto"` e `"c'è nessuno"` non matchano il detector.
+- Quando il detector non intercetta, il prompt scende al planner `planExecution`; il prompt non è un comando operativo, quindi l'edge `ai-assistant` può restituire `{ steps: [], summary: "Nessun piano possibile" }`.
+- La Command Page mostra quel summary del modello come risposta utente, quindi sembra che “l’AI non funzioni”, anche se il problema immediato è routing conversazionale incompleto.
+- Ho anche individuato un rischio di side-effect duplicato: nello smalltalk `useCommandSubmit` chiama `ttsSpeak()`, ma `CommandPage` ha già un effetto che legge ogni messaggio del `Direttore`; questo può causare doppia voce.
 
-Obiettivo: passare da ~76k a ≥90k chiudendo i tre blocchi rimasti: coverage Vitest bassa, 24 `any` residui, PWA cache rischiosa su Supabase REST.
+## Mappa impatto nodo critico
+Nodo toccato: `src/v2/ui/pages/command/hooks/useCommandSubmit.ts` + `src/v2/ui/pages/command/lib/smalltalkDetector.ts`.
 
-## Fase 1 — Coverage reale 50%+ (impatto maggiore)
+Cosa fa oggi:
+```text
+input utente
+→ add user message + reset
+→ detectSmalltalk(rawText)
+  → se match: risposta Direttore, no planner
+  → se no match: normalizzazione → composer → SuperMario opzionale → fast-lane → planExecution
+→ se planner torna 0 step: mostra summary, incluso "Nessun piano possibile"
+```
 
-Target soglie Vitest: **statements 50 / branches 65 / functions 50 / lines 50** (oggi 8/55/25/8).
+Cosa può rompersi se si interviene male:
+- submit duplicati
+- doppia persistenza messaggi
+- doppia voce TTS
+- comandi operativi erroneamente classificati come smalltalk
+- fast-lane `ai-query` bypassata
+- planner o approvazioni mutate senza necessità
 
-Strategia: aggiungere test sui critical-path **non ancora coperti**, partendo dai moduli più piccoli e ad alto leverage:
+## Piano di intervento minimo
+1. **Correggere il detector smalltalk**
+   - Ampliare solo i pattern di presenza/test microfono per includere:
+     - `c'è nessuno`
+     - `c'è nessuno in ascolto`
+     - varianti con apostrofo/accènti/spazi: `ce nessuno`, `c e nessuno`, `c’è nessuno`
+     - varianti già esistenti: `c'è qualcuno`, `mi senti`, `ci sei`, `prova`
+   - Non trasformare query operative in smalltalk: niente match generici su parole come `partner`, `email`, `pipeline`, `audit`, `sistema`.
 
-1. **DAL `src/data/` non testati** (22 moduli da `docs/test/coverage-2026-04-14.md`): `agentPrompts`, `agentTasks`, `aiConversations`, `campaignJobs`, `cockpitQueue`, `contactInteractions`, `emailCampaigns`, `emailDrafts`, `importLogs`, `interactions`, `linkedinFlow`, `outreachPipeline`, `outreachQueue`, `partnerRelations`, `prospects`, `workPlans`, `workspaceDocs`, `clientAssignments`. Pattern già consolidato (mock supabase, export + happy/error path) → ~15 test/file.
+2. **Rimuovere il side-effect TTS duplicato**
+   - Lasciare che sia solo `CommandPage` a parlare i messaggi del `Direttore`.
+   - Eliminare la chiamata diretta `ttsSpeak(small.reply)` nel ramo smalltalk, così non ci sono due audio per la stessa risposta.
 
-2. **`src/lib/` puro** (utility senza dipendenze): finire test su `checkInbox`, `prefetchRoutes`, `lazify`/`lazyRetry`, `agentResponse`, `typedSupabase`. Alto rapporto LOC coperti/test scritti.
+3. **Aggiungere una guardia finale conversazionale**
+   - Nel ramo `plan.steps.length === 0`, prima di stampare `plan.summary`, ricontrollare il prompt con il detector smalltalk.
+   - Serve come cintura di sicurezza se in futuro il flusso cambia o la normalizzazione modifica il testo.
+   - Non cambia `ai-query`, composer, SuperMario, approvazioni o tool execution.
 
-3. **Hook critici senza test** (top per LOC da coverage report): `useCalendar`, `useAgentTasks`, `useOperativeJobs`, `usePushNotifications`, `useExtensionBridge`. Mock React Query + Supabase, smoke render + 1-2 mutation path.
+4. **Aggiungere test unitari mirati**
+   - Nuovo test su `smalltalkDetector` per bloccare regressioni:
+     - `C'è qualcuno in ascolto` → presence
+     - `c'è nessuno in ascolto` → presence
+     - `c'è nessuno` → presence
+     - `mi senti?` → presence
+     - `Mostrami i partner italiani senza email` → non smalltalk
+     - `fai un audit completo del sistema` → non smalltalk
+   - Test leggero, locale, senza DB, senza edge function.
 
-4. **Ratchet `vitest.config.ts`** progressivo: 8→25→40→50 in commit separati per evitare regressioni.
+5. **Audit operativo AI / tool / prompt**
+   - Documentare nel risultato finale la catena effettiva:
+     - smalltalk: `detectSmalltalk` → risposta locale
+     - read query: `looksLikeSimpleQuery` → `aiQueryTool` → `planQuery` → safe executor
+     - task complessi: `planExecution` → `ai-assistant` → `planRunner`
+     - Super Mario: solo se flag `super_mario_enabled=true`
+   - Evidenziare i prompt realmente coinvolti e i punti di fallback.
 
-## Fase 2 — Azzerare i 24 `any` residui
+6. **Verifica finale**
+   - Eseguire test selettivi sul detector.
+   - Controllare che non ci siano nuovi side-effect duplicati:
+     - submit OK
+     - ordine messaggi OK
+     - memoria/persistenza non duplicata
+     - fallback OK
+     - TTS non duplicato
+     - planner non chiamato per smalltalk
 
-Tutti i restanti sono concentrati in 4 file di boundary Supabase:
-
-- `src/lib/supabaseUntyped.ts` (2 `any` sanctioned)
-- `src/lib/typedSupabase.ts` (1 `any` sanctioned)
-- `src/lib/lazify.ts` (2 `any` su `ComponentType`)
-- `src/lib/lazyRetry.ts` (1 `any` su `ComponentType`)
-- ~18 `any` distribuiti su `safeQueryExecutor`, harmonizer orchestrator, bulk-ops wrappers (vedi sprint precedente).
-
-Approccio:
-1. **`lazify`/`lazyRetry`**: sostituire `ComponentType<any>` con `ComponentType<Record<string, unknown>>` o generic libero `<P extends object>`. Zero impatto runtime.
-2. **`supabaseUntyped`/`typedSupabase`**: generare tipi Supabase per le 14 tabelle in `KNOWN_UNTYPED_TABLES` via `supabase gen types` rigenerato → eliminare i wrapper. Se alcune tabelle non sono nel pubblico schema, mantenere il wrapper ma tipizzarlo come `PostgrestQueryBuilder<Database['public'], any, string>` (il singolo `any` rimasto è quello del builder PostgREST, accettabile e documentato).
-3. **Altri 18**: refactor mirato file-per-file (DAL → schema Zod già esistenti dove possibile).
-
-Target: `any ≤ 5` (solo boundary PostgREST documentati). Ratchet `scripts/debt-budget.js`.
-
-## Fase 3 — PWA cache hardening
-
-Service Worker (`vite.config.ts` / workbox config): rimuovere `StaleWhileRevalidate` su Supabase REST. Sostituire con:
-- **NetworkOnly** per `/rest/v1/*` (dati live, mai cache stale).
-- **NetworkFirst** con `maxAgeSeconds: 30` solo per endpoint read-only espliciti (es. `app_settings`, `kb_entries`).
-- Mantenere `CacheFirst` per asset statici e immagini.
-
-## Fase 4 — Eslint-disable ratchet finale
-
-49 → ≤20: la maggior parte sono `react-hooks/exhaustive-deps` e `@typescript-eslint/no-explicit-any` su file già toccati in Fase 2. Pulizia naturale.
-
-## Fase 5 — Validazione e ratchet finale
-
-- `npx vitest run --coverage` → conferma soglie nuove.
-- `npm run typecheck:strict` + `eslint --max-warnings 0`.
-- `node scripts/debt-budget.js` → lock nuove baseline.
-- Aggiornare `mem/reference/sprint-90k-2026-05-27.md` + index.
-- Eseguire smoke E2E locale (8 spec) per verificare nessuna regressione.
+## Cosa non farò
+- Nessun refactor opportunistico della Command Page.
+- Nessun cambio DB/RLS/auth.
+- Nessuna modifica ai prompt commerciali o al Prompt Lab.
+- Nessun cambio al comportamento di email, batch, deduplica, invii o pipeline.
 
 ## Risultato atteso
-
-| Area | Oggi | Target |
-|---|---|---|
-| Test coverage statements/lines | 8% | ≥50% |
-| `any` | 24 | ≤5 |
-| `eslint-disable` | 49 | ≤20 |
-| PWA cache Supabase | SWR 600s | NetworkOnly |
-| **Score audit** | **~76k** | **≥90k** |
-
-## Vincoli
-
-- Nessuna modifica a logica business, RLS, edge functions, auth.
-- Atomicità per fase: ogni fase committabile in isolamento con typecheck + test verdi.
-- Nessun refactor opportunistico fuori scope.
-- Le 14 tabelle `KNOWN_UNTYPED_TABLES` non vengono ridisegnate: solo tipizzate o wrappate meglio.
-
-## Stima
-
-~3-4 ore di lavoro AI continuo, dominate da Fase 1 (scrittura test DAL). Fase 2/3/4 sono tutte sub-30min.
+Le frasi di presenza tornano a rispondere subito con il Direttore, senza passare dal planner e senza mostrare `Nessun piano possibile`; i comandi veri continuano invece a usare fast-lane, planner e tool registry come oggi.
