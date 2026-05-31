@@ -95,7 +95,7 @@ export default tseslint.config(
     ignores: ["src/hooks/use-toast.ts"],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           patterns: [
             {
