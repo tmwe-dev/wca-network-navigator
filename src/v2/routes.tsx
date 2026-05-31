@@ -111,6 +111,7 @@ const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage"
 const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
 const AgentCapabilitiesPage = lazy(() => import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })));
 const AgentTasksPage = lazy(() => import("./ui/pages/AgentTasksPage").then((m) => ({ default: m.AgentTasksPage })));
+const AgentRolesOverviewPage = lazy(() => import("./ui/pages/AgentRolesOverviewPage").then((m) => ({ default: m.AgentRolesOverviewPage })));
 const CalendarPage = lazy(() => import("./ui/pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const NotificationsPage = lazy(() => import("./ui/pages/NotificationsPage"));
 const TokenCockpitPage = lazy(() => import("./ui/pages/TokenCockpitPage").then((m) => ({ default: m.TokenCockpitPage })));
