@@ -8,7 +8,7 @@
  *
  * Usage:
  * ```ts
- * const Dashboard = lazify(() => import("@/pages/Dashboard"));
+ * const Dashboard = lazify(() => import("@/v2/ui/pages/DashboardPage"));
  * ```
  */
 import { lazy, ComponentType } from "react";

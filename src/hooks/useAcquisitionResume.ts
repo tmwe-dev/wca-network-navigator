@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByCountries } from "@/data/partners";
 import { toast } from "@/hooks/use-toast";
-import type { QueueItem } from "@/components/acquisition/types";
+import type { QueueItem } from "@/types/acquisition";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("useAcquisitionResume");

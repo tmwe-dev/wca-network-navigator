@@ -4,7 +4,7 @@ import { getContactsByIds } from "@/data/contacts";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
-import type { DeepSearchResult, DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
+import type { DeepSearchResult, DeepSearchCurrent } from "@/types/deep-search";
 import { useDeepSearchLocal } from "./useDeepSearchLocal";
 import { createLogger } from "@/lib/log";
 import { invalidateEnrichmentCaches } from "@/lib/enrichmentCacheInvalidation";

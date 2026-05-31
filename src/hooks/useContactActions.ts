@@ -7,8 +7,8 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useUpdateLeadStatus, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
 import { useSelection } from "@/hooks/useSelection";
-import type { AICommand } from "@/components/contacts/ContactAIBar";
-import type { SortKey } from "@/components/contacts/contactHelpers";
+import type { AICommand } from "@/types/contacts";
+import type { SortKey } from "@/types/contacts";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
 import { queryKeys } from "@/lib/queryKeys";
 

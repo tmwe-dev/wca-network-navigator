@@ -1,7 +1,7 @@
 /**
  * Types for EmailComposer state management
  */
-import type { EditAnalysis } from "@/components/email/EmailEditLearningDialog";
+import type { EditAnalysis } from "@/types/email-composer";
 
 export interface LinkItem { label: string; url: string }
 

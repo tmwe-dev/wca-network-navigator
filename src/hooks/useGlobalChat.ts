@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
-import { type StructuredPartner } from "@/components/operations/AiResultsPanel";
+import { type StructuredPartner } from "@/types/operations";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { createLogger } from "@/lib/log";

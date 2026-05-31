@@ -10,7 +10,7 @@ import { useMission } from "@/contexts/MissionContext";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { createLogger } from "@/lib/log";
-import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/components/global/email-picker/types";
+import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/types/email-picker";
 import { queryKeys } from "@/lib/queryKeys";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
 

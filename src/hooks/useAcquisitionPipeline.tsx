@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
-import { QueueItem, CanvasData, ContactSource } from "@/components/acquisition/types";
+import { QueueItem, CanvasData, ContactSource } from "@/types/acquisition";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useScrapingSettings, getPatternPause } from "@/hooks/useScrapingSettings";
