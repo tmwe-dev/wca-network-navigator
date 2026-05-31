@@ -7,6 +7,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { createPauseChecker } from "./pauseChecker.ts";
+import { hardGate } from "../_shared/aiActionRiskGate.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
