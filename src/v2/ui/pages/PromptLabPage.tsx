@@ -205,6 +205,7 @@ export function PromptLabPage() {
                   })}
                 </TabsList>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <ExportButton getSnapshot={handleExport} />
                   <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 relative">
                     <Link to="/v2/prompt-lab/suggestions" title="Suggerimenti da approvare">
                       <BookmarkPlus className="h-3.5 w-3.5" />
