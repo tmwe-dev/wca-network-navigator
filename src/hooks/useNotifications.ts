@@ -18,6 +18,9 @@ import {
 } from "@/data/notifications";
 import { queryKeys } from "@/lib/queryKeys";
 
+// Re-export tipi per i componenti (regola layer: no import diretto da @/data).
+export type { Notification, NotificationFilters, CreateNotificationInput } from "@/data/notifications";
+
 // ─── useNotifications ───────────────────────────────────
 
 export function useNotifications(filters: NotificationFilters = {}) {
