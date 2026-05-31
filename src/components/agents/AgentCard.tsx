@@ -3,7 +3,7 @@ import { Power, PowerOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/hooks/useAgents";
 import { AGENT_ROLES } from "@/data/agentTemplates";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface Props {

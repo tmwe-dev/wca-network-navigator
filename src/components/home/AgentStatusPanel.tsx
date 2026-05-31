@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { ChevronRight } from "lucide-react";

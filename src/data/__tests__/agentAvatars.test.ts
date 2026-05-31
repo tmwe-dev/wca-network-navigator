@@ -48,12 +48,12 @@ vi.mock("@/lib/supabaseUntyped", () => ({
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) }));
 describe("DAL — agentAvatars", () => {
   it("module loads and exports something", async () => {
-    const mod: any = await import("@/data/agentAvatars");
+    const mod: any = await import("@/constants/agentAvatars");
     expect(mod).toBeDefined();
     expect(Object.keys(mod).length).toBeGreaterThan(0);
   });
   it("invokes exported functions defensively", async () => {
-    const mod: any = await import("@/data/agentAvatars");
+    const mod: any = await import("@/constants/agentAvatars");
     for (const [key, val] of Object.entries(mod)) {
       if (typeof val !== "function") continue;
       try {

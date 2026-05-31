@@ -9,7 +9,7 @@ import { it as itLocale } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import type { CestinoItem } from "@/data/cestinone";
 import { CHANNEL_META, TRIGGER_META, PARTNER_TYPE_META } from "./meta";

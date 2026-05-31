@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, Image, Link2, Eye } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { ROBIN_VOICE_CALL_URL } from "@/data/agentTemplates";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";

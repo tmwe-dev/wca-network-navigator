@@ -2,7 +2,7 @@ import * as React from "react";
 import { Bot, CheckCircle2, AlertOctagon, Inbox } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 
 export function AgentBadge({ name, size = "sm" }: { name: string; size?: "sm" | "md" }): React.ReactElement {
   const avatar = resolveAgentAvatar(name);
