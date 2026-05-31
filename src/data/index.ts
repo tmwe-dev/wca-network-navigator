@@ -62,7 +62,6 @@ export * from "./operativePrompts";
 
 // ── Agents ──
 export * from "./agents";
-export * from "./agentAvatars";
 export * from "./agentPrompts";
 export * from "./agentTasks";
 export * from "./agentTemplates";
