@@ -328,11 +328,10 @@ DECISION ENGINE (raccomandazione automatica):
           commercial_state: {
             lead_status: (ctx.commercialState as string) || "new",
             touch_count: ctx.touchCount ?? 0,
-            last_outcome: ctx.lastOutcome ?? undefined,
             days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
-            has_active_conversation: !!ctx.historyContext,
+            has_active_conversation: !!ctx.historyText,
           },
-          history_summary: ctx.historyContext || undefined,
+          history_summary: ctx.historyText || undefined,
           kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
           partner: {
             id: null,
