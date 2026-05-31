@@ -199,7 +199,7 @@ function StrategyCard({
         <p className="text-sm font-semibold text-foreground">{title}</p>
       </div>
       <p className="text-xs text-muted-foreground">{desc}</p>
-      <div className={cn("flex items-center gap-1.5 text-[11px]", ready ? "text-success" : "text-amber-500")}>
+      <div className={cn("flex items-center gap-1.5 text-[11px]", ready ? "text-success" : "text-warning")}>
         {ready ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
         {detail}
       </div>
