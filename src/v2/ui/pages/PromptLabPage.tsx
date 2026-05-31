@@ -257,10 +257,6 @@ export function PromptLabPage() {
                           <Library className="h-3.5 w-3.5 mr-2" /> Catalog
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <div className="px-2 py-1">
-                        <ExportButton getSnapshot={handleExport} />
-                      </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
