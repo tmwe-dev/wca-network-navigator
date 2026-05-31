@@ -28,6 +28,7 @@ export async function findAgents(_userId?: string): Promise<Agent[]> {
   const { data, error } = await supabase
     .from("agents")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Agent[];
@@ -37,6 +38,7 @@ export async function findActiveAgents(fields = "name, role, avatar_emoji, is_ac
   const { data, error } = await supabase
     .from("agents")
     .select(fields)
+    .is("deleted_at", null)
     .eq("is_active", true);
   if (error) throw error;
   return (data ?? []) as unknown as Array<Record<string, unknown>>;
@@ -81,7 +83,7 @@ export async function deleteAgent(id: string): Promise<void> {
 }
 
 export async function countActiveAgents() {
-  const { count, error } = await supabase.from("agents").select("id", { count: "planned", head: true }).eq("is_active", true);
+  const { count, error } = await supabase.from("agents").select("id", { count: "planned", head: true }).is("deleted_at", null).eq("is_active", true);
   if (error) throw error;
   return count ?? 0;
 }
