@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getTokenSettings, updateTokenSetting } from "@/data/tokenUsage";
+import { getTokenSettings, updateTokenSetting } from "@/hooks/useTokenUsage";
 import { queryKeys } from "@/lib/queryKeys";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/v2/ui/atoms/Button";

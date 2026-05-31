@@ -13,7 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { checkSiblingRisk, type SiblingRiskRow } from "@/data/siblingRisk";
+import { checkSiblingRisk, type SiblingRiskRow } from "@/hooks/useSiblingRisk";
 
 interface Props {
   readonly partnerId: string | null | undefined;
