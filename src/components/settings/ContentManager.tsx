@@ -23,8 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
-import { findWorkspaceDocs, createWorkspaceDoc, deleteWorkspaceDoc } from "@/data/workspaceDocs";
-import { queryKeys } from "@/lib/queryKeys";
+import { useWorkspaceDocs } from "@/hooks/useWorkspaceDocs";
 
 const log = createLogger("ContentManager");
 
