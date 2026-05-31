@@ -56,13 +56,11 @@ export * from "./aiMemory";
 export * from "./aiLabTestRuns";
 export * from "./kbEntries";
 export * from "./kbSeedData";
-export * from "./salesKnowledgeBase";
 export * from "./workPlans";
 export * from "./operativePrompts";
 
 // ── Agents ──
 export * from "./agents";
-export * from "./agentPrompts";
 export * from "./agentTasks";
 
 // ── Outreach & Campaigns ──
@@ -76,7 +74,6 @@ export * from "./activities";
 export * from "./downloadJobs";
 export * from "./importLogs";
 export * from "./directoryCache";
-export * from "./operationsProcedures";
 export * from "./clientAssignments";
 
 // ── External Integrations ──
@@ -88,8 +85,6 @@ export * from "./wcaFilters";
 export * from "./appSettings";
 export * from "./credits";
 export * from "./telemetry";
-export * from "./defaultContentPresets";
-export * from "./defaultEmailTypes";
 
 // ── Reference Data ──
 export * from "./atecoCategories";
