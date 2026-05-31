@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Inbox, Building2, Briefcase, Check, Eye, Shield, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AccessibleMailbox } from "@/data/mailboxes";
+import type { AccessibleMailbox } from "@/hooks/useMailboxAdmin";
 
 function iconForMailbox(m: AccessibleMailbox) {
   if (m.kind === "personal") return Inbox;
