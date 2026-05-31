@@ -112,4 +112,8 @@ export const commsKeys = {
     recipients: (userId?: string) => ["alert-recipients", userId ?? "current"] as const,
     log: (userId?: string) => ["alert-dispatch-log", userId ?? "current"] as const,
   },
+  emailStrategies: {
+    autoresponders: ["email-strategies", "autoresponders"] as const,
+    wakeUpRules: ["email-strategies", "wake-up-rules"] as const,
+  },
 } as const;

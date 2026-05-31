@@ -65,6 +65,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
         title: "Agenti",
         items: [
           { label: "Chi fa cosa",          path: "/v2/agents/overview" },
+          { label: "Strategie Email",      path: "/v2/agents/email-strategies" },
           { label: "AI Staff Hub",         path: "/v2/ai-staff" },
           { label: "Agent Capabilities",   path: "/v2/agents/capabilities" },
           { label: "Agent Tasks",          path: "/v2/agents/tasks" },

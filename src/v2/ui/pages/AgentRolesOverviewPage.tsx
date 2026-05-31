@@ -8,6 +8,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { Users, Mail, MessageSquare, Inbox, Wrench, BookOpen, Bell, MailCheck, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
@@ -152,7 +153,10 @@ export function AgentRolesOverviewPage(): React.ReactElement {
 
         {/* Strategie email post-attesa */}
         <div>
-          <h2 className="text-sm font-semibold text-foreground mb-3">Strategie email dopo il circuito di attesa</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-foreground">Strategie email dopo il circuito di attesa</h2>
+            <Link to="/v2/agents/email-strategies" className="text-xs text-primary hover:underline">Gestisci →</Link>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <StrategyCard
               icon={MailCheck}
