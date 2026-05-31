@@ -1,3 +1,6 @@
+> **SUPERATO (2026-05-31)** — `src/pages/` è stato rimosso: tutte le pagine sono native v2.
+> Questo draft descriveva wrapper su pagine v1 non più esistenti. Vedi docs/v2/MIGRATION_STATUS.md.
+
 # V2 Migration — Batch 2: CRM & Outreach
 
 ## Title
