@@ -20,9 +20,9 @@ import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
 import { supabase } from "@/integrations/supabase/client";
 import { insertEditPattern } from "@/data/aiEditPatterns";
-import type { OracleConfig } from "@/components/email/OraclePanel";
-import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
-import type { EditAnalysis } from "@/components/email/EmailEditLearningDialog";
+import type { OracleConfig } from "@/types/email-composer";
+import type { OracleContextSummary } from "@/types/email-composer";
+import type { EditAnalysis } from "@/types/email-composer";
 import type {
   EmailTemplate, EmailComposerLocationState, GenerateContentResponse,
   ImproveEmailResponse, PartnerPreviewData, LinkItem,
