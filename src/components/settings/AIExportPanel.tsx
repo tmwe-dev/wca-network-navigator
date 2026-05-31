@@ -17,7 +17,7 @@ import { FileDown, Package } from "lucide-react";
 import { toast } from "sonner";
 
 import { AGENT_PROMPTS } from "@/data/agentPrompts";
-import { AGENT_TEMPLATES, AGENT_DEFAULT_KB } from "@/data/agentTemplates";
+import { AGENT_TEMPLATES, AGENT_DEFAULT_KB } from "@/constants/agentTemplates";
 import { OPERATIONS_PROCEDURES } from "@/data/operationsProcedures";
 
 

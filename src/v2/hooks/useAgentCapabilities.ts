@@ -8,7 +8,7 @@ import {
   ALL_OPERATIONAL_TOOLS,
   MANAGEMENT_TOOLS,
   STRATEGIC_TOOLS,
-} from "@/data/agentTemplates/roles";
+} from "@/constants/agentTemplates/roles";
 
 const ALL_TOOLS = [
   ...ALL_OPERATIONAL_TOOLS,
