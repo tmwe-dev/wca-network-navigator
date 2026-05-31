@@ -19,6 +19,7 @@ const LLM_HOST_PATTERNS: Array<{ host: RegExp; provider: string }> = [
   { host: /(^|\.)ai\.gateway\.lovable\.dev$/i, provider: "lovable" },
   { host: /(^|\.)api\.openai\.com$/i, provider: "openai" },
   { host: /(^|\.)api\.anthropic\.com$/i, provider: "anthropic" },
+  { host: /(^|\.)generativelanguage\.googleapis\.com$/i, provider: "google" },
 ];
 
 function detectProvider(url: string): string | null {
