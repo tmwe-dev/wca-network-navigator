@@ -117,4 +117,4 @@ export function useTokenUsage() {
 }
 
 // Passthrough verso il DAL per i consumer (i componenti non importano @/data).
-export { getUsageByFunction } from "@/data/tokenUsage";
+export { getUsageByFunction, getTokenSettings, updateTokenSetting } from "@/data/tokenUsage";
