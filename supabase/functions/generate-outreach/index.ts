@@ -351,13 +351,14 @@ DECISION ENGINE (raccomandazione automatica):
     const senderCompanyAlias = ctx.settings.ai_company_alias || ctx.settings.ai_company_name || "";
 
     return new Response(JSON.stringify({
-      channel: ch, subject, body, full_content: result.content || "",
+      channel: ch, subject, body: finalBody, full_content: result.content || "",
       contact_name: recipientName || contact_name || null,
       contact_email: contact_email || null, company_name: company_name || null,
       language: effectiveLanguage, quality, model,
       readiness_score: readinessTotal, readiness_warnings: readinessWarnings,
       _debug: {
         model, quality, language_detected: detected.languageLabel, language_used: effectiveLanguage,
+        journalist_verdict: journalistVerdict || "(skipped)",
         country_code: country_code || "N/A", recipient_name_resolved: recipientName || "(generico)",
         sender_alias: senderAlias || "(non configurato)", sender_company: senderCompanyAlias || "(non configurato)",
         sender_role: ctx.settings.ai_contact_role || "(non configurato)",
