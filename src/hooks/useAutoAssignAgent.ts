@@ -35,6 +35,7 @@ export async function autoAssignAgent(params: {
   const { data: agents } = await supabase
     .from("agents")
     .select("id, role, territory_codes")
+    .is("deleted_at", null)
     .eq("user_id", userId)
     .eq("is_active", true)
     .order("created_at", { ascending: true });
