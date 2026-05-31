@@ -6,7 +6,7 @@ import {
   deleteSharedMailbox,
   type SharedMailbox,
   type SharedMailboxUpsert,
-} from "@/data/mailboxes";
+} from "@/hooks/useMailboxAdmin";
 import { useCurrentOperator } from "@/hooks/useOperators";
 import { queryKeys } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
