@@ -226,6 +226,17 @@ async function processAction(
   const actionType = mapActionType(action.action_type);
 
   if (autoExecute) {
+    // Hard gate: never auto-send to blacklisted/archived targets, whatever the cadence proposes.
+    const gate = await hardGate(supabase, "SEND", partnerId, null);
+    if (!gate.allowed) {
+      await supabase.from("mission_actions").update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        last_error: `hard_gate_blocked:${gate.reason ?? "denied"}`,
+      }).eq("id", action.id);
+      counters.cancelled();
+      return;
+    }
     // Mark action as executing and invoke mission-executor
     await supabase.from("mission_actions").update({
       status: "approved",
