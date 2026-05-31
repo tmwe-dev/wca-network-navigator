@@ -3,7 +3,7 @@ import {
   listSharedMailboxes,
   listOperatorMailboxAccess,
   setOperatorMailboxAccess,
-} from "@/data/mailboxes";
+} from "@/hooks/useMailboxAdmin";
 import { queryKeys } from "@/lib/queryKeys";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
