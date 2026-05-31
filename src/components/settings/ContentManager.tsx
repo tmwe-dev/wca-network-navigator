@@ -1,5 +1,4 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useWorkspacePresets } from "@/hooks/useWorkspacePresets";
@@ -277,7 +276,6 @@ export default function ContentManager() {
   const { presets, isLoading: loadingPresets } = useWorkspacePresets();
   const { data: settings, isLoading: loadingSettings } = useAppSettings();
   const updateSetting = useUpdateSetting();
-  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [newLinkUrl, setNewLinkUrl] = useState("");
@@ -304,14 +302,7 @@ export default function ContentManager() {
     updateSetting.mutate({ key, value: JSON.stringify(items) });
   };
 
-  const { data: documents = [], isLoading: loadingDocs } = useQuery({
-    queryKey: queryKeys.workspaceDocs.all,
-    queryFn: async () => {
-      const data = await findWorkspaceDocs(); const error = null;
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const { documents, isLoading: loadingDocs, createDoc, deleteDoc, invalidate: invalidateDocs } = useWorkspaceDocs();
 
   const allLinks = useMemo(() => {
     const set = new Set<string>();
@@ -329,19 +320,19 @@ export default function ContentManager() {
         const { error: upErr } = await supabase.storage.from("workspace-docs").upload(path, file);
         if (upErr) throw upErr;
         const { data: urlData } = await supabase.storage.from("workspace-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
-        await createWorkspaceDoc({
+        await createDoc({
           file_name: file.name, file_url: urlData?.signedUrl || path, file_size: file.size,
         });
       }
       toast.success(`${files.length} documento/i caricato/i`);
-      qc.invalidateQueries({ queryKey: queryKeys.workspaceDocs.all });
+      invalidateDocs();
     } catch (err: unknown) { toast.error("Errore upload: " + (err instanceof Error ? err.message : String(err))); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 
   const handleDeleteDoc = async (id: string) => {
-    await deleteWorkspaceDoc(id);
-    qc.invalidateQueries({ queryKey: queryKeys.workspaceDocs.all });
+    await deleteDoc(id);
+    invalidateDocs();
     toast.success("Documento eliminato");
   };
 
