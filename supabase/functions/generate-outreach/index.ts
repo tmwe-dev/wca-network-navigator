@@ -334,6 +334,12 @@ DECISION ENGINE (raccomandazione automatica):
           },
           history_summary: ctx.historyContext || undefined,
           kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
+          partner: {
+            id: null,
+            company_name: company_name || null,
+            country: country_code || null,
+          },
+          contact: recipientName ? { name: recipientName } : undefined,
         }, { mode: optimus.mode, strictness: optimus.strictness });
         journalistVerdict = journalistResult.verdict;
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
