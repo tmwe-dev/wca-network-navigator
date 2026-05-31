@@ -95,7 +95,7 @@ function AutorespondersSection(): React.ReactElement {
   const { isAdmin } = useAuthV2();
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.comms.emailStrategies.autoresponders,
+    queryKey: queryKeys.emailStrategies.autoresponders,
     queryFn: async (): Promise<AutoTemplate[]> => {
       const { data, error } = await supabase
         .from("funnemail_autoresponder_templates")
@@ -135,7 +135,7 @@ function AutorespondersSection(): React.ReactElement {
     },
     onSuccess: () => {
       toast.success("Template salvato");
-      qc.invalidateQueries({ queryKey: queryKeys.comms.emailStrategies.autoresponders });
+      qc.invalidateQueries({ queryKey: queryKeys.emailStrategies.autoresponders });
     },
     onError: (e: unknown) => toast.error(`Errore: ${(e as Error).message}`),
   });
@@ -147,7 +147,7 @@ function AutorespondersSection(): React.ReactElement {
     },
     onSuccess: () => {
       toast.success("Template eliminato");
-      qc.invalidateQueries({ queryKey: queryKeys.comms.emailStrategies.autoresponders });
+      qc.invalidateQueries({ queryKey: queryKeys.emailStrategies.autoresponders });
     },
     onError: (e: unknown) => toast.error(`Errore: ${(e as Error).message}`),
   });
@@ -256,7 +256,7 @@ function WakeUpSection(): React.ReactElement {
   const { user } = useAuthV2();
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.comms.emailStrategies.wakeUpRules,
+    queryKey: queryKeys.emailStrategies.wakeUpRules,
     queryFn: async (): Promise<WakeRule[]> => {
       const { data, error } = await supabase
         .from("wake_up_rules")
@@ -303,7 +303,7 @@ function WakeUpSection(): React.ReactElement {
     },
     onSuccess: () => {
       toast.success("Regola salvata");
-      qc.invalidateQueries({ queryKey: queryKeys.comms.emailStrategies.wakeUpRules });
+      qc.invalidateQueries({ queryKey: queryKeys.emailStrategies.wakeUpRules });
     },
     onError: (e: unknown) => toast.error(`Errore: ${(e as Error).message}`),
   });
@@ -318,7 +318,7 @@ function WakeUpSection(): React.ReactElement {
     },
     onSuccess: () => {
       toast.success("Regola eliminata");
-      qc.invalidateQueries({ queryKey: queryKeys.comms.emailStrategies.wakeUpRules });
+      qc.invalidateQueries({ queryKey: queryKeys.emailStrategies.wakeUpRules });
     },
     onError: (e: unknown) => toast.error(`Errore: ${(e as Error).message}`),
   });
