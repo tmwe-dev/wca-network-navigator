@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getFunctionDisplayName } from "@/data/tokenUsage";
+import { getFunctionDisplayName } from "@/lib/tokenFormat";
 
 
 import { createLogger } from "@/lib/log";

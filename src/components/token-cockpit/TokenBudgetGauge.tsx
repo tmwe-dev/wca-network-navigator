@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatTokenCount } from "@/data/tokenUsage";
+import { formatTokenCount } from "@/lib/tokenFormat";
 
 interface GaugeData {
   daily: { used: number; limit: number; percentage: number };

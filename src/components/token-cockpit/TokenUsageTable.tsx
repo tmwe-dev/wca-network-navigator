@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatTokenCount, getFunctionDisplayName } from "@/data/tokenUsage";
+import { formatTokenCount, getFunctionDisplayName } from "@/lib/tokenFormat";
 import {
   Table,
   TableBody,

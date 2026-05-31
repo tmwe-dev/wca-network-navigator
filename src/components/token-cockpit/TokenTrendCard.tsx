@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatTokenCount } from "@/data/tokenUsage";
+import { formatTokenCount } from "@/lib/tokenFormat";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface TrendData {
