@@ -76,6 +76,11 @@ export async function loadAgentCapabilities(
       .eq("agent_id", agentId)
       .maybeSingle();
     if (error || !data) return { ...DEFAULT_CAPABILITIES, agentId };
+    if (!error && !data) {
+      // Health-check: l'agente NON ha una riga di capabilities → fallback ai
+      // default = TUTTI i tool aperti. Lo segnaliamo per non girare "a vuoto".
+      console.warn(`[agentCapabilitiesLoader] HEALTH: agent ${agentId} senza riga capabilities → DEFAULT (tutti i tool aperti)`);
+    }
     const row = data as Record<string, unknown>;
     return {
       agentId,
