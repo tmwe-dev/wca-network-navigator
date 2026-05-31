@@ -64,7 +64,6 @@ export * from "./operativePrompts";
 export * from "./agents";
 export * from "./agentPrompts";
 export * from "./agentTasks";
-export * from "./agentTemplates";
 
 // ── Outreach & Campaigns ──
 export * from "./outreachMissions";
