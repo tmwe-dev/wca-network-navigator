@@ -2,7 +2,7 @@
  * ToolsColumn — Tool platform a cui l'agente ha accesso.
  */
 import { Wrench } from "lucide-react";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { Badge } from "@/components/ui/badge";
 
 export function ToolsColumn({ agent }: { agent: AgentRegistryEntry }) {

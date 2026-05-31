@@ -9,7 +9,7 @@ import {
   ImageIcon,
   BookOpen,
 } from "lucide-react";
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
 import { checkOracleCoherence } from "@/lib/oracleCoherence";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import BriefAccordion, { EMPTY_BRIEF, briefToText, type EmailBrief } from "./BriefAccordion";

@@ -15,7 +15,7 @@ import { getAppSetting, upsertAppSetting } from "@/data/appSettings";
 import { findEmailPromptsByScope, updateEmailPrompt } from "@/data/emailPrompts";
 import { findEmailAddressRules, updateEmailAddressRule } from "@/data/emailAddressRules";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
-import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 import { toast } from "sonner";
 
 const TYPES_KEY = "email_oracle_types";

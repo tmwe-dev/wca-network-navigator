@@ -10,7 +10,7 @@ import { Plus, Check, Handshake, RefreshCw, Search, Briefcase, Globe, FileText, 
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import {
   CONTENT_CATEGORIES, DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem,
-} from "@/data/defaultContentPresets";
+} from "@/constants/defaultContentPresets";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";

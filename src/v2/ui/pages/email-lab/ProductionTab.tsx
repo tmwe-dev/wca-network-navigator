@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Wand2, RotateCcw, Loader2 } from "lucide-react";
 import { ForgeOraclePanel, type ForgeConfig } from "@/v2/ui/pages/email-forge/ForgeOraclePanel";
 import { useForgeLab, forgeLabStore } from "@/v2/hooks/useForgeLabStore";
-import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 import { useEmailLabIterations } from "@/v2/hooks/useEmailLabIterations";
 import type { ForgeRunParams } from "@/v2/hooks/useEmailForge";
 import { IterationCard } from "./IterationCard";

@@ -3,7 +3,7 @@
  */
 import { useMemo } from "react";
 import * as Icons from "lucide-react";
-import type { AgentRegistryEntry, AgentCategory } from "@/data/agentPrompts";
+import type { AgentRegistryEntry, AgentCategory } from "@/constants/agentPrompts";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import * as m from "@/data/salesKnowledgeBase";
+import * as m from "@/constants/salesKnowledgeBase";
 describe("DAL — salesKnowledgeBase", () => {
   it("module loads", () => expect(m).toBeDefined());
   it("has string exports", () => {

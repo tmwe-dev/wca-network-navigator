@@ -16,7 +16,7 @@
  */
 
 import type { Block, BlockSource } from "../types";
-import { AGENT_REGISTRY, type AgentRegistryEntry } from "@/data/agentPrompts";
+import { AGENT_REGISTRY, type AgentRegistryEntry } from "@/constants/agentPrompts";
 
 /**
  * Priorità di ownership quando più agenti condividono la stessa sorgente.

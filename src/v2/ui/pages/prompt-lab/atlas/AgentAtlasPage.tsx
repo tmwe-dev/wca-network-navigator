@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AGENT_REGISTRY, type AgentCategory } from "@/data/agentPrompts";
+import { AGENT_REGISTRY, type AgentCategory } from "@/constants/agentPrompts";
 import { AtlasSidebar } from "./AtlasSidebar";
 import { AtlasContent } from "./AtlasContent";
 import { GlobalImproverDialog } from "../GlobalImproverDialog";

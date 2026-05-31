@@ -1,7 +1,7 @@
 /**
  * AgentDetail — Vista a 5 colonne per un agente: avatar + Prompt + KB + Tools + Contract.
  */
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { AgentAvatarCard } from "./AgentAvatarCard";
 import { PromptColumn } from "./columns/PromptColumn";
 import { KBColumn } from "./columns/KBColumn";

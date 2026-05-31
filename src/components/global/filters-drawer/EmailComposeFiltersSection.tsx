@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import BriefAccordion from "@/components/email/BriefAccordion";
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useComposeAiConfig } from "@/contexts/ComposeAiConfigContext";
 import { BookOpen, Briefcase, ClipboardList, GraduationCap, Globe, Handshake, Plane, RefreshCw, Smile, Target, type LucideIcon } from "lucide-react";

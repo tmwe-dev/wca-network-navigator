@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import type { SimulatorResponse } from "@/data/agentSimulator";
 import type { KbEntry } from "@/data/kbEntries";
 import { Section } from "./Section";

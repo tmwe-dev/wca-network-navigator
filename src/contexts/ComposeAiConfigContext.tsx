@@ -12,7 +12,7 @@
  */
 import * as React from "react";
 import { EMPTY_BRIEF, type EmailBrief } from "@/components/email/BriefAccordion";
-import type { EmailType } from "@/data/defaultEmailTypes";
+import type { EmailType } from "@/constants/defaultEmailTypes";
 
 const LS_KEY = "compose-ai-config-v1";
 

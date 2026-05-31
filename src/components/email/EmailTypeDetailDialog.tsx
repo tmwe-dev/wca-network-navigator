@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Copy, Save } from "lucide-react";
-import type { EmailType } from "@/data/defaultEmailTypes";
+import type { EmailType } from "@/constants/defaultEmailTypes";
 
 interface Props {
   emailType: EmailType | null;

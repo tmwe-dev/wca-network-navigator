@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 describe("DAL — defaultEmailTypes", () => {
   it("not empty", () => expect(DEFAULT_EMAIL_TYPES.length).toBeGreaterThan(0));
   it("each has id/name", () => {

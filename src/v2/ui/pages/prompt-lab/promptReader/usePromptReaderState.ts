@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AGENT_REGISTRY, type AgentRegistryEntry, type AgentCategory } from "@/data/agentPrompts";
+import { AGENT_REGISTRY, type AgentRegistryEntry, type AgentCategory } from "@/constants/agentPrompts";
 import { runAgentSimulator, type SimulatorResponse } from "@/data/agentSimulator";
 import { findKbEntries, type KbEntry } from "@/data/kbEntries";
 import { PANEL_ORDER_KEY, COPILOT_EXPANDED_KEY, readPanelOrder, readExpanded, type PanelId } from "./constants";

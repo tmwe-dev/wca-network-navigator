@@ -4,7 +4,7 @@
  */
 import { Link } from "react-router-dom";
 import { ExternalLink, FileText } from "lucide-react";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { Button } from "@/components/ui/button";
 
 export function PromptColumn({ agent }: { agent: AgentRegistryEntry }) {

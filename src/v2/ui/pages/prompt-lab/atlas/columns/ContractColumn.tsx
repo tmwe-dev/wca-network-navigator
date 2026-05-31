@@ -4,7 +4,7 @@
  * proporre nuovi backend contracts (es. EmailBrief, VoiceBrief).
  */
 import { Network } from "lucide-react";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 
 export function ContractColumn({ agent }: { agent: AgentRegistryEntry }) {
   return (

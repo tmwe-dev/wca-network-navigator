@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Sparkles, Loader2, ChevronDown, ChevronRight, ChevronsUpDown } from "lucide-react";
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
 import { ForgeRecipientPicker, type ForgeRecipient } from "./ForgeRecipientPicker";
 import { cn } from "@/lib/utils";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";

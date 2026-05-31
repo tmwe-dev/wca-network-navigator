@@ -1,7 +1,7 @@
 import type { Block } from "../../types";
 import { resolveRubric, rubricToPromptSection, validateAgainstRubric, isVoiceBlock } from "../../promptRubrics";
 import { parseArchitectDiagnostics, type ArchitectDiagnosticV2 } from "../diagnostics";
-import { AGENT_REGISTRY, type AgentRegistryEntry } from "@/data/agentPrompts";
+import { AGENT_REGISTRY, type AgentRegistryEntry } from "@/constants/agentPrompts";
 import { resolveBlockAgent } from "../agentMapping";
 import { VOICE_ENFORCEMENT_RULES } from "./briefings";
 import {

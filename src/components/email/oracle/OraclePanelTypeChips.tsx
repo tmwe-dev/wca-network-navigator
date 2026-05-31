@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { EmailType } from "@/data/defaultEmailTypes";
+import type { EmailType } from "@/constants/defaultEmailTypes";
 
 const CHIP_LABELS: Record<string, string> = {
   primo_contatto: "Primo",

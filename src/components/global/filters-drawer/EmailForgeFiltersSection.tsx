@@ -30,7 +30,7 @@ import {
   Gauge,
   FileText,
 } from "lucide-react";
-import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 import { ForgeRecipientPicker } from "@/v2/ui/pages/email-forge/ForgeRecipientPicker";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
 import { FilterSection } from "./shared";
