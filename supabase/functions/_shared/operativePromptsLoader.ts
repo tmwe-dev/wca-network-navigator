@@ -172,6 +172,7 @@ export async function loadOperativePrompts(
     const rows = data as OperativePromptRow[];
     const relevant = rows.filter((r) => isRelevant(r, matched.contexts, matched.tags));
     if (relevant.length === 0) {
+      console.warn(`[operativePromptsLoader] HEALTH: nessun prompt operativo per scope='${options.scope}'${options.channel ? " canale='" + options.channel + "'" : ""} → l'AI gira senza regole del Prompt Lab`);
       return { block: "", appliedNames: [], hasMandatory: false, matched: { contexts: [...matched.contexts], tags: [...matched.tags] } };
     }
 
