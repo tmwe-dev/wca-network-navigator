@@ -305,6 +305,7 @@ export function V2Routes(): React.ReactElement {
           {/* Agents + figli */}
           <Route path="agents" element={<Navigate to="/v2/intelligence/agents" replace />} />
           <Route path="agents/persona" element={guardedPage(AgentPersonaEditorPage, "AgentPersona")} />
+          <Route path="agents/overview" element={guardedPage(AgentRolesOverviewPage, "AgentRolesOverview")} />
           <Route path="agents/missions" element={guardedPage(MissionBuilderPage, "Missions")} />
           <Route path="agents/autopilot" element={guardedPage(MissionsAutopilotPage, "AutopilotMissions")} />
           <Route path="agents/capabilities" element={guardedPage(AgentCapabilitiesPage, "AgentCapabilities")} />
