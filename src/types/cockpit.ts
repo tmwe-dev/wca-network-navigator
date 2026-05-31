@@ -9,6 +9,14 @@ import type { OracleContextSummary } from "@/components/email/OracleContextPanel
 import type { ResolvedEmailType } from "@/v2/ui/pages/email-forge/types/contract";
 
 export type ViewMode = "card" | "list";
+
+/**
+ * Transitional re-exports (strangler seam): contracts that still live in
+ * cockpit feature components, surfaced through the types layer so hooks/v2 can
+ * depend on `@/types/cockpit` instead of `@/components/cockpit/*`.
+ */
+export type { CockpitAIAction, SourceTab } from "@/components/cockpit/TopCommandBar";
+export type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 export type DraftChannel = "email" | "linkedin" | "whatsapp" | "sms" | null;
 export type ContactOrigin = "wca" | "report_aziende" | "import" | "bca" | "manual";
 export type ScrapingPhase = "idle" | "searching" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
