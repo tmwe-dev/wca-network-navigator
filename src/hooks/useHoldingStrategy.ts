@@ -33,6 +33,7 @@ export function useHoldingStrategy() {
       const { data: agents } = await supabase
         .from("agents")
         .select("id")
+        .is("deleted_at", null)
         .eq("is_active", true)
         .limit(1)
         .single();

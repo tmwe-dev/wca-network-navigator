@@ -74,7 +74,7 @@ export function useAgentCapabilities() {
     queryKey: queryKeys.v2.agents("capabilities"),
     queryFn: async () => {
       const [agentsRes, tasksRes] = await Promise.all([
-        supabase.from("agents").select("id, name, role, avatar_emoji, is_active, assigned_tools").order("created_at", { ascending: true }),
+        supabase.from("agents").select("id, name, role, avatar_emoji, is_active, assigned_tools").is("deleted_at", null).order("created_at", { ascending: true }),
         supabase.from("agent_tasks").select("agent_id, task_type, status"),
       ]);
 

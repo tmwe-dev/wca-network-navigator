@@ -1,32 +1,25 @@
-## Stato attuale
+## Obiettivo
+Mettere ordine su agenti, istruzioni e strategie email post-attesa, senza inventare contenuti: si elimina il rumore, si collega ciò che già esiste e si crea UN solo luogo per istruire ogni agente e per definire le email di onboarding.
 
-I tre fix richiesti sono già stati applicati nel turno precedente:
+## A. Pulizia dati (database) — riduce la confusione
+1. **Separare i frammenti KB dagli agenti reali.** Le 29 righe `role='assistant'` nella tabella `agents` che sono in realtà testi di knowledge base (es. "11. Glossario rapido", "🏢 Entità & Sistemi", "Numeri di performance", "TMWE S.r.l.") verranno marcate come archiviate (soft-delete, non distruttivo) così la lista agenti mostra solo i ~16 agenti operativi reali. Nessun contenuto perso: i testi restano già presenti come schede in KB.
+2. **Deduplica prompt operativi** (Wake-Up Composer, Customer story, Recipient psychology, Post-send) tenendo una sola versione per nome+contesto.
 
-1. **Smalltalk detector esteso** (`src/v2/ui/pages/command/lib/smalltalkDetector.ts`) — riconosce ora `c'è nessuno`, `c'è nessuno in ascolto`, `ce nessuno`, `c e nessuno`, varianti con `’`.
-2. **TTS duplicato rimosso** (`src/v2/ui/pages/command/hooks/useCommandSubmit.ts`) — solo `CommandPage` legge i messaggi `Direttore`.
-3. **Guard conversazionale** (`useCommandSubmit.ts`) — quando `plan.steps.length === 0`, ri-esegue `detectSmalltalk` su `rawText`/`text` prima di mostrare "Nessun piano possibile".
-4. **18 unit test** in `smalltalkDetector.test.ts` — tutti verdi.
+## B. Un solo luogo per istruire gli agenti
+3. **Trasformare AgentChatHub da sandbox a editor reale**: le istruzioni scritte per un agente salvano davvero su `agent_personas` (tono, regole, vocabolario, firma) e mostrano in chiaro quali tool quell'agente può usare (`agent_capabilities`). Niente più prompt hard-coded nel codice.
+4. **Scheda "Chi fa cosa"** in cima alla pagina Agenti: per ogni agente reale → ruolo, canale, cosa può fare, dove le sue istruzioni vengono effettivamente usate. Tabella generata dai dati, non statica.
 
-## Cosa farò in build mode
+## C. Strategie email post-circuito di attesa (in un unico posto governabile)
+5. **Cliente che HA scritto** → estendere `funnemail_autoresponder_templates` come libreria di template di onboarding governabili da UI (oltre ai 2 "ricevuto" attuali), editabili e attivabili per fase. Solo struttura: i testi li definisci tu.
+6. **Cliente che NON riscrive dopo X giorni** → collegare davvero la tabella `wake_up_rules` (oggi vuota e inutilizzata) a una UI dove definisci le regole (giorni di silenzio, score minimo, canale, template) e al motore di outreach che le esegue. Le 3 schede KB `followup` esistenti diventano i template di riferimento.
 
-Operazione minima, nessun refactor:
+## D. Semplificazione navigazione
+7. Raggruppare le 5 pagine sovrapposte sotto un'unica voce "Agenti" con sotto-schede: **Chi fa cosa · Istruzioni (persona+capability) · Routing · Email & Cadenze**. Nessuna logica nuova, solo riorganizzazione.
 
-1. **Re-run dei test** `bunx vitest run src/v2/ui/pages/command/lib/__tests__/smalltalkDetector.test.ts` per confermare che i 18 test passano sull'HEAD corrente.
-2. **Smoke check manuale** del flusso in `useCommandSubmit.ts`: rileggo il file per confermare che il guard `plan.steps.length === 0` chiama `detectSmalltalk(rawText) ?? detectSmalltalk(text)` prima del fallback "Nessun piano possibile", e che non c'è più `ttsSpeak` duplicato nel ramo smalltalk.
-3. **Nessuna modifica** a planner, fast-lane, SuperMario, registry tool, edge functions, DB, RLS, auth, prompt.
+## Note tecniche
+- Tutte le rimozioni sono soft-delete (rispetta il vincolo "no physical delete").
+- Le migrazioni DB toccano nodi critici (personas, outreach): mappa impatto prima, modifica minima e reversibile.
+- Nessun testo commerciale inventato: l'AI fornisce solo i contenitori e i collegamenti; i contenuti li valida/scrivi tu.
 
-## Checklist nodi critici (invarianti)
-
-- submit: invariato (solo guard aggiuntivo nel branch vuoto)
-- memoria/history: invariata
-- batch/dedup/pipeline: non toccati
-- edge functions: non toccate
-- side-effect duplicati: rimossi (TTS unico via CommandPage)
-- ordine messaggi: invariato
-
-## Output atteso
-
-- "c'è nessuno", "c'è nessuno in ascolto", "ce nessuno" → risposta Direttore in tono conversazionale, una sola voce TTS.
-- Frasi operative ("audit sistema", "cerca partner") → planner invariato.
-
-Se i test falliscono o riscontro regressioni, mi fermo e segnalo prima di applicare altre modifiche.
+## Cosa decidi tu
+Confermi questo ordine? Posso partire dalla **fase A (pulizia)** che è la più urgente e dà subito chiarezza, e poi proseguire con B, C, D in autonomia.

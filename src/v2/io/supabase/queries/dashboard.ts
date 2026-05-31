@@ -21,7 +21,7 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
       supabase.from("partners").select("id", { count: "exact", head: true }).is("deleted_at", null),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
       supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("agents").select("id", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("agents").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("is_active", true),
       supabase.from("campaign_jobs").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("status", "draft"),
     ]);
@@ -162,6 +162,7 @@ export async function fetchAgentTaskBreakdowns(): Promise<Result<AgentTaskBreakd
     const { data: agents, error: agentsErr } = await supabase
       .from("agents")
       .select("id")
+      .is("deleted_at", null)
       .eq("is_active", true);
 
     if (agentsErr) {

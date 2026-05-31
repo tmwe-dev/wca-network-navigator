@@ -142,7 +142,7 @@ export function PendingActionsPanel() {
       if (action?.action_type === "prompt_refinement" && action.suggested_content) {
         try {
           const suggestions = JSON.parse(action.suggested_content);
-          const { data: agents } = await supabase.from("agents").select("id, system_prompt").eq("user_id", (await supabase.auth.getSession()).data.session?.user?.id || "").eq("is_active", true);
+          const { data: agents } = await supabase.from("agents").select("id, system_prompt").is("deleted_at", null).eq("user_id", (await supabase.auth.getSession()).data.session?.user?.id || "").eq("is_active", true);
           if (agents?.length) {
             const agent = agents[0];
             let updatedPrompt = agent.system_prompt || "";

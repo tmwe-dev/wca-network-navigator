@@ -36,6 +36,7 @@ export function useAgentDashboard() {
       const { data: agents } = await supabase
         .from("agents")
         .select("id, name, role, avatar_emoji, is_active")
+        .is("deleted_at", null)
         .eq("user_id", user.id)
         .eq("is_active", true)
         .order("created_at");

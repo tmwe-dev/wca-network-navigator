@@ -12,6 +12,7 @@ export async function fetchAgents(): Promise<Result<Agent[], AppError>> {
     const { data, error } = await supabase
       .from("agents")
       .select("*")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (error) {
