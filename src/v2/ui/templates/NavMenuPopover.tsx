@@ -140,7 +140,14 @@ export function NavMenuPopover({
   const handleSelect = (path: string) => {
     setOpen(false);
     setQuery("");
-    nav(path);
+    // Fix "primo click non funziona": Radix lascia a volte
+    // `pointer-events: none` sul body quando il popover si chiude in
+    // contemporanea alla navigazione. Ripuliamo e navighiamo nel frame
+    // successivo così la pagina di destinazione è subito cliccabile.
+    requestAnimationFrame(() => {
+      document.body.style.pointerEvents = "";
+      nav(path);
+    });
   };
 
   const activeRoot = currentPath ? sectionRoot(currentPath) : null;
