@@ -4,9 +4,8 @@
  * Dropdown with detailed breakdown
  */
 import { useState } from "react";
-import { useTokenUsage } from "@/hooks/useTokenUsage";
-import { formatTokenCount, getFunctionDisplayName } from "@/data/tokenUsage";
-import { getUsageByFunction } from "@/data/tokenUsage";
+import { useTokenUsage, getUsageByFunction } from "@/hooks/useTokenUsage";
+import { formatTokenCount, getFunctionDisplayName } from "@/lib/tokenFormat";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
