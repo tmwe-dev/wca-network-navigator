@@ -308,6 +308,44 @@ DECISION ENGINE (raccomandazione automatica):
     // ── Parse ──
     const { subject, body } = parseOutreachResponse(result.content || "", ch, ctx.settings);
 
+    // ── GIORNALISTA AI — Editorial review OBBLIGATORIA (parità con generate-email) ──
+    // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto per email/WA/LinkedIn.
+    let finalBody = body;
+    let journalistVerdict: string | null = null;
+    try {
+      if (finalBody) {
+        const optimus = await loadOptimusSettings(supabase, userId);
+        const reviewChannel: "email" | "whatsapp" | "linkedin" =
+          ch === "whatsapp" ? "whatsapp" : ch === "linkedin" ? "linkedin" : "email";
+        const journalistResult = await journalistReview(supabase, userId, {
+          final_draft: finalBody,
+          resolved_brief: {
+            objective: goal ?? undefined,
+            playbook_active: ctx.playbookActive ? "yes" : undefined,
+          },
+          channel: reviewChannel,
+          language: effectiveLanguage || undefined,
+          commercial_state: {
+            lead_status: (ctx.commercialState as string) || "new",
+            touch_count: ctx.touchCount ?? 0,
+            last_outcome: ctx.lastOutcome ?? undefined,
+            days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
+            has_active_conversation: !!ctx.historyContext,
+          },
+          history_summary: ctx.historyContext || undefined,
+          kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
+        }, { mode: optimus.mode, strictness: optimus.strictness });
+        journalistVerdict = journalistResult.verdict;
+        if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
+          finalBody = journalistResult.edited_text;
+        }
+      }
+    } catch (jerr) {
+      // Fail-soft sul generatore (bozza): la review HARD fail-closed resta
+      // garantita a valle in send-email/whatsapp/linkedin prima dell'invio.
+      console.error("[generate-outreach] journalistReview failed:", jerr);
+    }
+
     const kbSource = ctx.salesKBSlice ? "kb_entries" : (ctx.settings.ai_sales_knowledge_base ? "legacy_monolithic_deprecated" : "none");
     const senderAlias = ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name || "";
     const senderCompanyAlias = ctx.settings.ai_company_alias || ctx.settings.ai_company_name || "";
