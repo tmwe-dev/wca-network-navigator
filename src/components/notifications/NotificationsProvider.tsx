@@ -6,7 +6,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { NotificationToast } from "./NotificationToast";
-import type { Notification } from "@/data/notifications";
+import type { Notification } from "@/hooks/useNotifications";
 
 interface ToastNotification extends Notification {
   toastId?: string;
