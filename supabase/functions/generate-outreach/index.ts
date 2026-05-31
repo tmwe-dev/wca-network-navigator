@@ -18,6 +18,8 @@ import { buildOutreachPrompts, getModel, type Channel } from "./promptBuilder.ts
 import { parseOutreachResponse } from "./responseParser.ts";
 import { checkCadence } from "../_shared/cadenceEngine.ts";
 import { loadOperativePrompts, type PromptScope } from "../_shared/operativePromptsLoader.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 
 async function checkWhatsAppConsent(
   supabase: ReturnType<typeof createClient>,
@@ -306,18 +308,62 @@ DECISION ENGINE (raccomandazione automatica):
     // ── Parse ──
     const { subject, body } = parseOutreachResponse(result.content || "", ch, ctx.settings);
 
+    // ── GIORNALISTA AI — Editorial review OBBLIGATORIA (parità con generate-email) ──
+    // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto per email/WA/LinkedIn.
+    let finalBody = body;
+    let journalistVerdict: string | null = null;
+    try {
+      if (finalBody) {
+        const optimus = await loadOptimusSettings(supabase, userId);
+        const reviewChannel: "email" | "whatsapp" | "linkedin" =
+          ch === "whatsapp" ? "whatsapp" : ch === "linkedin" ? "linkedin" : "email";
+        const journalistResult = await journalistReview(supabase, userId, {
+          final_draft: finalBody,
+          resolved_brief: {
+            objective: goal ?? undefined,
+            playbook_active: ctx.playbookActive ? "yes" : undefined,
+          },
+          channel: reviewChannel,
+          language: effectiveLanguage || undefined,
+          commercial_state: {
+            lead_status: (ctx.commercialState as string) || "new",
+            touch_count: ctx.touchCount ?? 0,
+            days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
+            has_active_conversation: !!ctx.historyText,
+          },
+          history_summary: ctx.historyText || undefined,
+          kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
+          partner: {
+            id: null,
+            company_name: company_name || null,
+            country: country_code || null,
+          },
+          contact: recipientName ? { name: recipientName } : undefined,
+        }, { mode: optimus.mode, strictness: optimus.strictness });
+        journalistVerdict = journalistResult.verdict;
+        if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
+          finalBody = journalistResult.edited_text;
+        }
+      }
+    } catch (jerr) {
+      // Fail-soft sul generatore (bozza): la review HARD fail-closed resta
+      // garantita a valle in send-email/whatsapp/linkedin prima dell'invio.
+      console.error("[generate-outreach] journalistReview failed:", jerr);
+    }
+
     const kbSource = ctx.salesKBSlice ? "kb_entries" : (ctx.settings.ai_sales_knowledge_base ? "legacy_monolithic_deprecated" : "none");
     const senderAlias = ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name || "";
     const senderCompanyAlias = ctx.settings.ai_company_alias || ctx.settings.ai_company_name || "";
 
     return new Response(JSON.stringify({
-      channel: ch, subject, body, full_content: result.content || "",
+      channel: ch, subject, body: finalBody, full_content: result.content || "",
       contact_name: recipientName || contact_name || null,
       contact_email: contact_email || null, company_name: company_name || null,
       language: effectiveLanguage, quality, model,
       readiness_score: readinessTotal, readiness_warnings: readinessWarnings,
       _debug: {
         model, quality, language_detected: detected.languageLabel, language_used: effectiveLanguage,
+        journalist_verdict: journalistVerdict || "(skipped)",
         country_code: country_code || "N/A", recipient_name_resolved: recipientName || "(generico)",
         sender_alias: senderAlias || "(non configurato)", sender_company: senderCompanyAlias || "(non configurato)",
         sender_role: ctx.settings.ai_contact_role || "(non configurato)",

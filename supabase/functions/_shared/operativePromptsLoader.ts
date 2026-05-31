@@ -172,11 +172,30 @@ export async function loadOperativePrompts(
     const rows = data as OperativePromptRow[];
     const relevant = rows.filter((r) => isRelevant(r, matched.contexts, matched.tags));
     if (relevant.length === 0) {
+      console.warn(`[operativePromptsLoader] HEALTH: nessun prompt operativo per scope='${options.scope}'${options.channel ? " canale='" + options.channel + "'" : ""} → l'AI gira senza regole del Prompt Lab`);
       return { block: "", appliedNames: [], hasMandatory: false, matched: { contexts: [...matched.contexts], tags: [...matched.tags] } };
     }
 
+    // Dedup per NOME: i prompt sono salvati per-utente (copie identiche su più
+    // user_id) ma il loader li tratta come workspace-shared. Senza dedup, le N
+    // copie dello stesso prompt riempiono tutti gli slot del `limit` ed
+    // espellono gli altri prompt rilevanti. Teniamo una sola riga per nome,
+    // preferendo quella OBBLIGATORIA e a priorità più alta.
+    const bestByName = new Map<string, OperativePromptRow>();
+    for (const r of relevant) {
+      const current = bestByName.get(r.name);
+      if (!current) {
+        bestByName.set(r.name, r);
+        continue;
+      }
+      const rScore = (isMandatory(r) ? 1_000_000 : 0) + (r.priority ?? 0);
+      const cScore = (isMandatory(current) ? 1_000_000 : 0) + (current.priority ?? 0);
+      if (rScore > cScore) bestByName.set(r.name, r);
+    }
+    const deduped = [...bestByName.values()];
+
     // Mandatory first, then by priority desc.
-    const sorted = [...relevant].sort((a, b) => {
+    const sorted = deduped.sort((a, b) => {
       const am = isMandatory(a) ? 1 : 0;
       const bm = isMandatory(b) ? 1 : 0;
       if (am !== bm) return bm - am;
