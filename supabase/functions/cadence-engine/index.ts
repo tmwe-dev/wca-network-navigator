@@ -7,6 +7,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { createPauseChecker } from "./pauseChecker.ts";
+import { hardGate } from "../_shared/aiActionRiskGate.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -225,6 +226,17 @@ async function processAction(
   const actionType = mapActionType(action.action_type);
 
   if (autoExecute) {
+    // Hard gate: never auto-send to blacklisted/archived targets, whatever the cadence proposes.
+    const gate = await hardGate(supabase, "SEND", partnerId, null);
+    if (!gate.allowed) {
+      await supabase.from("mission_actions").update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        last_error: `hard_gate_blocked:${gate.reason ?? "denied"}`,
+      }).eq("id", action.id);
+      counters.cancelled();
+      return;
+    }
     // Mark action as executing and invoke mission-executor
     await supabase.from("mission_actions").update({
       status: "approved",
