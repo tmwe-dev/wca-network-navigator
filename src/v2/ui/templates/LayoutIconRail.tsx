@@ -8,11 +8,11 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Menu } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { navItemsDef } from "./navConfig";
-import { EXPANDABLE_MAIN_NAV, sectionRoot } from "./NavMenuPopover";
+import { EXPANDABLE_MAIN_NAV, sectionRoot, NavMenuPopover } from "./NavMenuPopover";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 
 interface Props {
@@ -44,6 +44,17 @@ export function LayoutIconRail({ currentPath }: Props): React.ReactElement {
       role="navigation"
       aria-label="Navigazione rapida"
     >
+      {/* Menu unico globale: stesso NavMenuPopover usato in Command.
+          Garantisce accesso a TUTTE le maschere (incl. Development) da ogni pagina. */}
+      <NavMenuPopover currentPath={currentPath} align="start" side="right">
+        <button
+          type="button"
+          aria-label="Apri menu completo"
+          className="h-10 w-10 mb-1 flex items-center justify-center rounded-md text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </NavMenuPopover>
       <div className="flex-1 w-full flex flex-col items-center gap-0.5 overflow-y-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {navItemsDef.map((item) => {
           const isActive = sectionRoot(item.path) === activeRoot;
