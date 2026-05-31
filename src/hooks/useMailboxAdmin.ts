@@ -9,4 +9,4 @@ export {
   upsertSharedMailbox,
   deleteSharedMailbox,
 } from "@/data/mailboxes";
-export type { SharedMailbox, SharedMailboxUpsert } from "@/data/mailboxes";
+export type { SharedMailbox, SharedMailboxUpsert, AccessibleMailbox } from "@/data/mailboxes";

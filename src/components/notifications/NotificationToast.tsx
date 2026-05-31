@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Notification } from "@/data/notifications";
+import type { Notification } from "@/hooks/useNotifications";
 
 interface NotificationToastProps {
   notification: Notification;

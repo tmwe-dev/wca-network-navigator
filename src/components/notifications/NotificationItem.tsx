@@ -8,7 +8,7 @@ import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { Notification } from "@/data/notifications";
+import type { Notification } from "@/hooks/useNotifications";
 
 interface NotificationItemProps {
   notification: Notification;

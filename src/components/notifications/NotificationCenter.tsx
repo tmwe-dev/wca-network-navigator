@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, useUnreadCount, useMarkAllAsRead, useDismissNotification, useMarkAsRead } from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
 import { cn } from "@/lib/utils";
-import type { Notification } from "@/data/notifications";
+import type { Notification } from "@/hooks/useNotifications";
 
 export function NotificationCenter(): React.ReactElement {
   const navigate = useNavigate();
