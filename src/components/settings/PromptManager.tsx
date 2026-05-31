@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
-import { DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem, CONTENT_CATEGORIES } from "@/data/defaultContentPresets";
+import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
+import { DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem, CONTENT_CATEGORIES } from "@/constants/defaultContentPresets";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

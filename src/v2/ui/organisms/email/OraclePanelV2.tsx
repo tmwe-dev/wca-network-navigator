@@ -11,7 +11,7 @@ import type { LucideProps } from "lucide-react";
 const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
   Handshake, RefreshCw, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target,
 };
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS } from "@/constants/defaultEmailTypes";
 import { cn } from "@/lib/utils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 

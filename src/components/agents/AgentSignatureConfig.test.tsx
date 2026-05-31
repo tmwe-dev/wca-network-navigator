@@ -7,8 +7,8 @@ const mockUpdateAgent = { mutate: vi.fn(), isPending: false };
 vi.mock("@/hooks/useAgents", () => ({
   useAgents: () => ({ updateAgent: mockUpdateAgent }),
 }));
-vi.mock("@/data/agentAvatars", () => ({ resolveAgentAvatar: () => null }));
-vi.mock("@/data/agentTemplates", () => ({ ROBIN_VOICE_CALL_URL: "https://voice.example.com" }));
+vi.mock("@/constants/agentAvatars", () => ({ resolveAgentAvatar: () => null }));
+vi.mock("@/constants/agentTemplates", () => ({ ROBIN_VOICE_CALL_URL: "https://voice.example.com" }));
 vi.mock("@/lib/security/htmlSanitizer", () => ({ sanitizeHtml: (h: string) => h }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { storage: { from: () => ({ upload: vi.fn().mockResolvedValue({ error: null }), getPublicUrl: () => ({ data: { publicUrl: "https://cdn/sig.png" } }) }) } },

@@ -1,7 +1,7 @@
 import { Mail, Linkedin, MessageCircle, Smartphone, Globe, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Briefcase } from "lucide-react";
 import type { ContactOrigin } from "@/types/cockpit";
 import type { AssignmentInfo } from "./CockpitContactCard";

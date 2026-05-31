@@ -2,7 +2,7 @@ import { useMemo, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { MicOff, Mic, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { EmailType } from "@/data/defaultEmailTypes";
+import type { EmailType } from "@/constants/defaultEmailTypes";
 import { getCustomGoalPlaceholder } from "@/lib/oracleCoherence";
 
 interface GoalInputProps {

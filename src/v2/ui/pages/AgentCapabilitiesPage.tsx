@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AGENT_ROLES } from "@/data/agentTemplates/roles";
+import { AGENT_ROLES } from "@/constants/agentTemplates/roles";
 import { Bot, AlertTriangle, CheckCircle2, BarChart3, Loader2 } from "lucide-react";
 
 function coverageColor(pct: number) {

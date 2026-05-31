@@ -2,7 +2,7 @@
  * KBColumn — KB categories caricate a runtime + procedure critiche iniettate.
  */
 import { BookOpen } from "lucide-react";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { Badge } from "@/components/ui/badge";
 
 export function KBColumn({ agent }: { agent: AgentRegistryEntry }) {

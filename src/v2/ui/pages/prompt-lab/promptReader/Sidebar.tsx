@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { AgentRegistryEntry, AgentCategory } from "@/data/agentPrompts";
+import type { AgentRegistryEntry, AgentCategory } from "@/constants/agentPrompts";
 import { cn } from "@/lib/utils";
 import { CATEGORY_ORDER, CATEGORY_LABEL } from "./constants";
 

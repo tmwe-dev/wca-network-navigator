@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useWorkspacePresets } from "@/hooks/useWorkspacePresets";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
-import { DEFAULT_GOALS, DEFAULT_PROPOSALS, ContentItem, CONTENT_CATEGORIES } from "@/data/defaultContentPresets";
+import { DEFAULT_GOALS, DEFAULT_PROPOSALS, ContentItem, CONTENT_CATEGORIES } from "@/constants/defaultContentPresets";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

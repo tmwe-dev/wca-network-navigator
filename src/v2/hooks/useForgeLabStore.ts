@@ -6,8 +6,8 @@
  */
 import { useSyncExternalStore } from "react";
 import type { ForgeRecipient } from "@/v2/ui/pages/email-forge/ForgeRecipientPicker";
-import type { EmailType } from "@/data/defaultEmailTypes";
-import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import type { EmailType } from "@/constants/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 import { presetToForgeConfig, type DeepSearchQuality } from "@/lib/deepSearchPresets";
 
 export interface DeepSearchConfig {

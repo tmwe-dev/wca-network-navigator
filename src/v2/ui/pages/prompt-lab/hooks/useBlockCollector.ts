@@ -20,7 +20,7 @@ import { findEmailAddressRules } from "@/data/emailAddressRules";
 import { findCommercialPlaybooks } from "@/data/commercialPlaybooks";
 import { findAgentPersonas } from "@/data/agentPersonas";
 import { DEFAULT_SYSTEM_PROMPT_BLOCKS } from "../types";
-import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 
 const TYPES_KEY = "email_oracle_types";
 const SYSTEM_PROMPT_KEY = "system_prompt_blocks";

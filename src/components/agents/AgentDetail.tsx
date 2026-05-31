@@ -13,7 +13,7 @@ import { AgentVoiceConfig } from "./AgentVoiceConfig";
 import { AgentSignatureConfig } from "./AgentSignatureConfig";
 import { AgentTerritoryConfig } from "./AgentTerritoryConfig";
 import { AgentChat } from "./AgentChat";
-import { AGENT_ROLES } from "@/data/agentTemplates";
+import { AGENT_ROLES } from "@/constants/agentTemplates";
 import { toast } from "sonner";
 
 interface Props {

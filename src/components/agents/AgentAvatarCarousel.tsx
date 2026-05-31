@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/hooks/useAgents";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const roleBadgeColor: Record<string, string> = {

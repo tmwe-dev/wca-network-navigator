@@ -1,4 +1,4 @@
-import type { AgentCategory } from "@/data/agentPrompts";
+import type { AgentCategory } from "@/constants/agentPrompts";
 
 export const PANEL_ORDER_KEY = "prompt-reader.panel-order";
 export const COPILOT_EXPANDED_KEY = "prompt-reader.copilot-expanded";

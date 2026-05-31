@@ -3,7 +3,7 @@
  * - se isReply → "contesto_email" (risposta a mail entrante)
  * - altrimenti → "primo_contatto" (outreach standard)
  */
-import { DEFAULT_EMAIL_TYPES, type EmailType } from "@/data/defaultEmailTypes";
+import { DEFAULT_EMAIL_TYPES, type EmailType } from "@/constants/defaultEmailTypes";
 
 export function pickDefaultEmailTypeId(ctx: { isReply?: boolean } = {}): string {
   return ctx.isReply ? "contesto_email" : "primo_contatto";

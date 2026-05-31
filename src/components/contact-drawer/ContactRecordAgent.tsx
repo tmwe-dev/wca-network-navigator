@@ -2,7 +2,7 @@ import { useAssignmentMap, useAssignClient } from "@/hooks/useClientAssignments"
 import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Bot, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";

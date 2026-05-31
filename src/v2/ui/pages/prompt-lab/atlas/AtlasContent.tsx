@@ -16,7 +16,7 @@ import {
   FileText, BookOpen, Wrench, Network, AlertTriangle, Zap,
   ExternalLink, ShieldAlert, Variable, ArrowRight, Blocks,
 } from "lucide-react";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/providers/AuthProvider";
 import { collectAllBlocks } from "../hooks/useBlockCollector";

@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { useAgentDashboard, type AgentTaskRow, type AgentWithTasks } from "@/hooks/useAgentDashboard";
 import {
   Clock, CheckCircle, XCircle, Loader2, Zap, TrendingUp,

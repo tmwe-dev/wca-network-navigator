@@ -1,4 +1,4 @@
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import type { SimulatorResponse } from "@/data/agentSimulator";
 import type { KbEntry } from "@/data/kbEntries";
 

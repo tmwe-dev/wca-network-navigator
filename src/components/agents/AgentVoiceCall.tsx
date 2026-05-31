@@ -7,7 +7,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import VoicePresence from "@/components/intelliflow/VoicePresence";
 import type { Agent } from "@/hooks/useAgents";
 import { createLogger } from "@/lib/log";
-import { logAiInteraction } from "@/data/aiInteractionLog";
+import { useAiInteractionLogger } from "@/hooks/useAiInteractionLogger";
 
 const log = createLogger("AgentVoiceCall");
 
@@ -18,6 +18,7 @@ interface Props {
 
 export function AgentVoiceCall({ agent, onClose }: Props) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const { logAiInteraction } = useAiInteractionLogger();
   const bridgeTokenRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string>(crypto.randomUUID());
   const sessionStartRef = useRef<number>(0);

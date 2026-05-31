@@ -12,7 +12,7 @@ import {
   Save, Loader2, User, Mail, Phone, Briefcase, TrendingUp, RotateCcw,
   Upload, Trash2, Image as ImageIcon,
 } from "lucide-react";
-import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/data/salesKnowledgeBase";
+import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/constants/salesKnowledgeBase";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";

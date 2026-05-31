@@ -21,8 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
-import { insertActivity } from "@/data/activities";
-import { deleteCockpitQueueItem } from "@/data/cockpitQueue";
+import { useCockpitContactActions } from "@/hooks/useCockpitContactActions";
 import { queryKeys } from "@/lib/queryKeys";
 
 type ActivityType = Database["public"]["Enums"]["activity_type"];
@@ -41,6 +40,7 @@ interface Props {
 export function ContactActionMenu({ contact, children }: Props) {
   const navigate = useAppNavigate();
   const qc = useQueryClient();
+  const { insertActivity, deleteCockpitQueueItem } = useCockpitContactActions();
   const { handleSendWhatsApp: bridgeSendWhatsApp, waAvailable: _waAvailable } = useDirectContactActions();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);

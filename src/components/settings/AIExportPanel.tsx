@@ -16,9 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileDown, Package } from "lucide-react";
 import { toast } from "sonner";
 
-import { AGENT_PROMPTS } from "@/data/agentPrompts";
-import { AGENT_TEMPLATES, AGENT_DEFAULT_KB } from "@/data/agentTemplates";
-import { OPERATIONS_PROCEDURES } from "@/data/operationsProcedures";
+import { AGENT_PROMPTS } from "@/constants/agentPrompts";
+import { AGENT_TEMPLATES, AGENT_DEFAULT_KB } from "@/constants/agentTemplates";
+import { OPERATIONS_PROCEDURES } from "@/constants/operationsProcedures";
 
 
 import { createLogger } from "@/lib/log";

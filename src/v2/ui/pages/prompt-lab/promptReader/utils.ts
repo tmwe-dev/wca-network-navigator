@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import type { KbEntry } from "@/data/kbEntries";
 
 export function copy(text: string, label = "Prompt") {

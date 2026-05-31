@@ -15,7 +15,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Wrench, AlertTriangle, ArrowRight } from "lucide-react";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { useLabAgent } from "../hooks/useLabAgent";
 import type {
   ArchitectDiagnosticV2,

@@ -25,11 +25,9 @@ import { useAgents } from "@/hooks/useAgents";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
-import { insertActivity } from "@/data/activities";
-import { deleteCockpitQueueItem } from "@/data/cockpitQueue";
+import { useCockpitContactActions } from "@/hooks/useCockpitContactActions";
 import { queryKeys } from "@/lib/queryKeys";
 import { Input } from "@/components/ui/input";
-import { createCampaignDraftQueue } from "@/data/emailCampaigns";
 import DOMPurify from "dompurify";
 import { EmailLanguagePicker } from "@/components/email/EmailLanguagePicker";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -57,6 +55,7 @@ interface Props {
 
 export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
   const qc = useQueryClient();
+  const { insertActivity, deleteCockpitQueueItem, createCampaignDraftQueue } = useCockpitContactActions();
   const assignClient = useAssignClient();
   const { agents } = useAgents();
   const [noteOpen, setNoteOpen] = useState(false);

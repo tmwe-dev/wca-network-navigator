@@ -14,7 +14,7 @@ import { useCallback, useState } from "react";
 import type { Block } from "../types";
 import { type ArchitectDiagnosticV2 } from "./diagnostics";
 import { useArchitectKb } from "./useArchitectKb";
-import type { AgentRegistryEntry } from "@/data/agentPrompts";
+import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { useCallAgent } from "./useLabAgent/callAgent";
 import {
   improveBlock as improveBlockImpl,

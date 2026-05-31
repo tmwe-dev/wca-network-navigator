@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AGENT_REGISTRY, AGENT_PROMPTS } from "@/data/agentPrompts";
+import { AGENT_REGISTRY, AGENT_PROMPTS } from "@/constants/agentPrompts";
 
 describe("DAL — agentPrompts registry", () => {
   it("AGENT_REGISTRY is not empty", () => {
