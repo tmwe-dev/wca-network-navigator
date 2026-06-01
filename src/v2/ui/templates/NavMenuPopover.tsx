@@ -15,7 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { navItemsDef } from "./navConfig";
+import { FULL_NAV_ITEMS, macroAreaGroups } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 import {
@@ -30,7 +30,7 @@ import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV
  * già una voce pinned del menu principale (`navItemsDef`). Garantisce
  * che ogni rotta compaia UNA sola volta nel popover unificato.
  */
-const MAIN_PATHS = new Set(navItemsDef.map((i) => i.path));
+const MAIN_PATHS = new Set(FULL_NAV_ITEMS.map((i) => i.path));
 const DEV_PAGE_GROUPS = SECONDARY_NAV.map((g) => ({
   ...g,
   items: (g.items ?? []).filter((it) => !MAIN_PATHS.has(it.path)),
@@ -182,7 +182,7 @@ export function NavMenuPopover({
   type SearchEntry = { label: string; path: string; trail: string };
   const searchIndex = React.useMemo<SearchEntry[]>(() => {
     const out: SearchEntry[] = [];
-    for (const item of navItemsDef) {
+    for (const item of FULL_NAV_ITEMS) {
       const translated = t(item.labelKey);
       const label = translated === item.labelKey
         ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
@@ -299,7 +299,12 @@ export function NavMenuPopover({
           )}
           {!q && (
           <>
-          {navItemsDef.map((item) => {
+          {macroAreaGroups.map((group) => (
+            <div key={group.key} className="flex flex-col">
+              <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {group.label}
+              </div>
+              {group.items.map((item) => {
               const isActive = sectionRoot(item.path) === activeRoot;
               const translated = t(item.labelKey);
               const label =
@@ -418,7 +423,9 @@ export function NavMenuPopover({
                   )}
                 </button>
               );
-            })}
+              })}
+            </div>
+          ))}
           <div className="my-1 border-t border-white/10" />
           <button
             type="button"
