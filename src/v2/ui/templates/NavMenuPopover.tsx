@@ -15,7 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { navItemsDef, FULL_NAV_ITEMS, macroAreaGroups } from "./navConfig";
+import { FULL_NAV_ITEMS, macroAreaGroups } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 import {
