@@ -299,7 +299,12 @@ export function NavMenuPopover({
           )}
           {!q && (
           <>
-          {navItemsDef.map((item) => {
+          {macroAreaGroups.map((group) => (
+            <div key={group.key} className="flex flex-col">
+              <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {group.label}
+              </div>
+              {group.items.map((item) => {
               const isActive = sectionRoot(item.path) === activeRoot;
               const translated = t(item.labelKey);
               const label =
@@ -418,7 +423,9 @@ export function NavMenuPopover({
                   )}
                 </button>
               );
-            })}
+              })}
+            </div>
+          ))}
           <div className="my-1 border-t border-white/10" />
           <button
             type="button"
