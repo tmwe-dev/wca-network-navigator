@@ -78,6 +78,7 @@ export function CockpitPage() {
 
   return (
     <StandardPageFrame testId="page-cockpit" title="Cockpit" contentOverflow="contain">
+      <div className="flex flex-col h-full overflow-hidden">
       <TopCommandBar
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={() => {}}
@@ -188,6 +189,7 @@ export function CockpitPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </StandardPageFrame>
   );
 }
