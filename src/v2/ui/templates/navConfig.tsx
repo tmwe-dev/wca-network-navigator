@@ -35,7 +35,7 @@ export interface NavGroupDef {
  * In Lean Mode la sidebar mostra solo le voci con path in LEAN_NAV_PATHS;
  * le altre restano accessibili via deep-link e popover "Tutte le pagine".
  */
-const FULL_NAV_ITEMS: readonly NavItemDef[] = [
+export const FULL_NAV_ITEMS: readonly NavItemDef[] = [
   { labelKey: "nav.command",            path: "/v2/command",            icon: <Command className="h-4 w-4" />,  pinned: true, pinOrder: 1 },
   { labelKey: "nav.missioni",           path: "/v2/agents/autopilot",   icon: <Target className="h-4 w-4" />,   pinned: true, pinOrder: 1.5 },
   { labelKey: "nav.explore",            path: "/v2/explore/network",    icon: <Search className="h-4 w-4" />,   pinned: true, pinOrder: 2 },
@@ -80,3 +80,69 @@ export const mobileBottomNavPaths = [
   "/v2/cockpit",
   "/v2/settings",
 ] as const;
+
+/**
+ * MACRO-AREE (Ristrutturazione UX 2026-06, Fase B).
+ *
+ * Le 7 macro-aree sono l'unica tassonomia con cui l'utente naviga il sistema.
+ * Ogni voce del menu principale appartiene a UNA sola macro-area, così il
+ * menu è sempre leggibile e nessuno si perde. Le pagine non elencate qui
+ * (dev/orfane) restano raggiungibili dalla sezione "Development" del popover.
+ *
+ * Ordine = ordine di visualizzazione nel menu.
+ */
+export type MacroAreaKey =
+  | "comando"
+  | "esplora"
+  | "pipeline"
+  | "comunica"
+  | "cervello"
+  | "lab"
+  | "config";
+
+export interface MacroAreaDef {
+  readonly key: MacroAreaKey;
+  readonly label: string;
+  /** Path (in ordine) appartenenti a questa macro-area. */
+  readonly paths: readonly string[];
+}
+
+export const MACRO_AREAS: readonly MacroAreaDef[] = [
+  { key: "comando",  label: "Comando",  paths: ["/v2/command", "/v2/agents/autopilot"] },
+  { key: "esplora",  label: "Esplora",  paths: ["/v2/explore/network"] },
+  { key: "pipeline", label: "Pipeline", paths: ["/v2/cestinone", "/v2/cockpit", "/v2/agenda"] },
+  {
+    key: "comunica",
+    label: "Comunica",
+    paths: [
+      "/v2/comms",
+      "/v2/inbox",
+      "/v2/email",
+      "/v2/email-intelligence",
+      "/v2/funnemail-inbox",
+      "/v2/rubrica/whatsapp",
+      "/v2/rubrica/linkedin",
+    ],
+  },
+  { key: "cervello", label: "Cervello", paths: ["/v2/intelligence/agents", "/v2/intelligence"] },
+  { key: "lab",      label: "Lab",      paths: ["/v2/lab"] },
+  { key: "config",   label: "Config",   paths: ["/v2/settings"] },
+] as const;
+
+/** Risolve, in ordine macro-area, i gruppi del menu principale con i loro item. */
+export interface MacroAreaGroup {
+  readonly key: MacroAreaKey;
+  readonly label: string;
+  readonly items: readonly NavItemDef[];
+}
+
+const ITEM_BY_PATH = new Map(FULL_NAV_ITEMS.map((i) => [i.path, i] as const));
+
+/** Menu principale raggruppato nelle 7 macro-aree (item risolti da FULL_NAV_ITEMS). */
+export const macroAreaGroups: readonly MacroAreaGroup[] = MACRO_AREAS.map((area) => ({
+  key: area.key,
+  label: area.label,
+  items: area.paths
+    .map((p) => ITEM_BY_PATH.get(p))
+    .filter((i): i is NavItemDef => Boolean(i)),
+})).filter((g) => g.items.length > 0);
