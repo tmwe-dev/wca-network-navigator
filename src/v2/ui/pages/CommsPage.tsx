@@ -8,12 +8,12 @@
  *
  * Deep-link: /v2/comms/:tab  (tab ∈ inbox|email|whatsapp|linkedin|smistamento)
  */
-import { lazy, Suspense, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { lazy, Suspense } from "react";
+import { useParams } from "react-router-dom";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
-import { Inbox, Mail, MessageCircle, Linkedin, Sparkles } from "lucide-react";
+import { StandardPageFrame } from "@/v2/ui/templates/StandardPageFrame";
+import type { SectionTab } from "@/v2/ui/templates/SectionTabs";
 
 const InreachPage = lazy(() =>
   import("./InreachPage").then((m) => ({ default: m.InreachPage })),
@@ -38,61 +38,35 @@ function isValidTab(value: string | undefined): value is CommsTab {
   return !!value && (VALID_TABS as readonly string[]).includes(value);
 }
 
+const COMMS_TABS: readonly SectionTab[] = [
+  { key: "inbox",       label: "Inbox",       to: "/v2/comms/inbox" },
+  { key: "email",       label: "Email",       to: "/v2/comms/email" },
+  { key: "whatsapp",    label: "WhatsApp",    to: "/v2/comms/whatsapp" },
+  { key: "linkedin",    label: "LinkedIn",    to: "/v2/comms/linkedin" },
+  { key: "smistamento", label: "Smistamento", to: "/v2/comms/smistamento" },
+];
+
 export function CommsPage(): JSX.Element {
-  const navigate = useNavigate();
   const { tab } = useParams<{ tab?: string }>();
   const active: CommsTab = isValidTab(tab) ? tab : "inbox";
 
-  const onTabChange = useCallback(
-    (next: string) => {
-      if (next === active) return;
-      navigate(`/v2/comms/${next}`, { replace: false });
-    },
-    [active, navigate],
-  );
-
   return (
-    <div className="flex flex-col h-full w-full">
-      <div className="border-b border-border bg-background sticky top-0 z-10 px-4 py-2 flex items-center gap-4">
-        <h1 className="text-sm font-semibold shrink-0">Comunicazioni</h1>
-        <Tabs value={active} onValueChange={onTabChange} className="flex-1 min-w-0">
-          <TabsList className="inline-flex h-8 justify-start">
-            <TabsTrigger value="inbox" className="gap-2">
-              <Inbox className="h-4 w-4" />
-              <span className="hidden sm:inline">Inbox</span>
-            </TabsTrigger>
-            <TabsTrigger value="email" className="gap-2">
-              <Mail className="h-4 w-4" />
-              <span className="hidden sm:inline">Email</span>
-            </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="gap-2">
-              <MessageCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </TabsTrigger>
-            <TabsTrigger value="linkedin" className="gap-2">
-              <Linkedin className="h-4 w-4" />
-              <span className="hidden sm:inline">LinkedIn</span>
-            </TabsTrigger>
-            <TabsTrigger value="smistamento" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">Smistamento</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-auto">
-        <FeatureErrorBoundary featureName={`Comms.${active}`}>
-          <Suspense fallback={<PageSkeleton />}>
-            {active === "inbox" && <InreachPage />}
-            {active === "email" && <EmailComposerPage />}
-            {active === "whatsapp" && <RubricaWhatsAppPage />}
-            {active === "linkedin" && <RubricaLinkedInPage />}
-            {active === "smistamento" && <FunnemailInboxPage />}
-          </Suspense>
-        </FeatureErrorBoundary>
-      </div>
-    </div>
+    <StandardPageFrame
+      title="Comunicazioni"
+      tabs={COMMS_TABS}
+      tabsRootPath="/v2/comms"
+      contentOverflow="auto"
+    >
+      <FeatureErrorBoundary featureName={`Comms.${active}`}>
+        <Suspense fallback={<PageSkeleton />}>
+          {active === "inbox" && <InreachPage />}
+          {active === "email" && <EmailComposerPage />}
+          {active === "whatsapp" && <RubricaWhatsAppPage />}
+          {active === "linkedin" && <RubricaLinkedInPage />}
+          {active === "smistamento" && <FunnemailInboxPage />}
+        </Suspense>
+      </FeatureErrorBoundary>
+    </StandardPageFrame>
   );
 }
 
