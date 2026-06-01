@@ -42,6 +42,7 @@ import { LayoutHeader } from "./LayoutHeader";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
+import { pageHasWorkflow } from "@/v2/navigation/pageContract";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
