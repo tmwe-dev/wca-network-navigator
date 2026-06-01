@@ -15,7 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { navItemsDef } from "./navConfig";
+import { navItemsDef, FULL_NAV_ITEMS, macroAreaGroups } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 import {
@@ -30,7 +30,7 @@ import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV
  * già una voce pinned del menu principale (`navItemsDef`). Garantisce
  * che ogni rotta compaia UNA sola volta nel popover unificato.
  */
-const MAIN_PATHS = new Set(navItemsDef.map((i) => i.path));
+const MAIN_PATHS = new Set(FULL_NAV_ITEMS.map((i) => i.path));
 const DEV_PAGE_GROUPS = SECONDARY_NAV.map((g) => ({
   ...g,
   items: (g.items ?? []).filter((it) => !MAIN_PATHS.has(it.path)),
