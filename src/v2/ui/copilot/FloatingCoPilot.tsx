@@ -79,6 +79,17 @@ export function FloatingCoPilot() {
     return () => window.removeEventListener("copilot-confirm", handler);
   }, []);
 
+  // Listener: apertura esplicita del Co-Pilot dal pulsante AI in-mask
+  // (StandardPageFrame emette `copilot-open`). Abilita anche se spento.
+  useEffect(() => {
+    const handler = () => {
+      setEnabled(true);
+      setExpanded(true);
+    };
+    window.addEventListener("copilot-open", handler);
+    return () => window.removeEventListener("copilot-open", handler);
+  }, [setEnabled]);
+
   const respondConfirmation = (result: "ok" | "cancel") => {
     if (!confirmRequest) return;
     window.dispatchEvent(new CustomEvent("copilot-confirm-result", {

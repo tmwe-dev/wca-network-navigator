@@ -42,6 +42,7 @@ import { LayoutHeader } from "./LayoutHeader";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
+import { pageHasWorkflow } from "@/v2/navigation/pageContract";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
@@ -315,6 +316,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </AnimatePresence>
 
                       {/* Linguetta filtri rimossa: usiamo solo quella contestuale di ContextFiltersRail */}
+                      {pageHasWorkflow(location.pathname) && (
                       <button
                         onClick={() => setMissionOpen(true)}
                         className={cn(
@@ -326,6 +328,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         <Target className="w-3 h-3 text-primary" />
                       </button>
+                      )}
 
                       {/* Main content */}
                       <BcaFiltersGate>

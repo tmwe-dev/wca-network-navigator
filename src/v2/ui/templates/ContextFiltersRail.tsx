@@ -17,86 +17,38 @@ import {
   SIDEBAR_BANNER_REGISTRY,
   type SidebarContextKey,
 } from "@/components/global/filters-drawer/sidebarContextRegistry";
+import { resolveFilterRule, type FilterKey } from "@/v2/navigation/pageContract";
+
+/**
+ * Mappa FilterKey → componente di contenuto. È l'UNICO punto che lega una
+ * chiave del contratto al suo set di filtri JSX. Le regole di matching
+ * (path → FilterKey) vivono in `pageContract.ts`.
+ */
+const FILTER_CONTENT: Record<FilterKey, () => React.ReactNode> = {
+  network: () => <NetworkFiltersSection />,
+  bca: () => <BCAFiltersRailContent />,
+  "crm-contacts": () => <CRMFiltersSection />,
+  "email-intelligence": () => <EmailIntelligenceFiltersSection />,
+  "email-compose": () => <EmailComposeFiltersSection />,
+  "email-forge": () => <EmailForgeFiltersSection />,
+  agenda: () => <AgendaFiltersSection />,
+  campaigns: () => <CampaignsFiltersSection />,
+  "funnemail-inbox": () => <FunnemailInboxFiltersSection />,
+  sorting: () => <SortingFiltersSection />,
+  arena: () => <ArenaFiltersSection />,
+};
 
 function getFilterContext(
   pathname: string,
   networkView: "partners" | "bca",
 ): { title: string; content: React.ReactNode; bannerKey: SidebarContextKey } | null {
-  if (pathname.startsWith("/v2/explore/network") || pathname === "/v2/network" || pathname.startsWith("/v2/partner-hub")) {
-    if (networkView === "bca") {
-      return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent />, bannerKey: "bca" };
-    }
-    return { title: "Filtri WCA Partner", content: <NetworkFiltersSection />, bannerKey: "network" };
-  }
-
-  if (
-    pathname.startsWith("/v2/pipeline/contacts") ||
-    pathname.startsWith("/v2/pipeline/kanban") ||
-    pathname.startsWith("/v2/explore/contacts") ||
-    pathname.startsWith("/v2/crm/contacts") ||
-    pathname === "/v2/crm" ||
-    pathname === "/v2/contacts"
-  ) {
-    return { title: "Filtri Contatti CRM", content: <CRMFiltersSection />, bannerKey: "crm-contacts" };
-  }
-
-  if (pathname.startsWith("/v2/pipeline/biglietti") || pathname.startsWith("/v2/explore/biglietti")) {
-    return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent />, bannerKey: "bca" };
-  }
-
-  if (pathname.startsWith("/v2/email-intelligence")) {
-    return {
-      title: "Filtri Email Intelligence",
-      content: <EmailIntelligenceFiltersSection />,
-      bannerKey: "email-intelligence",
-    };
-  }
-
-  if (pathname.startsWith("/v2/communicate/compose")) {
-    return {
-      title: "Configurazione Email AI",
-      content: <EmailComposeFiltersSection />,
-      bannerKey: "email-compose",
-    };
-  }
-
-  if (pathname.startsWith("/v2/cockpit")) {
-    return {
-      title: "Configurazione Email AI",
-      content: <EmailComposeFiltersSection />,
-      bannerKey: "email-compose",
-    };
-  }
-
-  if (
-    pathname.startsWith("/v2/email/forge") ||
-    pathname.startsWith("/v2/email-forge") ||
-    pathname.startsWith("/v2/ai-staff/email-forge")
-  ) {
-    return { title: "Email Forge — Lab AI", content: <EmailForgeFiltersSection />, bannerKey: "email-forge" };
-  }
-
-  if (pathname.startsWith("/v2/agenda") || pathname.startsWith("/v2/pipeline/agenda")) {
-    return { title: "Filtri Agenda", content: <AgendaFiltersSection />, bannerKey: "agenda" };
-  }
-
-  if (pathname.startsWith("/v2/campaigns")) {
-    return { title: "Filtri Campagne", content: <CampaignsFiltersSection />, bannerKey: "campaigns" };
-  }
-
-  if (pathname.startsWith("/v2/funnemail-inbox") || pathname.startsWith("/v2/inbox")) {
-    return { title: "Filtri Funnemail", content: <FunnemailInboxFiltersSection />, bannerKey: "funnemail-inbox" };
-  }
-
-  if (pathname.startsWith("/v2/sorting")) {
-    return { title: "Filtri Approvazioni", content: <SortingFiltersSection />, bannerKey: "sorting" };
-  }
-
-  if (pathname.startsWith("/v2/ai-arena")) {
-    return { title: "AI Arena — Focus", content: <ArenaFiltersSection />, bannerKey: "arena" };
-  }
-
-  return null;
+  const rule = resolveFilterRule(pathname, networkView);
+  if (!rule) return null;
+  return {
+    title: rule.title,
+    content: FILTER_CONTENT[rule.filterKey](),
+    bannerKey: rule.bannerKey,
+  };
 }
 
 export function ContextFiltersRail(): React.ReactElement | null {
