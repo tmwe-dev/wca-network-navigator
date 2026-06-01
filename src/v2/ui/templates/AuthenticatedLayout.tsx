@@ -316,6 +316,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </AnimatePresence>
 
                       {/* Linguetta filtri rimossa: usiamo solo quella contestuale di ContextFiltersRail */}
+                      {pageHasWorkflow(location.pathname) && (
                       <button
                         onClick={() => setMissionOpen(true)}
                         className={cn(
@@ -327,6 +328,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         <Target className="w-3 h-3 text-primary" />
                       </button>
+                      )}
 
                       {/* Main content */}
                       <BcaFiltersGate>
