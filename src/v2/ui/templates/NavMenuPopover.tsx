@@ -182,7 +182,7 @@ export function NavMenuPopover({
   type SearchEntry = { label: string; path: string; trail: string };
   const searchIndex = React.useMemo<SearchEntry[]>(() => {
     const out: SearchEntry[] = [];
-    for (const item of navItemsDef) {
+    for (const item of FULL_NAV_ITEMS) {
       const translated = t(item.labelKey);
       const label = translated === item.labelKey
         ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
