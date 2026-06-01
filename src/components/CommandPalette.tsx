@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   CommandDialog,
   CommandEmpty,
@@ -7,10 +8,10 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command";
-import { LayoutDashboard, Users, Calendar, Building2, Star, Mail, Rocket, Gamepad2, Send, Brain, Settings, Globe, MessageCircle, Target, BarChart3, Wrench, BookOpen, Inbox } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { searchPartners } from "@/data/partners";
+import { macroAreaGroups, type NavItemDef } from "@/v2/ui/templates/navConfig";
 
 interface Partner {
   id: string;
@@ -24,39 +25,19 @@ interface CommandPaletteProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, v1Path: "/v1", v2Path: "/v2" },
-  { label: "Network", icon: Globe, v1Path: "/v1/network", v2Path: "/v2/network" },
-  { label: "CRM Contatti", icon: Users, v1Path: "/v1/crm", v2Path: "/v2/crm" },
-  { label: "Outreach", icon: Rocket, v1Path: "/v1/outreach", v2Path: "/v2/cockpit" },
-  { label: "Inreach", icon: Inbox, v1Path: "/v1/inreach", v2Path: "/v2/inreach" },
-  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/email" },
-  { label: "AI Arena", icon: Gamepad2, v1Path: "/v1/ai-arena", v2Path: "/v2/ai-arena" },
-  { label: "AI Control", icon: Target, v1Path: "/v1/ai-control", v2Path: "/v2/ai-control" },
-  { label: "Email Intelligence", icon: Brain, v1Path: "/v1/email-intelligence", v2Path: "/v2/email-intelligence" },
-  { label: "Campagne", icon: Send, v1Path: "/v1/campaigns", v2Path: "/v2/explore/campaigns" },
-  { label: "Agenda", icon: Calendar, v1Path: "/v1/agenda", v2Path: "/v2/agenda" },
-  { label: "Chat Agenti", icon: MessageCircle, v1Path: "/v1/agent-chat", v2Path: "/v2/agents" },
-  { label: "Staff Direzionale", icon: BookOpen, v1Path: "/v1/staff-direzionale", v2Path: "/v2/ai-staff" },
-  { label: "Mission Builder", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/agents/missions" },
-  { label: "Telemetria", icon: BarChart3, v1Path: "/v1/telemetry", v2Path: "/v2/settings/telemetry" },
-  { label: "Diagnostica", icon: Wrench, v1Path: "/v1/diagnostics", v2Path: "/v2/settings/diagnostics" },
-  { label: "Impostazioni", icon: Settings, v1Path: "/v1/settings", v2Path: "/v2/settings" },
-];
-
-const QUICK_ACTIONS = [
-  { label: "Nuova Missione", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/agents/missions" },
-  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/email" },
-  { label: "Visualizza Preferiti", icon: Star, v1Path: "/v1/network?favorites=true", v2Path: "/v2/network?favorites=true" },
-];
-
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { t } = useTranslation();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [search, setSearch] = useState("");
-  const isV2 = location.pathname.startsWith("/v2");
-  const resolvePath = (item: { v1Path: string; v2Path: string }) => (isV2 ? item.v2Path : item.v1Path);
+
+  // SSOT navigazione: stesse 7 macro-aree del menu principale (navConfig).
+  const labelOf = (item: NavItemDef): string => {
+    const translated = t(item.labelKey);
+    return translated === item.labelKey
+      ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
+      : translated;
+  };
 
   useEffect(() => {
     if (open && search.length >= 2) {
@@ -89,7 +70,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             {partners.map((partner) => (
               <CommandItem
                 key={partner.id}
-                onSelect={() => runCommand(() => navigate(isV2 ? "/v2/network" : "/v1/network"))}
+                onSelect={() => runCommand(() => navigate("/v2/network"))}
               >
                 <Building2 className="mr-2 h-4 w-4" />
                 <div className="flex flex-col">
@@ -103,31 +84,20 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandGroup>
         )}
 
-        <CommandGroup heading="Navigazione">
-          {NAV_ITEMS.map((item) => (
-            <CommandItem
-              key={item.label}
-              onSelect={() => runCommand(() => navigate(resolvePath(item)))}
-            >
-              <item.icon className="mr-2 h-4 w-4" />
-              <span>{item.label}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-
-        <CommandSeparator />
-
-        <CommandGroup heading="Azioni Rapide">
-          {QUICK_ACTIONS.map((item) => (
-            <CommandItem
-              key={item.label}
-              onSelect={() => runCommand(() => navigate(resolvePath(item)))}
-            >
-              <item.icon className="mr-2 h-4 w-4" />
-              <span>{item.label}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
+        {macroAreaGroups.map((group) => (
+          <CommandGroup key={group.key} heading={group.label}>
+            {group.items.map((item) => (
+              <CommandItem
+                key={item.path}
+                value={`${labelOf(item)} ${group.label}`}
+                onSelect={() => runCommand(() => navigate(item.path))}
+              >
+                <span className="mr-2 inline-flex h-4 w-4 items-center justify-center">{item.icon}</span>
+                <span>{labelOf(item)}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ))}
       </CommandList>
     </CommandDialog>
   );
