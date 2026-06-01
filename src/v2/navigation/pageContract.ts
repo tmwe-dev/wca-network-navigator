@@ -48,20 +48,19 @@ export interface FilterRule {
  */
 export const FILTER_RULES: readonly FilterRule[] = [
   {
-    match: (p) =>
-      p.startsWith("/v2/explore/network") || p === "/v2/network" || p.startsWith("/v2/partner-hub"),
-    title: "Filtri WCA Partner",
-    filterKey: "network",
-    bannerKey: "network",
-  },
-  // Network in vista BCA → filtri biglietti (override gestito dal predicato networkView).
-  {
     match: (p, ctx) =>
       ctx.networkView === "bca" &&
       (p.startsWith("/v2/explore/network") || p === "/v2/network" || p.startsWith("/v2/partner-hub")),
     title: "Filtri Biglietti BCA",
     filterKey: "bca",
     bannerKey: "bca",
+  },
+  {
+    match: (p) =>
+      p.startsWith("/v2/explore/network") || p === "/v2/network" || p.startsWith("/v2/partner-hub"),
+    title: "Filtri WCA Partner",
+    filterKey: "network",
+    bannerKey: "network",
   },
   {
     match: (p) =>
