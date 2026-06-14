@@ -40,7 +40,6 @@ import { BackgroundServices } from "./BackgroundServices";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
-import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
 import { pageHasWorkflow } from "@/v2/navigation/pageContract";
 import { queryKeys } from "@/lib/queryKeys";
