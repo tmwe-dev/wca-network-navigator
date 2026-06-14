@@ -1,103 +1,90 @@
-# Ristrutturazione UX: shell uniforme + bonifica maschere
+# Piano: Template di struttura unico + zero sovrapposizioni
 
-## 1. Cosa ho trovato (audit)
+## Diagnosi (perché si accavallano)
 
-### Shell attuale
-- **Menu unico**: hamburger in alto-sx → `NavMenuPopover`. Sorgenti: `navItemsDef` (navConfig) + `SECONDARY_NAV` (registry) + `EXPANDABLE_MAIN_NAV` (tab Settings). Funziona ma mescola 16 voci pinned + 7 gruppi "Development" + 40 sotto-voci → l'utente non sa dove sta una pagina.
-- **Sidebar SINISTRA = filtri** (`ContextFiltersRail`): si attiva SOLO per i path mappati in `getFilterContext`. La maggior parte delle pagine non ha filtri (rail = `null`).
-- **Sidebar DESTRA = workflow** (`MissionDrawer`): contestuale solo per outreach/network/crm/settings/explore. Ovunque altrove mostra il generico "Mission Control" (goal/preset) **irrilevante** al contesto.
-- **AI in-mask**: NON esiste un accesso AI uniforme in cima a ogni maschera. Ci sono solo overlay globali sparsi (FloatingCoPilot, Command palette ⌘K, StatusPill).
+Oggi convivono **più sistemi di intestazione in parallelo**, ognuno con regole, altezze e z-index diversi:
 
-### Problemi concreti
-1. **Filtri orfani**: 8 `*FiltersSection` esistono ma NON sono cablate in `getFilterContext` → codice morto: `Inbox`, `CodaAI`, `Circuit`, `Outgoing`, `Attivita`, `ABTest`, `Workspace`, (`Arena` cablata ma minima).
-2. **Filtri stub** (≤24 righe, vuoti/placeholder): `Sorting`, `CodaAI`, `Circuit`, `Outgoing`, `Attivita`, `ABTest`, `Workspace`, `FunnemailInbox`.
-3. **Workflow dx non contestuale** sulla maggior parte delle pagine (mostra Mission Control fuori luogo).
-4. **Nessun contratto comune**: ogni pagina decide da sé header, tabs, filtri, azioni → incoerenza totale.
-5. **Sovrabbondanza di maschere** con funzioni duplicate (email, prompt-lab, agenti, analytics, RA/acquisizione).
+| Sistema | Dove vive | Pagine | Altezza |
+|---|---|---|---|
+| `LayoutHeader` (top bar globale) | sempre montata | tutte | 44px (`h-11`) |
+| `PageTitleHeader` (portal in `#page-title-slot`) | dentro LayoutHeader | **22 pagine** | inline |
+| `StandardPageFrame` (header in-mask + ✦AI) | nella maschera | **2 pagine** | 36px (`h-9`) |
+| `GoldenHeaderBar` | — | 0 (orfano) | 32px |
+| `ExploreContextHeader` / `CommandPageHeader` | speciali | 2+ | varie |
+| `LayoutIconRail` (☰ fluttuante) | `fixed left-3 top-3` | globale | 40px |
 
-## 2. Architettura target (contratto unico per OGNI maschera)
+**Causa diretta dell'overlap in alto** (screenshot): il pulsante ☰ è `fixed` a `left-3 top-3` e **galleggia sopra** la top bar, che però inizia a `px-4` senza riservare spazio a sinistra → ☰ copre lo StatusPill / inizio del cluster sinistro.
 
-Ogni pagina (incluse le speciali Command/Cockpit/Campagne, che mantengono il loro contenuto) viene avvolta da un guscio standard `StandardPageFrame` con 4 zone fisse:
+**Cause sistemiche delle altre sovrapposizioni:**
+- Due paradigmi opposti (header globale con portal **vs** header in-maschera) → titoli che compaiono in due punti o si accavallano.
+- Ogni pagina impila toolbar proprie (barra sincronizzazione, riga ricerca, chip filtri) con spaziature e z-index arbitrari.
+- Nessun token condiviso per altezze, gap, z-index, padding di sicurezza.
 
-```text
-+------------------------------------------------------------------+
-|  [☰ menu]  Breadcrumb / Titolo        [ ✦ AI ]  [azioni pagina]  |  <- header in-mask (AI sempre qui)
-+----+--------------------------------------------------------+----+
-| F  |                                                        | W  |
-| I  |                  CONTENUTO MASCHERA                     | O  |
-| L  |                                                        | R  |
-| T  |                                                        | K  |
-| R  |                                                        | F  |
-| I  |  (tabs di sezione standard se presenti)                | L  |
-+----+--------------------------------------------------------+----+
-  ^sx = SOLO filtri                              dx = SOLO workflow^
-```
+## Obiettivo
 
-- **SX (filtri)**: riusa `ContextFiltersRail`, ma il contenuto è risolto da un **registry unico** `pageContract` (1 riga per pagina) invece dell'`if/else` su pathname. Pagine senza filtri → linguetta nascosta (non rail vuota).
-- **DX (workflow)**: nuovo `WorkflowRail` che sostituisce il routing per-pathname di `MissionDrawer`. Mostra, per pagina, i blocchi dichiarati nel contract: `azioni rapide`, `processi/missioni`, `suggerimenti AI`, `scorciatoie`. Default vuoto = linguetta nascosta (mai pannello generico fuori contesto).
-- **AI in-mask**: pulsante `✦ AI` fisso nell'header della maschera, apre il CoPilot già filtrato sul contesto pagina. Uniforme ovunque.
-- **Tabs**: tutte le sezioni con sotto-pagine usano `SectionTabs variant="pill"` (un solo stile). Le speciali tengono i loro tab ma con lo stesso componente/stile.
+Un **unico template strutturale** (zone fisse, altezze fisse, z-index a livelli) applicato a tutte le pagine "normali". Le maschere speciali restano fuori e si analizzano una per una. La priorità è l'**uniformità** del resto.
 
-### Il "contract" (single source of truth)
-`src/v2/navigation/pageContract.ts` — una mappa `path → { title, group, filters?, workflow?, ai?, tabs? }`. Da qui derivano: menu (gruppi), breadcrumb, filtri sx, workflow dx, AI. **Un solo posto da editare per pagina.**
+---
 
-## 3. Menu riorganizzato (gruppi intelligenti)
+## Fase 0 — Fix immediato dell'overlap ☰ / top bar
 
-7 macro-aree (allineate alla memoria 7-Cassetto), ogni pagina assegnata a UNA sola:
-1. **Comando** — Command, Dashboard/KPI
-2. **Esplora** — Network, Mappa/Globe, Sherlock/DeepSearch, Acquisizione/RA/Prospects, Finder API
-3. **Pipeline** — Contatti CRM, Biglietti, Agenda/Kanban, Campagne
-4. **Comunica** — Comms (Inbox/Email/WA/LinkedIn/Funnemail), Cestinone (coda invii), Email Intelligence
-5. **Cervello/Intelligence** — Agenti, Prompt Lab, KB, AI Control
-6. **Config** — Settings (tabs), Admin, Routing
-7. **Lab/Sistema** — solo dev/diagnostica (nascosto agli operatori)
+Senza rifattorizzare nulla:
+- Riservare lo spazio del ☰ nella top bar: aggiungere padding-left sul cluster sinistro di `LayoutHeader` (desktop) pari alla larghezza del pulsante + gap, così ☰ e StatusPill non si toccano mai.
+- Allineare ☰ verticalmente all'altezza esatta della top bar (stessa `h`, stesso asse) invece di `top-3` arbitrario.
+- Definire una scala z-index unica (vedi Fase 2) e applicarla a ☰, top bar, popover, drawer, toast/notifiche per evitare che la notifica email in alto copra i controlli.
 
-## 4. Scaletta 100→0 — utilità delle maschere
+Risultato: la barra in alto torna leggibile e cliccabile su tutte le pagine.
 
-**100–80 (core, tenere e potenziare)**: Command, Comms, Cockpit, Agenda/Pipeline, Network, Contatti CRM, Cestinone, Settings, Email Intelligence, KB, Agenti.
+## Fase 1 — Audit categorizzato di tutti gli elementi
 
-**79–55 (utili, consolidare)**: Campagne, DeepSearch/Sherlock, Acquisizione Partner, Prospects, Analytics/KPI, AI Control, Notifications, Guida.
+Censimento sistematico, **una categoria alla volta**, con inventario file→componente e regole target:
 
-**54–35 (overlap → unire in un hub)**:
-- Email: `EmailForge`, `EmailLab`, `EmailStrategies`, `BrandVoice` → confluire in **un solo "Email Lab"** a tab.
-- Prompt: `PromptLab`, `PromptCatalog`, `PromptTests`, `AgentAtlas`, `Suggestions`, `Proposals`, `PromptReader`, `Brain` → **un solo "Prompt Lab"** a tab (già esiste l'hub `/v2/lab`).
-- Agenti: `AgentsPage`, `AgentChatHub`, `AgentCapabilities`, `AgentTasks`, `AgentRolesOverview`, `AgentPersonaEditor` → **un solo "Agenti"** a tab.
-- Analytics: `Dashboard`, `KPI`, `Analytics`, `Telemetry`, `Observability`, `TokenCockpit`, `PipelineTraces`, `AiInteractionLog` → **un "Analytics" hub** a tab.
-- RA: `RADashboard`, `RAExplorer`, `RAScraping`, `RACompanyDetail`, `AcquisizionePartner`, `FinderApi` → **un "Acquisizione" hub**.
+1. **Top bar globale** — cluster sinistro/destro, slot portal, comportamento mobile.
+2. **Header di pagina / titoli** — `PageTitleHeader` (22), `StandardPageFrame` (2), `ExploreContextHeader`, `GoldenHeaderBar` (orfano da rimuovere).
+3. **Toolbar contestuali** — barre azioni di pagina (es. SINCRONIZZAZIONE / AZIONI in Inbox), riga ricerca, chip filtri attivi.
+4. **Badge** — NEW, contatori, stato (online/offline), "Condivisa".
+5. **Icone & pulsanti icona** — dimensioni, hit-area minima, allineamento.
+6. **Campi di ricerca** — globale (⌘K) vs di pagina vs nel popover.
+7. **Rail laterali** — filtri (sx) e workflow (dx) già governati da `pageContract`.
 
-**34–15 (bassa utilità, declassare a deep-link/tab)**: `CalendarPage` (dup Agenda), `CampaignJobs` (tab Campagne), `EmailIntelligenceOperations` (tab), `KBSupervisor` (tab KB), `AlertRouting` (tab AI Control), `StaffPage`, `TmweClients`, `Docs`, `DPA`.
+Output: tabella unica "elemento → dove sta oggi → regola standard".
 
-**14–0 (deprecare/rimuovere)**:
-- `PlaceholderPage` (placeholder), `SimpleHomePage` (home alternativa morta), `AIArenaPage` (demo 3D), `DesignSystemPreviewPage` (dev), `MissionBuilderPage` (dup Autopilot), `E2EStatusPage` (dev), `AiTestHubPage` (dev), `GuidedOnboardingPage` (dup Onboarding).
-- **Filtri sx orfani da eliminare**: `CodaAI`, `Circuit`, `Outgoing`, `Attivita`, `ABTest`, `Workspace`, `Inbox` FiltersSection (non cablati).
+## Fase 2 — Definizione del template standard (design tokens)
 
-## 5. Piano di esecuzione (fasi)
+Sorgente unica di verità per la struttura, senza colori custom (solo token semantici):
 
-**Fase A — Fondamenta del contratto** (no regressioni visibili)
-- Creare `pageContract.ts` (registry path→config).
-- Creare `StandardPageFrame` (header in-mask + slot AI + slot filtri + slot workflow).
-- Refactor `ContextFiltersRail` per leggere `pageContract.filters` invece dell'if/else.
-- Creare `WorkflowRail` (legge `pageContract.workflow`), affiancato a `MissionDrawer` (deprecato gradualmente).
+- **Zone fisse** (dall'alto): `[Top bar globale]` → `[Header di pagina]` → `[Toolbar pagina opz.]` → `[Contenuto]`, con rail sx/dx ai lati.
+- **Altezze fisse** standard: top bar, header pagina, toolbar (un token ciascuna, riusato ovunque).
+- **Scala z-index a livelli** documentata: contenuto < rail < header < ☰/top bar < popover/drawer < toast.
+- **Padding di sicurezza**: offset costante per gli elementi `fixed` (☰, linguette) così non coprono mai contenuto.
+- **Un solo componente header**: consolidare su **`StandardPageFrame`** come unico header di pagina (titolo/breadcrumb + ✦AI + slot azioni + tabs pill), ritirando `PageTitleHeader`, `GoldenHeaderBar` e lo slot portal.
+- Documentare in `mem/architecture/` (estende il contratto shell esistente).
 
-**Fase B — Uniformazione menu**
-- Derivare `NavMenuPopover` dai 7 gruppi del contract; rimuovere duplicazioni `SECONDARY_NAV`/`EXPANDABLE_MAIN_NAV` ridondanti.
-- Breadcrumb da contract.
+## Fase 3 — Migrazione pagine "normali" all'header unico
 
-**Fase C — Consolidamento hub** (uno per turno, con redirect dei vecchi path)
-- Email Lab → Prompt Lab → Agenti → Analytics → Acquisizione. Ogni vecchia maschera diventa una tab; vecchie rotte → `Navigate` redirect.
+Migrazione incrementale, pagina per pagina, **senza toccare la logica** (solo presentazione), riusando il pattern già applicato a Cockpit/Comms:
+- Sostituire `PageTitleHeader` con `StandardPageFrame` (titolo + eventuali azioni nello slot).
+- Spostare le toolbar di pagina nella zona dedicata sotto l'header, con altezza/gap standard.
+- Verifica visiva desktop + mobile (drawer) per ogni pagina migrata.
+- A migrazione completa: rimozione di `PageTitleHeader`, `GoldenHeaderBar`, slot `#page-title-slot`.
 
-**Fase D — Bonifica**
-- Rimuovere maschere fascia 14–0 e filtri orfani; aggiornare `routes.tsx`, `navConfig`, `registry`, test smoke `08-v2-navigation`.
+## Fase 4 — Maschere speciali (analisi individuale, dopo l'uniformità)
 
-**Fase E — Cablaggio workflow/filtri per le pagine core**
-- Popolare `workflow` (azioni, suggerimenti, scorciatoie) e `filters` per le 11 pagine core.
+Non toccate nella standardizzazione di massa; ognuna avrà una mini-analisi dedicata, preservandone il comportamento. Candidate: **Command**, **Cockpit**, **Comms**, **Campagne**, **Network/Explore**, **Lab**, **Settings**. Per ciascuna: cosa conservare (funzioni custom) e come agganciare l'header standard senza regressioni.
 
-### Note tecniche
-- Le speciali (Command/Cockpit/Campagne) **mantengono il contenuto**; cambia solo il guscio (header AI, tabs, rail) per coerenza.
-- Ogni rimozione passa da redirect per non rompere bookmark/deep-link e i test E2E in `e2e/smoke/08-v2-navigation.spec.ts` (vanno aggiornati gli array di rotte).
-- Zero modifiche a logica di business: solo presentazione/navigazione.
+---
 
-## 6. Output atteso
-Sistema con un solo pattern di pagina: menu chiaro a 7 aree, filtri sempre a sinistra (o nascosti), workflow sempre a destra (o nascosti), AI sempre raggiungibile in cima alla maschera, ~25 maschere in meno per duplicazione/deprecazione.
+## Note tecniche
 
-Confermi e procedo autonomamente dalla Fase A?
+- File chiave: `LayoutHeader.tsx`, `LayoutIconRail.tsx`, `AuthenticatedLayout.tsx`, `StandardPageFrame.tsx`, `PageTitleHeader.tsx`, `GoldenHeaderBar.tsx`, `SectionTabs.tsx`.
+- Solo modifiche frontend/presentazione; nessun cambiamento a hook, dati, RLS o edge.
+- Modifiche minime, locali e reversibili; ogni pagina verificata prima di passare alla successiva.
+- I rail filtri (sx) / workflow (dx) restano governati da `pageContract.ts`.
+
+## Ordine di esecuzione proposto
+
+1. Fase 0 (fix overlap ☰) — sblocca subito la leggibilità.
+2. Fase 2 (token + scelta header unico) — fondamenta.
+3. Fase 1 (audit) in parallelo come riferimento.
+4. Fase 3 (migrazione pagine normali).
+5. Fase 4 (speciali, una ad una).

@@ -40,7 +40,6 @@ import { BackgroundServices } from "./BackgroundServices";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
-import { LayoutIconRail } from "./LayoutIconRail";
 import { ContextFiltersRail } from "./ContextFiltersRail";
 import { pageHasWorkflow } from "@/v2/navigation/pageContract";
 import { queryKeys } from "@/lib/queryKeys";
@@ -257,9 +256,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         Vai al contenuto principale
                       </a>
-                      {/* Desktop icon rail — unico menu (hamburger lilla in cima apre NavMenuPopover) */}
-                      <LayoutIconRail currentPath={location.pathname} />
-
+                      {/* Desktop: il menu ☰ vive ora dentro la top bar (LayoutHeader) — niente più overlay fluttuante */}
                        {/* Mobile header */}
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2" role="banner">
                         <h2 className="text-sm font-bold text-foreground truncate min-w-0">WCA Partners</h2>
