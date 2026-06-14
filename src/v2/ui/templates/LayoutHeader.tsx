@@ -11,6 +11,8 @@
  */
 import * as React from "react";
 import { useLocation } from "react-router-dom";
+import { Menu } from "lucide-react";
+import { NavMenuPopover } from "./NavMenuPopover";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
 import { StatusPill } from "./header/StatusPill";
@@ -65,7 +67,6 @@ export function LayoutHeader({
   // per retrocompatibilità con i call site; consumato altrove o ignorato.
   void onAiClick;
   const { pathname } = useLocation();
-  void pathname;
   useInitTheme();
 
   return (
@@ -76,6 +77,17 @@ export function LayoutHeader({
     >
       {/* LEFT cluster */}
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+        {/* ☰ Menu globale — ora dentro la top bar (niente più overlap con il floating button) */}
+        <NavMenuPopover currentPath={pathname} align="start" side="bottom">
+          <button
+            type="button"
+            aria-label="Apri menu"
+            className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </NavMenuPopover>
+
         <StatusPill
           onAiClick={onAiClick ?? (() => {})}
           outreachQueue={outreachQueue}
