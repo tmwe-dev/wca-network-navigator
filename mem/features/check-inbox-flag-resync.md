@@ -1,8 +1,18 @@
 ---
 name: Check-Inbox Flag Re-Sync
-description: Re-sync best-effort dei flag \Seen IMAP sulle mail locali ancora unread, eseguito a fine ciclo check-inbox
+description: DISABILITATO (2026-06-15). Le mail NON vengono mai marcate lette in automatico; solo dopo visualizzazione in-app o richiesta esplicita.
 type: feature
 ---
+# ⛔ DISABILITATO il 2026-06-15
+
+Per decisione esplicita dell'owner, `resyncUnreadFlags` NON viene più invocato in
+`check-inbox/index.ts` (chiamata e import rimossi). Le mail in arrivo restano
+**unread** finché non vengono **visualizzate in-app** o marcate **su richiesta
+esplicita via prompt**. Il vecchio comportamento auto-marcava `read_at` in base al
+flag `\Seen` del server → indesiderato. Storico sotto.
+
+---
+
 # Check-Inbox: Re-sync flag \Seen (2026-05-05)
 
 **Scope**: ad ogni run di `check-inbox`, dopo il fetch dei nuovi messaggi e prima del disconnect IMAP, viene eseguito `resyncUnreadFlags` (file `supabase/functions/check-inbox/flagResync.ts`).
