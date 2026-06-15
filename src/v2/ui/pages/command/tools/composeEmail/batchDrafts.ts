@@ -127,14 +127,14 @@ export async function generateDraftsBatch(
   goal: string,
 ): Promise<ComposerDraft[]> {
   const capped = partners.slice(0, MAX_BATCH_DRAFTS);
-  const settled = await Promise.allSettled(capped.map((p) => generateOneDraft(p, tone, goal)));
   const out: ComposerDraft[] = [];
-  for (let i = 0; i < settled.length; i++) {
-    const r = settled[i];
-    if (r.status === "fulfilled") {
-      out.push(r.value);
-    } else {
-      const p = capped[i];
+  for (const p of capped) {
+    try {
+      out.push(await generateOneDraft(p, tone, goal));
+      // generate-email ha un bucket per utente; il batch parallelo saturava il
+      // limite dopo le prime bozze. Manteniamo ordine e contesto, ma serializziamo.
+      if (out.length < capped.length) await new Promise((r) => setTimeout(r, 250));
+    } catch (reason) {
       out.push({
         partnerId: p.id,
         partnerName: p.company_name,
@@ -143,7 +143,7 @@ export async function generateDraftsBatch(
         subject: "",
         body: "",
         status: "ai_error",
-        errorMessage: r.reason instanceof Error ? r.reason.message : String(r.reason),
+        errorMessage: reason instanceof Error ? reason.message : String(reason),
       });
     }
   }
