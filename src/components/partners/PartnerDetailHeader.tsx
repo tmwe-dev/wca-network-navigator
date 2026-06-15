@@ -89,16 +89,16 @@ export function PartnerDetailHeader({
                   <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-foreground/80 flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs text-foreground flex-wrap">
                 <PartnerTypeIcon className="w-3.5 h-3.5 opacity-60" strokeWidth={1.5} />
                 <span>{formatPartnerType(String(partner.partner_type || ""))}</span>
                 {partner.office_type && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 font-medium text-foreground/70">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 font-medium text-foreground">
                     {partner.office_type === "head_office" ? "HQ" : "Branch"}
                   </span>
                 )}
                 {networks.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-primary/20 text-foreground/70 font-medium">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-primary/20 text-foreground font-medium">
                     {networks.length} network
                   </span>
                 )}
@@ -106,7 +106,7 @@ export function PartnerDetailHeader({
             </div>
             <div className="flex flex-col items-start gap-0.5 shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 text-xs text-foreground/85">
+                <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
                   <span className="text-base leading-none">{getCountryFlag(String(partner.country_code))}</span>
                   <span className="font-medium">{String(partner.country_name)}</span>
                 </span>
@@ -123,7 +123,7 @@ export function PartnerDetailHeader({
                 </Tooltip>
               </div>
               {(displayCity || partner.wca_id) && (
-                <div className="flex items-center gap-2 text-xs text-foreground/75">
+                <div className="flex items-center gap-2 text-xs text-foreground">
                   {displayCity && <span>{displayCity}</span>}
                   {partner.wca_id && (
                     <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
@@ -136,19 +136,19 @@ export function PartnerDetailHeader({
           {/* Riga 3 — contatti sempre a sinistra */}
           <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
             {partner.phone && (
-              <a href={`tel:${String(partner.phone)}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground transition-colors">
+              <a href={`tel:${String(partner.phone)}`} className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors">
                 <Phone className="w-3 h-3" strokeWidth={1.5} /> {String(partner.phone)}
               </a>
             )}
             {partner.email && (
-              <a href={`mailto:${String(partner.email)}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground transition-colors">
+              <a href={`mailto:${String(partner.email)}`} className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors">
                 <Mail className="w-3 h-3" strokeWidth={1.5} /> {String(partner.email)}
               </a>
             )}
             {partner.website && (
               <a href={String(partner.website).startsWith("http") ? String(partner.website) : `https://${String(partner.website)}`}
                 target="_blank" rel="noopener"
-                className="flex items-center gap-1 text-foreground/80 hover:text-foreground transition-colors">
+                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors">
                 <Globe className="w-3 h-3" strokeWidth={1.5} /> {String(partner.website)}
               </a>
             )}

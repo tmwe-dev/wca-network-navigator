@@ -67,7 +67,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           transition={{ repeat: Infinity, duration: 4 }}
           className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-chart-3/10 flex items-center justify-center mb-4"
         >
-          <Sparkles className="w-7 h-7 text-primary/80" />
+          <Sparkles className="w-7 h-7 text-primary" />
         </motion.div>
         <h3 className="text-sm font-medium text-foreground mb-1">AI Draft Studio</h3>
         <p className="text-xs text-muted-foreground max-w-[200px]">
@@ -91,7 +91,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
             </InfoTooltip>
           )}
           <span className="text-xs text-muted-foreground">→</span>
-          <span className="text-sm text-foreground/90 truncate">{displayName}</span>
+          <span className="text-sm text-foreground truncate">{displayName}</span>
           {isReplyDraft && (
             <button
               type="button"
@@ -104,7 +104,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
             </button>
           )}
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/90">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
           <span>Lingua: {draft.language}</span>
           <span>·</span>
           <span>{draft.companyName}</span>
@@ -240,9 +240,9 @@ function ReviewingState({ draft, onGenerateAfterReview }: { draft: DraftState; o
             {draft.linkedinProfile?.headline && <div className="text-xs text-muted-foreground truncate">{draft.linkedinProfile.headline}</div>}
           </div>
         </div>
-        {draft.linkedinProfile?.location && <div className="text-xs text-muted-foreground/80">📍 {draft.linkedinProfile.location}</div>}
+        {draft.linkedinProfile?.location && <div className="text-xs text-muted-foreground">📍 {draft.linkedinProfile.location}</div>}
         {draft.linkedinProfile?.about && (
-          <div className="text-xs text-muted-foreground/90 bg-background/50 rounded-lg p-2.5 max-h-[120px] overflow-y-auto leading-relaxed">
+          <div className="text-xs text-muted-foreground bg-background/50 rounded-lg p-2.5 max-h-[120px] overflow-y-auto leading-relaxed">
             {draft.linkedinProfile.about}
           </div>
         )}
@@ -270,7 +270,7 @@ function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftSta
     <>
       {draft.channel === "email" && (
         <div>
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Oggetto</label>
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Oggetto</label>
           {isReady ? (
             <input
               value={draft.subject}
@@ -279,16 +279,16 @@ function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftSta
             />
           ) : (
             <div className="mt-1 text-sm font-medium text-foreground">
-              {draft.isGenerating && !draft.subject ? <span className="text-muted-foreground/70">Generazione in corso...</span>
+              {draft.isGenerating && !draft.subject ? <span className="text-muted-foreground">Generazione in corso...</span>
                 : draft.subject ? <TypewriterText text={draft.subject} speed={25} />
-                : <span className="text-muted-foreground/70">In attesa...</span>}
+                : <span className="text-muted-foreground">In attesa...</span>}
             </div>
           )}
         </div>
       )}
       <div>
-        <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Messaggio</label>
-        <div className="mt-2 text-sm text-foreground/90 leading-relaxed">
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Messaggio</label>
+        <div className="mt-2 text-sm text-foreground leading-relaxed">
           {draft.isGenerating && !draft.body ? (
             <div className="space-y-3">
               <ScrapingPhaseIndicator phase={draft.scrapingPhase} linkedinProfile={draft.linkedinProfile} />
@@ -303,7 +303,7 @@ function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftSta
               rows={isHtmlContent ? 16 : 10}
               className="w-full text-sm text-foreground bg-card border border-border/60 rounded p-2 font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary/50 resize-y"
             />
-          ) : <span className="text-muted-foreground/70">In attesa...</span>}
+          ) : <span className="text-muted-foreground">In attesa...</span>}
         </div>
       </div>
     </>
@@ -347,7 +347,7 @@ function SourcesTab({ draft }: { draft: DraftState }) {
   if (!draft._debug) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <Brain className="w-8 h-8 text-muted-foreground/30 mb-2" />
+        <Brain className="w-8 h-8 text-muted-foreground mb-2" />
         <p className="text-xs text-muted-foreground">Genera un messaggio per vedere le fonti e i log AI</p>
       </div>
     );
@@ -404,7 +404,7 @@ function SourcesTab({ draft }: { draft: DraftState }) {
             {d.recipient_intelligence.enrichment_snippet && (
               <details className="group">
                 <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Mostra contesto iniettato nel prompt ▸</summary>
-                <pre className="mt-1 text-[9px] text-muted-foreground/90 whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[150px] overflow-y-auto">{d.recipient_intelligence.enrichment_snippet}</pre>
+                <pre className="mt-1 text-[9px] text-muted-foreground whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[150px] overflow-y-auto">{d.recipient_intelligence.enrichment_snippet}</pre>
               </details>
             )}
           </>
@@ -422,8 +422,8 @@ function SourcesTab({ draft }: { draft: DraftState }) {
             </div>
             {draft.linkedinProfile.name && <div className="text-xs font-medium text-foreground">{draft.linkedinProfile.name}</div>}
             {draft.linkedinProfile.headline && <div className="text-[11px] text-muted-foreground">{draft.linkedinProfile.headline}</div>}
-            {draft.linkedinProfile.about && <div className="text-[10px] text-muted-foreground/80 line-clamp-3">{draft.linkedinProfile.about}</div>}
-            {draft.linkedinProfile.location && <div className="text-[10px] text-muted-foreground/60">📍 {draft.linkedinProfile.location}</div>}
+            {draft.linkedinProfile.about && <div className="text-[10px] text-muted-foreground line-clamp-3">{draft.linkedinProfile.about}</div>}
+            {draft.linkedinProfile.location && <div className="text-[10px] text-muted-foreground">📍 {draft.linkedinProfile.location}</div>}
           </div>
         )}
       </DebugSection>

@@ -13,7 +13,7 @@ export function SmartActions() {
 
   return (
     <div className="space-y-1">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/60 px-1">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground px-1">
         ⚡ Azioni suggerite
       </div>
       <div className="flex flex-col gap-1">
@@ -26,9 +26,9 @@ export function SmartActions() {
             <span className="text-base leading-none">{s.icon}</span>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-medium text-foreground">{s.label}</div>
-              <div className="text-[10px] text-muted-foreground/70 truncate">{s.description}</div>
+              <div className="text-[10px] text-muted-foreground truncate">{s.description}</div>
             </div>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
           </button>
         ))}
       </div>

@@ -126,7 +126,7 @@ export default function NotificationsPage(): React.ReactElement {
       {/* Notifications List */}
       {notifications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card/40 py-16 text-center">
-          <Bell className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+          <Bell className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">Nessuna notifica</p>
         </div>
       ) : (

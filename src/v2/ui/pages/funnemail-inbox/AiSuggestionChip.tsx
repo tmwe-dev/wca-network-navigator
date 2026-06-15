@@ -25,7 +25,7 @@ export function AiSuggestionChip({ suggestion, onAccept, className }: Props) {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-sm px-1.5 py-0 text-[9px] font-medium leading-tight text-muted-foreground/60",
+          "inline-flex items-center gap-1 rounded-sm px-1.5 py-0 text-[9px] font-medium leading-tight text-muted-foreground",
           className,
         )}
         title="Nessun suggerimento AI disponibile"

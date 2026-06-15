@@ -71,7 +71,7 @@ export function SenderProfilesView() {
         <div className="flex items-center justify-center h-40"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
       ) : profiles.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <UserCircle className="h-10 w-10 mb-2 text-primary/30" />
+          <UserCircle className="h-10 w-10 mb-2 text-primary" />
           <p className="text-xs">Nessun profilo sender disponibile</p>
         </div>
       ) : (

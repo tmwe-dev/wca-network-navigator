@@ -24,7 +24,7 @@ const AgentDots = () => {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[8px] text-muted-foreground/40 font-mono tracking-wider mr-1">AGENTI</span>
+      <span className="text-[8px] text-muted-foreground font-mono tracking-wider mr-1">AGENTI</span>
       {agents.map((agent, i) => (
         <div key={agent.name} className="relative">
           <motion.div
@@ -43,7 +43,7 @@ const AgentDots = () => {
             >
               <div className="text-[10px] font-light text-foreground">{agent.name}</div>
               <div className="text-[8px] text-muted-foreground font-mono mt-0.5">{agent.status.toUpperCase()}</div>
-              <div className="text-[8px] text-muted-foreground/60 mt-0.5">{agent.lastAction}</div>
+              <div className="text-[8px] text-muted-foreground mt-0.5">{agent.lastAction}</div>
             </motion.div>
           )}
         </div>

@@ -206,8 +206,8 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       {/* QUALITY PRESET PANEL — auto-determina le fonti */}
       <div className="rounded-md border border-border/60 bg-muted/30 p-2 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80">Profondità Deep Search</div>
-          <span className="text-[11px] text-foreground/70 font-mono">~{meta.estimatedSecondsPerRecord}s/record</span>
+          <div className="text-xs font-semibold uppercase tracking-wide text-foreground">Profondità Deep Search</div>
+          <span className="text-[11px] text-foreground font-mono">~{meta.estimatedSecondsPerRecord}s/record</span>
         </div>
 
         <div className="grid grid-cols-3 gap-1">
@@ -225,19 +225,19 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
                 <Badge key={l} variant="secondary" className="text-[9px] py-0 px-1.5 h-4 font-normal">{l}</Badge>
               ))}
             </div>
-            <div className="text-[11px] text-foreground/70 mt-1 leading-tight">{meta.description}</div>
+            <div className="text-[11px] text-foreground mt-1 leading-tight">{meta.description}</div>
           </div>
         </div>
 
         {/* AVANZATO — collapsibile, chiuso di default */}
         <Collapsible>
-          <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-foreground/70 hover:text-foreground pt-1.5 border-t border-border/60 w-full">
+          <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-foreground hover:text-foreground pt-1.5 border-t border-border/60 w-full">
             <ChevronsUpDown className="w-3 h-3" />
             Personalizza fonti (avanzato)
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-2 mt-2">
             <div className="space-y-1">
-              <div className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
+              <div className="text-xs font-semibold uppercase tracking-wide text-foreground">
                 Fonti attive (granulare)
               </div>
               <div className="grid grid-cols-1 gap-0.5">
@@ -253,9 +253,9 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
             </div>
 
             <div className="space-y-0.5 pt-1.5 border-t border-border/30">
-              <Label className="text-xs text-foreground/70 flex items-center justify-between">
+              <Label className="text-xs text-foreground flex items-center justify-between">
                 <span>Dominio prioritario</span>
-                <span className="font-mono text-foreground/60">max {sources.maxQueriesPerContact} query</span>
+                <span className="font-mono text-foreground">max {sources.maxQueriesPerContact} query</span>
               </Label>
               <Input
                 value={dsConfig.priorityDomain}
@@ -281,7 +281,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
               <div className={`text-[11px] font-semibold ${profileMissing ? "text-warning dark:text-warning" : "text-success dark:text-success"}`}>
                 {profileMissing ? "Profilo testuale assente" : "Profilo sincronizzato disponibile"}
               </div>
-              <div className={`text-[10px] ${profileMissing ? "text-warning/80 dark:text-warning/80" : "text-success/80 dark:text-success/80"}`}>
+              <div className={`text-[10px] ${profileMissing ? "text-warning dark:text-warning" : "text-success dark:text-success"}`}>
                 {profileMissing
                   ? "Nessuna descrizione, HTML o markdown presente. La Deep Search funzionerà ma senza contesto testuale."
                   : "L'AI dispone del profilo sincronizzato. La Deep Search aggiunge social, contatti e rating."}
@@ -321,12 +321,12 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       {/* CASCADE TIMELINE */}
       {(ds.running || timeline.length > 0) && (
         <div className="rounded border border-border/60 p-2 bg-muted/20 space-y-1">
-          <div className="text-xs font-medium uppercase tracking-wide text-foreground/80 flex items-center gap-1">
+          <div className="text-xs font-medium uppercase tracking-wide text-foreground flex items-center gap-1">
             <Loader2 className={`w-2.5 h-2.5 ${ds.running ? "animate-spin" : ""}`} />
             Cascade query · {timeline.length}
           </div>
           {timeline.length === 0 && (
-            <div className="text-xs text-foreground/70 italic">In attesa della prima query…</div>
+            <div className="text-xs text-foreground italic">In attesa della prima query…</div>
           )}
           {timeline.map((t, i) => (
             <div key={i} className="flex items-center gap-1.5 text-[10px] font-mono">
@@ -363,7 +363,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
 
       {ds.results.length > 0 && (
         <div className="rounded border border-border/60 p-2 bg-muted/30 space-y-1">
-          <div className="text-xs font-medium uppercase tracking-wide text-foreground/80">Risultati ultima esecuzione</div>
+          <div className="text-xs font-medium uppercase tracking-wide text-foreground">Risultati ultima esecuzione</div>
           {ds.results.map((r) => (
             <div key={r.partnerId} className="text-[11px] flex items-center justify-between">
               <span className="truncate">{r.companyName}</span>
@@ -384,7 +384,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
               <div className="text-[11px] font-semibold text-success dark:text-success">
                 ✅ Salvato in database — Deep Search {savedSummary.quality.toUpperCase()}
               </div>
-              <div className="text-[10px] text-success/80 dark:text-success/80 mt-0.5">
+              <div className="text-[10px] text-success dark:text-success mt-0.5">
                 {savedSummary.when}
               </div>
             </div>
@@ -410,7 +410,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       />
 
       <div>
-        <div className="text-xs uppercase tracking-wide text-foreground/80 mb-1">Enrichment grezzo (JSON)</div>
+        <div className="text-xs uppercase tracking-wide text-foreground mb-1">Enrichment grezzo (JSON)</div>
         <pre className="text-[10px] bg-muted/40 p-2 rounded border border-border/60 max-h-[180px] overflow-auto font-mono">
           {enrichmentJson ? JSON.stringify(enrichmentJson, null, 2) : "(nessun dato)"}
         </pre>
@@ -442,7 +442,7 @@ function SourceRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-muted-foreground truncate">{label}</span>
-      <span className={value ? "text-foreground" : "text-muted-foreground/50"}>{value ?? "—"}</span>
+      <span className={value ? "text-foreground" : "text-muted-foreground"}>{value ?? "—"}</span>
     </div>
   );
 }

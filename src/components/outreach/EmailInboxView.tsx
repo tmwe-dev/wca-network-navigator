@@ -235,11 +235,11 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
           <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <Database className="h-2.5 w-2.5" />
-              <strong className="text-foreground/90">{emailCount.toLocaleString()}</strong> in db
+              <strong className="text-foreground">{emailCount.toLocaleString()}</strong> in db
             </span>
             <span className="flex items-center gap-1">
               <Mail className="h-2.5 w-2.5" />
-              pag. <strong className="text-foreground/90">{page + 1}</strong> · <strong className="text-foreground/90">{inbound.length}</strong> vis.
+              pag. <strong className="text-foreground">{page + 1}</strong> · <strong className="text-foreground">{inbound.length}</strong> vis.
             </span>
             {unreadCount > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-primary">

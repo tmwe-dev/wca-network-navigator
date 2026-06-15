@@ -25,10 +25,10 @@ interface JobListProps {
 }
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
-  pending: <Circle className="w-3 h-3 text-muted-foreground/50" />,
+  pending: <Circle className="w-3 h-3 text-muted-foreground" />,
   in_progress: <Clock className="w-3 h-3 text-amber-400" />,
   completed: <CheckCircle2 className="w-3 h-3 text-emerald-400" />,
-  skipped: <Circle className="w-3 h-3 text-muted-foreground/30" />,
+  skipped: <Circle className="w-3 h-3 text-muted-foreground" />,
 };
 
 export function JobList({
@@ -193,7 +193,7 @@ export function JobList({
                               <Phone className="w-3 h-3 text-blue-500" />
                             )}
                             {!hasEmail && !hasPhone && (
-                              <span className="text-[10px] text-muted-foreground/40">—</span>
+                              <span className="text-[10px] text-muted-foreground">—</span>
                             )}
                           </div>
                         </div>
@@ -204,7 +204,7 @@ export function JobList({
 
                 {/* No contacts fallback */}
                 {!isCollapsed && contacts.length === 0 && (
-                  <p className="ml-8 text-[11px] text-muted-foreground/50 py-1">Nessun contatto</p>
+                  <p className="ml-8 text-[11px] text-muted-foreground py-1">Nessun contatto</p>
                 )}
               </div>
             );

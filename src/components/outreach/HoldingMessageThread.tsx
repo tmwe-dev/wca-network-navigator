@@ -71,7 +71,7 @@ export function HoldingMessageThread({
             )}
             <div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Messaggio originale</p>
-              <div className="text-xs text-foreground/80 whitespace-pre-wrap bg-muted/10 rounded-lg p-3 border border-border/20 max-h-[300px] overflow-auto">
+              <div className="text-xs text-foreground whitespace-pre-wrap bg-muted/10 rounded-lg p-3 border border-border/20 max-h-[300px] overflow-auto">
                 {selectedMessage?.body_text || "Nessun contenuto disponibile"}
               </div>
             </div>

@@ -182,7 +182,7 @@ function GroupedSettingsNav({
             <button
               type="button"
               onClick={() => setOpen((p) => ({ ...p, [group.id]: !isOpen }))}
-              className="flex w-full items-center gap-1.5 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground hover:bg-accent/40 transition-colors"
+              className="flex w-full items-center gap-1.5 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
             >
               {isOpen ? (
                 <ChevronDown className="w-3 h-3" />
@@ -190,7 +190,7 @@ function GroupedSettingsNav({
                 <ChevronRight className="w-3 h-3" />
               )}
               <span className="truncate">{group.title}</span>
-              <span className="ml-auto text-[10px] text-muted-foreground/60">
+              <span className="ml-auto text-[10px] text-muted-foreground">
                 {group.items.length}
               </span>
             </button>
@@ -240,7 +240,7 @@ function DevelopmentPagesPanel() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {DEV_PAGE_GROUPS.map((group) => (
           <div key={group.title} className="rounded-md border border-border/60 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {group.title}
             </div>
             <div className="space-y-1">
@@ -257,7 +257,7 @@ function DevelopmentPagesPanel() {
               ))}
               {(group.subGroups ?? []).map((sg) => (
                 <div key={sg.title} className="mt-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1 px-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 px-1">
                     {sg.title}
                   </div>
                   <div className="space-y-1 border-l border-border/50 pl-2">

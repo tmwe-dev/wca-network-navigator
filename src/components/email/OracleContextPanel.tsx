@@ -69,7 +69,7 @@ export default function OracleContextPanel({ summary, hasRecipient }: Props) {
     <div className="rounded-md border border-border/30 bg-muted/10">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-medium text-foreground/80 hover:bg-muted/30 transition-colors rounded-md"
+        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-medium text-foreground hover:bg-muted/30 transition-colors rounded-md"
       >
         <span className="flex items-center gap-1.5">
           <SettingsIcon className="w-3 h-3" />
@@ -131,9 +131,9 @@ function Row({ icon, label, children, tone = "muted" }: { icon: React.ReactNode;
         tone === "warn" && "text-warning",
         tone === "muted" && "text-muted-foreground",
       )}>{icon}</span>
-      <span className="text-muted-foreground/70 shrink-0">{label}:</span>
+      <span className="text-muted-foreground shrink-0">{label}:</span>
       <span className={cn(
-        "text-foreground/80",
+        "text-foreground",
         tone === "warn" && "text-warning",
       )}>{children}</span>
     </div>

@@ -122,7 +122,7 @@ export function LabGuideDialog({ initialTabId, initialGroup }: LabGuideDialogPro
                     {LAB_GROUPS.find((g) => g.id === activeTab.group)?.label}
                   </Badge>
                 </div>
-                <p className="text-base text-foreground/90">{guide.purpose}</p>
+                <p className="text-base text-foreground">{guide.purpose}</p>
               </header>
 
               <Section title="Perché esiste">
@@ -177,7 +177,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </h3>
-      <div className="text-sm leading-relaxed text-foreground/85">{children}</div>
+      <div className="text-sm leading-relaxed text-foreground">{children}</div>
     </section>
   );
 }

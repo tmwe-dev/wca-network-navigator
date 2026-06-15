@@ -57,7 +57,7 @@ export function ActiveJobsWidget({ jobs }: Props) {
   return (
     <section className="glass-panel rounded-xl border border-border/60 p-4 space-y-3">
       <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        <Download className="h-3.5 w-3.5 text-primary/70" />
+        <Download className="h-3.5 w-3.5 text-primary" />
         Download attivi
       </div>
       <div className="space-y-2.5">
@@ -98,7 +98,7 @@ export function ActiveJobsWidget({ jobs }: Props) {
                     {STATUS_LABELS[job.status] ?? job.status}
                   </span>
                   {canDismiss && (
-                    <button onClick={() => dismiss(job.id)} className="ml-1 p-0.5 rounded hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                    <button onClick={() => dismiss(job.id)} className="ml-1 p-0.5 rounded hover:bg-muted/40 text-muted-foreground hover:text-muted-foreground transition-colors">
                       <X className="h-3 w-3" />
                     </button>
                   )}
@@ -114,7 +114,7 @@ export function ActiveJobsWidget({ jobs }: Props) {
                 </div>
               )}
               {job.error_message && (
-                <div className="text-[10px] text-destructive/80 truncate">⚠️ {job.error_message}</div>
+                <div className="text-[10px] text-destructive truncate">⚠️ {job.error_message}</div>
               )}
             </div>
           );

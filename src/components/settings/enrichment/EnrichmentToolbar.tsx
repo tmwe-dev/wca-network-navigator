@@ -88,7 +88,7 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
 
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/50" />
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground" />
           <Input
             placeholder="Cerca nome, dominio, email..."
             value={search}
@@ -116,7 +116,7 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex items-center gap-3 ml-auto text-xs text-foreground/70">
+        <div className="flex items-center gap-3 ml-auto text-xs text-foreground">
           {isRunning && baseEnrichment ? (
             <span className="flex items-center gap-1 text-primary font-semibold">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -136,7 +136,7 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
       {showProgressBar && baseEnrichment && (
         <div className="space-y-1">
           <Progress value={pct} className="h-1" />
-          <div className="flex items-center justify-between text-xs text-foreground/70">
+          <div className="flex items-center justify-between text-xs text-foreground">
             <span className="truncate max-w-[60%]">
               {isRunning && baseEnrichment.progress.currentName
                 ? `· ${baseEnrichment.progress.currentName}`
@@ -181,7 +181,7 @@ function FilterChip({
       onClick={onClick}
       className={cn(
         "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-        active ? activeClass : "bg-card text-foreground/70 border-border/60 hover:bg-muted hover:text-foreground",
+        active ? activeClass : "bg-card text-foreground border-border/60 hover:bg-muted hover:text-foreground",
       )}
     >
       {label}

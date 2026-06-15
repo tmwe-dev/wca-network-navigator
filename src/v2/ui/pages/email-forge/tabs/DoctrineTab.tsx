@@ -8,7 +8,7 @@ const DOCTRINE_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "p
 export function DoctrineTab() {
   return (
     <div className="space-y-2">
-      <div className="text-xs text-foreground/70">
+      <div className="text-xs text-foreground">
         Memoria L3 — dottrine sempre incluse dall'assembler nel contesto AI.
       </div>
       <KnowledgeBaseTab categories={DOCTRINE_CATEGORIES} />

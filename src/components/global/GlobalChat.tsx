@@ -70,7 +70,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
       <div ref={scrollRef} className="flex-1 overflow-auto px-4 py-3 space-y-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
-            <Bot className="w-12 h-12 text-muted-foreground/20" />
+            <Bot className="w-12 h-12 text-muted-foreground" />
             <p className="text-xs text-center text-muted-foreground">Chiedi di scaricare partner per paese,<br />aggiornare profili o verificare lo stato.</p>
             <div className="flex flex-wrap gap-1.5 justify-center">
               {QUICK_PROMPTS.map((q) => (
@@ -102,7 +102,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
           <textarea ref={inputRef} value={state.input} onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(state.input); } }}
             placeholder="Es: Scarica tutti i partner della Germania..." rows={1} aria-label="Messaggio per l'assistente AI"
-            className="flex-1 resize-none rounded-xl px-3 py-2 text-xs outline-none transition-colors bg-muted/30 border border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/40"
+            className="flex-1 resize-none rounded-xl px-3 py-2 text-xs outline-none transition-colors bg-muted/30 border border-border text-foreground placeholder:text-muted-foreground focus:border-primary/40"
             style={{ minHeight: "36px", maxHeight: "100px" }} />
           {speech.hasSpeechAPI && (
             <button onClick={speech.toggle} aria-label={speech.listening ? "Stop dettatura" : "Detta con microfono"}

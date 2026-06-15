@@ -124,7 +124,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
       )}
 
       {!hasData && (
-        <p className="text-xs text-muted-foreground/60 text-center py-4">
+        <p className="text-xs text-muted-foreground text-center py-4">
           Il contatto non ha ancora interazioni nel circuito
         </p>
       )}

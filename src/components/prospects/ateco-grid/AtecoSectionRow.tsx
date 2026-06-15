@@ -77,7 +77,7 @@ export function AtecoSectionRow({
                 <Collapsible key={div.codice} open={isDivOpen} onOpenChange={() => onToggleExpand(div.codice)}>
                   <div className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-all ${dPriorityClass} ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-muted/50"}`}>
                     <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
-                      {isDivOpen ? <FolderOpen className="w-3.5 h-3.5 shrink-0 text-primary/70" /> : <Folder className={`w-3.5 h-3.5 shrink-0 ${th.dim}`} />}
+                      {isDivOpen ? <FolderOpen className="w-3.5 h-3.5 shrink-0 text-primary" /> : <Folder className={`w-3.5 h-3.5 shrink-0 ${th.dim}`} />}
                       <span className={`text-xs font-semibold ${th.h2}`}>{div.codice}</span>
                       <span className={`text-[11px] truncate flex-1 ${th.sub}`}>{div.descrizione}</span>
                       {isDivOpen ? <ChevronDown className={`w-3 h-3 shrink-0 ${th.dim}`} /> : <ChevronRight className={`w-3 h-3 shrink-0 ${th.dim}`} />}
@@ -118,7 +118,7 @@ export function AtecoSectionRow({
                             {gScore > 0 && (
                               <span className={`text-[8px] font-mono font-bold px-1 py-0.5 rounded border shrink-0 ${scoreBg(gScore, isDark)} ${scoreColor(gScore, isDark)}`}>{gScore.toFixed(0)}</span>
                             )}
-                            {gCount > 0 && <span className="text-[10px] font-mono text-primary/70">{gCount}</span>}
+                            {gCount > 0 && <span className="text-[10px] font-mono text-primary">{gCount}</span>}
                           </button>
                         );
                       })}

@@ -37,10 +37,10 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
         }}
       >
         <div className="flex items-start gap-3 mb-4">
-          <Shield className="w-3.5 h-3.5 text-success/80 mt-0.5 flex-shrink-0" />
+          <Shield className="w-3.5 h-3.5 text-success mt-0.5 flex-shrink-0" />
           <div>
-            <div className="text-[13px] font-light text-foreground/95 mb-1">{title}</div>
-            <p className="text-[11px] text-muted-foreground/96 leading-relaxed">{description}</p>
+            <div className="text-[13px] font-light text-foreground mb-1">{title}</div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{description}</p>
           </div>
         </div>
 
@@ -54,8 +54,8 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
                 transition={{ delay: 0.2 + i * 0.06, ease }}
                 className="flex items-center justify-between text-[11px]"
               >
-                <span className="text-muted-foreground/90">{d.label}</span>
-                <span className="text-foreground/100 font-mono text-[10px]">{d.value}</span>
+                <span className="text-muted-foreground">{d.label}</span>
+                <span className="text-foreground font-mono text-[10px]">{d.value}</span>
               </motion.div>
             ))}
           </div>
@@ -72,12 +72,12 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
           >
             <div className="flex items-center gap-1.5">
               <div className="w-1 h-1 rounded-full bg-success/55" />
-              <span className="text-[8px] text-success/80 font-mono tracking-wider">{governance.role}</span>
+              <span className="text-[8px] text-success font-mono tracking-wider">{governance.role}</span>
             </div>
-            <span className="text-[6px] text-muted-foreground/92">·</span>
-            <span className="text-[8px] text-muted-foreground/88 font-mono">{governance.permission}</span>
-            <span className="text-[6px] text-muted-foreground/92">·</span>
-            <span className="text-[8px] text-muted-foreground/88 font-mono">{governance.policy}</span>
+            <span className="text-[6px] text-muted-foreground">·</span>
+            <span className="text-[8px] text-muted-foreground font-mono">{governance.permission}</span>
+            <span className="text-[6px] text-muted-foreground">·</span>
+            <span className="text-[8px] text-muted-foreground font-mono">{governance.policy}</span>
           </motion.div>
         )}
 
@@ -86,7 +86,7 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onApprove}
-            className="text-[11px] px-4 py-2 rounded-xl bg-success/10 text-success/80 hover:bg-success/15 hover:text-success/90 transition-all duration-500 flex items-center gap-1.5"
+            className="text-[11px] px-4 py-2 rounded-xl bg-success/10 text-success hover:bg-success/15 hover:text-success transition-all duration-500 flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-3 h-3" /> Conferma
           </motion.button>
@@ -95,7 +95,7 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onModify}
-              className="text-[11px] px-4 py-2 rounded-xl text-muted-foreground/90 hover:text-muted-foreground/90 hover:bg-secondary/[0.1] transition-all duration-500 flex items-center gap-1.5"
+              className="text-[11px] px-4 py-2 rounded-xl text-muted-foreground hover:text-muted-foreground hover:bg-secondary/[0.1] transition-all duration-500 flex items-center gap-1.5"
             >
               <Pencil className="w-3 h-3" /> Modifica
             </motion.button>
@@ -104,7 +104,7 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCancel}
-            className="text-[11px] px-3 py-2 rounded-xl text-muted-foreground/88 hover:text-muted-foreground/96 transition-all duration-500"
+            className="text-[11px] px-3 py-2 rounded-xl text-muted-foreground hover:text-muted-foreground transition-all duration-500"
           >
             <X className="w-3 h-3" />
           </motion.button>

@@ -156,8 +156,8 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
         </div>
         {(c.name || c.contact_alias) && (
           <div className="flex items-center gap-2 ml-[52px]">
-            <User className="w-3.5 h-3.5 text-muted-foreground/80 shrink-0" />
-            <p className="text-sm text-foreground/80">
+            <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <p className="text-sm text-foreground">
               {c.contact_alias || c.name}
               {c.contact_alias && c.name && c.contact_alias !== c.name && <span className="text-muted-foreground text-xs ml-1">({c.name})</span>}
               {c.position && <span className="text-primary"> • {c.position}</span>}

@@ -53,7 +53,7 @@ export function CommandInput({
             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${
               voiceSpeaking
                 ? "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]"
-                : "text-muted-foreground/100 hover:text-foreground/100"
+                : "text-muted-foreground hover:text-foreground"
             }`}
             title="Lettura vocale"
           >
@@ -70,7 +70,7 @@ export function CommandInput({
             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${
               voiceListening
                 ? "bg-primary/20 text-primary animate-pulse"
-                : "text-muted-foreground/100 hover:text-foreground/100"
+                : "text-muted-foreground hover:text-foreground"
             } ${!voiceSupported ? "opacity-30 cursor-not-allowed" : ""}`}
             title={
               voiceSupported
@@ -94,7 +94,7 @@ export function CommandInput({
             onKeyDown={onKeyDown}
             onFocus={onFocus}
             onBlur={onBlur}
-            className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/80 font-light text-foreground/100"
+            className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground font-light text-foreground"
           />
           <motion.button
             onClick={() => {}}
@@ -109,7 +109,7 @@ export function CommandInput({
             disabled={!input.trim()}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
-            className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary/92 hover:bg-primary/15 hover:text-primary/96 transition-all duration-500 disabled:opacity-20"
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary transition-all duration-500 disabled:opacity-20"
           >
             <Send className="w-3.5 h-3.5" />
           </motion.button>

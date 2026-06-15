@@ -56,7 +56,7 @@ const ExecutionFlow = ({ visible, steps, progress }: ExecutionFlowProps) => (
             >
               <div className="flex-shrink-0 w-4 flex justify-center">
                 {step.status === "done" ? (
-                  <CheckCircle2 className="w-3 h-3 text-success/80" />
+                  <CheckCircle2 className="w-3 h-3 text-success" />
                 ) : step.status === "running" ? (
                   <Loader2 className="w-3 h-3 text-primary animate-spin" />
                 ) : step.status === "error" ? (

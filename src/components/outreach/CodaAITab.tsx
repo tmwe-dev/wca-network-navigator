@@ -205,9 +205,9 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
       {/* List */}
       {displayActions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-          <Bot className="w-10 h-10 text-muted-foreground/30 mb-3" />
+          <Bot className="w-10 h-10 text-muted-foreground mb-3" />
           <p className="text-sm font-medium text-muted-foreground">Nessuna azione in attesa</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Le azioni proposte dagli agenti AI appariranno qui per la tua approvazione.
           </p>
         </div>

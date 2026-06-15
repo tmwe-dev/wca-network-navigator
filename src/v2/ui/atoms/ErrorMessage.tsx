@@ -24,7 +24,7 @@ export function ErrorMessage({ message, className, onDismiss }: ErrorMessageProp
       <AlertCircle className="h-4 w-4 shrink-0" />
       <span className="flex-1">{message}</span>
       {onDismiss ? (
-        <button onClick={onDismiss} className="text-destructive hover:text-destructive/80 text-xs font-medium">
+        <button onClick={onDismiss} className="text-destructive hover:text-destructive text-xs font-medium">
           ✕
         </button>
       ) : null}

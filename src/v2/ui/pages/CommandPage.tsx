@@ -220,7 +220,7 @@ const CommandPage = () => {
             <button
               type="button"
               onClick={() => setConversationsCollapsed((value) => !value)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-muted/40 hover:text-foreground"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
               title={conversationsCollapsed ? "Mostra conversazioni" : "Nascondi conversazioni"}
               aria-label={conversationsCollapsed ? "Mostra conversazioni" : "Nascondi conversazioni"}
             >

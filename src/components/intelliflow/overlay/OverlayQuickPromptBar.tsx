@@ -21,7 +21,7 @@ export function OverlayQuickPromptBar({ statsLine, pageLabel, quickPrompts, onSe
       <div className="flex flex-wrap justify-center gap-2 max-w-lg">
         {quickPrompts.map((p) => (
           <button key={p} onClick={() => onSend(p)}
-            className="text-xs px-4 py-2.5 rounded-full border border-border bg-card/80 text-foreground/80 hover:text-foreground hover:bg-card transition-colors font-medium">
+            className="text-xs px-4 py-2.5 rounded-full border border-border bg-card/80 text-foreground hover:text-foreground hover:bg-card transition-colors font-medium">
             {p}
           </button>
         ))}

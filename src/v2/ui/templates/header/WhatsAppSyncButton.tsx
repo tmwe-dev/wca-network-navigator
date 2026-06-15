@@ -51,7 +51,7 @@ export function GlobalSyncButton(): React.ReactElement {
 
   const colorClass = hasNew
     ? "text-emerald-500"
-    : "text-foreground/70 hover:text-primary";
+    : "text-foreground hover:text-primary";
 
   const title = syncing
     ? "Sincronizzazione in corso…"

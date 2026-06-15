@@ -103,8 +103,8 @@ export function BusinessCardsView() {
         {/* Toolbar unica */}
         <div className="flex items-center gap-2 pt-2 flex-wrap">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
-            <input type="text" value={g.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-7 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input type="text" value={g.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-7 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40" />
           </div>
           <TooltipProvider delayDuration={200}>
             <div className="inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-muted/30 p-0.5">
@@ -188,8 +188,8 @@ export function BusinessCardsView() {
             <BCAEventTimeline cards={g.filtered} />
           ) : g.groups.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3">
-              <CreditCard className="w-12 h-12 text-muted-foreground/20" />
-              <p className="text-sm text-muted-foreground/60">Nessun biglietto da visita</p>
+              <CreditCard className="w-12 h-12 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Nessun biglietto da visita</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -198,7 +198,7 @@ export function BusinessCardsView() {
                   {/* Group header */}
                   <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30">
                     <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border", group.isMatched ? "border-primary/30 bg-primary/10" : "border-border/40 bg-muted/30")}>
-                      {group.logoUrl ? <OptimizedImage src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" /> : <Building2 className={cn("w-4 h-4", group.isMatched ? "text-primary/60" : "text-muted-foreground/40")} />}
+                      {group.logoUrl ? <OptimizedImage src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" /> : <Building2 className={cn("w-4 h-4", group.isMatched ? "text-primary" : "text-muted-foreground")} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">

@@ -82,13 +82,13 @@ const TableCanvas = ({
             className="float-panel-subtle p-3 rounded-xl flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-2">
-              <Wand2 className="w-3 h-3 text-primary/80" />
+              <Wand2 className="w-3 h-3 text-primary" />
               <span className="text-[11px] font-light text-foreground">
                 <span className="text-gradient-primary font-mono">{selectedCount}</span> selezionati
               </span>
               <button
                 onClick={onClearSelection}
-                className="text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors ml-2"
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors ml-2"
               >
                 annulla
               </button>
@@ -98,7 +98,7 @@ const TableCanvas = ({
                 <button
                   key={action.id}
                   onClick={() => onBulkAction?.(action, Array.from(selectedIds ?? []))}
-                  className="px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 text-[10px] text-foreground/90 font-light transition-colors"
+                  className="px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 text-[10px] text-foreground font-light transition-colors"
                 >
                   {action.label}
                 </button>

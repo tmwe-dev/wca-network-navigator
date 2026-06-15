@@ -81,7 +81,7 @@ export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, on
                 ) : item.status === "error" ? (
                   <Circle className="w-4 h-4 text-destructive fill-destructive" />
                 ) : (
-                  <Circle className="w-3.5 h-3.5 text-muted-foreground/40" />
+                  <Circle className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
               </div>
 
@@ -100,7 +100,7 @@ export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, on
                 )}>
                   {item.company_name}
                 </div>
-                <div className="text-[10px] text-muted-foreground/70 truncate">{item.city}</div>
+                <div className="text-[10px] text-muted-foreground truncate">{item.city}</div>
               </div>
 
               {/* Already downloaded badge */}

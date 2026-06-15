@@ -38,7 +38,7 @@ export function EnrichmentFilters({
     <div className="space-y-3">
       {/* Search */}
       <div className="relative">
-        <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+        <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Cerca..."
           value={search}

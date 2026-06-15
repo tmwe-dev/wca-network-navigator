@@ -89,7 +89,7 @@ export function JournalistsTab() {
         ))}
       </div>
 
-      <div className="p-2 rounded border border-accent/20 bg-accent/5 text-[11px] text-foreground/70">
+      <div className="p-2 rounded border border-accent/20 bg-accent/5 text-[11px] text-foreground">
         <span className="text-accent font-medium">engaged</span> → auto-selezione contestuale: risposta positiva &lt;5gg → Accompagnatore | silenzio &gt;5gg → Risvegliatore. <span className="text-destructive font-medium">blacklisted</span> → blocco totale.
       </div>
     </div>
@@ -131,7 +131,7 @@ function JournalistCard({ journalist: j, data, onSave }: {
       </div>
       <p className="text-[11px] text-muted-foreground">{j.desc}</p>
       <details>
-        <summary className="cursor-pointer text-xs text-primary/70">Configura (lascia vuoto per usare default)</summary>
+        <summary className="cursor-pointer text-xs text-primary">Configura (lascia vuoto per usare default)</summary>
         <div className="mt-2 space-y-2">
           {(Object.keys(FIELD_LABELS) as Field[]).map((field) => {
             const isShort = field === "tone" || field === "kb_sources";

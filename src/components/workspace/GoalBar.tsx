@@ -172,7 +172,7 @@ export default function GoalBar({
                         <p className="text-[11px] font-medium text-foreground truncate">{tryHostname(link)}</p>
                         <p className="text-[9px] text-muted-foreground truncate">{link}</p>
                       </div>
-                      <ExternalLink className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                      <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
                     </a>
                   </div>
                 ))}

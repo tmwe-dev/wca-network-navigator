@@ -40,7 +40,7 @@ export function OutreachLegendFooter() {
         type="button"
         aria-label="Nascondi legenda"
         onClick={close}
-        className="ml-auto text-muted-foreground/60 hover:text-foreground p-0.5 rounded"
+        className="ml-auto text-muted-foreground hover:text-foreground p-0.5 rounded"
       >
         <X className="w-3 h-3" />
       </button>

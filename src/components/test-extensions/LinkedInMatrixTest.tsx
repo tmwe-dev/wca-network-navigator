@@ -275,7 +275,7 @@ export function LinkedInMatrixTest() {
                     <td className="px-2 py-1.5 text-center">
                       {r?.outcome === "ok" && <CheckCircle2 className="h-4 w-4 text-green-500 inline" />}
                       {r?.outcome === "fail" && <XCircle className="h-4 w-4 text-red-500 inline" />}
-                      {!r && <Circle className="h-4 w-4 text-muted-foreground/30 inline" />}
+                      {!r && <Circle className="h-4 w-4 text-muted-foreground inline" />}
                     </td>
                     <td className="px-2 py-1.5">
                       <div className="font-medium">{s.emoji} {s.label}</div>

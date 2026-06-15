@@ -106,7 +106,7 @@ function EmailBody({ message, compact = false }: { message: PreviewEmail; compac
     return (
       <pre
         className={cn(
-          "leading-relaxed whitespace-pre-wrap break-words font-sans text-foreground/90",
+          "leading-relaxed whitespace-pre-wrap break-words font-sans text-foreground",
           compact ? "text-xs" : "text-sm",
         )}
       >

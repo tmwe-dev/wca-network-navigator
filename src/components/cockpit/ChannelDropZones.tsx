@@ -83,7 +83,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                 }}
                 className={cn(
                   "flex items-center gap-3 px-5 py-5 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[72px]",
-                  !isHovered && "border-border/40 bg-card/40 text-muted-foreground/60",
+                  !isHovered && "border-border/40 bg-card/40 text-muted-foreground",
                   isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder, ch.hoverText),
                   isMissing && !isHovered && "opacity-50",
                 )}
@@ -111,7 +111,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
           })}
         </div>
 
-        <p className="text-[10px] text-muted-foreground/40 text-center">
+        <p className="text-[10px] text-muted-foreground text-center">
           Trascina un contatto qui per generare un messaggio
         </p>
       </div>
@@ -159,7 +159,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
 
             <div className={cn(
               "relative w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-              isHovered ? cn(ch.hoverBg, ch.hoverText, "animate-pulse") : "bg-muted/40 text-muted-foreground/60"
+              isHovered ? cn(ch.hoverBg, ch.hoverText, "animate-pulse") : "bg-muted/40 text-muted-foreground"
             )}>
               <Icon className={cn("transition-all", isHovered ? "w-7 h-7" : "w-5 h-5")} />
             </div>

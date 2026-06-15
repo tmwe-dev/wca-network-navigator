@@ -194,7 +194,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
         return (
           <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/30">
             {isGarbled ? (
-              <>{card.notes.slice(0, 120)}... <span className="text-muted-foreground/50 italic">(dati grezzi)</span></>
+              <>{card.notes.slice(0, 120)}... <span className="text-muted-foreground italic">(dati grezzi)</span></>
             ) : card.notes}
           </div>
         );

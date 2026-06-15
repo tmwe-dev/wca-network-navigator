@@ -83,7 +83,7 @@ function StarSelector({ label, icon: Icon, value, onChange, isDark }: {
   const th = t(isDark);
   return (
     <div className="flex items-center gap-2">
-      <Icon className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+      <Icon className="w-3.5 h-3.5 shrink-0 text-primary" />
       <span className={`text-[11px] w-20 shrink-0 ${th.sub}`}>{label}</span>
       <div className="flex gap-0.5">
         {[1, 2, 3, 4, 5].map(star => (
@@ -96,13 +96,13 @@ function StarSelector({ label, icon: Icon, value, onChange, isDark }: {
             <Star className={`w-4 h-4 ${
               star <= value
                 ? "text-primary fill-primary"
-                : isDark ? "text-white/15" : "text-muted-foreground/30"
+                : isDark ? "text-white/15" : "text-muted-foreground"
             }`} />
           </button>
         ))}
       </div>
       {value > 0 && (
-        <span className="text-[9px] font-mono text-primary/60">≥{value}</span>
+        <span className="text-[9px] font-mono text-primary">≥{value}</span>
       )}
     </div>
   );
@@ -117,7 +117,7 @@ function ChipMultiSelect({ label, icon: Icon, options, selected, onToggle, isDar
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <Icon className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+        <Icon className="w-3.5 h-3.5 shrink-0 text-primary" />
         <span className={`text-[11px] ${th.sub}`}>{label}</span>
       </div>
       <div className="flex flex-wrap gap-1 ml-5">
@@ -291,7 +291,7 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
 
           {/* Sezione: Ranking ATECO */}
           <div className="border-t pt-4 space-y-3 border-border">
-            <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">
+            <p className="text-[10px] uppercase tracking-wider font-bold text-primary">
               ⭐ Ranking ATECO
             </p>
 
@@ -323,7 +323,7 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
             {/* Score slider */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Star className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+                <Star className="w-3.5 h-3.5 shrink-0 text-primary" />
                 <span className="text-xs text-foreground">Score minimo</span>
                 <span className={`text-[11px] font-mono font-bold ml-auto ${
                   filters.rank_score_min > 0 ? "text-primary" : "text-muted-foreground"

@@ -11,10 +11,10 @@ interface Props {
 function Chip({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <span className="inline-flex items-center gap-1 text-[11px]">
-      <span className={`font-bold ${value > 0 ? color : "text-muted-foreground/40"}`}>
+      <span className={`font-bold ${value > 0 ? color : "text-muted-foreground"}`}>
         {value.toLocaleString("it-IT")}
       </span>
-      <span className="text-muted-foreground/60">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
     </span>
   );
 }

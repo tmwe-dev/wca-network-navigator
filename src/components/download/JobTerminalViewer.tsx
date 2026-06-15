@@ -126,7 +126,7 @@ function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<type
         {parsed.success ? (
           <CheckCircle className="w-4 h-4 text-emerald-400" />
         ) : (
-          <XCircle className="w-4 h-4 text-destructive/60" />
+          <XCircle className="w-4 h-4 text-destructive" />
         )}
       </div>
       <span className="text-[10px] text-muted-foreground font-mono shrink-0">{entry.ts}</span>
@@ -143,7 +143,7 @@ function StartRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeo
       </div>
       <span className="text-xs text-muted-foreground">
         Estrazione <span className="font-mono text-primary">#{parsed.wcaId}</span>
-        <span className="ml-2 text-muted-foreground/60">{parsed.current}/{parsed.total}</span>
+        <span className="ml-2 text-muted-foreground">{parsed.current}/{parsed.total}</span>
       </span>
       <span className="ml-auto text-[10px] text-muted-foreground font-mono">{entry.ts}</span>
     </div>
@@ -155,9 +155,9 @@ function SkipRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-primary/[0.04] border border-primary/10">
       <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 border border-primary/20 shrink-0">
-        <SkipForward className="w-3.5 h-3.5 text-primary/80" />
+        <SkipForward className="w-3.5 h-3.5 text-primary" />
       </div>
-      <span className="text-xs text-primary/80 truncate flex-1">{parsed.message}</span>
+      <span className="text-xs text-primary truncate flex-1">{parsed.message}</span>
       <span className="text-[10px] text-muted-foreground font-mono shrink-0">{entry.ts}</span>
     </div>
   );
@@ -170,7 +170,7 @@ function GenericRow({ entry }: { entry: LogEntry }) {
     DONE: { icon: CheckCircle, color: "text-emerald-400" },
     ERROR: { icon: AlertTriangle, color: "text-destructive" },
     STOP: { icon: XCircle, color: "text-destructive" },
-    WARN: { icon: AlertTriangle, color: "text-primary/80" },
+    WARN: { icon: AlertTriangle, color: "text-primary" },
   };
   const style = typeStyles[entry.type] || typeStyles.INFO;
   const Icon = style.icon;
@@ -262,7 +262,7 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
               <span className="flex items-center gap-1.5 text-emerald-400">
                 <CheckCircle className="w-3 h-3" /> {successCount} con contatti
               </span>
-              <span className="flex items-center gap-1.5 text-destructive/70">
+              <span className="flex items-center gap-1.5 text-destructive">
                 <XCircle className="w-3 h-3" /> {failCount} senza contatti
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
@@ -281,7 +281,7 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
           {entries.length === 0 ? (
             <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
               <div className="text-center space-y-2">
-                <Terminal className="w-8 h-8 mx-auto text-muted-foreground/30" />
+                <Terminal className="w-8 h-8 mx-auto text-muted-foreground" />
                 <p>In attesa dei log...</p>
               </div>
             </div>

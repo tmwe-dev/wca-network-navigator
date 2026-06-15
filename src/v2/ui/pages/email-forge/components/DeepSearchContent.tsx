@@ -81,7 +81,7 @@ export function DeepSearchContent({ selected }: DeepSearchContentProps) {
           <div className="text-[11px] font-mono truncate text-foreground">
             {selected.url}
           </div>
-          <div className="text-[11px] text-foreground/70 flex items-center gap-2 mt-0.5">
+          <div className="text-[11px] text-foreground flex items-center gap-2 mt-0.5">
             <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-mono">
               {selected.pipelineKey}
             </Badge>
@@ -149,17 +149,17 @@ export function DeepSearchContent({ selected }: DeepSearchContentProps) {
                 prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground
                 prose-h1:text-base prose-h1:text-primary prose-h1:border-b prose-h1:border-primary/30 prose-h1:pb-1.5 prose-h1:mb-3
                 prose-h2:text-sm prose-h2:text-primary prose-h2:mt-5 prose-h2:mb-2
-                prose-h3:text-[13px] prose-h3:text-primary/90 prose-h3:mt-4 prose-h3:mb-1.5
-                prose-h4:text-[12px] prose-h4:text-foreground/90
-                prose-p:text-[12.5px] prose-p:leading-relaxed prose-p:my-2 prose-p:text-foreground/85
-                prose-li:text-[12.5px] prose-li:my-0.5 prose-li:text-foreground/85
+                prose-h3:text-[13px] prose-h3:text-primary prose-h3:mt-4 prose-h3:mb-1.5
+                prose-h4:text-[12px] prose-h4:text-foreground
+                prose-p:text-[12.5px] prose-p:leading-relaxed prose-p:my-2 prose-p:text-foreground
+                prose-li:text-[12.5px] prose-li:my-0.5 prose-li:text-foreground
                 prose-ul:my-2 prose-ol:my-2
                 prose-strong:text-primary prose-strong:font-semibold
-                prose-em:text-foreground/90 prose-em:not-italic prose-em:font-medium
+                prose-em:text-foreground prose-em:not-italic prose-em:font-medium
                 prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline
                 prose-code:text-[11px] prose-code:bg-primary/10 prose-code:text-primary prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
                 prose-pre:text-[11px] prose-pre:bg-muted prose-pre:border prose-pre:border-border
-                prose-blockquote:border-l-2 prose-blockquote:border-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground/85
+                prose-blockquote:border-l-2 prose-blockquote:border-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground
                 prose-hr:border-border/60">
                 <LazyMarkdown>{enhanceMarkdown(selected.markdown)}</LazyMarkdown>
               </article>
@@ -167,7 +167,7 @@ export function DeepSearchContent({ selected }: DeepSearchContentProps) {
           </TabsContent>
           <TabsContent value="raw" className="flex-1 min-h-0 mt-0">
             <ScrollArea className="h-full">
-              <pre className="text-[11px] font-mono whitespace-pre-wrap break-words px-6 py-4 text-foreground/90">
+              <pre className="text-[11px] font-mono whitespace-pre-wrap break-words px-6 py-4 text-foreground">
                 {selected.markdown}
               </pre>
             </ScrollArea>

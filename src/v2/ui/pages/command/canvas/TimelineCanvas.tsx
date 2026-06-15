@@ -21,10 +21,10 @@ interface TimelineCanvasProps {
 }
 
 const statusIcon = {
-  success: <CheckCircle2 className="w-3 h-3 text-success/70" />,
-  pending: <Clock className="w-3 h-3 text-warning/70" />,
-  warning: <AlertTriangle className="w-3 h-3 text-destructive/60" />,
-  info: <Zap className="w-3 h-3 text-primary/70" />,
+  success: <CheckCircle2 className="w-3 h-3 text-success" />,
+  pending: <Clock className="w-3 h-3 text-warning" />,
+  warning: <AlertTriangle className="w-3 h-3 text-destructive" />,
+  info: <Zap className="w-3 h-3 text-primary" />,
 };
 
 const statusDot = {
@@ -80,7 +80,7 @@ const TimelineCanvas = ({ events, kpis }: TimelineCanvasProps) => (
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[9px] text-muted-foreground font-mono">{event.time}</span>
                 <span className="text-[6px] text-muted-foreground">·</span>
-                <span className="text-[9px] text-primary/60 font-mono">{event.agent}</span>
+                <span className="text-[9px] text-primary font-mono">{event.agent}</span>
               </div>
             </div>
           </motion.div>

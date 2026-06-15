@@ -44,7 +44,7 @@ export function EntityRowFlag({
         <span
           className={cn(
             flagSize,
-            "leading-none text-muted-foreground/30 font-light"
+            "leading-none text-muted-foreground font-light"
           )}
           aria-hidden
         >
@@ -52,7 +52,7 @@ export function EntityRowFlag({
         </span>
       )}
       {hasFlag && text && (
-        <span className="text-[8px] text-muted-foreground/80 font-semibold tracking-wide mt-0.5">
+        <span className="text-[8px] text-muted-foreground font-semibold tracking-wide mt-0.5">
           {text}
         </span>
       )}

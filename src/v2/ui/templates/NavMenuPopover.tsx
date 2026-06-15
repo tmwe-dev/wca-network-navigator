@@ -301,7 +301,7 @@ export function NavMenuPopover({
           <>
           {macroAreaGroups.map((group) => (
             <div key={group.key} className="flex flex-col">
-              <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {group.label}
               </div>
               {group.items.map((item) => {
@@ -328,10 +328,10 @@ export function NavMenuPopover({
                          "flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left capitalize border-l-2 " +
                          (isActive || isOpen
                            ? "bg-primary/15 text-primary border-primary"
-                           : "border-transparent text-foreground/90 hover:bg-primary/10 hover:text-primary hover:border-primary/60")
+                           : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
                        }
                      >
-                       <span className={isActive || isOpen ? "text-primary" : "text-primary/70"}>{item.icon}</span>
+                       <span className={isActive || isOpen ? "text-primary" : "text-primary"}>{item.icon}</span>
                       <span className="flex-1">{label}</span>
                       {isOpen ? (
                         <ChevronDown className="h-4 w-4 opacity-60" />
@@ -344,7 +344,7 @@ export function NavMenuPopover({
                         <button
                           type="button"
                           onClick={() => handleSelect(item.path)}
-                          className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-accent-foreground/70 hover:bg-accent/10 hover:text-accent-foreground"
+                          className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground"
                         >
                           ↳ Apri pagina
                         </button>
@@ -365,7 +365,7 @@ export function NavMenuPopover({
                                   "flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-left transition-colors " +
                                   (isGroupOpen
                                     ? "bg-accent/15 text-accent-foreground"
-                                    : "text-accent-foreground/80 hover:bg-accent/10 hover:text-accent-foreground")
+                                    : "text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground")
                                 }
                               >
                                 {isGroupOpen ? (
@@ -407,10 +407,10 @@ export function NavMenuPopover({
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left capitalize border-l-2 " +
                     (isActive
                       ? "bg-primary/15 text-primary border-primary"
-                      : "border-transparent text-foreground/90 hover:bg-primary/10 hover:text-primary hover:border-primary/60")
+                      : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
                   }
                 >
-                  <span className={isActive ? "text-primary" : "text-primary/70"}>{item.icon}</span>
+                  <span className={isActive ? "text-primary" : "text-primary"}>{item.icon}</span>
                   <span className="flex-1">{label}</span>
                   {count > 0 && (
                     <span
@@ -435,10 +435,10 @@ export function NavMenuPopover({
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left border-l-2 " +
               (isInDev || devOpen
                 ? "bg-primary/15 text-primary border-primary"
-                : "border-transparent text-foreground/90 hover:bg-primary/10 hover:text-primary hover:border-primary/60")
+                : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
             }
           >
-            <span className={isInDev || devOpen ? "text-primary" : "text-primary/70"}><Layers className="h-4 w-4" /></span>
+            <span className={isInDev || devOpen ? "text-primary" : "text-primary"}><Layers className="h-4 w-4" /></span>
             <span className="flex-1">Development</span>
             {devOpen ? <ChevronDown className="h-4 w-4 opacity-60" /> : <ChevronRight className="h-4 w-4 opacity-60" />}
           </button>
@@ -457,7 +457,7 @@ export function NavMenuPopover({
                         "flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-left " +
                         (isGroupActive || isGroupOpen
                           ? "bg-accent/15 text-accent-foreground"
-                          : "text-accent-foreground/80 hover:bg-accent/10 hover:text-accent-foreground")
+                          : "text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground")
                       }
                     >
                       {isGroupOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-60" /> : <ChevronRight className="h-3.5 w-3.5 opacity-60" />}
@@ -486,7 +486,7 @@ export function NavMenuPopover({
                         })}
                         {(group.subGroups ?? []).map((sg) => (
                           <div key={sg.title} className="mt-1">
-                            <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                            <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {sg.title}
                             </div>
                             <div className="ml-2 flex flex-col border-l border-white/10 pl-2">
@@ -502,7 +502,7 @@ export function NavMenuPopover({
                                       "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
                                       (isActive
                                         ? "bg-primary/15 text-primary font-semibold"
-                                        : "text-foreground/75 hover:bg-white/5 hover:text-foreground")
+                                        : "text-foreground hover:bg-white/5 hover:text-foreground")
                                     }
                                   >
                                     {item.label}

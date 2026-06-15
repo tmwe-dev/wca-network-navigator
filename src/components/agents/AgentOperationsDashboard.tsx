@@ -80,7 +80,7 @@ function TaskRow({ task, showAgent }: { task: AgentTaskRow; showAgent?: string }
           <span className="text-[9px] text-muted-foreground ml-auto">{timeAgo}</span>
         </div>
         {task.result_summary && (
-          <p className="text-[10px] text-muted-foreground/70 mt-1 italic truncate">{task.result_summary}</p>
+          <p className="text-[10px] text-muted-foreground mt-1 italic truncate">{task.result_summary}</p>
         )}
       </div>
     </motion.div>

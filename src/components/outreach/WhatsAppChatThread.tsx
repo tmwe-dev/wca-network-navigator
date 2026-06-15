@@ -295,7 +295,7 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground/40 cursor-not-allowed" disabled aria-label="Dettatura vocale">
+                <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground cursor-not-allowed" disabled aria-label="Dettatura vocale">
                   <Mic className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>

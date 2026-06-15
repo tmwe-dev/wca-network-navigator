@@ -75,9 +75,9 @@ export function UnifiedContactList({ contacts, selected, onSelect, compact, clas
                 </div>
               )}
               <div className="flex items-center gap-2 mt-1">
-                {c.email && <Mail className="h-3 w-3 text-muted-foreground/60" />}
-                {c.phone && <Phone className="h-3 w-3 text-muted-foreground/60" />}
-                {c.linkedinUrl && <Linkedin className="h-3 w-3 text-muted-foreground/60" />}
+                {c.email && <Mail className="h-3 w-3 text-muted-foreground" />}
+                {c.phone && <Phone className="h-3 w-3 text-muted-foreground" />}
+                {c.linkedinUrl && <Linkedin className="h-3 w-3 text-muted-foreground" />}
                 {c.country && (
                   <span className="text-[10px] text-muted-foreground ml-auto">{c.country}</span>
                 )}

@@ -566,7 +566,7 @@ function BigActionButton({
         tone === "info" && "text-primary bg-primary/10",
         tone === "warn" && "text-destructive bg-destructive/10",
         tone === "ai" && "text-primary bg-primary/15",
-        tone === "default" && "text-foreground/80",
+        tone === "default" && "text-foreground",
       )}>
         {busy ? <Loader2 className="h-7 w-7 animate-spin" /> : icon}
       </div>

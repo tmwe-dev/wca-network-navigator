@@ -18,7 +18,7 @@ export function FilterSection({
   return (
     <section className="space-y-2">
       <header className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-foreground/80">
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-foreground">
           <Icon className="w-3.5 h-3.5 text-primary" />
           <span>{label}</span>
         </div>

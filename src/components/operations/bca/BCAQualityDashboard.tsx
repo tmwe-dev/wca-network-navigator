@@ -80,11 +80,11 @@ export function BCAQualityDashboard({ cards }: Props) {
 
           <div className="flex items-center gap-3">
             <FunnelStep label="Scansione" count={stats.total} total={stats.total} color="bg-primary" />
-            <span className="text-muted-foreground/30 text-lg">→</span>
+            <span className="text-muted-foreground text-lg">→</span>
             <FunnelStep label="Con Email" count={stats.withEmail} total={stats.total} color="bg-blue-500" />
-            <span className="text-muted-foreground/30 text-lg">→</span>
+            <span className="text-muted-foreground text-lg">→</span>
             <FunnelStep label="Partner" count={stats.matched} total={stats.total} color="bg-emerald-500" />
-            <span className="text-muted-foreground/30 text-lg">→</span>
+            <span className="text-muted-foreground text-lg">→</span>
             <FunnelStep label="Contattato" count={stats.contacted} total={stats.total} color="bg-amber-500" />
           </div>
         </div>

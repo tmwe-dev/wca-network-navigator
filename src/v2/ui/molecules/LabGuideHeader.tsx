@@ -23,11 +23,11 @@ export function LabGuideHeader({
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div className="max-w-2xl">
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-1 text-sm text-foreground/70">{subtitle}</p>
-        <ol className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground/65">
+        <p className="mt-1 text-sm text-foreground">{subtitle}</p>
+        <ol className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground">
           {steps.map((s, i) => (
             <React.Fragment key={i}>
-              {i > 0 ? <span className="text-foreground/30">→</span> : null}
+              {i > 0 ? <span className="text-foreground">→</span> : null}
               <li className="flex items-center gap-1.5">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
                   {i + 1}

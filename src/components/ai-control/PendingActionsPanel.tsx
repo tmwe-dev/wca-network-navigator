@@ -249,7 +249,7 @@ export function PendingActionsPanel() {
         <div className="flex items-center justify-center h-40"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
       ) : actions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <ShieldCheck className="h-12 w-12 mb-3 text-primary/30" />
+          <ShieldCheck className="h-12 w-12 mb-3 text-primary" />
           <p className="text-sm font-medium">Nessuna azione in attesa</p>
           <p className="text-xs">L'AI sta lavorando autonomamente.</p>
         </div>
@@ -386,7 +386,7 @@ export function PendingActionsPanel() {
                               <p className="flex items-center gap-1 text-emerald-400">
                                 <ArrowRight className="h-2.5 w-2.5" /> {s.suggested_text}
                               </p>
-                              <p className="text-muted-foreground/70 italic">{s.reason}</p>
+                              <p className="text-muted-foreground italic">{s.reason}</p>
                             </div>
                           ))}
                         </div>

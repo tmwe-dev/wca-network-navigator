@@ -175,7 +175,7 @@ export function CompanyList({
       <div ref={listParentRef} className="flex-1 overflow-auto">
         {filteredPartners.length === 0 ? (
           <div className="p-8 text-center">
-            <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+            <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
             <p className="text-muted-foreground">
               {partners.length === 0 ? "Clicca su un paese nel globo per vedere le aziende" : "Nessuna azienda corrisponde ai filtri"}
             </p>

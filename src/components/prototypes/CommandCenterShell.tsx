@@ -147,7 +147,7 @@ export function CommandCenterShell() {
             <div className="p-4 space-y-4 max-w-4xl mx-auto">
               {/* Briefing */}
               <WidgetCard title="Briefing AI" icon={Sparkles}>
-                <p className="text-xs text-foreground/80 leading-relaxed">
+                <p className="text-xs text-foreground leading-relaxed">
                   {briefing?.summary || "Caricamento briefing..."}
                 </p>
               </WidgetCard>
@@ -258,7 +258,7 @@ export function CommandCenterShell() {
 
           {section === "settings" && (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              <Settings className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+              <Settings className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
               <p>Le impostazioni sono accessibili dalla versione completa</p>
               <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/settings")}>
                 Vai alle impostazioni

@@ -48,7 +48,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
         )}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-2">
-            <FileText className="w-16 h-16 mx-auto text-muted-foreground/50" />
+            <FileText className="w-16 h-16 mx-auto text-muted-foreground" />
             <p className="text-muted-foreground">
               {hasBulkSelection
                 ? `${bulkCount} contatti selezionati — usa le azioni in alto`
@@ -169,7 +169,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
                     <Mail className="w-3.5 h-3.5" /> {focusedContact.email}
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-muted-foreground/50">
+                  <span className="flex items-center gap-1 text-muted-foreground">
                     <Mail className="w-3.5 h-3.5" /> —
                   </span>
                 )}
@@ -178,7 +178,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
                     <Phone className="w-3.5 h-3.5" /> {focusedContact.direct_phone || focusedContact.mobile}
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-muted-foreground/50">
+                  <span className="flex items-center gap-1 text-muted-foreground">
                     <Phone className="w-3.5 h-3.5" /> —
                   </span>
                 )}

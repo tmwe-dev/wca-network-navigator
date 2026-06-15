@@ -165,10 +165,10 @@ export default function AgendaListView() {
                   <TableCell className="py-1.5 text-muted-foreground">{p.city}</TableCell>
                   <TableCell className="py-1.5 text-muted-foreground">{p.country_name}</TableCell>
                   <TableCell className="py-1.5">
-                    {hasEmail ? <Mail className="w-3.5 h-3.5 text-emerald-500" /> : <Mail className="w-3.5 h-3.5 text-muted-foreground/20" />}
+                    {hasEmail ? <Mail className="w-3.5 h-3.5 text-emerald-500" /> : <Mail className="w-3.5 h-3.5 text-muted-foreground" />}
                   </TableCell>
                   <TableCell className="py-1.5">
-                    {hasPhone ? <Phone className="w-3.5 h-3.5 text-blue-400" /> : <Phone className="w-3.5 h-3.5 text-muted-foreground/20" />}
+                    {hasPhone ? <Phone className="w-3.5 h-3.5 text-blue-400" /> : <Phone className="w-3.5 h-3.5 text-muted-foreground" />}
                   </TableCell>
                   <TableCell className="py-1.5">
                     <div className="flex gap-1">

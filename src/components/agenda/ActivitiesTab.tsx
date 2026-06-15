@@ -181,7 +181,7 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
       {/* Activities list */}
       <ScrollArea className="flex-1 min-h-0">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground/50">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Activity className="w-8 h-8 mb-2 opacity-30" />
             <p className="text-xs">Nessuna attività trovata</p>
           </div>
@@ -261,7 +261,7 @@ function ActivityRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium truncate">{a.title}</span>
-          <span className="text-[9px] text-muted-foreground/70 shrink-0">
+          <span className="text-[9px] text-muted-foreground shrink-0">
             {typeLabels[a.activity_type] || a.activity_type}
           </span>
         </div>
@@ -289,7 +289,7 @@ function ActivityRow({
           <Check className="w-3 h-3" />
         </Button>
       )}
-      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10" onClick={onDelete} aria-label="Elimina">
+      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={onDelete} aria-label="Elimina">
         <Trash2 className="w-3 h-3" />
       </Button>
     </motion.div>

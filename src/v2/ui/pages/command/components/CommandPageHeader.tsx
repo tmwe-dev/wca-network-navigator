@@ -47,7 +47,7 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
         aria-label="Sessione attiva"
       />
       {phaseLabel && (
-        <span className="text-[9px] text-primary/90 font-mono uppercase tracking-wider">
+        <span className="text-[9px] text-primary font-mono uppercase tracking-wider">
           {phaseLabel}
         </span>
       )}
@@ -58,7 +58,7 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
             type="button"
             aria-label="Dettagli sessione"
             title="Dettagli"
-            className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 transition-colors"
+            className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
           >
             <Info className="w-3.5 h-3.5" />
           </button>
@@ -86,7 +86,7 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
                         : "bg-muted-foreground/30"
                     }`}
                   />
-                  <span className="text-[10px] text-foreground/80">{a.agent}</span>
+                  <span className="text-[10px] text-foreground">{a.agent}</span>
                 </div>
               ))}
             </div>
@@ -104,7 +104,7 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
             <button
               type="button"
               onClick={() => { setOpen(false); onOpenTraceConsole(); }}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground/85 hover:bg-primary/10 hover:text-primary text-left"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground hover:bg-primary/10 hover:text-primary text-left"
             >
               <Activity className="w-3.5 h-3.5" />
               Monitor AI
@@ -112,7 +112,7 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
             <Link
               to="/v2/command/help"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground/85 hover:bg-primary/10 hover:text-primary"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground hover:bg-primary/10 hover:text-primary"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               Cosa posso fare
@@ -120,7 +120,7 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
             <button
               type="button"
               onClick={() => { setOpen(false); onLangChange(); }}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground/85 hover:bg-primary/10 hover:text-primary text-left"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground hover:bg-primary/10 hover:text-primary text-left"
             >
               <Globe2 className="w-3.5 h-3.5" />
               Lingua: {lang === "it" ? "IT" : "EN"}

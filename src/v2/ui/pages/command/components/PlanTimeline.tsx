@@ -17,7 +17,7 @@ interface Props {
 }
 
 const statusConfig: Record<PlanStepStatus, { icon: React.ReactNode; color: string; label: string }> = {
-  pending: { icon: <Clock className="w-3.5 h-3.5" />, color: "text-muted-foreground/60", label: "In attesa" },
+  pending: { icon: <Clock className="w-3.5 h-3.5" />, color: "text-muted-foreground", label: "In attesa" },
   running: { icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, color: "text-primary", label: "In esecuzione" },
   done: { icon: <Check className="w-3.5 h-3.5" />, color: "text-success", label: "Completato" },
   "blocked-on-approval": { icon: <ShieldAlert className="w-3.5 h-3.5" />, color: "text-warning", label: "Approvazione richiesta" },
@@ -35,7 +35,7 @@ export default function PlanTimeline({ stepStates, visible, onApproveStep, onRej
       transition={{ duration: 0.5, ease }}
       className="space-y-1 my-4"
     >
-      <div className="text-[9px] text-muted-foreground/70 font-mono tracking-wider uppercase mb-2 px-1">
+      <div className="text-[9px] text-muted-foreground font-mono tracking-wider uppercase mb-2 px-1">
         Piano · {stepStates.length} step
       </div>
       {stepStates.map((ss, i) => {
@@ -76,22 +76,22 @@ export default function PlanTimeline({ stepStates, visible, onApproveStep, onRej
                 className="flex-1 pb-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground/50 font-mono">{ss.step.stepNumber}</span>
-                  <span className="text-[12px] font-light text-foreground/90">{toolLabel}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{ss.step.stepNumber}</span>
+                  <span className="text-[12px] font-light text-foreground">{toolLabel}</span>
                   {ss.requiresApproval && ss.status !== "done" && (
-                    <span className="px-1.5 py-0.5 rounded text-[7px] font-mono tracking-wider bg-warning/10 text-warning/80 border border-warning/20">WRITE</span>
+                    <span className="px-1.5 py-0.5 rounded text-[7px] font-mono tracking-wider bg-warning/10 text-warning border border-warning/20">WRITE</span>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground/70 font-light mt-0.5">{ss.step.reasoning}</p>
+                <p className="text-[11px] text-muted-foreground font-light mt-0.5">{ss.step.reasoning}</p>
 
                 {ss.status === "done" && ss.result && (
-                  <div className="text-[10px] text-success/80 font-mono mt-1">
+                  <div className="text-[10px] text-success font-mono mt-1">
                     ✓ {ss.result.kind === "result" ? ss.result.message?.slice(0, 80) : `${ss.result.meta?.count ?? 0} risultati`}
                   </div>
                 )}
 
                 {ss.status === "error" && ss.error && (
-                  <div className="text-[10px] text-destructive/80 font-mono mt-1">✗ {ss.error}</div>
+                  <div className="text-[10px] text-destructive font-mono mt-1">✗ {ss.error}</div>
                 )}
 
                 {ss.status === "blocked-on-approval" && (
@@ -108,7 +108,7 @@ export default function PlanTimeline({ stepStates, visible, onApproveStep, onRej
                       onClick={() => onRejectStep?.(ss.step.stepNumber)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-muted-foreground/70 hover:text-foreground hover:bg-white/5 transition-all"
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
                     >
                       Annulla piano
                     </motion.button>

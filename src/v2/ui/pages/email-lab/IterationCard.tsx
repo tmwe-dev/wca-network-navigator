@@ -40,7 +40,7 @@ function CollapsibleSection({ icon: Icon, label, children, defaultOpen = false }
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-7 w-full justify-start gap-1.5 px-2 text-xs text-foreground/70 hover:text-foreground">
+        <Button variant="ghost" size="sm" className="h-7 w-full justify-start gap-1.5 px-2 text-xs text-foreground hover:text-foreground">
           {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
           <Icon className="h-3 w-3" />
           {label}
@@ -64,12 +64,12 @@ export function IterationCard({ iteration, index, previous }: Props): React.Reac
     <Card className="w-[420px] shrink-0 border-border/60 bg-card/60">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-semibold text-foreground/90">
-            <span className="text-foreground/50 mr-1">#{index + 1}</span>{iteration.label}
+          <CardTitle className="text-sm font-semibold text-foreground">
+            <span className="text-foreground mr-1">#{index + 1}</span>{iteration.label}
           </CardTitle>
           <VerdictBadge verdict={review?.verdict} score={review?.quality_score} />
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-foreground/60">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-foreground">
           <span className="flex items-center gap-1"><Cpu className="h-3 w-3" /> {r.model}</span>
           <span>·</span>
           <span>{r.quality}</span>
@@ -85,13 +85,13 @@ export function IterationCard({ iteration, index, previous }: Props): React.Reac
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-foreground/50">Subject</div>
-          <div className="text-sm font-medium text-foreground/90">{r.subject || <em className="text-foreground/40">vuoto</em>}</div>
+          <div className="text-[10px] uppercase tracking-wide text-foreground">Subject</div>
+          <div className="text-sm font-medium text-foreground">{r.subject || <em className="text-foreground">vuoto</em>}</div>
         </div>
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-wide text-foreground/50">Body</div>
+            <div className="text-[10px] uppercase tracking-wide text-foreground">Body</div>
             {canDiff && (
               <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setShowDiff((v) => !v)}>
                 {showDiff ? "Mostra integrale" : "Mostra diff vs precedente"}
@@ -101,14 +101,14 @@ export function IterationCard({ iteration, index, previous }: Props): React.Reac
           <div className="max-h-[280px] overflow-auto rounded border border-border/50 bg-background/40 p-2">
             {showDiff && previous
               ? <DiffView before={previous.result.body} after={r.body} />
-              : <div className="whitespace-pre-wrap text-sm text-foreground/85">{r.body.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]+>/g, "")}</div>}
+              : <div className="whitespace-pre-wrap text-sm text-foreground">{r.body.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]+>/g, "")}</div>}
           </div>
         </div>
 
         {review?.warnings && review.warnings.length > 0 && (
           <div className="space-y-1">
-            <div className="text-[10px] uppercase tracking-wide text-foreground/50">Journalist · {review.warnings.length} warning</div>
-            <ul className="space-y-1 text-[11px] text-foreground/70">
+            <div className="text-[10px] uppercase tracking-wide text-foreground">Journalist · {review.warnings.length} warning</div>
+            <ul className="space-y-1 text-[11px] text-foreground">
               {review.warnings.slice(0, 4).map((w, i) => (
                 <li key={i} className="flex gap-1.5">
                   <span className={
@@ -123,12 +123,12 @@ export function IterationCard({ iteration, index, previous }: Props): React.Reac
 
         {dbg?.systemPrompt && (
           <CollapsibleSection icon={FileText} label={`System prompt (${Math.round((dbg.systemPrompt.length || 0) / 100) / 10}k char)`}>
-            <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-[11px] text-foreground/75">{dbg.systemPrompt}</pre>
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-[11px] text-foreground">{dbg.systemPrompt}</pre>
           </CollapsibleSection>
         )}
         {dbg?.userPrompt && (
           <CollapsibleSection icon={FileText} label="User prompt">
-            <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-[11px] text-foreground/75">{dbg.userPrompt}</pre>
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-[11px] text-foreground">{dbg.userPrompt}</pre>
           </CollapsibleSection>
         )}
         {dbg?.blocks && dbg.blocks.length > 0 && (
@@ -136,8 +136,8 @@ export function IterationCard({ iteration, index, previous }: Props): React.Reac
             <div className="space-y-2">
               {dbg.blocks.map((b, i) => (
                 <div key={i}>
-                  <div className="text-[10px] uppercase tracking-wide text-foreground/50">{b.label}</div>
-                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-[11px] text-foreground/75">{b.content}</pre>
+                  <div className="text-[10px] uppercase tracking-wide text-foreground">{b.label}</div>
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-[11px] text-foreground">{b.content}</pre>
                 </div>
               ))}
             </div>
@@ -145,7 +145,7 @@ export function IterationCard({ iteration, index, previous }: Props): React.Reac
         )}
         {review?.reasoning && (
           <CollapsibleSection icon={ShieldCheck} label="Reasoning journalist">
-            <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-[11px] text-foreground/75">{review.reasoning}</pre>
+            <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-[11px] text-foreground">{review.reasoning}</pre>
           </CollapsibleSection>
         )}
       </CardContent>

@@ -58,7 +58,7 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
 
   return createPortal(
     <div className="flex items-center gap-3 min-w-0 flex-1">
-      <Globe className="w-4 h-4 text-primary/70 animate-spin-slow flex-shrink-0" />
+      <Globe className="w-4 h-4 text-primary animate-spin-slow flex-shrink-0" />
       <span className="text-xs font-semibold text-foreground hidden sm:inline">Network</span>
 
       <div className="flex items-center rounded-lg border border-border/60 bg-card/60 p-0.5">
@@ -282,7 +282,7 @@ export function ImportPage({ activeView }: { activeView?: "partners" | "bca" }) 
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/40">
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
                     <Users className="w-8 h-8 mb-2" />
                     <p className="text-xs font-medium">Caricamento...</p>
                   </div>

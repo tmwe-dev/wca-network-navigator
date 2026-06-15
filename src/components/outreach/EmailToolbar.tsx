@@ -29,7 +29,7 @@ export function EmailToolbar({
     <div className="flex items-center gap-3">
       {/* Sezione: SINCRONIZZAZIONE — un solo bottone "Scarica nuove" con stato/contatore inline */}
       <div className="flex flex-col gap-0.5">
-        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/70 px-1">Sincronizzazione</span>
+        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground px-1">Sincronizzazione</span>
         <div className="flex items-center gap-1">
           {isSyncing ? (
             <Button
@@ -97,7 +97,7 @@ export function EmailToolbar({
 
       {/* Sezione: AZIONI */}
       <div className="flex flex-col gap-0.5">
-        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/70 px-1">Azioni</span>
+        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground px-1">Azioni</span>
         <div className="flex items-center gap-1">
           <Button
             size="sm"

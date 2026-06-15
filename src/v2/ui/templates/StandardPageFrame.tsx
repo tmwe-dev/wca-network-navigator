@@ -103,7 +103,7 @@ export function StandardPageFrame({
             <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs min-w-0 overflow-hidden">
               {crumbs.map((c, i) => (
                 <React.Fragment key={`${c.label}-${i}`}>
-                  {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground/60 shrink-0" />}
+                  {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
                   {c.href ? (
                     <Link to={c.href} className="text-muted-foreground hover:text-foreground transition-colors truncate">
                       {c.label}

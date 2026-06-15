@@ -119,9 +119,9 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
           </div>
         ) : images.length === 0 ? (
           <div className="text-center py-6">
-            <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+            <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-[10px] text-muted-foreground">Nessuna immagine caricata</p>
-            <p className="text-[10px] text-muted-foreground/70">Carica logo, banner o grafiche per le email</p>
+            <p className="text-[10px] text-muted-foreground">Carica logo, banner o grafiche per le email</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-1.5">

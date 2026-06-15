@@ -75,7 +75,7 @@ export function TabIntroBanner({ id, icon: Icon, title, purpose, origin, actions
         type="button"
         aria-label="Nascondi"
         onClick={handleClose}
-        className="text-muted-foreground/60 hover:text-foreground p-0.5 rounded shrink-0"
+        className="text-muted-foreground hover:text-foreground p-0.5 rounded shrink-0"
       >
         <X className="w-3 h-3" />
       </button>

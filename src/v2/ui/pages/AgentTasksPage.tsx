@@ -204,9 +204,9 @@ export function AgentTasksPage() {
       {pending.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <Bot className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-muted-foreground">Nessun task in attesa</h3>
-            <p className="text-sm text-muted-foreground/70 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Gli agenti non hanno proposto task da confermare
             </p>
           </CardContent>

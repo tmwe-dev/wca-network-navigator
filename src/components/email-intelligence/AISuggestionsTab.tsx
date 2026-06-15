@@ -186,7 +186,7 @@ const SuggestionCard = memo(function SuggestionCard({
           >
             <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-primary/80 leading-none">
+              <div className="text-[10px] uppercase tracking-wide text-primary leading-none">
                 Suggerimento AI
               </div>
               <div className="flex items-center gap-1 mt-0.5">
@@ -696,7 +696,7 @@ export default function AISuggestionsTab() {
         </div>
       ) : visibleRows.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
-          <Sparkles className="h-10 w-10 mb-2 text-primary/30" />
+          <Sparkles className="h-10 w-10 mb-2 text-primary" />
           <p className="text-sm">Nessun address con questi filtri</p>
           <p className="text-xs mt-1">Abbassa &quot;Min. email&quot; o cambia il filtro</p>
         </div>

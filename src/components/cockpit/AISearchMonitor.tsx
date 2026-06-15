@@ -129,7 +129,7 @@ function SearchStepCard({ entry }: { entry: SearchLogEntry }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="text-[10px] text-muted-foreground/80 pt-1 border-t border-border/30"
+            className="text-[10px] text-muted-foreground pt-1 border-t border-border/30"
           >
             💬 {entry.reasoning}
           </motion.div>

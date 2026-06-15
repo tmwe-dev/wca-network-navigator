@@ -249,8 +249,8 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-1 text-xs">
-                            <Mail className={cn("w-3.5 h-3.5", (prospect.email || prospect.pec) ? "text-primary" : "text-muted-foreground/20")} />
-                            <Phone className={cn("w-3.5 h-3.5", prospect.phone ? "text-primary" : "text-muted-foreground/20")} />
+                            <Mail className={cn("w-3.5 h-3.5", (prospect.email || prospect.pec) ? "text-primary" : "text-muted-foreground")} />
+                            <Phone className={cn("w-3.5 h-3.5", prospect.phone ? "text-primary" : "text-muted-foreground")} />
                             {prospect.dipendenti != null && (
                               <span className={`flex items-center gap-0.5 ${th.dim}`}>
                                 <Users className="w-3 h-3" />{prospect.dipendenti}
@@ -408,8 +408,8 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
                 <span className={`text-sm font-medium ${th.h2}`}>{c.name}</span>
                 {c.role && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{c.role}</span>}
                 <div className="flex items-center gap-1 ml-auto">
-                  <Mail className={cn("w-3.5 h-3.5", c.email ? "text-primary" : "text-muted-foreground/20")} />
-                  <Phone className={cn("w-3.5 h-3.5", c.phone ? "text-primary" : "text-muted-foreground/20")} />
+                  <Mail className={cn("w-3.5 h-3.5", c.email ? "text-primary" : "text-muted-foreground")} />
+                  <Phone className={cn("w-3.5 h-3.5", c.phone ? "text-primary" : "text-muted-foreground")} />
                 </div>
               </div>
               <div className="flex items-center gap-3 text-xs ml-6 mt-1 flex-wrap">

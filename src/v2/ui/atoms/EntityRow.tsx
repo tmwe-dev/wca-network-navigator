@@ -179,7 +179,7 @@ export function EntityRow({
           </div>
         )}
         {previewSlot && (
-          <div className="text-[12px] text-muted-foreground/90 line-clamp-2 leading-snug min-w-0 mt-0.5">
+          <div className="text-[12px] text-muted-foreground line-clamp-2 leading-snug min-w-0 mt-0.5">
             {previewSlot}
           </div>
         )}
@@ -214,14 +214,14 @@ export function EntityRow({
                     e.stopPropagation();
                     onCityClick!(city);
                   }}
-                  className="text-[11px] text-foreground/70 truncate font-medium max-w-[40%] hover:text-primary hover:underline transition-colors"
+                  className="text-[11px] text-foreground truncate font-medium max-w-[40%] hover:text-primary hover:underline transition-colors"
                   aria-label={`Filtra per città ${city}`}
                   title={`Filtra per città ${city}`}
                 >
                   {city}
                 </button>
               ) : (
-                <span className="text-[11px] text-foreground/70 truncate font-medium max-w-[40%]">
+                <span className="text-[11px] text-foreground truncate font-medium max-w-[40%]">
                   {city}
                 </span>
               )
@@ -249,7 +249,7 @@ export function EntityRow({
               {recencySlot}
             </div>
           )}
-          <div className="text-[12px] text-foreground/90 truncate font-medium">
+          <div className="text-[12px] text-foreground truncate font-medium">
             {city ? (
               cityInteractive ? (
                 <button
@@ -268,7 +268,7 @@ export function EntityRow({
                 city
               )
             ) : (
-              <span className="text-muted-foreground/50 italic">—</span>
+              <span className="text-muted-foreground italic">—</span>
             )}
           </div>
           <div className="flex items-center gap-2 min-w-0">

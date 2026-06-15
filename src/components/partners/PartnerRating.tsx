@@ -71,7 +71,7 @@ function StarDisplay({ rating, size, colorClass }: { rating: number; size: "sm" 
     } else if (i - 0.5 <= rating) {
       stars.push(<StarHalf key={i} className={`${sizeClass} ${color}`} />);
     } else {
-      stars.push(<Star key={i} className={`${sizeClass} text-muted-foreground/30`} />);
+      stars.push(<Star key={i} className={`${sizeClass} text-muted-foreground`} />);
     }
   }
 

@@ -250,7 +250,7 @@ export default function ContactListPanel({
                             {hasGeneratedEmail && (
                               <span title="Email generata"><Sparkles className="w-3 h-3 text-success shrink-0" /></span>
                             )}
-                            {d.hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
+                            {d.hasWebsite && <Globe className="w-3 h-3 text-primary shrink-0" />}
                             {linkedinUrl && (
                               <>
                                 <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
@@ -294,8 +294,8 @@ export default function ContactListPanel({
                               </div>
                             ) : (contact || displayName) ? (
                               <div className="flex items-center gap-1">
-                                <Mail className="w-3 h-3 text-destructive/60" />
-                                <span className="text-[11px] text-destructive/80">No email</span>
+                                <Mail className="w-3 h-3 text-destructive" />
+                                <span className="text-[11px] text-destructive">No email</span>
                               </div>
                             ) : null}
                             {(contact?.direct_phone || contact?.mobile) && (
@@ -312,7 +312,7 @@ export default function ContactListPanel({
                           </div>
                         </div>
                         <ChevronRight className={cn(
-                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground/50",
+                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground",
                           isSelected && "text-primary rotate-90"
                         )} />
                       </div>

@@ -77,7 +77,7 @@ export function ForgeOutputPanel({
                   ? "bg-warning/10 border-warning/30 text-warning"
                   : dataPointsBadge.used >= 2
                     ? "bg-success/10 border-success/30 text-success"
-                    : "bg-card border-border/60 text-foreground/70"
+                    : "bg-card border-border/60 text-foreground"
               }`}>
                 <Brain className="w-3.5 h-3.5 shrink-0" />
                 {isGeneric ? (
@@ -86,7 +86,7 @@ export function ForgeOutputPanel({
                   <span>
                     <strong>{dataPointsBadge.used}</strong> data point{dataPointsBadge.used === 1 ? "" : "s"} iniettat{dataPointsBadge.used === 1 ? "o" : "i"}
                     {dataPointsBadge.labels.length > 0 && (
-                      <span className="text-foreground/60"> · {dataPointsBadge.labels.join(" · ")}</span>
+                      <span className="text-foreground"> · {dataPointsBadge.labels.join(" · ")}</span>
                     )}
                   </span>
                 )}
@@ -115,7 +115,7 @@ export function ForgeOutputPanel({
 
         <TabsContent value="ai" className="flex-1 overflow-auto mt-0 p-3">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-medium text-foreground/80 uppercase tracking-wide">
+            <div className="text-xs font-medium text-foreground uppercase tracking-wide">
               Contesto disponibile
             </div>
             <Button size="sm" onClick={() => setSherlockOpen(true)} className="h-7 px-2.5 text-xs gap-1.5">

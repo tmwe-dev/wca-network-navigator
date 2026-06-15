@@ -115,7 +115,7 @@ export function OperativeBriefing({
         </div>
         <button
           onClick={onRefresh}
-          className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          className="text-muted-foreground hover:text-muted-foreground transition-colors"
           title="Aggiorna briefing"
         >
           <RefreshCw className="h-3.5 w-3.5" />

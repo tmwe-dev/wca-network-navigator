@@ -20,7 +20,7 @@ export function MissionBuilderPage() {
         <Rocket className="w-5 h-5 text-primary" />
         <input value={mb.missionTitle} onChange={e => mb.setMissionTitle(e.target.value)}
           placeholder="Nome missione..."
-          className="bg-transparent text-lg font-semibold text-foreground outline-none flex-1 placeholder:text-muted-foreground/50" />
+          className="bg-transparent text-lg font-semibold text-foreground outline-none flex-1 placeholder:text-muted-foreground" />
         <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Impostazioni"
           onClick={() => { mb.setVoiceEnabled((v: boolean) => !v); if (mb.audioRef.current) { mb.audioRef.current.pause(); mb.audioRef.current = null; } }}
           title={mb.voiceEnabled ? "Disattiva voce" : "Attiva voce"}>

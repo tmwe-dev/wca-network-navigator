@@ -113,7 +113,7 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
     <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5 space-y-2.5">
       {/* Row 1 — pitch sintetico */}
       {summary && (
-        <p className="text-[11px] leading-relaxed text-foreground/85 line-clamp-2">{summary}</p>
+        <p className="text-[11px] leading-relaxed text-foreground line-clamp-2">{summary}</p>
       )}
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
@@ -126,7 +126,7 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
                 key={label}
                 title={formatServiceCategory(label)}
                 aria-label={formatServiceCategory(label)}
-                className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-primary/20 bg-card/70 text-foreground/85 hover:bg-primary/10 hover:border-primary/40 transition-colors cursor-help"
+                className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-primary/20 bg-card/70 text-foreground hover:bg-primary/10 hover:border-primary/40 transition-colors cursor-help"
               >
                 <Icon className="h-5 w-5 text-primary" strokeWidth={1.6} />
               </span>
@@ -170,7 +170,7 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
       {/* Row 5 — rotte principali */}
       {routes.length > 0 && (
         <div>
-          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1 flex items-center gap-1">
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1">
             <MapPin className="h-3 w-3" /> Rotte principali
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -180,12 +180,12 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
               const fromCode = countryCodeFromLabel(from);
               const toCode = countryCodeFromLabel(to);
               return (
-                <span key={`${from}-${to}-${index}`} className="inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] text-foreground/85">
+                <span key={`${from}-${to}-${index}`} className="inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] text-foreground">
                   <span className="text-sm leading-none">{fromCode ? getCountryFlag(fromCode) : "🌍"}</span>
-                  <span className="max-w-[7rem] truncate text-foreground/70">{from || "—"}</span>
+                  <span className="max-w-[7rem] truncate text-foreground">{from || "—"}</span>
                   <ArrowRight className="h-3 w-3 text-primary shrink-0" strokeWidth={1.8} />
                   <span className="text-sm leading-none">{toCode ? getCountryFlag(toCode) : "🌍"}</span>
-                  <span className="max-w-[7rem] truncate text-foreground/70">{to || "—"}</span>
+                  <span className="max-w-[7rem] truncate text-foreground">{to || "—"}</span>
                 </span>
               );
             })}
@@ -196,7 +196,7 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
       {/* Row 6 — network di appartenenza (loghi orizzontali) */}
       {networks.length > 0 && (
         <div className="border-t border-primary/10 pt-2">
-          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1 flex items-center gap-1">
+          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1">
             <Building className="h-3 w-3" /> Network ({networks.length})
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -220,7 +220,7 @@ function CountryChip({
 }): React.ReactElement {
   const toneClasses = highlight
     ? "border-primary/35 bg-primary/10 text-foreground"
-    : "border-primary/15 bg-card/60 text-foreground/85";
+    : "border-primary/15 bg-card/60 text-foreground";
   return (
     <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium", toneClasses)} title={highlight ? `Filiale · ${label}` : label}>
       <span className="text-sm leading-none">{code ? getCountryFlag(code) : "🌍"}</span>
@@ -250,7 +250,7 @@ function NetworkBadge({ name }: { readonly name: string }): React.ReactElement {
 
 function Metric({ icon: Icon, label, className }: { readonly icon: React.ElementType; readonly label: string; readonly className?: string }): React.ReactElement {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground/85", className)}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground", className)}>
       <Icon className="h-3.5 w-3.5 text-primary" strokeWidth={1.6} />
       {label}
     </span>

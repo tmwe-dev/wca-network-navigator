@@ -20,7 +20,7 @@ export function FinderApiCanvas({ results, kbProposal, onSaveKb, onDismissKb, on
       style={{ background: "hsl(var(--glass-surface) / 0.6)", backdropFilter: "blur(20px)" }}
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-primary/80">Risultati API</h2>
+        <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-primary">Risultati API</h2>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground" aria-label="Chiudi">
           <X className="w-4 h-4" />
         </button>
@@ -36,9 +36,9 @@ export function FinderApiCanvas({ results, kbProposal, onSaveKb, onDismissKb, on
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${r.ok ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
               {r.ok ? "OK" : "ERROR"}
             </span>
-            <code className="text-xs text-primary/90">{r.op}</code>
+            <code className="text-xs text-primary">{r.op}</code>
           </div>
-          <pre className="text-[11px] leading-relaxed text-foreground/80 overflow-x-auto whitespace-pre-wrap break-all max-h-80">
+          <pre className="text-[11px] leading-relaxed text-foreground overflow-x-auto whitespace-pre-wrap break-all max-h-80">
             {JSON.stringify(r.data, null, 2)}
           </pre>
         </div>

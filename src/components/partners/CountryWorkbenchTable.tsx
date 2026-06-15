@@ -50,7 +50,7 @@ export function CountryWorkbenchTable({
               )}>
               {/* Left: number + checkbox */}
               <div className="flex flex-col items-center shrink-0 gap-0.5">
-                <span className="text-[10px] text-muted-foreground/60 font-mono">{index + 1}</span>
+                <span className="text-[10px] text-muted-foreground font-mono">{index + 1}</span>
                 <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }}>
                   <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
                 </div>
@@ -74,13 +74,13 @@ export function CountryWorkbenchTable({
                     <User className="w-3 h-3 text-muted-foreground shrink-0" />
                     <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
                     {extraContacts > 0 && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-foreground/60">
+                      <span className="flex items-center gap-0.5 text-[10px] text-foreground">
                         +{extraContacts}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <span className="text-[10px] italic text-destructive/80">Nessun contatto</span>
+                  <span className="text-[10px] italic text-destructive">Nessun contatto</span>
                 )}
 
                 {(allServices.length > 0 || branches.length > 0) && (

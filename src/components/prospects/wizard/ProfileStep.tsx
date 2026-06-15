@@ -23,7 +23,7 @@ export function ProfileStep({ isDark, filters, fatturatoPreset, dipendentiPreset
   const presetChip = (active: boolean, label: string, desc: string, onClick: () => void) => (
     <button onClick={onClick} className={`flex flex-col items-center px-3 py-2 rounded-xl border text-center transition-all ${active ? "bg-primary/20 text-primary border-primary/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>
       <span className="text-xs font-bold">{label}</span>
-      <span className={`text-[10px] ${active ? "" : "text-muted-foreground/60"}`}>{desc}</span>
+      <span className={`text-[10px] ${active ? "" : "text-muted-foreground"}`}>{desc}</span>
     </button>
   );
 
@@ -39,14 +39,14 @@ export function ProfileStep({ isDark, filters, fatturatoPreset, dipendentiPreset
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-3">
         <div className={`${card} p-3 space-y-2`}>
-          <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">💰 Fatturato</p>
+          <p className="text-[10px] uppercase tracking-wider font-bold text-primary">💰 Fatturato</p>
           <div className="grid grid-cols-4 gap-2">
             {FATTURATO_PRESETS.map((p, i) => presetChip(fatturatoPreset === i, p.label, p.desc, () => onApplyFatturato(i)))}
           </div>
         </div>
 
         <div className={`${card} p-3 space-y-2`}>
-          <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">👥 Dipendenti</p>
+          <p className="text-[10px] uppercase tracking-wider font-bold text-primary">👥 Dipendenti</p>
           <div className="grid grid-cols-4 gap-2">
             {DIPENDENTI_PRESETS.map((p, i) => presetChip(dipendentiPreset === i, p.label, p.desc, () => onApplyDipendenti(i)))}
           </div>

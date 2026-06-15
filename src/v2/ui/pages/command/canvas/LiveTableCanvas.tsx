@@ -59,7 +59,7 @@ export default function LiveTableCanvas({
       </div>
 
       {(sourceLabel || count != null) && (
-        <div className="text-[10px] text-muted-foreground/80 mb-3">
+        <div className="text-[10px] text-muted-foreground mb-3">
           {count != null ? `${count} risultati` : null}
           {count != null && sourceLabel ? " · " : ""}
           {sourceLabel ? `Fonte: ${sourceLabel}` : null}
@@ -69,17 +69,17 @@ export default function LiveTableCanvas({
       <div className="flex-1 overflow-y-auto">
         {rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-[12px] text-muted-foreground/60 font-light">
+            <p className="text-[12px] text-muted-foreground font-light">
               Nessun risultato trovato.
             </p>
-            <p className="text-[10px] text-muted-foreground/50 font-light mt-1">
+            <p className="text-[10px] text-muted-foreground font-light mt-1">
               Prova a riformulare la richiesta in modo più ampio.
             </p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="text-[9px] text-muted-foreground/90 font-mono tracking-wider uppercase">
+              <tr className="text-[9px] text-muted-foreground font-mono tracking-wider uppercase">
                 {visibleCols.map((c) => (
                   <th key={c.key} className="text-left pb-3 font-normal">
                     {c.label}
@@ -101,10 +101,10 @@ export default function LiveTableCanvas({
                     return (
                       <td
                         key={c.key}
-                        className="py-2.5 text-[12px] text-foreground/95 font-light"
+                        className="py-2.5 text-[12px] text-foreground font-light"
                       >
                         {v == null || v === "" ? (
-                          <span className="text-muted-foreground/50">—</span>
+                          <span className="text-muted-foreground">—</span>
                         ) : (
                           String(v)
                         )}

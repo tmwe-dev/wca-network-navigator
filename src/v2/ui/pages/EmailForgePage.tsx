@@ -78,7 +78,7 @@ export function EmailForgePage(): React.ReactElement {
           <Wand2 className="w-4 h-4 text-primary" />
           <div>
             <h1 className="text-sm font-semibold">Email Forge — Lab AI</h1>
-            <p className="text-xs text-foreground/70">
+            <p className="text-xs text-foreground">
               Seleziona destinatario, scegli il tipo email e clicca Genera.
             </p>
           </div>
@@ -116,7 +116,7 @@ export function EmailForgePage(): React.ReactElement {
       </div>
 
       {/* FOOTER metriche compatto */}
-      <footer className="border-t border-border/60 px-3 py-1.5 text-xs text-foreground/60 flex items-center gap-3 shrink-0 bg-card/30">
+      <footer className="border-t border-border/60 px-3 py-1.5 text-xs text-foreground flex items-center gap-3 shrink-0 bg-card/30">
         {forge.result ? (
           <>
             <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> {forge.result.model}</span>
@@ -148,7 +148,7 @@ export function EmailForgePage(): React.ReactElement {
             )}
           </>
         ) : (
-          <span className="text-foreground/50">Nessuna generazione ancora</span>
+          <span className="text-foreground">Nessuna generazione ancora</span>
         )}
       </footer>
     </div>

@@ -64,12 +64,12 @@ export default function IntelliFlowOverlay(props: OverlayProps) {
                   className="border-r border-border/70 overflow-hidden flex-shrink-0">
                   <div className="w-[260px] h-full overflow-y-auto py-3 px-2 space-y-1">
                     <p className="text-[10px] text-muted-foreground font-medium px-2 mb-2 uppercase tracking-wider">Conversazioni recenti</p>
-                    {ov.conversations.length === 0 && <p className="text-[11px] text-muted-foreground/60 px-2">Nessuna conversazione salvata</p>}
+                    {ov.conversations.length === 0 && <p className="text-[11px] text-muted-foreground px-2">Nessuna conversazione salvata</p>}
                     {ov.conversations.map((c) => (
                       <div key={c.id} className="group flex items-center gap-1 rounded-lg px-2 py-2 cursor-pointer hover:bg-secondary/40 transition-colors"
                         onClick={() => { ov.resumeConversation(c.id); ov.setShowHistory(false); }}>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs text-foreground/80 truncate">{c.title}</p>
+                          <p className="text-xs text-foreground truncate">{c.title}</p>
                           <p className="text-[10px] text-muted-foreground">{new Date(c.updated_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</p>
                         </div>
                         <button onClick={(e) => { e.stopPropagation(); ov.deleteConversation(c.id); }}

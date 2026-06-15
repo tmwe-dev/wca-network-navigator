@@ -174,7 +174,7 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                       </span>
                     </div>
                     {em.email_date && (
-                      <span className="text-[10px] text-muted-foreground/60 pl-[18px]">
+                      <span className="text-[10px] text-muted-foreground pl-[18px]">
                         {new Date(em.email_date).toLocaleDateString("it-IT", {
                           day: "2-digit", month: "short", year: "2-digit"
                         })}
@@ -213,12 +213,12 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                     <span className="flex items-center gap-1 text-primary">
                       <User className="h-3 w-3" />
                       <span className="font-medium">Da:</span>
-                      <span className="text-foreground/80">{current.from_address || "—"}</span>
+                      <span className="text-foreground">{current.from_address || "—"}</span>
                     </span>
-                    <span className="text-muted-foreground/40">→</span>
+                    <span className="text-muted-foreground">→</span>
                     <span className="text-muted-foreground">
                       <span className="font-medium">A:</span>{" "}
-                      <span className="text-foreground/70">{current.to_address || "—"}</span>
+                      <span className="text-foreground">{current.to_address || "—"}</span>
                     </span>
                   </div>
                 </div>

@@ -112,14 +112,14 @@ export const UnifiedContactRow = memo(function UnifiedContactRow({
       <div className="flex items-center gap-1 shrink-0">
         {CHANNEL_ICONS.map(({ key, icon: Icon, check }) =>
           check(contact) ? (
-            <Icon key={key} className="w-3 h-3 text-muted-foreground/60" />
+            <Icon key={key} className="w-3 h-3 text-muted-foreground" />
           ) : null
         )}
       </div>
 
       {/* Origin */}
       {contact.originLabel && (
-        <span className="text-[9px] text-muted-foreground/50 shrink-0">{contact.originLabel}</span>
+        <span className="text-[9px] text-muted-foreground shrink-0">{contact.originLabel}</span>
       )}
 
       {/* Action menu */}

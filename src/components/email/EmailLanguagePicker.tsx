@@ -93,7 +93,7 @@ export function EmailLanguagePicker({
                 "px-2 py-0.5 text-[11px] rounded-sm transition-colors flex items-center gap-1",
                 active
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-foreground/70 hover:text-foreground hover:bg-background",
+                  : "text-foreground hover:text-foreground hover:bg-background",
                 disabled && "opacity-50 cursor-not-allowed",
               )}
               aria-pressed={active}
@@ -113,7 +113,7 @@ export function EmailLanguagePicker({
                 "px-2 py-0.5 text-[11px] rounded-sm transition-colors flex items-center gap-1",
                 isSpecific
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-foreground/70 hover:text-foreground hover:bg-background",
+                  : "text-foreground hover:text-foreground hover:bg-background",
                 disabled && "opacity-50 cursor-not-allowed",
               )}
               aria-pressed={isSpecific}

@@ -78,7 +78,7 @@ function CountrySelectWidget({ countries, selected, onSelect }: CountrySelectPro
               </div>
               <span className="flex-1">{c.name}</span>
               <span className="text-xs text-muted-foreground">{c.count} partner</span>
-              <span className="text-xs text-muted-foreground/60">({c.withEmail} email)</span>
+              <span className="text-xs text-muted-foreground">({c.withEmail} email)</span>
             </label>
           ))}
         </div>

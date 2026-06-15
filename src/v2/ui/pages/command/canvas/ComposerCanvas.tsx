@@ -324,7 +324,7 @@ export default function ComposerCanvas({
           <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider bg-primary/20 text-primary">
             COMPOSER
           </span>
-          <Mail className="w-3.5 h-3.5 text-muted-foreground/60" />
+          <Mail className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-[13px] font-light text-foreground">
             {isBatch ? `Componi email · batch ${batchDrafts.length}` : "Componi email"}
           </span>
@@ -334,7 +334,7 @@ export default function ComposerCanvas({
         </div>
         <button
           onClick={onClose}
-          className="text-muted-foreground/60 hover:text-foreground text-[10px] transition-colors"
+          className="text-muted-foreground hover:text-foreground text-[10px] transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -368,7 +368,7 @@ export default function ComposerCanvas({
             <ChevronLeft className="w-4 h-4" />
           </button>
           <div className="flex flex-col items-center text-center min-w-0 flex-1 px-2">
-            <span className="text-[10px] font-mono text-muted-foreground/70 tracking-wider">
+            <span className="text-[10px] font-mono text-muted-foreground tracking-wider">
               {currentIndex + 1} / {batchDrafts.length}
             </span>
             <span className="text-[12px] text-foreground truncate max-w-full font-light">
@@ -395,7 +395,7 @@ export default function ComposerCanvas({
 
       {/* Recipients */}
       <div className="space-y-1">
-        <label className="text-[9px] font-mono text-muted-foreground/70 tracking-wider uppercase">
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
           Destinatari
         </label>
         <div className="flex items-center gap-2">
@@ -407,7 +407,7 @@ export default function ComposerCanvas({
                 key={r.email}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono bg-primary/10 text-primary/80"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono bg-primary/10 text-primary"
               >
                 {r.email}
                 <button
@@ -435,7 +435,7 @@ export default function ComposerCanvas({
               }}
               onBlur={() => commitPendingRecipient()}
               placeholder={composer.recipients.length === 0 ? "email@esempio.com" : "Aggiungi..."}
-              className="flex-1 min-w-[120px] bg-transparent text-[12px] text-foreground outline-none placeholder:text-muted-foreground/40"
+              className="flex-1 min-w-[120px] bg-transparent text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
         </div>
@@ -443,21 +443,21 @@ export default function ComposerCanvas({
 
       {/* Subject */}
       <div className="space-y-1">
-        <label className="text-[9px] font-mono text-muted-foreground/70 tracking-wider uppercase">
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
           Oggetto
         </label>
         <input
           value={composer.subject}
           onChange={(e) => composer.setSubject(e.target.value)}
           placeholder="Oggetto dell'email"
-          className="w-full rounded-xl px-3 py-2.5 text-[12px] text-foreground outline-none placeholder:text-muted-foreground/40"
+          className="w-full rounded-xl px-3 py-2.5 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
           style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
         />
       </div>
 
       {/* Body */}
       <div className="space-y-1 flex-1">
-        <label className="text-[9px] font-mono text-muted-foreground/70 tracking-wider uppercase">
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
           Corpo
         </label>
         <div className="relative">
@@ -476,7 +476,7 @@ export default function ComposerCanvas({
                 className="absolute inset-0 flex items-center justify-center rounded-xl"
                 style={{ background: "hsl(var(--glass-surface) / 0.8)", backdropFilter: "blur(8px)" }}
               >
-                <div className="flex items-center gap-2 text-primary/80">
+                <div className="flex items-center gap-2 text-primary">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-[11px] font-light">Generazione AI in corso...</span>
                 </div>
@@ -547,7 +547,7 @@ export default function ComposerCanvas({
             whileTap={{ scale: 0.98 }}
             onClick={handleSendClick}
             disabled={isSending || isGenerating}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success/80 hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
             style={{ border: "1px solid hsl(152 60% 45% / 0.15)" }}
           >
             {isSending ? (

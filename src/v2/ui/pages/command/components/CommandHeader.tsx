@@ -23,7 +23,7 @@ export default function CommandHeader({ flowPhase, lang, onToggleLang }: Props) 
         onClick={() => nav("/v2")}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed top-6 left-6 z-50 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] text-muted-foreground/80 hover:text-foreground hover:bg-white/5 transition-all backdrop-blur-md border border-white/[0.06]"
+        className="fixed top-6 left-6 z-50 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all backdrop-blur-md border border-white/[0.06]"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         <span>Dashboard</span>
@@ -43,9 +43,9 @@ export default function CommandHeader({ flowPhase, lang, onToggleLang }: Props) 
       <div className="flex items-center justify-between px-6 py-3 relative z-10 flex-shrink-0">
         <div className="flex items-center gap-3 ml-28">
           <motion.div className="w-1.5 h-1.5 rounded-full bg-primary/95" animate={{ opacity: [0.5, 0.85, 0.5] }} transition={{ duration: 3, repeat: Infinity }} />
-          <span className="text-[11px] text-muted-foreground/98 font-light tracking-wide">Sessione attiva</span>
+          <span className="text-[11px] text-muted-foreground font-light tracking-wide">Sessione attiva</span>
           {flowPhase !== "idle" && flowPhase !== "done" && (
-            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-primary/92 font-mono ml-2">
+            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-primary font-mono ml-2">
               {flowPhase === "thinking" ? "ELABORAZIONE" : flowPhase === "proposal" ? "PROPOSTA" : flowPhase === "approval" ? "IN ATTESA" : "ESECUZIONE"}
             </motion.span>
           )}
@@ -62,7 +62,7 @@ export default function CommandHeader({ flowPhase, lang, onToggleLang }: Props) 
               />
             ))}
           </div>
-          <span className="text-[8px] text-muted-foreground/100 font-mono tracking-wider">14 fonti · 12.8k contatti · 234 partner · 7 agenti</span>
+          <span className="text-[8px] text-muted-foreground font-mono tracking-wider">14 fonti · 12.8k contatti · 234 partner · 7 agenti</span>
           <motion.button
             onClick={onToggleLang}
             whileHover={{ scale: 1.05 }}

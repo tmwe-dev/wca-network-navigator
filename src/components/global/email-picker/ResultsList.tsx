@@ -98,7 +98,7 @@ export function ResultsList({ picker }: ResultsListProps) {
                             <div className="text-[10px] font-medium text-foreground truncate">{c.name}</div>
                             {c.title && <div className="text-[9px] text-muted-foreground truncate">{c.title}</div>}
                           </div>
-                          {c.email && <Mail className="w-3 h-3 text-primary/60 flex-shrink-0 mt-0.5" />}
+                          {c.email && <Mail className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />}
                           {isSelected(p.id, c.id)
                             ? <Check className="w-3 h-3 text-primary mt-0.5" />
                             : <span className="text-primary text-[9px] font-medium mt-0.5">+</span>
@@ -141,7 +141,7 @@ export function ResultsList({ picker }: ResultsListProps) {
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-foreground truncate text-[11px]">{companyName !== "Senza azienda" ? companyName : (members[0].name || "—")}</div>
                             {members[0].name && companyName !== "Senza azienda" && (
-                              <div className="text-[10px] text-foreground/80 truncate">{members[0].name}</div>
+                              <div className="text-[10px] text-foreground truncate">{members[0].name}</div>
                             )}
                             {members[0].position && (
                               <div className="text-[9px] text-muted-foreground truncate">{members[0].position}</div>
@@ -154,7 +154,7 @@ export function ResultsList({ picker }: ResultsListProps) {
                           </div>
                           <div className="flex items-center gap-1 mt-0.5 shrink-0">
                             {members[0].origin && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{members[0].origin}</Badge>}
-                            {members[0].email && <Mail className="w-3 h-3 text-primary/60" />}
+                            {members[0].email && <Mail className="w-3 h-3 text-primary" />}
                             {isSelected(members[0].id) ? <Check className="w-3 h-3 text-primary" /> : <span className="text-primary text-[9px]">+</span>}
                           </div>
                         </div>
@@ -192,7 +192,7 @@ export function ResultsList({ picker }: ResultsListProps) {
                               <div className="text-[10px] font-medium text-foreground truncate">{c.name || "—"}</div>
                               {c.position && <div className="text-[9px] text-muted-foreground truncate">{c.position}</div>}
                             </div>
-                            {c.email && <Mail className="w-3 h-3 text-primary/60 mt-0.5" />}
+                            {c.email && <Mail className="w-3 h-3 text-primary mt-0.5" />}
                             {isSelected(c.id) ? <Check className="w-3 h-3 text-primary mt-0.5" /> : <span className="text-primary text-[9px] mt-0.5">+</span>}
                           </div>
                         </button>
@@ -228,7 +228,7 @@ export function ResultsList({ picker }: ResultsListProps) {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground truncate text-[11px]">{c.company_name || c.contact_name || "—"}</div>
                       {c.contact_name && c.company_name && (
-                        <div className="text-[10px] text-foreground/80 truncate">{c.contact_name}</div>
+                        <div className="text-[10px] text-foreground truncate">{c.contact_name}</div>
                       )}
                       {c.location && (
                         <div className="text-[9px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
@@ -237,7 +237,7 @@ export function ResultsList({ picker }: ResultsListProps) {
                       )}
                     </div>
                     <div className="flex items-center gap-1 mt-0.5 shrink-0">
-                      {c.email && <Mail className="w-3 h-3 text-primary/60" />}
+                      {c.email && <Mail className="w-3 h-3 text-primary" />}
                       {isSelected(c.matched_partner_id || c.id) ? <Check className="w-3 h-3 text-primary" /> : <span className="text-primary text-[9px]">+</span>}
                     </div>
                   </div>

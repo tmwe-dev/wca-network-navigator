@@ -26,7 +26,7 @@ const VoicePresence = ({ active, speaking = false, listening = false }: VoicePre
           transition={{ duration: 2, repeat: Infinity }}
         >
           <div className={`w-2 h-2 rounded-full ${speaking ? "bg-accent/60" : "bg-primary/60"}`} />
-          <span className="text-[10px] text-muted-foreground/92 tracking-[0.15em] uppercase font-mono">
+          <span className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase font-mono">
             {speaking ? "ASSISTENTE PARLA" : listening ? "IN ASCOLTO" : "VOCE ATTIVA"}
           </span>
         </motion.div>
@@ -52,7 +52,7 @@ const VoicePresence = ({ active, speaking = false, listening = false }: VoicePre
           ))}
         </div>
 
-        <span className="text-[8px] text-muted-foreground/92 tracking-wider font-mono">ELEVENLABS · VOICE AI</span>
+        <span className="text-[8px] text-muted-foreground tracking-wider font-mono">ELEVENLABS · VOICE AI</span>
       </div>
     </motion.div>
   );

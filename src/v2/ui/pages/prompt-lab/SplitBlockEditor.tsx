@@ -100,7 +100,7 @@ export function SplitBlockEditor({
                   )}
                   title={b.label}
                 >
-                  <span className="tabular-nums text-[10px] text-muted-foreground/70 w-4 flex-shrink-0">
+                  <span className="tabular-nums text-[10px] text-muted-foreground w-4 flex-shrink-0">
                     {i + 1}
                   </span>
                   <span className="truncate flex-1">{title}</span>
@@ -247,7 +247,7 @@ function InlineDiff({ original, improved }: { original: string; improved: string
           ? "text-success dark:text-success"
           : p.removed
             ? "text-destructive dark:text-destructive"
-            : "text-muted-foreground/40";
+            : "text-muted-foreground";
         return (
           <div key={i} className={cn("py-0.5", bg)}>
             {lines.map((ln, j) => (

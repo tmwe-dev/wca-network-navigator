@@ -52,7 +52,7 @@ export function EmailPreviewPane({ item, onClose, onAuthorize, onCancel, onResch
   if (!item) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center px-6 text-muted-foreground bg-muted/5 border-l border-border/30">
-        <Mail className="w-10 h-10 text-muted-foreground/30 mb-3" />
+        <Mail className="w-10 h-10 text-muted-foreground mb-3" />
         <p className="text-sm font-medium">Seleziona un messaggio</p>
         <p className="text-xs mt-1">Clicca una riga a sinistra per vedere oggetto, corpo, sorgente e bottoni di azione.</p>
       </div>

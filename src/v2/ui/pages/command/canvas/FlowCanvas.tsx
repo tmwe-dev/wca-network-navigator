@@ -17,10 +17,10 @@ interface FlowCanvasProps {
 }
 
 const nodeIcon = {
-  trigger: <Zap className="w-3 h-3 text-warning/70" />,
-  action: <Mail className="w-3 h-3 text-primary/70" />,
+  trigger: <Zap className="w-3 h-3 text-warning" />,
+  action: <Mail className="w-3 h-3 text-primary" />,
   condition: <Users className="w-3 h-3 text-accent/70" />,
-  end: <CheckCircle2 className="w-3 h-3 text-success/70" />,
+  end: <CheckCircle2 className="w-3 h-3 text-success" />,
 };
 
 const nodeBorder = {
@@ -37,7 +37,7 @@ const FlowCanvas = ({ nodes, title, badge, sourceLabel }: FlowCanvasProps) => (
         {badge ?? "DEMO"}
       </span>
       {title && <span className="text-[10px] text-muted-foreground font-mono">{title}</span>}
-      {sourceLabel && <span className="text-[9px] text-muted-foreground/60 font-mono ml-auto">{sourceLabel}</span>}
+      {sourceLabel && <span className="text-[9px] text-muted-foreground font-mono ml-auto">{sourceLabel}</span>}
     </div>
 
     <div className="flex flex-col items-center gap-0">
@@ -63,7 +63,7 @@ const FlowCanvas = ({ nodes, title, badge, sourceLabel }: FlowCanvasProps) => (
               transition={{ delay: 0.2 + i * 0.1 }}
               className="py-1"
             >
-              <ArrowDown className="w-3 h-3 text-muted-foreground/30" />
+              <ArrowDown className="w-3 h-3 text-muted-foreground" />
             </motion.div>
           )}
         </div>

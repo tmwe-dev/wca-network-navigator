@@ -333,7 +333,7 @@ export function AssignActivityDialog({
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Crea {validIds.length} Attività
                 {rejectedPartners.length > 0 && (
-                  <span className="ml-1 text-destructive-foreground/70">
+                  <span className="ml-1 text-destructive-foreground">
                     ({rejectedPartners.length} esclusi)
                   </span>
                 )}

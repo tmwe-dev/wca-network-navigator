@@ -223,7 +223,7 @@ function CronTab() {
               </div>
 
               {job.last_return_message && job.last_status !== "succeeded" && (
-                <p className="mt-2 text-xs text-destructive/80 font-mono bg-destructive/5 rounded px-2 py-1 truncate">
+                <p className="mt-2 text-xs text-destructive font-mono bg-destructive/5 rounded px-2 py-1 truncate">
                   {job.last_return_message}
                 </p>
               )}

@@ -44,7 +44,7 @@ export function EnrichmentBatchActions({
               <Linkedin className="w-4 h-4 text-primary" />
               <div>
                 <div className="text-xs font-semibold text-foreground">LinkedIn Batch</div>
-                <div className="text-xs text-foreground/70">
+                <div className="text-xs text-foreground">
                   {contactsWithoutLinkedin} contatti senza profilo
                 </div>
               </div>
@@ -68,7 +68,7 @@ export function EnrichmentBatchActions({
           {(isRunning || isDone) && (
             <div className="space-y-1">
               <Progress value={progress.total > 0 ? (progress.current / progress.total) * 100 : 0} className="h-1" />
-              <div className="flex items-center justify-between text-xs text-foreground/70">
+              <div className="flex items-center justify-between text-xs text-foreground">
                 <span>{progress.current}/{progress.total}
                   {progress.currentName && isRunning && <span className="ml-1 text-foreground">{progress.currentName}</span>}
                 </span>
@@ -91,12 +91,12 @@ export function EnrichmentBatchActions({
               <Image className="w-4 h-4 text-amber-500" />
               <div>
                 <div className="text-xs font-semibold text-foreground">Logo Batch</div>
-                <div className="text-xs text-foreground/70">
+                <div className="text-xs text-foreground">
                   {partnersWithoutLogo} partner senza logo
                 </div>
               </div>
             </div>
-            <Badge variant="outline" className="text-[11px] text-foreground/70">
+            <Badge variant="outline" className="text-[11px] text-foreground">
               Automatico via Clearbit
             </Badge>
           </div>

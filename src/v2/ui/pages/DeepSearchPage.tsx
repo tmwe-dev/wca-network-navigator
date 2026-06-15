@@ -137,7 +137,7 @@ export function DeepSearchPage(): React.ReactElement {
       {sherlock.stepResults.length === 0 && !sherlock.running ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md p-6">
-            <Sparkles className="w-10 h-10 text-primary/50 mx-auto mb-3" />
+            <Sparkles className="w-10 h-10 text-primary mx-auto mb-3" />
             <h3 className="text-sm font-semibold mb-2">Indaga su qualsiasi azienda</h3>
             <p className="text-xs text-muted-foreground mb-4">
               Inserisci almeno il nome company e scegli un livello: Scout (rapido),

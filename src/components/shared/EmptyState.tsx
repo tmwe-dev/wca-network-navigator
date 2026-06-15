@@ -45,7 +45,7 @@ export function EmptyState({
       className={cn("flex flex-col items-center justify-center gap-3 py-16 px-6 text-center", className)}
     >
       <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center">
-        <Icon className="w-7 h-7 text-muted-foreground/50" />
+        <Icon className="w-7 h-7 text-muted-foreground" />
       </div>
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {description && (

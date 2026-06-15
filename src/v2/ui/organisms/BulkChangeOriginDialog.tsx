@@ -101,7 +101,7 @@ export function BulkChangeOriginDialog({
 
         <div className="space-y-3">
           <div>
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground/80 pb-1">
+            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground pb-1">
               Origine attuale
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -117,7 +117,7 @@ export function BulkChangeOriginDialog({
           </div>
 
           <div>
-            <label htmlFor="new-origin" className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground/80">
+            <label htmlFor="new-origin" className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">
               Nuova origine
             </label>
             <Input
@@ -148,7 +148,7 @@ export function BulkChangeOriginDialog({
           </div>
 
           <div>
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground/80 pb-1">
+            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground pb-1">
               {trimmed ? "Suggerimenti" : "Origini più frequenti"}
             </div>
             <div className="max-h-56 overflow-y-auto border border-border/40 rounded-md divide-y divide-border/30">

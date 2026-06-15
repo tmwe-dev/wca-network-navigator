@@ -12,7 +12,7 @@ export function OraclePanelHeader() {
         />
       </div>
       <div className="flex flex-col leading-tight">
-        <span className="text-[11px] font-semibold tracking-wide uppercase text-foreground/80">
+        <span className="text-[11px] font-semibold tracking-wide uppercase text-foreground">
           Oracolo
         </span>
         <span className="text-[10px] text-muted-foreground">

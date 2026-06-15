@@ -215,12 +215,12 @@ export default function AgendaCardView() {
                   {/* Data row */}
                   <div className="flex items-center gap-2 text-[10px]">
                     <InfoTooltip content={hasEmail ? `Email: ${allEmails.join(", ")}` : "Nessuna email disponibile"}>
-                      <span className={cn("flex items-center gap-1", hasEmail ? "text-emerald-500" : "text-muted-foreground/30")}>
+                      <span className={cn("flex items-center gap-1", hasEmail ? "text-emerald-500" : "text-muted-foreground")}>
                         <Mail className="w-3 h-3" /> Email
                       </span>
                     </InfoTooltip>
                     <InfoTooltip content={hasPhone ? `Telefono: ${allPhones.join(", ")}` : "Nessun telefono disponibile"}>
-                      <span className={cn("flex items-center gap-1", hasPhone ? "text-blue-400" : "text-muted-foreground/30")}>
+                      <span className={cn("flex items-center gap-1", hasPhone ? "text-blue-400" : "text-muted-foreground")}>
                         <Phone className="w-3 h-3" /> Tel
                       </span>
                     </InfoTooltip>

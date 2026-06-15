@@ -310,7 +310,7 @@ export function AgentChatHub() {
                       disabled={feedbackGiven.has(`${activeId}-${i}`)}
                       className={cn(
                         "p-1 rounded-full transition-colors",
-                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-success hover:bg-success/10"
+                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground" : "text-muted-foreground hover:text-success hover:bg-success/10"
                       )}
                     >
                       <ThumbsUp className="w-3 h-3" />
@@ -320,7 +320,7 @@ export function AgentChatHub() {
                       disabled={feedbackGiven.has(`${activeId}-${i}`)}
                       className={cn(
                         "p-1 rounded-full transition-colors",
-                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       )}
                     >
                       <ThumbsDown className="w-3 h-3" />

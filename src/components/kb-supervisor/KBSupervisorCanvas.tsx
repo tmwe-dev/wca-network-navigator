@@ -284,7 +284,7 @@ export function KBSupervisorCanvas({
                   {[
                     { label: "Critiche", count: auditReport.summary?.critical ?? 0, className: "text-destructive" },
                     { label: "Alte", count: auditReport.summary?.high ?? 0, className: "text-warning" },
-                    { label: "Medie", count: auditReport.summary?.medium ?? 0, className: "text-warning/70" },
+                    { label: "Medie", count: auditReport.summary?.medium ?? 0, className: "text-warning" },
                     { label: "Basse", count: auditReport.summary?.low ?? 0, className: "text-info" },
                   ].map(({ label, count, className }) => (
                     <Card key={label}>

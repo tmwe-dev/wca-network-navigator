@@ -91,7 +91,7 @@ function DownloadPanel({ jobs }: { jobs: DownloadJob[] }) {
                 </div>
               </>
             )}
-            {job.error_message && <div className="text-[10px] text-destructive/80">⚠️ {job.error_message}</div>}
+            {job.error_message && <div className="text-[10px] text-destructive">⚠️ {job.error_message}</div>}
             <div className="text-[10px] text-muted-foreground">
               {job.contacts_found_count} contatti trovati · <TimeLabel date={job.created_at} />
             </div>
@@ -119,7 +119,7 @@ function AgentTasksPanel({ tasks }: { tasks: AgentTaskLive[] }) {
             </div>
             <Badge variant="outline" className="text-[10px]">{task.task_type}</Badge>
           </div>
-          <div className="text-xs text-foreground/80">{task.description}</div>
+          <div className="text-xs text-foreground">{task.description}</div>
           {task.result_summary && (
             <div className="text-[10px] text-muted-foreground italic truncate">{task.result_summary}</div>
           )}
@@ -184,7 +184,7 @@ function EmailQueuePanel({ emails }: { emails: EmailQueueItem[] }) {
               )}
             </div>
           </div>
-          <div className="text-[11px] text-foreground/70 truncate">{email.subject}</div>
+          <div className="text-[11px] text-foreground truncate">{email.subject}</div>
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>{email.recipient_email}</span>
             {email.scheduled_at && email.status === "pending" ? (
@@ -195,7 +195,7 @@ function EmailQueuePanel({ emails }: { emails: EmailQueueItem[] }) {
               <TimeLabel date={email.created_at} />
             )}
           </div>
-          {email.error_message && <div className="text-[10px] text-destructive/80">⚠️ {email.error_message}</div>}
+          {email.error_message && <div className="text-[10px] text-destructive">⚠️ {email.error_message}</div>}
         </div>
       ))}
     </div>

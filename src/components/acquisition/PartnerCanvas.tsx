@@ -62,7 +62,7 @@ function PhaseIndicator({ phase }: { phase: CanvasPhase }) {
         <div key={p.key} className="flex items-center gap-1">
           <div className={cn("w-2 h-2 rounded-full transition-colors", i < currentIdx ? "bg-emerald-500" : i === currentIdx ? "bg-primary animate-pulse" : "bg-muted-foreground/20")} />
           <span className={cn("hidden sm:inline", i === currentIdx ? "text-foreground font-medium" : "text-muted-foreground")}>{p.label}</span>
-          {i < phases.length - 1 && <span className="text-muted-foreground/30 mx-0.5">→</span>}
+          {i < phases.length - 1 && <span className="text-muted-foreground mx-0.5">→</span>}
         </div>
       ))}
     </div>
@@ -74,11 +74,11 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
 
   if (!data) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground/50">
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
         <div className="text-center space-y-3">
           <div className="text-4xl">📋</div>
           <p className="text-sm">Seleziona paesi e avvia l'acquisizione</p>
-          <p className="text-xs text-muted-foreground/40">Il documento si costruirà qui</p>
+          <p className="text-xs text-muted-foreground">Il documento si costruirà qui</p>
         </div>
       </div>
     );
@@ -101,7 +101,7 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
         <div className={cn("transition-all duration-500", show("header") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
           <div className="grid grid-cols-[minmax(80px,1fr)_2fr] gap-4">
             <div className="flex items-center justify-center min-h-[64px]">
-              {data.logo_url ? <OptimizedImage src={data.logo_url} alt="" className="max-h-16 max-w-full object-contain" /> : <Building2 className="w-10 h-10 text-muted-foreground/30" />}
+              {data.logo_url ? <OptimizedImage src={data.logo_url} alt="" className="max-h-16 max-w-full object-contain" /> : <Building2 className="w-10 h-10 text-muted-foreground" />}
             </div>
             <div className="min-w-0">
               <div className="flex items-start justify-between gap-2">

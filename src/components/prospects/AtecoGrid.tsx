@@ -98,7 +98,7 @@ export function AtecoGrid({
         <div className="flex flex-col gap-0.5 pr-2">
           {grid.filteredSections.length === 0 ? (
             <div className="text-center py-12 space-y-3">
-              <FileText className="w-16 h-16 mx-auto text-muted-foreground/20" />
+              <FileText className="w-16 h-16 mx-auto text-muted-foreground" />
               <p className={`text-sm ${th.sub}`}>Nessun codice ATECO trovato</p>
             </div>
           ) : (

@@ -149,7 +149,7 @@ export function CockpitContactCard({
         <div className="relative flex gap-2.5">
           <div className="flex flex-col items-center gap-1 pt-0.5">
             <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} className="h-3.5 w-3.5" onClick={(e) => e.stopPropagation()} />
-            <GripVertical className="w-3.5 h-3.5 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />
+            <GripVertical className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
           </div>
 
           <div className="flex-1 min-w-0 space-y-1.5">

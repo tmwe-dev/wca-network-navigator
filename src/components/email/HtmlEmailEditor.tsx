@@ -99,7 +99,7 @@ export default function HtmlEmailEditor({ value, onChange, placeholder, classNam
               "prose prose-sm max-w-none",
               "prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5",
               "prose-a:text-primary prose-strong:text-foreground",
-              "[&_*]:text-foreground/80",
+              "[&_*]:text-foreground",
               isEmpty && "empty-editor"
             )}
             style={{ minHeight: 200 }}

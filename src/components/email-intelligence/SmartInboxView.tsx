@@ -172,7 +172,7 @@ export function SmartInboxView() {
           <div className="flex items-center justify-center flex-1"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : classifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
-            <Inbox className="h-10 w-10 mb-2 text-primary/30" />
+            <Inbox className="h-10 w-10 mb-2 text-primary" />
             <p className="text-xs">Nessuna classificazione trovata</p>
           </div>
         ) : (
@@ -218,7 +218,7 @@ export function SmartInboxView() {
       <div className="flex-1 bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 overflow-y-auto">
         {!selected ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <MessageCircle className="h-10 w-10 mb-2 text-primary/20" />
+            <MessageCircle className="h-10 w-10 mb-2 text-primary" />
             <p className="text-xs">Seleziona un'email per vedere i dettagli</p>
           </div>
         ) : (

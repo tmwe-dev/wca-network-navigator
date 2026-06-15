@@ -174,7 +174,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                   {decision.reasoning && (
                     <div>
                       <div className="text-[10px] uppercase text-muted-foreground mt-2 mb-1">Perché</div>
-                      <p className="text-xs text-foreground/80 italic">"{decision.reasoning}"</p>
+                      <p className="text-xs text-foreground italic">"{decision.reasoning}"</p>
                     </div>
                   )}
                 </div>
@@ -188,7 +188,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                 <h4 className="text-xs font-semibold uppercase tracking-wide">Commerciale</h4>
               </div>
               {decision?.commercial_handoff ? (
-                <p className="text-xs text-foreground/80">
+                <p className="text-xs text-foreground">
                   Funnemail ha segnalato questa email al cervello commerciale.
                   Il lead verrà valutato per ingresso/aggiornamento del circuito di attesa.
                 </p>
@@ -216,12 +216,12 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                   {ci.intent_summary && (
                     <div>
                       <div className="text-[10px] uppercase text-muted-foreground mt-1 mb-1">Intento</div>
-                      <p className="text-xs text-foreground/90">{ci.intent_summary}</p>
+                      <p className="text-xs text-foreground">{ci.intent_summary}</p>
                     </div>
                   )}
                   {ci.business_value && (
                     <Field label="Valore">
-                      <span className="text-foreground/80">{ci.business_value}</span>
+                      <span className="text-foreground">{ci.business_value}</span>
                     </Field>
                   )}
                   {ci.urgency && (
@@ -231,7 +231,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                   )}
                   {ci.target_role && (
                     <Field label="Per">
-                      <span className="text-foreground/80">{ci.target_role}</span>
+                      <span className="text-foreground">{ci.target_role}</span>
                     </Field>
                   )}
                   <Field label="Confidenza">
@@ -246,7 +246,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                         {ci.suggested_actions.map((a, i) => (
                           <li key={i} className="flex items-start gap-1.5 text-xs">
                             <span className="text-accent mt-0.5">•</span>
-                            <span className="text-foreground/85">
+                            <span className="text-foreground">
                               <span className="font-medium">{a.label ?? a.title ?? a.type}</span>
                               {a.reason && <span className="text-muted-foreground"> — {a.reason}</span>}
                             </span>
@@ -263,7 +263,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                   {ci.reasoning && (
                     <div>
                       <div className="text-[10px] uppercase text-muted-foreground mt-2 mb-1">Ragionamento</div>
-                      <p className="text-xs text-foreground/70 italic">"{ci.reasoning}"</p>
+                      <p className="text-xs text-foreground italic">"{ci.reasoning}"</p>
                     </div>
                   )}
                 </div>

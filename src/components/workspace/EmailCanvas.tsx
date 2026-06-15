@@ -154,7 +154,7 @@ export default function EmailCanvas({
   if (!activity) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <Mail className="w-10 h-10 text-muted-foreground/40 mb-3" />
+        <Mail className="w-10 h-10 text-muted-foreground mb-3" />
         <h3 className="text-sm font-medium text-foreground">Seleziona un contatto</h3>
         <p className="text-xs text-muted-foreground mt-1 max-w-xs">
           Scegli un'attività dalla lista per generare un'email personalizzata
@@ -211,7 +211,7 @@ export default function EmailCanvas({
               <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
             </div>
             <p className="text-sm text-muted-foreground">Generazione in corso...</p>
-            <p className="text-xs text-muted-foreground/60">Analisi profilo {displayCompany}</p>
+            <p className="text-xs text-muted-foreground">Analisi profilo {displayCompany}</p>
           </div>
         ) : displayEmail ? (
           <div className="p-4">
@@ -280,7 +280,7 @@ export default function EmailCanvas({
                   <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)}
                     className="min-h-[350px] text-sm leading-relaxed border-border font-[inherit]" />
                 ) : (
-                  <div className="text-sm leading-[1.75] text-foreground/80 whitespace-pre-wrap">
+                  <div className="text-sm leading-[1.75] text-foreground whitespace-pre-wrap">
                     {displayBody}
                   </div>
                 )}
@@ -308,7 +308,7 @@ export default function EmailCanvas({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-center p-8">
-            <Wand2 className="w-10 h-10 text-muted-foreground/40" />
+            <Wand2 className="w-10 h-10 text-muted-foreground" />
             {/* Contact picker for partner-source activities */}
             {sourceType === "partner" && partnerId && (
               <div className="w-full max-w-xs mb-2">

@@ -114,14 +114,14 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
                 </div>
               ) : (
                 <div className="flex items-center gap-1 flex-1 min-w-0">
-                  <span className={cn("truncate flex-1", value ? "text-foreground" : "text-muted-foreground/50 italic")}>
+                  <span className={cn("truncate flex-1", value ? "text-foreground" : "text-muted-foreground italic")}>
                     {value || "—"}
                   </span>
                   <button
                     onClick={() => startEdit(key)}
                     className={cn("p-0.5 rounded hover:bg-muted/50 transition-colors shrink-0", isLow && "animate-pulse")}
                   >
-                    <Pencil className={cn("w-3 h-3", isLow ? "text-amber-500" : "text-muted-foreground/50")} />
+                    <Pencil className={cn("w-3 h-3", isLow ? "text-amber-500" : "text-muted-foreground")} />
                   </button>
                 </div>
               )}

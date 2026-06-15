@@ -58,7 +58,7 @@ export function HoldingPatternBadge({ interactionCount, lastInteractionAt, size 
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-[9px] font-medium text-foreground/70">
+    <span className="inline-flex items-center gap-1 text-[9px] font-medium text-foreground">
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", color, pulse && "animate-pulse")} />
       <Plane className="w-2.5 h-2.5" />
       {label}

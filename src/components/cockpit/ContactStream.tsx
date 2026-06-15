@@ -135,8 +135,8 @@ export function ContactStream({
   if (contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
-        <Users className="w-12 h-12 text-muted-foreground/60" />
-        <h3 className="text-sm font-semibold text-foreground/80">Nessun contatto</h3>
+        <Users className="w-12 h-12 text-muted-foreground" />
+        <h3 className="text-sm font-semibold text-foreground">Nessun contatto</h3>
         <p className="text-xs text-muted-foreground max-w-[240px]">
           Importa contatti, scarica da WCA o aggiungi prospect per popolare il Cockpit.
         </p>
@@ -157,7 +157,7 @@ export function ContactStream({
             onCheckedChange={(checked) => checked ? onSelectAll() : onClear()}
             className="h-3.5 w-3.5"
           />
-          <span className="text-xs font-medium text-foreground/80">
+          <span className="text-xs font-medium text-foreground">
             {selectionCount > 0 ? `${selectionCount} selezionati` : `${filteredContacts.length} contatti`}
           </span>
         </div>

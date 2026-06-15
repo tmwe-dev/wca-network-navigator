@@ -28,7 +28,7 @@ export function WizardStepBar({ currentStep, onStepClick }: WizardStepBarProps) 
                   ? "bg-primary/20 text-primary"
                   : done
                     ? "text-emerald-400 hover:bg-muted/30"
-                    : "text-muted-foreground/40"
+                    : "text-muted-foreground"
               }`}
             >
               {done ? <Check className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}

@@ -27,7 +27,7 @@ function StatusRow({
         {label}
       </span>
       {ok && age !== null && (
-        <span className="text-muted-foreground/70 text-[10px] shrink-0">
+        <span className="text-muted-foreground text-[10px] shrink-0">
           {age === 0 ? "oggi" : `${age}gg fa`}
         </span>
       )}
@@ -51,7 +51,7 @@ export function EnrichmentStatusInline({ partnerId }: Props): React.ReactElement
 
   return (
     <div className="rounded-md border border-border/40 bg-muted/20 px-2.5 py-2 space-y-1">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80 font-medium">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
         Dati disponibili per l'AI
       </div>
       <StatusRow

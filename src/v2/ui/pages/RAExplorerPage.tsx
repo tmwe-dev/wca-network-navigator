@@ -152,9 +152,9 @@ export function RAExplorer() {
             ) : !prospectsData?.items || prospectsData.items.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-center">
                 <div>
-                  <Building2 className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <Building2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">Nessuna azienda trovata</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Seleziona un'ATECO o modifica la ricerca
                   </p>
                 </div>
@@ -311,9 +311,9 @@ export function RAExplorer() {
         ) : (
           <div className="flex-1 flex items-center justify-center text-center p-4">
             <div>
-              <Building2 className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
+              <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm font-medium text-muted-foreground">Seleziona un'azienda</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">per visualizzare i dettagli</p>
+              <p className="text-xs text-muted-foreground mt-1">per visualizzare i dettagli</p>
             </div>
           </div>
         )}

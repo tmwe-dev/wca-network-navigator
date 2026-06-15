@@ -196,7 +196,7 @@ export function ArenaActiveSession({
                     {channel !== "linkedin" && (
                       <div className="text-xs text-muted-foreground font-mono">Subject: {current.draft_subject}</div>
                     )}
-                    <div className="text-sm text-foreground/90 leading-relaxed max-h-32 overflow-y-auto">
+                    <div className="text-sm text-foreground leading-relaxed max-h-32 overflow-y-auto">
                       <TypewriterText text={current.draft_body.replace(/<[^>]*>/g, "")} speed={15} />
                     </div>
                     {channel === "linkedin" && (

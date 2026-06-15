@@ -45,7 +45,7 @@ export function HistoryTab({ recipient }: Props) {
 
   return (
     <div className="space-y-2 text-xs">
-      <div className="text-xs text-foreground/70">
+      <div className="text-xs text-foreground">
         Ultime 10 interazioni — è ciò che l'AI vede nel blocco "History" del prompt.
       </div>
 
@@ -74,7 +74,7 @@ export function HistoryTab({ recipient }: Props) {
               {m.from_address && <span className="text-muted-foreground truncate">· {m.from_address}</span>}
             </div>
             {m.subject && <div className="font-medium text-[11px] mt-1 truncate">{m.subject}</div>}
-            {m.body_text && <div className="text-xs text-foreground/70 line-clamp-2 mt-0.5">{m.body_text.slice(0, 200)}</div>}
+            {m.body_text && <div className="text-xs text-foreground line-clamp-2 mt-0.5">{m.body_text.slice(0, 200)}</div>}
           </div>
         ))}
       </div>

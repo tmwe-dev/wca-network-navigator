@@ -143,7 +143,7 @@ function SortableRow({ folder, active, count, onSelect, draggable }: SortableRow
           type="button"
           {...attributes}
           {...listeners}
-          className="flex h-8 w-4 cursor-grab items-center justify-center text-muted-foreground/50 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+          className="flex h-8 w-4 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
           aria-label={`Trascina ${folder.label}`}
           onClick={(e) => e.stopPropagation()}
         >

@@ -118,7 +118,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                     ? <Loader2 className="w-3 h-3 animate-spin" />
                     : <span className="text-[12px]">{meta.icon}</span>}
                   {meta.label}
-                  <span className="text-[11px] text-foreground/70 ml-0.5">{meta.eta}</span>
+                  <span className="text-[11px] text-foreground ml-0.5">{meta.eta}</span>
                 </Button>
               );
             })}
@@ -166,14 +166,14 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
         <div className="flex-1 flex min-h-0">
           {/* LEFT — Timeline step */}
           <aside className="w-[340px] border-r border-border bg-muted/20 flex flex-col min-h-0">
-            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/80 border-b border-border/60 shrink-0 flex items-center justify-between">
+            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground border-b border-border/60 shrink-0 flex items-center justify-between">
               <span>Timeline · {sherlock.stepResults.length} step</span>
               {sherlock.running && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
             </div>
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-1">
                 {sherlock.stepResults.length === 0 && (
-                  <div className="text-xs text-foreground/70 italic px-2 py-4 text-center">
+                  <div className="text-xs text-foreground italic px-2 py-4 text-center">
                     Scegli un livello in alto per avviare l'indagine.
                   </div>
                 )}
@@ -198,7 +198,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                     <StatusIcon status={selected.status} />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold truncate text-foreground">{selected.label}</div>
-                      <div className="text-xs text-foreground/70 font-mono truncate">{selected.url ?? "—"}</div>
+                      <div className="text-xs text-foreground font-mono truncate">{selected.url ?? "—"}</div>
                     </div>
                     {selected.confidence !== null && (
                       <Badge variant="outline" className="text-[9px]">
@@ -298,7 +298,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                       <div className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Findings consolidati ({Object.keys(sherlock.consolidated).length})
                       </div>
-                      <pre className="text-[11px] font-mono whitespace-pre-wrap break-words bg-muted/30 rounded-md p-3 text-foreground/90">
+                      <pre className="text-[11px] font-mono whitespace-pre-wrap break-words bg-muted/30 rounded-md p-3 text-foreground">
                         {JSON.stringify(sherlock.consolidated, null, 2)}
                       </pre>
                     </div>
@@ -334,7 +334,7 @@ function StepRow({ result, active, onClick }: { result: SherlockStepResult; acti
       <StatusIcon status={result.status} small />
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{result.order}. {result.label}</div>
-        <div className="text-[11px] text-foreground/70 truncate">
+        <div className="text-[11px] text-foreground truncate">
           {result.channel} · {result.duration_ms ? `${(result.duration_ms / 1000).toFixed(1)}s` : "—"}
           {result.cache_hit && " · cache"}
           {result.confidence !== null && ` · AI ${Math.round(result.confidence * 100)}%`}
@@ -365,7 +365,7 @@ function MarkdownPane({ markdown }: { markdown: string }) {
   return (
     <div className="h-full flex flex-col min-h-0">
       <div className="flex items-center justify-between px-4 py-1.5 border-b border-border/60 shrink-0">
-        <div className="text-xs text-foreground/70">
+        <div className="text-xs text-foreground">
           {showRaw
             ? `Markdown grezzo · ${markdown.length.toLocaleString()} caratteri`
             : `Markdown pulito · ${pretty.length.toLocaleString()} caratteri${reduction > 0 ? ` (−${reduction}% rumore)` : ""}`}

@@ -65,7 +65,7 @@ export function PartnerListItem({
       <div className="flex items-start gap-2">
         {/* Progressive number */}
         {index !== undefined && (
-          <span className="text-[10px] text-muted-foreground/50 font-mono w-5 shrink-0 text-right mt-2.5">
+          <span className="text-[10px] text-muted-foreground font-mono w-5 shrink-0 text-right mt-2.5">
             {index + 1}
           </span>
         )}
@@ -95,7 +95,7 @@ export function PartnerListItem({
             {primaryContact ? (
               <>
                 <div className="flex items-center gap-1.5 text-[11px]">
-                  <User className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                  <User className="w-3 h-3 text-muted-foreground shrink-0" />
                   <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
                   {contacts.length > 1 && (
                     <span className="text-[10px] text-muted-foreground">+{contacts.length - 1}</span>
@@ -115,7 +115,7 @@ export function PartnerListItem({
                 )}
               </>
             ) : (
-              <span className="text-[10px] italic text-destructive/60">Nessun contatto</span>
+              <span className="text-[10px] italic text-destructive">Nessun contatto</span>
             )}
           </div>
 
@@ -127,7 +127,7 @@ export function PartnerListItem({
                 return (
                   <Tooltip key={i}>
                     <TooltipTrigger>
-                      <Icon className="w-3.5 h-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                      <Icon className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
                     </TooltipTrigger>
                     <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                   </Tooltip>
@@ -140,12 +140,12 @@ export function PartnerListItem({
           {networks.length > 0 && (
             <div className="flex items-center gap-1 mt-1">
               {networks.slice(0, 3).map((n) => (
-                <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary/80 font-medium truncate max-w-[80px]">
+                <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary font-medium truncate max-w-[80px]">
                   {n.network_name.replace("WCA ", "").substring(0, 10)}
                 </span>
               ))}
               {networks.length > 3 && (
-                <span className="text-[9px] text-muted-foreground/60">+{networks.length - 3}</span>
+                <span className="text-[9px] text-muted-foreground">+{networks.length - 3}</span>
               )}
             </div>
           )}
