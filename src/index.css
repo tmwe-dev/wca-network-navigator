@@ -211,6 +211,8 @@ html, body {
     --popover: 216 34% 12%;
     --popover-foreground: 210 40% 98%;
     --primary: 268 80% 65%;
+    --glass-surface: 240 5% 8%;
+    --glass-edge: 0 0% 100%;
     --primary-foreground: 0 0% 100%;
     --secondary: 260 25% 17%;
     --secondary-foreground: 260 30% 98%;
