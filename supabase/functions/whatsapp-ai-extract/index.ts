@@ -22,6 +22,19 @@ const aiCreditsFallbackResponse = (headers: Record<string, string>, mode: unknow
     { status: 200, headers: jsonHeaders(headers) }
   );
 
+const aiRateLimitFallbackResponse = (headers: Record<string, string>, mode: unknown) =>
+  new Response(
+    JSON.stringify({
+      success: false,
+      fallback: true,
+      error: "AI_RATE_LIMITED",
+      message: "Servizio AI temporaneamente sovraccarico — riprova tra qualche istante",
+      mode,
+      items: [],
+    }),
+    { status: 200, headers: jsonHeaders(headers) }
+  );
+
 
 serve(async (req) => {
   const pre = corsPreflight(req);
