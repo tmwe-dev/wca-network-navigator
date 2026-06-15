@@ -29,10 +29,10 @@ export default function CommandComposer({
     <div className="px-8 pb-8 pt-2 pl-16">
       <div className="max-w-xl mx-auto">
         <motion.div
-          animate={{ boxShadow: inputFocused ? "0 0 0 1px hsl(210 100% 66% / 0.24), 0 0 60px hsl(210 100% 66% / 0.12)" : "0 0 0 1px hsl(0 0% 100% / 0.1)" }}
+          animate={{ boxShadow: inputFocused ? "0 0 0 1px hsl(210 100% 66% / 0.24), 0 0 60px hsl(210 100% 66% / 0.12)" : "0 0 0 1px hsl(var(--glass-edge) / 0.12)" }}
           transition={{ duration: 0.6 }}
           className="flex items-center gap-3 rounded-2xl px-4 py-3"
-          style={{ background: "hsl(240 5% 6% / 0.75)", backdropFilter: "blur(40px)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+          style={{ background: "hsl(var(--glass-surface) / 0.75)", backdropFilter: "blur(40px)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
         >
           <motion.button
             onClick={onTtsMuteToggle}

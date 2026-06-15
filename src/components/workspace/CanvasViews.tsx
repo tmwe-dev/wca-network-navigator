@@ -25,7 +25,7 @@ export const TableCanvas = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: 0.4 + i * 0.1, duration: 0.5, ease }}
             className="p-4 rounded-xl text-center"
-            style={{ background: "hsl(240 5% 7% / 0.7)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+            style={{ background: "hsl(var(--glass-surface) / 0.7)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
           >
             <div className="text-2xl font-extralight tracking-tight text-foreground/100">{kpi.value}</div>
             <div className="text-[9px] text-muted-foreground/97 mt-1.5 tracking-wider uppercase">{kpi.label}</div>
@@ -99,7 +99,7 @@ export const CampaignCanvas = ({ onClose }: { onClose: () => void }) => (
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 + i * 0.08, ease }}
           className="p-3.5 rounded-xl"
-          style={{ background: "hsl(240 5% 7% / 0.7)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+          style={{ background: "hsl(var(--glass-surface) / 0.7)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
         >
           <div className="text-[9px] text-muted-foreground/97 tracking-wider uppercase mb-1">{item.label}</div>
           <div className="text-[13px] font-light text-foreground/100">{item.value}</div>
@@ -113,7 +113,7 @@ export const CampaignCanvas = ({ onClose }: { onClose: () => void }) => (
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.8, ease }}
       className="rounded-xl p-5 mb-4"
-      style={{ background: "hsl(240 5% 8% / 0.75)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+      style={{ background: "hsl(var(--glass-surface) / 0.75)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-[9px] text-muted-foreground/97 tracking-wider uppercase">ANTEPRIMA BOZZA · 1 DI 50</span>
@@ -135,7 +135,7 @@ export const CampaignCanvas = ({ onClose }: { onClose: () => void }) => (
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1, ease }}
       className="rounded-xl p-4 mb-4"
-      style={{ background: "hsl(240 5% 7% / 0.65)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+      style={{ background: "hsl(var(--glass-surface) / 0.65)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
     >
       <div className="text-[9px] text-muted-foreground/97 tracking-wider uppercase mb-3">PIANO DI INVIO</div>
       <div className="space-y-2">
@@ -198,7 +198,7 @@ export const ReportCanvas = ({ onClose }: { onClose: () => void }) => (
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 + i * 0.08, ease }}
           className="p-3 rounded-xl text-center"
-          style={{ background: "hsl(240 5% 7% / 0.7)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+          style={{ background: "hsl(var(--glass-surface) / 0.7)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
         >
           <div className="text-lg font-extralight text-foreground/100">{kpi.value}</div>
           <div className="text-[8px] text-muted-foreground/100 mt-1 tracking-wider uppercase">{kpi.label}</div>
@@ -329,7 +329,7 @@ export const ResultCanvas = ({ onClose, scenarioKey }: ResultCanvasProps) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 + i * 0.1, ease }}
             className="p-3 rounded-xl text-center"
-            style={{ background: "hsl(240 5% 7% / 0.7)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+            style={{ background: "hsl(var(--glass-surface) / 0.7)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
           >
             <div className="text-lg font-extralight text-foreground/100">{s.value}</div>
             <div className="text-[9px] text-muted-foreground/100 mt-1 tracking-wider uppercase">{s.label}</div>
@@ -343,7 +343,7 @@ export const ResultCanvas = ({ onClose, scenarioKey }: ResultCanvasProps) => {
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2 }}
         className="px-4 py-3 rounded-xl mb-4"
-        style={{ background: "hsl(240 5% 7% / 0.65)", border: "1px solid hsl(0 0% 100% / 0.1)" }}
+        style={{ background: "hsl(var(--glass-surface) / 0.65)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
       >
         <div className="text-[9px] text-muted-foreground/100 tracking-wider uppercase mb-2">AUDIT TRAIL</div>
         <div className="space-y-1">
@@ -367,9 +367,9 @@ export const ResultCanvas = ({ onClose, scenarioKey }: ResultCanvasProps) => {
 /* ── Shell ── */
 export const CanvasShell = ({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) => (
   <div className="h-full flex flex-col rounded-2xl p-6" style={{
-    background: "hsl(240 5% 6% / 0.75)",
+    background: "hsl(var(--glass-surface) / 0.75)",
     backdropFilter: "blur(40px) saturate(1.1)",
-    border: "1px solid hsl(0 0% 100% / 0.12)",
+    border: "1px solid hsl(var(--glass-edge) / 0.12)",
     boxShadow: "0 0 80px hsl(210 100% 66% / 0.03), 0 30px 60px -20px hsl(0 0% 0% / 0.65)",
   }}>
     <div className="flex items-center justify-between mb-6">

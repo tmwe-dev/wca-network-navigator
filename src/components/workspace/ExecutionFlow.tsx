@@ -25,9 +25,9 @@ const ExecutionFlow = ({ visible, steps, progress }: ExecutionFlowProps) => (
         transition={{ duration: 0.5, ease }}
         className="rounded-2xl p-5 mt-4"
         style={{
-          background: "hsl(240 5% 6% / 0.75)",
+          background: "hsl(var(--glass-surface) / 0.75)",
           backdropFilter: "blur(40px)",
-          border: "1px solid hsl(0 0% 100% / 0.1)",
+          border: "1px solid hsl(var(--glass-edge) / 0.12)",
         }}
       >
         {progress !== undefined && (

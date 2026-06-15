@@ -356,7 +356,7 @@ export default function ComposerCanvas({
       {isBatch && currentDraft && (
         <div
           className="flex items-center justify-between rounded-xl px-3 py-2"
-          style={{ background: "hsl(240 5% 10% / 0.5)", border: "1px solid hsl(0 0% 100% / 0.06)" }}
+          style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
         >
           <button
             type="button"
@@ -400,7 +400,7 @@ export default function ComposerCanvas({
         </label>
         <div className="flex items-center gap-2">
           <div className="flex-1 flex items-center gap-1.5 flex-wrap rounded-xl px-3 py-2 min-h-[40px]"
-            style={{ background: "hsl(240 5% 10% / 0.5)", border: "1px solid hsl(0 0% 100% / 0.06)" }}
+            style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
           >
             {composer.recipients.map((r) => (
               <motion.span
@@ -451,7 +451,7 @@ export default function ComposerCanvas({
           onChange={(e) => composer.setSubject(e.target.value)}
           placeholder="Oggetto dell'email"
           className="w-full rounded-xl px-3 py-2.5 text-[12px] text-foreground outline-none placeholder:text-muted-foreground/40"
-          style={{ background: "hsl(240 5% 10% / 0.5)", border: "1px solid hsl(0 0% 100% / 0.06)" }}
+          style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
         />
       </div>
 
@@ -474,7 +474,7 @@ export default function ComposerCanvas({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="absolute inset-0 flex items-center justify-center rounded-xl"
-                style={{ background: "hsl(240 5% 6% / 0.8)", backdropFilter: "blur(8px)" }}
+                style={{ background: "hsl(var(--glass-surface) / 0.8)", backdropFilter: "blur(8px)" }}
               >
                 <div className="flex items-center gap-2 text-primary/80">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -488,7 +488,7 @@ export default function ComposerCanvas({
 
       {/* Toolbar */}
       <div className="flex items-center justify-between pt-2"
-        style={{ borderTop: "1px solid hsl(0 0% 100% / 0.04)" }}
+        style={{ borderTop: "1px solid hsl(var(--glass-edge) / 0.12)" }}
       >
         <motion.button
           whileHover={{ scale: 1.02 }}
@@ -513,7 +513,7 @@ export default function ComposerCanvas({
             onClick={() => setShowPreview(true)}
             disabled={isGenerating || isSending}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-light transition-all duration-300 disabled:opacity-50 text-muted-foreground hover:text-foreground"
-            style={{ background: "hsl(240 5% 12% / 0.4)", border: "1px solid hsl(0 0% 100% / 0.08)" }}
+            style={{ background: "hsl(var(--glass-surface) / 0.4)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
             title="Anteprima email come arriverà al destinatario"
           >
             <Eye className="w-3.5 h-3.5" />

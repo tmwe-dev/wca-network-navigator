@@ -55,8 +55,8 @@ export default function EmailPipelineBadge({ pipeline, summary }: Props): React.
     <div
       className="rounded-xl px-3 py-2 space-y-1.5"
       style={{
-        background: "hsl(240 5% 10% / 0.5)",
-        border: "1px solid hsl(0 0% 100% / 0.06)",
+        background: "hsl(var(--glass-surface) / 0.5)",
+        border: "1px solid hsl(var(--glass-edge) / 0.12)",
       }}
     >
       <div className="flex items-center justify-between gap-2">
