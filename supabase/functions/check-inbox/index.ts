@@ -198,21 +198,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Re-sync flag \Seen sulle mail locali ancora unread (best-effort) ──
-    // Risolve "letta su un altro client" senza ri-scaricare nulla.
-    try {
-      const resync = await resyncUnreadFlags(supabase, imapExec, userId, activeMailboxId);
-      if (resync.checked > 0) {
-        console.log(JSON.stringify({
-          fn: "check-inbox",
-          step: "flag_resync",
-          checked: resync.checked,
-          marked_read: resync.markedRead,
-        }));
-      }
-    } catch (resyncErr: unknown) {
-      console.warn("flag_resync skipped:", extractErrorMessage(resyncErr));
-    }
+    // ── Flag \Seen re-sync DISABILITATO (2026-06-15) ──
+    // Per decisione esplicita dell'owner: le mail NON devono essere marcate
+    // come lette automaticamente durante il download. Una mail diventa "letta"
+    // solo dopo visualizzazione in-app o su richiesta esplicita via prompt.
+    // Il re-sync server-driven (\Seen su altro client) marcava read_at senza
+    // che l'utente aprisse la mail nel nostro sistema → comportamento indesiderato.
+    // (resyncUnreadFlags resta disponibile ma non viene più invocato.)
 
     try {
       client.disconnect();
