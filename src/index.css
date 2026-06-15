@@ -59,6 +59,10 @@ html, body {
     --glass-bg: 0 0% 100% / 0.7;
     --glass-border: 0 0% 100% / 0.3;
     --glass-shadow: 220 25% 10% / 0.1;
+    /* Theme-aware glass surfaces (pannelli/canvas/command bar).
+     * In light: superficie chiara, bordo scuro tenue. In dark: viceversa. */
+    --glass-surface: 0 0% 100%;
+    --glass-edge: 220 13% 18%;
     --gradient-start: 217 91% 60%;
     --gradient-mid: 213 94% 68%;
     --gradient-end: 199 89% 70%;
