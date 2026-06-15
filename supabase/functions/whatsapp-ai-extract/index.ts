@@ -284,34 +284,37 @@ REGOLE:
     }
 
     if (!aiResponse.ok) {
-      // F6 — retry once on 429
-      if (aiResponse.status === 429 && !retried) {
-        retried = true;
-        const retryAfter = parseInt(aiResponse.headers.get("Retry-After") || "3", 10);
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
-        const retryController = new AbortController();
-        const retryTimer = setTimeout(() => retryController.abort(), 30000);
-        try {
-          const retryResponse = await aiFetch(gatewayBody, { signal: retryController.signal });
-          clearTimeout(retryTimer);
-          if (retryResponse.ok) {
+      // F6 — retry up to 3 times on 429 with exponential backoff; degrade
+      // gracefully (HTTP 200 + fallback payload) so the client never crashes.
+      if (aiResponse.status === 429) {
+        const MAX_RETRIES = 3;
+        for (let attempt = 1; attempt <= MAX_RETRIES && aiResponse.status === 429; attempt++) {
+          const retryAfter = parseInt(aiResponse.headers.get("Retry-After") || "0", 10);
+          const delayMs = retryAfter > 0 ? retryAfter * 1000 : Math.min(1000 * 2 ** (attempt - 1), 8000);
+          await new Promise((r) => setTimeout(r, delayMs));
+          const retryController = new AbortController();
+          const retryTimer = setTimeout(() => retryController.abort(), 30000);
+          try {
+            const retryResponse = await aiFetch(gatewayBody, { signal: retryController.signal });
+            clearTimeout(retryTimer);
+            if (retryResponse.ok) {
+              aiResponse = retryResponse;
+              break;
+            }
+            if (retryResponse.status === 402) return aiCreditsFallbackResponse(dynCors, mode);
             aiResponse = retryResponse;
-          } else if (retryResponse.status === 402) {
-            return aiCreditsFallbackResponse(dynCors, mode);
-          } else {
-            return new Response(
-              JSON.stringify({ error: "Rate limit exceeded after retry" }),
-              { status: 429, headers: jsonHeaders(dynCors) }
-            );
+          } catch (retryErr) {
+            clearTimeout(retryTimer);
+            if ((retryErr as Error).name === "AbortError") break;
           }
-        } catch (retryErr) {
-          clearTimeout(retryTimer);
-          return new Response(
-            JSON.stringify({ error: "Rate limit retry failed: " + ((retryErr as Error).message || "unknown") }),
-            { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
-          );
         }
-      } else {
+        if (!aiResponse.ok) {
+          // Still rate-limited after retries → soft fallback, no client crash.
+          return aiRateLimitFallbackResponse(dynCors, mode);
+        }
+      }
+
+      if (!aiResponse.ok) {
         const errText = await aiResponse.text();
         console.error("AI gateway error:", aiResponse.status, errText);
 
