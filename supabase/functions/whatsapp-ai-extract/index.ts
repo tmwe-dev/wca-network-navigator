@@ -243,7 +243,6 @@ REGOLE:
     // F6 — retry once on 429 with Retry-After backoff
     const aiController = new AbortController();
     const aiTimeout = setTimeout(() => aiController.abort(), 30000);
-    let retried = false;
 
     const selectedModel = mode === "learnDom" ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
     const gatewayBody = {
