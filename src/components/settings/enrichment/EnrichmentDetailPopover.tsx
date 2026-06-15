@@ -143,7 +143,7 @@ export function EnrichmentDetailPopover({ row, kind, children }: Props): React.R
                   </div>
                 )}
                 {row.websiteExcerpt.scraped_at && (
-                  <div className="text-[11px] text-foreground/70 pt-1 border-t border-border">
+                  <div className="text-[11px] text-foreground pt-1 border-t border-border">
                     Letto il {formatDate(row.websiteExcerpt.scraped_at)}
                   </div>
                 )}

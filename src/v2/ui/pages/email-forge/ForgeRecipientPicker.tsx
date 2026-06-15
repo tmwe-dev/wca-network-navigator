@@ -281,7 +281,7 @@ function ResultRow({ title, subtitle, meta, flag, onClick }: { title: string; su
         <div className="min-w-0 flex-1">
           <div className="text-xs font-medium truncate">{title}</div>
           {subtitle && <div className="text-xs text-foreground truncate">{subtitle}</div>}
-          {meta && <div className="text-xs text-foreground/80 truncate">{meta}</div>}
+          {meta && <div className="text-xs text-foreground truncate">{meta}</div>}
         </div>
       </div>
     </button>
