@@ -74,7 +74,7 @@ export default function CommandThread({
                 <motion.div
                   className={`max-w-[85%] relative ${msg.role === "user" ? "px-5 py-4 rounded-2xl rounded-br-lg" : "px-5 py-4 rounded-2xl rounded-bl-lg"}`}
                   style={{
-                    background: msg.role === "assistant" ? "hsl(240 5% 6% / 0.7)" : "hsl(240 5% 8% / 0.65)",
+                    background: msg.role === "assistant" ? "hsl(var(--glass-surface) / 0.7)" : "hsl(var(--glass-surface) / 0.65)",
                     border: `1px solid hsl(0 0% 100% / ${msg.role === "assistant" ? "0.16" : "0.12"})`,
                     backdropFilter: "blur(40px)",
                     boxShadow: msg.role === "assistant" ? "0 0 60px hsl(210 100% 66% / 0.1), 0 20px 50px -20px hsl(0 0% 0% / 0.94)" : "none",

@@ -17,7 +17,7 @@ export function FinderApiCanvas({ results, kbProposal, onSaveKb, onDismissKb, on
   return (
     <aside
       className="w-1/2 border-l border-border/30 overflow-y-auto p-6 space-y-6 relative z-10"
-      style={{ background: "hsl(240 5% 4% / 0.6)", backdropFilter: "blur(20px)" }}
+      style={{ background: "hsl(var(--glass-surface) / 0.6)", backdropFilter: "blur(20px)" }}
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-primary/80">Risultati API</h2>

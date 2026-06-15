@@ -116,8 +116,8 @@ export function CommandHistory({
                   style={{
                     background:
                       msg.role === "assistant"
-                        ? "hsl(240 5% 6% / 0.7)"
-                        : "hsl(240 5% 8% / 0.65)",
+                        ? "hsl(var(--glass-surface) / 0.7)"
+                        : "hsl(var(--glass-surface) / 0.65)",
                     border: `1px solid hsl(0 0% 100% / ${
                       msg.role === "assistant" ? "0.16" : "0.12"
                     })`,

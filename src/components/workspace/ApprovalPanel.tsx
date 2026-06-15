@@ -30,7 +30,7 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
         transition={{ duration: 0.5, ease }}
         className="rounded-2xl p-5 mt-4"
         style={{
-          background: "hsl(240 5% 6% / 0.7)",
+          background: "hsl(var(--glass-surface) / 0.7)",
           backdropFilter: "blur(40px)",
           border: "1px solid hsl(152 60% 45% / 0.12)",
           boxShadow: "0 0 40px hsl(152 60% 45% / 0.03)",
