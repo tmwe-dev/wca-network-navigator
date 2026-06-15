@@ -259,7 +259,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         };
         return (
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
-          <div className="text-xs font-semibold uppercase text-foreground/80">Oracle — Stato Arricchimento</div>
+          <div className="text-xs font-semibold uppercase text-foreground">Oracle — Stato Arricchimento</div>
           <div className="space-y-1.5">
             {enr.last_enrichment_at ? (
               (() => {
@@ -270,7 +270,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                   <>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs text-foreground/70">
+                      <span className="text-xs text-foreground">
                         Aggiornato {daysSince}gg fa ({lastEnrichDate.toLocaleDateString("it-IT")})
                       </span>
                       {isStale && (
@@ -286,7 +286,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
             {enr.sherlock_level != null && (
               <div className="flex items-center gap-2">
                 <Search className="w-3.5 h-3.5 text-primary" />
-                <span className="text-xs text-foreground/70">
+                <span className="text-xs text-foreground">
                   Sherlock Livello {String(enr.sherlock_level)}
                 </span>
               </div>
@@ -361,7 +361,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                       )}
                     </button>
                     {!waAvailable && (
-                      <span className="text-[9px] text-muted-foreground/50">offline</span>
+                      <span className="text-[9px] text-muted-foreground">offline</span>
                     )}
                   </div>
                 )}
@@ -433,7 +433,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <p className="text-sm leading-relaxed whitespace-pre-line mt-1 text-foreground/80">
+            <p className="text-sm leading-relaxed whitespace-pre-line mt-1 text-foreground">
               {partner.profile_description}
             </p>
           </CollapsibleContent>

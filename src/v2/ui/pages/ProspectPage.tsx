@@ -179,7 +179,7 @@ export function ProspectPage() {
                   ) : selectedAteco.length === 0 ? (
                     <div className={`h-full flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
                       <div className="text-center space-y-3">
-                        <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-primary-foreground/10" : "text-slate-200"}`} />
+                        <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-primary-foreground" : "text-slate-200"}`} />
                         <p className={`text-lg ${th.h2}`}>Seleziona un codice ATECO</p>
                         <p className={`text-sm ${th.sub}`}>Clicca su uno o più codici ATECO per visualizzare i prospect associati</p>
                         <p className={`text-xs ${th.dim}`}>oppure usa la ricerca per nome / P.IVA</p>

@@ -135,7 +135,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
 
   if (!activity) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground/60">
+      <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
         <MailX className="w-10 h-10 mb-3 opacity-30" />
         <p className="text-sm">Seleziona un'attività a sinistra</p>
         <p className="text-[11px] mt-1 opacity-70">
@@ -265,8 +265,8 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
                 Anteprima email
                 {senderEmail && (
-                  <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground/70">
-                    da <span className="text-foreground/80">{senderEmail}</span>
+                  <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground">
+                    da <span className="text-foreground">{senderEmail}</span>
                   </span>
                 )}
               </p>
@@ -277,12 +277,12 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
                   <div className="h-3 w-2/3 animate-pulse bg-muted/40 rounded" />
                 </div>
               ) : inboundPreview ? (
-                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed line-clamp-[14]">
+                <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed line-clamp-[14]">
                   {inboundPreview.slice(0, 1200)}
                   {inboundPreview.length > 1200 && "…"}
                 </p>
               ) : description ? (
-                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                   {description}
                 </p>
               ) : (
@@ -296,7 +296,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
                 Contesto
               </p>
-              <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+              <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                 {description}
               </p>
             </section>

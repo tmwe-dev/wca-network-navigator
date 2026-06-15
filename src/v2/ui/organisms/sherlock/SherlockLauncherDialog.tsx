@@ -140,7 +140,7 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
                 >
                   {isRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
                   {meta.label}
-                  <span className="text-[10px] text-foreground/60 ml-0.5">{meta.eta}</span>
+                  <span className="text-[10px] text-foreground ml-0.5">{meta.eta}</span>
                 </Button>
               );
             })}
@@ -159,7 +159,7 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-1">
               {sherlock.stepResults.length === 0 && (
-                <div className="text-xs text-foreground/70 italic px-2 py-8 text-center">
+                <div className="text-xs text-foreground italic px-2 py-8 text-center">
                   Scegli un livello in alto per avviare l&apos;indagine.
                   <div className="mt-1 text-[10px] text-muted-foreground">
                     Scout = rapido/gratis · Detective = standard · Sherlock = profondo
@@ -192,7 +192,7 @@ function StepLine({ result }: { result: SherlockStepResult }) {
         <div className="font-medium truncate text-foreground">
           {result.order}. {result.label}
         </div>
-        <div className="text-[10px] text-foreground/60 truncate">
+        <div className="text-[10px] text-foreground truncate">
           {result.channel}
           {result.duration_ms ? ` · ${(result.duration_ms / 1000).toFixed(1)}s` : ""}
           {result.cache_hit ? " · cache" : ""}

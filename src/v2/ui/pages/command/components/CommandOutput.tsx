@@ -100,7 +100,7 @@ export function CommandOutput({
                   </h3>
                   <button
                     onClick={onClose}
-                    className="text-muted-foreground/60 hover:text-foreground text-[10px]"
+                    className="text-muted-foreground hover:text-foreground text-[10px]"
                   >
                     ✕
                   </button>
@@ -148,20 +148,20 @@ export function CommandOutput({
                   </div>
                   <button
                     onClick={onClose}
-                    className="text-muted-foreground/60 hover:text-foreground text-[10px]"
+                    className="text-muted-foreground hover:text-foreground text-[10px]"
                   >
                     ✕
                   </button>
                 </div>
                 {liveResult.meta?.sourceLabel && (
-                  <div className="text-[9px] text-muted-foreground/60 font-mono mb-3">
+                  <div className="text-[9px] text-muted-foreground font-mono mb-3">
                     {liveResult.meta.sourceLabel} · {liveResult.meta.count}{" "}
                     record
                   </div>
                 )}
                 {liveResult.events.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <p className="text-[12px] text-muted-foreground/60 font-light">
+                    <p className="text-[12px] text-muted-foreground font-light">
                       Nessuna attività registrata negli ultimi 7gg
                     </p>
                   </div>
@@ -183,7 +183,7 @@ export function CommandOutput({
                   </h3>
                   <button
                     onClick={onClose}
-                    className="text-muted-foreground/60 hover:text-foreground text-[10px]"
+                    className="text-muted-foreground hover:text-foreground text-[10px]"
                   >
                     ✕
                   </button>
@@ -191,7 +191,7 @@ export function CommandOutput({
                 {liveResult.nodes.length <= 1 &&
                 liveResult.nodes[0]?.type === "end" ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <p className="text-[12px] text-muted-foreground/60 font-light">
+                    <p className="text-[12px] text-muted-foreground font-light">
                       Nessuna campagna in corso
                     </p>
                   </div>

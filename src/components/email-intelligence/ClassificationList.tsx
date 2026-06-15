@@ -45,7 +45,7 @@ export function ClassificationList({ classifications, onItemClick, isLoading, se
     return (
       <div className="flex-1 flex items-center justify-center bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
         <div className="text-center space-y-3 p-8">
-          <Inbox className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+          <Inbox className="h-12 w-12 text-muted-foreground mx-auto" />
           <h3 className="text-lg font-semibold">Nessuna email classificata</h3>
           <p className="text-sm text-muted-foreground max-w-md">
             Le classificazioni appariranno qui dopo la sincronizzazione email.

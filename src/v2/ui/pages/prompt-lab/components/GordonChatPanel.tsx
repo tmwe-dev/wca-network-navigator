@@ -293,7 +293,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           <div className="text-[11px] text-muted-foreground text-center py-6 px-3">
             Chiedi a Gordon il <em>perché</em> di questa proposta, oppure correggi un dato sbagliato:
             <br />
-            <span className="text-foreground/60">"la sede è Peschiera, non Segrate, rigenera"</span>
+            <span className="text-foreground">"la sede è Peschiera, non Segrate, rigenera"</span>
           </div>
         )}
         {messages.map((m, i) => (

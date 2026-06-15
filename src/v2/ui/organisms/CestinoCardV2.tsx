@@ -121,7 +121,7 @@ export function CestinoCardV2({
       <div className="px-4 pb-2 flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap border-b">
         <span className="flex items-center gap-1">
           <Bot className="h-3 w-3" />
-          <span className="font-medium text-foreground/80">{item.agentName ?? "Operatore"}</span>
+          <span className="font-medium text-foreground">{item.agentName ?? "Operatore"}</span>
         </span>
         <span className="opacity-40">·</span>
         <span className="flex items-center gap-1">

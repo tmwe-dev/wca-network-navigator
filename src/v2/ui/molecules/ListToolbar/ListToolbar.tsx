@@ -160,7 +160,7 @@ export function ListToolbar<K extends string = string>({
         )}
 
         <div className="relative flex-1 min-w-[180px] max-w-[320px]">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/60" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => onSearchChange?.(e.target.value)}

@@ -127,7 +127,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
               {value.email && (
                 <div className="text-muted-foreground truncate text-[10px]">{value.email}</div>
               )}
-              <div className="flex items-center gap-1.5 text-xs text-foreground/70 mt-1">
+              <div className="flex items-center gap-1.5 text-xs text-foreground mt-1">
                 <SourceBadge source={value.source} />
                 {value.countryCode && (
                   <span>{getCountryFlag(value.countryCode)} {value.countryCode}</span>
@@ -280,8 +280,8 @@ function ResultRow({ title, subtitle, meta, flag, onClick }: { title: string; su
         {flag && <span className="text-sm leading-none mt-0.5">{flag}</span>}
         <div className="min-w-0 flex-1">
           <div className="text-xs font-medium truncate">{title}</div>
-          {subtitle && <div className="text-xs text-foreground/70 truncate">{subtitle}</div>}
-          {meta && <div className="text-xs text-foreground/70/80 truncate">{meta}</div>}
+          {subtitle && <div className="text-xs text-foreground truncate">{subtitle}</div>}
+          {meta && <div className="text-xs text-foreground/80 truncate">{meta}</div>}
         </div>
       </div>
     </button>
@@ -290,7 +290,7 @@ function ResultRow({ title, subtitle, meta, flag, onClick }: { title: string; su
 
 function LoadingRow() {
   return (
-    <div className="flex items-center justify-center py-4 text-xs text-foreground/70 gap-1.5">
+    <div className="flex items-center justify-center py-4 text-xs text-foreground gap-1.5">
       <Loader2 className="w-3 h-3 animate-spin" /> Caricamento…
     </div>
   );
@@ -298,7 +298,7 @@ function LoadingRow() {
 
 function EmptyRow() {
   return (
-    <div className="text-center py-4 text-xs text-foreground/70">
+    <div className="text-center py-4 text-xs text-foreground">
       Nessun risultato — affina la ricerca.
     </div>
   );

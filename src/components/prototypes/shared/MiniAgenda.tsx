@@ -40,7 +40,7 @@ export function MiniAgenda({ className }: { className?: string }) {
           return (
             <div key={a.id} className="flex items-center gap-2 text-xs">
               <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="truncate flex-1 text-foreground/80">{a.title}</span>
+              <span className="truncate flex-1 text-foreground">{a.title}</span>
               <span className="text-[10px] text-muted-foreground shrink-0">{dateLabel}</span>
             </div>
           );

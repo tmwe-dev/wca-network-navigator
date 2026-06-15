@@ -168,7 +168,7 @@ function ActionIcon({ icon: Icon, label, tooltip, active, activeName, count, col
         <p className="text-[10px] text-muted-foreground font-medium">{label}</p>
         {activeName && <p className="text-xs font-medium text-foreground truncate">{activeName}</p>}
         {count !== undefined && count > 0 && <p className="text-xs font-medium text-foreground">{count}</p>}
-        {!active && !activeName && (count === undefined || count === 0) && <p className="text-[10px] text-muted-foreground/60">Non impostato</p>}
+        {!active && !activeName && (count === undefined || count === 0) && <p className="text-[10px] text-muted-foreground">Non impostato</p>}
       </div>
       {active && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
     </button>

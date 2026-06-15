@@ -131,7 +131,7 @@ export function FindingsView({ findings, suggestedNextUrl, onInvestigateUrl }: P
             >
               <div className="text-muted-foreground mt-0.5 shrink-0">{iconFor(k)}</div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wider text-foreground/80 mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-foreground mb-0.5">
                   {humanizeKey(k)}
                 </div>
                 <div className="text-xs break-words">{renderValue(v)}</div>
@@ -152,7 +152,7 @@ export function FindingsView({ findings, suggestedNextUrl, onInvestigateUrl }: P
           {showJson ? "Nascondi JSON" : "Vedi JSON grezzo"}
         </Button>
         {showJson && (
-          <pre className="mt-2 text-[10px] font-mono whitespace-pre-wrap break-words bg-muted/30 rounded-md p-3 text-foreground/80 max-h-72 overflow-auto">
+          <pre className="mt-2 text-[10px] font-mono whitespace-pre-wrap break-words bg-muted/30 rounded-md p-3 text-foreground max-h-72 overflow-auto">
             {JSON.stringify(findings, null, 2)}
           </pre>
         )}

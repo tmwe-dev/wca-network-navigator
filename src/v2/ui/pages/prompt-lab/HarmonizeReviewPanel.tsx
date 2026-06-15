@@ -454,7 +454,7 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                       <CollapsibleContent className="mt-2 space-y-2">
                         <div>
                           <div className="text-xs font-semibold text-muted-foreground">Perché:</div>
-                          <p className="text-sm text-foreground/90">{p.reasoning}</p>
+                          <p className="text-sm text-foreground">{p.reasoning}</p>
                         </div>
                         {(p.current_location || p.proposed_location) && (
                           <div className="text-xs grid grid-cols-2 gap-2">

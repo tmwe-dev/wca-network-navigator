@@ -18,14 +18,14 @@ export function FunnemailTab(): React.ReactElement {
           <Construction className="h-4 w-4 text-amber-400" />
           <CardTitle className="text-sm">Round B — in arrivo</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-foreground/80">
+        <CardContent className="space-y-2 text-sm text-foreground">
           <p>
             Qui potrai compilare un'email finta (mittente, oggetto, body) e vedere il "viaggio"
             stage-by-stage: injection guard, classificazione AI, scout mittente, auto-route, policy
             engine, triage. Ogni step mostrerà prompt usato, output AI, durata e azioni proposte —
             senza scrivere niente nel database reale.
           </p>
-          <p className="text-foreground/65">
+          <p className="text-foreground">
             Richiede una nuova edge <code className="rounded bg-muted px-1">simulate-funnemail-classify</code>
             (read-only wrapper di <code className="rounded bg-muted px-1">classify-inbound-message</code>):
             la consegno nel prossimo round.
@@ -37,7 +37,7 @@ export function FunnemailTab(): React.ReactElement {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Nel frattempo: Pipeline Traces (live)</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-foreground/75">
+        <CardContent className="space-y-2 text-sm text-foreground">
           <p>
             Le pipeline reali di smistamento Funnemail sono già tracciate stage-by-stage.
             Vai alla pagina Pipeline Traces e filtra per <code className="rounded bg-muted px-1">classify-inbound-message</code>

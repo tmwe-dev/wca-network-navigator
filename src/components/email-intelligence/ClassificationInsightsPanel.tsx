@@ -111,7 +111,7 @@ export function ClassificationInsightsPanel() {
                     </button>
                   )}
                   {isOpen && ins.reasoning && (
-                    <div className="text-xs text-foreground/80 bg-muted/40 rounded p-2 whitespace-pre-wrap">
+                    <div className="text-xs text-foreground bg-muted/40 rounded p-2 whitespace-pre-wrap">
                       {ins.reasoning}
                     </div>
                   )}

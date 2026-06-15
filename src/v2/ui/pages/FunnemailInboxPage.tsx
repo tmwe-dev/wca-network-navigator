@@ -51,7 +51,7 @@ export default function FunnemailInboxPage(): React.ReactElement {
       {activeMailbox ? (
         <div className="flex-shrink-0 border-b border-border bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground">
           Casella attiva: <span className="font-medium text-foreground">{activeMailbox.label}</span>
-          <span className="ml-2 text-muted-foreground/70">
+          <span className="ml-2 text-muted-foreground">
             · l'AI smista solo le mail nuove non lette (le storiche restano importate ma non analizzate)
           </span>
         </div>

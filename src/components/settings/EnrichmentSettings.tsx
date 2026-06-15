@@ -107,7 +107,7 @@ export default function EnrichmentSettings() {
         onDeepSearch={d.openDeepSearchDialog}
       />
 
-      <p className="text-xs text-foreground/60">
+      <p className="text-xs text-foreground">
         Loghi via Clearbit/Google Favicon · LinkedIn via Partner Connect · Deep Search configurabile per record
       </p>
 

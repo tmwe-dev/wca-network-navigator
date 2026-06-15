@@ -37,7 +37,7 @@ export default function CommandComposer({
           <motion.button
             onClick={onTtsMuteToggle}
             whileTap={{ scale: 0.9 }}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${ttsMuted ? "text-muted-foreground/100 hover:text-foreground/100" : "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]"}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${ttsMuted ? "text-muted-foreground hover:text-foreground" : "bg-[hsl(270_60%_60%)]/15 text-[hsl(270_60%_70%)]"}`}
             title={ttsMuted ? "Attiva voce AI" : "Disattiva voce AI"}
           >
             {ttsMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -46,7 +46,7 @@ export default function CommandComposer({
             onClick={onVoiceToggle}
             whileTap={{ scale: 0.9 }}
             disabled={!voiceSupported}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceListening ? "bg-primary/20 text-primary animate-pulse" : "text-muted-foreground/100 hover:text-foreground/100"} ${!voiceSupported ? "opacity-30 cursor-not-allowed" : ""}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceListening ? "bg-primary/20 text-primary animate-pulse" : "text-muted-foreground hover:text-foreground"} ${!voiceSupported ? "opacity-30 cursor-not-allowed" : ""}`}
             title={voiceSupported ? (voiceListening ? "Stop registrazione" : "Registrazione vocale") : "Voce non supportata da questo browser"}
           >
             {voiceListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -59,13 +59,13 @@ export default function CommandComposer({
             onKeyDown={(e) => e.key === "Enter" && onSend()}
             onFocus={onFocus}
             onBlur={onBlur}
-            className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/80 font-light text-foreground/100"
+            className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground font-light text-foreground"
           />
           {onToggleMissionMode && (
             <motion.button
               onClick={onToggleMissionMode}
               whileTap={{ scale: 0.9 }}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${missionMode ? "bg-primary/20 text-primary" : "text-muted-foreground/100 hover:text-foreground/100"}`}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${missionMode ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"}`}
               title={missionMode ? "Modalità Missione attiva" : "Attiva Modalità Missione"}
             >
               <Rocket className="w-4 h-4" />
@@ -79,7 +79,7 @@ export default function CommandComposer({
           >
             <Wand2 className="w-4 h-4" />
           </motion.button>
-          <motion.button onClick={onSend} disabled={!input.trim()} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary/92 hover:bg-primary/15 hover:text-primary/96 transition-all duration-500 disabled:opacity-20">
+          <motion.button onClick={onSend} disabled={!input.trim()} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary transition-all duration-500 disabled:opacity-20">
             <Send className="w-3.5 h-3.5" />
           </motion.button>
         </motion.div>

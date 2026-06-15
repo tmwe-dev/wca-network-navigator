@@ -31,7 +31,7 @@ export function Terminal({ logs }: { logs: LogEntry[] }) {
       )}
       {logs.map((l, i) => (
         <div key={i} className={colorMap[l.type]}>
-          <span className="text-muted-foreground/60">[{l.ts}]</span> {l.msg}
+          <span className="text-muted-foreground">[{l.ts}]</span> {l.msg}
         </div>
       ))}
       <div ref={bottomRef} />

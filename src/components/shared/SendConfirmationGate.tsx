@@ -179,7 +179,7 @@ export function SendConfirmationGate({
             <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Anteprima</label>
             <ScrollArea className="max-h-[200px] rounded-lg border border-border/30 bg-card p-3">
               <div
-                className="text-sm leading-relaxed text-foreground/80 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline"
+                className="text-sm leading-relaxed text-foreground [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_a]:text-primary [&_a]:underline"
                 dangerouslySetInnerHTML={{ __html: sanitized }}
               />
             </ScrollArea>

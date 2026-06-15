@@ -57,9 +57,9 @@ export function KnowledgeBaseTab({ categories }: Props) {
                   <span className="font-medium text-xs truncate">{e.title}</span>
                   <Badge variant="outline" className="text-[9px]">{e.category}</Badge>
                   <Badge variant="outline" className="text-[9px]">P{e.priority}</Badge>
-                  <span className="text-xs text-foreground/70">{e.content.length.toLocaleString()} char</span>
+                  <span className="text-xs text-foreground">{e.content.length.toLocaleString()} char</span>
                 </div>
-                <div className="text-xs text-foreground/70 line-clamp-2 mt-1">{e.content}</div>
+                <div className="text-xs text-foreground line-clamp-2 mt-1">{e.content}</div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <Switch

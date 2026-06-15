@@ -64,7 +64,7 @@ export default function AgentTimeline({ state, onStop, onApprove, onReject, auto
             {autonomousMode ? "Auto" : "Step"}
           </button>
           {state.running && (
-            <button onClick={onStop} className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1">
+            <button onClick={onStop} className="text-xs text-destructive hover:text-destructive flex items-center gap-1">
               <Square className="w-3 h-3" /> Stop
             </button>
           )}
@@ -80,7 +80,7 @@ export default function AgentTimeline({ state, onStop, onApprove, onReject, auto
           >
             <span className="flex-shrink-0 w-5 text-center">{TOOL_ICONS[step.toolName] ?? "🔧"}</span>
             <div className="flex-1 min-w-0">
-              <span className="font-medium text-foreground/90">{step.toolName}</span>
+              <span className="font-medium text-foreground">{step.toolName}</span>
               {step.args && Object.keys(step.args).length > 0 && (
                 <span className="text-muted-foreground ml-1 truncate block">
                   {JSON.stringify(step.args).slice(0, 60)}
@@ -143,7 +143,7 @@ export default function AgentTimeline({ state, onStop, onApprove, onReject, auto
       {state.finished && state.finalAnswer && (
         <div className="px-4 py-3 border-t border-border/20">
           <p className="text-xs text-muted-foreground mb-1">Risultato:</p>
-          <p className="text-sm text-foreground/90">{state.finalAnswer.slice(0, 300)}</p>
+          <p className="text-sm text-foreground">{state.finalAnswer.slice(0, 300)}</p>
         </div>
       )}
 

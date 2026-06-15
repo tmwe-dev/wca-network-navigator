@@ -274,7 +274,7 @@ export function CompanyCard({
         recency.tone === "ok" && "text-success border-success/30",
         recency.tone === "warn" && "text-warning border-warning/30",
         recency.tone === "alert" && "text-destructive border-destructive/30",
-        recency.tone === "muted" && "text-muted-foreground/70 border-border/50"
+        recency.tone === "muted" && "text-muted-foreground border-border/50"
       )}
       title={lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"}
     >
@@ -289,13 +289,13 @@ export function CompanyCard({
       compact ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]"
     )}>
       <div className="min-w-0">
-        <span className="block text-[10px] font-semibold leading-none text-muted-foreground/75">Contatto</span>
-        <span className="mt-1 block truncate text-[13px] font-semibold leading-tight text-foreground/90">
+        <span className="block text-[10px] font-semibold leading-none text-muted-foreground">Contatto</span>
+        <span className="mt-1 block truncate text-[13px] font-semibold leading-tight text-foreground">
           {primaryContact.name}
         </span>
       </div>
       <div className="min-w-0">
-        <span className="block text-[10px] font-semibold leading-none text-muted-foreground/75">Ruolo</span>
+        <span className="block text-[10px] font-semibold leading-none text-muted-foreground">Ruolo</span>
         <span className="mt-1 block truncate text-[12px] leading-tight text-muted-foreground">
           {primaryContact.role || "—"}
         </span>
@@ -307,7 +307,7 @@ export function CompanyCard({
       )}
     </div>
   ) : (
-    <div className="rounded-md border border-border/45 bg-muted/15 px-2.5 py-2 text-[12px] italic text-muted-foreground/60">
+    <div className="rounded-md border border-border/45 bg-muted/15 px-2.5 py-2 text-[12px] italic text-muted-foreground">
       {contactsCount === 0 ? "Nessun referente" : `${contactsCount} contatt${contactsCount === 1 ? "o" : "i"}`}
     </div>
   );
@@ -349,14 +349,14 @@ export function CompanyCard({
               e.stopPropagation();
               onCityClick(city);
             }}
-            className={cn(CHIP_BASE, "max-w-[180px] border-border/55 bg-muted/35 text-foreground/80 hover:border-primary/45 hover:text-primary")}
+            className={cn(CHIP_BASE, "max-w-[180px] border-border/55 bg-muted/35 text-foreground hover:border-primary/45 hover:text-primary")}
             title={`Filtra per città ${city}`}
           >
             <MapPin className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{city}</span>
           </button>
         ) : (
-          <span className={cn(CHIP_BASE, "max-w-[180px] border-border/55 bg-muted/35 text-foreground/80")}>
+          <span className={cn(CHIP_BASE, "max-w-[180px] border-border/55 bg-muted/35 text-foreground")}>
             <MapPin className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{city}</span>
           </span>

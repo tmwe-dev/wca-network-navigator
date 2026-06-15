@@ -58,7 +58,7 @@ export default function CommandThread({
                   {[0, 1, 2].map((dot) => (
                     <motion.div key={dot} className="w-1.5 h-1.5 rounded-full bg-primary/95" animate={{ opacity: [0.2, 0.7, 0.2], scale: [0.8, 1.1, 0.8] }} transition={{ duration: 1.2, repeat: Infinity, delay: dot * 0.2 }} />
                   ))}
-                  <span className="text-[11px] text-muted-foreground/100 ml-2 font-light">Sto ragionando...</span>
+                  <span className="text-[11px] text-muted-foreground ml-2 font-light">Sto ragionando...</span>
                 </div>
               </motion.div>
             ) : (
@@ -81,14 +81,14 @@ export default function CommandThread({
                   }}
                 >
                   {msg.agentName && (
-                    <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} className="text-[10px] text-primary/100 font-mono mb-2.5 tracking-[0.2em] uppercase">
+                    <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} className="text-[10px] text-primary font-mono mb-2.5 tracking-[0.2em] uppercase">
                       {msg.agentName}
                     </motion.div>
                   )}
-                  <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground/100">
+                  <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground">
                     {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
                       part.startsWith("**") && part.endsWith("**")
-                        ? <span key={i} className="text-primary/92 font-mono text-[12px]">{part.slice(2, -2)}</span>
+                        ? <span key={i} className="text-primary font-mono text-[12px]">{part.slice(2, -2)}</span>
                         : <span key={i}>{part}</span>
                     )}
                   </div>
@@ -98,28 +98,28 @@ export default function CommandThread({
                         <button
                           key={i}
                           onClick={() => onSuggestedAction(action.prompt)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 text-[11px] text-foreground/90 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 text-[11px] text-foreground transition-colors"
                         >
                           <span>{action.label}</span>
-                          <ArrowRight className="w-3 h-3 text-primary/70" />
+                          <ArrowRight className="w-3 h-3 text-primary" />
                         </button>
                       ))}
                     </motion.div>
                   )}
                   {msg.meta && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex items-center gap-2 mt-3 pt-2 border-t border-border/[0.16]">
-                      <Wand2 className="w-2.5 h-2.5 text-primary/92" />
-                      <span className="text-[10px] text-muted-foreground/100 font-light font-mono">{msg.meta}</span>
+                      <Wand2 className="w-2.5 h-2.5 text-primary" />
+                      <span className="text-[10px] text-muted-foreground font-light font-mono">{msg.meta}</span>
                     </motion.div>
                   )}
                   {msg.governance && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center gap-2 mt-1.5">
                       <div className="w-1 h-1 rounded-full bg-success/90" />
-                      <span className="text-[9px] text-muted-foreground/100 font-mono">{msg.governance}</span>
+                      <span className="text-[9px] text-muted-foreground font-mono">{msg.governance}</span>
                     </motion.div>
                   )}
                   {msg.audit && <MessageAuditPanel audit={msg.audit} />}
-                  <span className="text-[10px] text-muted-foreground/100 mt-2 block">{msg.timestamp}</span>
+                  <span className="text-[10px] text-muted-foreground mt-2 block">{msg.timestamp}</span>
                 </motion.div>
               </motion.div>
             )}

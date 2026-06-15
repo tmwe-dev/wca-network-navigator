@@ -146,7 +146,7 @@ export function HoldingPatternTab() {
                             {item.email || "—"} · {SOURCE_LABELS[item.source] || item.source}
                           </div>
                           {(item.agentEmoji || item.tutorName) && (
-                            <div className="text-[9px] text-muted-foreground/70 truncate mt-0.5 flex items-center gap-1">
+                            <div className="text-[9px] text-muted-foreground truncate mt-0.5 flex items-center gap-1">
                               {item.agentEmoji && <span>{item.agentEmoji}</span>}
                               {item.tutorName && <span className="truncate">{item.tutorName}</span>}
                             </div>
@@ -168,7 +168,7 @@ export function HoldingPatternTab() {
         {!selected ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center space-y-1">
-              <ArrowRight className="w-5 h-5 text-muted-foreground/30 mx-auto" />
+              <ArrowRight className="w-5 h-5 text-muted-foreground mx-auto" />
               <p className="text-xs text-muted-foreground">Seleziona un contatto</p>
             </div>
           </div>
@@ -178,12 +178,12 @@ export function HoldingPatternTab() {
               <h3 className="text-sm font-semibold">{selected.name}</h3>
               <p className="text-xs text-muted-foreground">{selected.email || "Nessun contatto"}</p>
               {(selected.agentEmoji || selected.tutorName) && (
-                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground/80">
+                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground">
                   {selected.agentEmoji && <span className="text-sm">{selected.agentEmoji}</span>}
                   {selected.agentName && <span className="font-medium">{selected.agentName}</span>}
                   {selected.tutorName && (
                     <>
-                      <span className="text-muted-foreground/40">·</span>
+                      <span className="text-muted-foreground">·</span>
                       <span>Tutor: {selected.tutorName}</span>
                     </>
                   )}

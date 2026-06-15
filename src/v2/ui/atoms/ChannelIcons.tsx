@@ -30,7 +30,7 @@ export function ChannelIcons({
 }: ChannelIconsProps): React.ReactElement | null {
   const sz = size === "md" ? "w-3.5 h-3.5" : "w-3 h-3";
   const items = [
-    email && <Mail key="mail" className={cn(sz, "text-primary/70")} aria-label="Email" />,
+    email && <Mail key="mail" className={cn(sz, "text-primary")} aria-label="Email" />,
     whatsapp && (
       <MessageCircle key="wa" className={cn(sz, "text-emerald-500/80")} aria-label="WhatsApp" />
     ),
@@ -38,7 +38,7 @@ export function ChannelIcons({
       <Linkedin key="li" className={cn(sz, "text-sky-500/80")} aria-label="LinkedIn" />
     ),
     phone && !email && !whatsapp && (
-      <Phone key="phone" className={cn(sz, "text-muted-foreground/70")} aria-label="Telefono" />
+      <Phone key="phone" className={cn(sz, "text-muted-foreground")} aria-label="Telefono" />
     ),
     website && (
       <Globe2 key="web" className={cn(sz, "text-emerald-400/80")} aria-label="Website" />

@@ -121,7 +121,7 @@ export function KnowledgeBasePage() {
           {showJobs && jobs && (
             <div className="max-h-48 overflow-y-auto px-3 pb-3 space-y-1">
               {jobs.length === 0 && (
-                <p className="text-[11px] text-muted-foreground/60 px-1">Nessun job</p>
+                <p className="text-[11px] text-muted-foreground px-1">Nessun job</p>
               )}
               {jobs.map((j) => (
                 <div key={j.id} className="text-[11px] p-2 rounded-lg bg-muted/30 border border-border/30">

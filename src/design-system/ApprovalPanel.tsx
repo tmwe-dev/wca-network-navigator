@@ -37,7 +37,7 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
         }}
       >
         <div className="flex items-start gap-3 mb-4">
-          <Shield className="w-3.5 h-3.5 text-success/80 mt-0.5 flex-shrink-0" />
+          <Shield className="w-3.5 h-3.5 text-success mt-0.5 flex-shrink-0" />
           <div>
             <div className="text-[13px] font-light text-foreground mb-1">{title}</div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">{description}</p>
@@ -71,7 +71,7 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
           >
             <div className="flex items-center gap-1.5">
               <div className="w-1 h-1 rounded-full bg-success/55" />
-              <span className="text-[8px] text-success/80 font-mono tracking-wider">{governance.role}</span>
+              <span className="text-[8px] text-success font-mono tracking-wider">{governance.role}</span>
             </div>
             <span className="text-[6px] text-muted-foreground">·</span>
             <span className="text-[8px] text-muted-foreground font-mono">{governance.permission}</span>
@@ -85,7 +85,7 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onApprove}
-            className="text-[11px] px-4 py-2 rounded-xl bg-success/10 text-success/80 hover:bg-success/15 hover:text-success transition-all duration-500 flex items-center gap-1.5"
+            className="text-[11px] px-4 py-2 rounded-xl bg-success/10 text-success hover:bg-success/15 hover:text-success transition-all duration-500 flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-3 h-3" /> Conferma
           </motion.button>

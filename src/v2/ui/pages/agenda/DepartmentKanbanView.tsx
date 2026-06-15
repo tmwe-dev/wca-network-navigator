@@ -208,9 +208,9 @@ export function DepartmentKanbanView(): React.ReactElement {
                         )}
                       >
                         <div className="flex items-start gap-1.5">
-                          <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground" />
+                          <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-muted-foreground" />
                           <div className="min-w-0 flex-1">
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                               {cardKindLabel(j)}
                             </div>
                             <div className="line-clamp-2 font-medium text-foreground">

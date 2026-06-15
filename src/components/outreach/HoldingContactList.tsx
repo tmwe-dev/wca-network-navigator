@@ -155,7 +155,7 @@ export function HoldingContactList({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className={cn("text-[11px] truncate flex-1", isUnread ? "font-bold text-foreground" : "font-medium text-foreground/80")}>
+                            <span className={cn("text-[11px] truncate flex-1", isUnread ? "font-bold text-foreground" : "font-medium text-foreground")}>
                               {msg.subject || msg.from_address || "Messaggio"}
                             </span>
                             <span className="text-[9px] text-muted-foreground shrink-0">

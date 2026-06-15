@@ -49,7 +49,7 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
     <div className="flex items-center gap-1">
       {icons.map(({ key, Icon, active, activeClass, value }) => (
         <InfoTooltip key={key} content={active ? `${key}: ${value}` : `${key} non disponibile`}>
-          <span className={cn("p-1 rounded-md transition-colors", active ? activeClass : "bg-muted/30 text-muted-foreground/25")}>
+          <span className={cn("p-1 rounded-md transition-colors", active ? activeClass : "bg-muted/30 text-muted-foreground")}>
             <Icon className="w-3.5 h-3.5" />
           </span>
         </InfoTooltip>
@@ -63,7 +63,7 @@ function EnrichBadge({ icon, label, done }: { icon: React.ReactNode; label: stri
     <InfoTooltip content={`${label}: ${done ? "completato" : "mancante"}`}>
       <span className={cn(
         "flex items-center gap-0.5 text-[8px] font-medium px-1 py-0.5 rounded border",
-        done ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted/30 text-muted-foreground/40 border-border/20"
+        done ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted/30 text-muted-foreground border-border/20"
       )}>
         {icon}
         {done ? <Check className="w-2 h-2" /> : <X className="w-2 h-2" />}
@@ -91,7 +91,7 @@ export function CockpitContactMetrics({ contact, assignment, hasLiveLinkedin, en
   return (
     <>
       <div className="pt-1.5 border-t border-border/20">
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80 mb-1.5">
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1.5">
           <span className={cn("truncate max-w-[100px]", oc.text)}>{contact.originDetail}</span>
           <span>·</span>
           <span>{contact.language}</span>

@@ -21,7 +21,7 @@ export function HoldingActionBar({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <ArrowRight className="w-5 h-5 text-muted-foreground/30 mx-auto" />
+          <ArrowRight className="w-5 h-5 text-muted-foreground mx-auto" />
           <p className="text-xs text-muted-foreground">Seleziona un messaggio per analizzare</p>
         </div>
       </div>

@@ -37,7 +37,7 @@ export function RACompanyDetailPage() {
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
           <div className="p-3 rounded-full bg-destructive/10 border border-destructive/30"><AlertCircle className="w-6 h-6 text-destructive" /></div>
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-foreground/90">Azienda non trovata</h2>
+            <h2 className="text-lg font-semibold text-foreground">Azienda non trovata</h2>
             <p className="text-sm text-muted-foreground mt-1">L'azienda che stai cercando non esiste o è stata eliminata</p>
           </div>
           <Button variant="outline" onClick={() => navigate("/v2/research/explorer")} className="border-border hover:bg-muted/50">
@@ -51,7 +51,7 @@ export function RACompanyDetailPage() {
   if (isLoading || !prospect) {
     return (
       <div className="h-full flex items-center justify-center bg-gradient-to-b from-[hsl(240_6%_3%)] via-[hsl(240_6%_5%)] to-[hsl(240_6%_3%)]">
-        <Loader2 className="w-8 h-8 text-primary/50 animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -94,7 +94,7 @@ export function RACompanyDetailPage() {
                         {prospect.descrizione_ateco && (
                           <div>
                             <label className="text-xs font-medium text-muted-foreground">Descrizione</label>
-                            <p className="text-sm text-foreground/80 mt-1.5">{prospect.descrizione_ateco}</p>
+                            <p className="text-sm text-foreground mt-1.5">{prospect.descrizione_ateco}</p>
                           </div>
                         )}
                       </div>
@@ -139,7 +139,7 @@ function InfoField({ label, value, mono }: { label: string; value: string; mono?
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground">{label}</label>
-      <p className={`text-sm mt-1.5 ${mono ? "font-mono text-primary" : "text-foreground/80"}`}>{value}</p>
+      <p className={`text-sm mt-1.5 ${mono ? "font-mono text-primary" : "text-foreground"}`}>{value}</p>
     </div>
   );
 }
@@ -150,7 +150,7 @@ function ContactRow({ icon: Icon, label, value, iconColor }: { icon: React.Eleme
       <Icon className={`w-4 h-4 flex-shrink-0 ${iconColor || "text-muted-foreground"}`} />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <p className="text-sm text-foreground/80 truncate">{value}</p>
+        <p className="text-sm text-foreground truncate">{value}</p>
       </div>
       <CopyButton text={value} />
     </div>
@@ -161,7 +161,7 @@ function FinCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="p-4 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border backdrop-blur-xl">
       <p className="text-xs text-muted-foreground font-medium">{label}</p>
-      <p className="text-lg font-bold text-foreground/95 mt-2">{value}</p>
+      <p className="text-lg font-bold text-foreground mt-2">{value}</p>
     </div>
   );
 }

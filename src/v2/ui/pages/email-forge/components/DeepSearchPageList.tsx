@@ -64,11 +64,11 @@ function PageRow({
       <StatusIcon status={page.status} />
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{host}</div>
-        <div className="text-[11px] text-foreground/70 font-mono truncate">
+        <div className="text-[11px] text-foreground font-mono truncate">
           {page.url}
         </div>
         {page.status === "done" && (
-          <div className="text-[11px] text-foreground/70 mt-0.5">
+          <div className="text-[11px] text-foreground mt-0.5">
             {page.markdown.length.toLocaleString()} char
             {page.durationMs && ` · ${(page.durationMs / 1000).toFixed(1)}s`}
           </div>
@@ -91,7 +91,7 @@ export function DeepSearchPageList({
 }: DeepSearchPageListProps) {
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/80 border-b border-border/60 shrink-0 flex items-center justify-between">
+      <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground border-b border-border/60 shrink-0 flex items-center justify-between">
         <span>Pagine lette · {pages.length}</span>
         {running && (
           <Loader2 className="w-3 h-3 animate-spin text-primary" />
@@ -100,7 +100,7 @@ export function DeepSearchPageList({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {pages.length === 0 && (
-            <div className="text-xs text-foreground/70 italic px-2 py-4 text-center">
+            <div className="text-xs text-foreground italic px-2 py-4 text-center">
               Nessuna pagina ancora letta. Lancia una pipeline o un URL.
             </div>
           )}

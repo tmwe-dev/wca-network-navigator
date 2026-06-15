@@ -14,11 +14,11 @@ interface Props {
 }
 
 const KIND_META: Record<LiveActivity["kind"], { icon: React.ComponentType<{ className?: string }>; tint: string }> = {
-  outreach: { icon: Send, tint: "text-primary/80" },
-  scrape: { icon: Globe, tint: "text-warning/80" },
-  agent: { icon: Bot, tint: "text-success/80" },
-  mission: { icon: Target, tint: "text-primary/80" },
-  campaign: { icon: Megaphone, tint: "text-warning/80" },
+  outreach: { icon: Send, tint: "text-primary" },
+  scrape: { icon: Globe, tint: "text-warning" },
+  agent: { icon: Bot, tint: "text-success" },
+  mission: { icon: Target, tint: "text-primary" },
+  campaign: { icon: Megaphone, tint: "text-warning" },
 };
 
 const STATUS_DOT: Record<LiveActivity["status"], string> = {
@@ -37,14 +37,14 @@ export default function LiveActivityRail({ activities }: Props) {
       className="float-panel-subtle rounded-xl p-3 mt-4"
     >
       <div className="flex items-center gap-2 mb-2.5">
-        <Activity className="w-3 h-3 text-primary/70" />
-        <span className="text-[9px] font-mono tracking-wider uppercase text-muted-foreground/70">Live activity</span>
+        <Activity className="w-3 h-3 text-primary" />
+        <span className="text-[9px] font-mono tracking-wider uppercase text-muted-foreground">Live activity</span>
         {activities.length > 0 && (
           <span className="text-[9px] font-mono text-gradient-primary ml-auto">{activities.length}</span>
         )}
       </div>
       {activities.length === 0 ? (
-        <p className="text-[10px] text-muted-foreground/50 font-light italic py-2">In ascolto di eventi…</p>
+        <p className="text-[10px] text-muted-foreground font-light italic py-2">In ascolto di eventi…</p>
       ) : (
         <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
           <AnimatePresence initial={false}>
@@ -62,9 +62,9 @@ export default function LiveActivityRail({ activities }: Props) {
                 >
                   <Icon className={`w-3 h-3 mt-0.5 flex-shrink-0 ${Meta.tint}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] font-light text-foreground/90 truncate">{a.label}</div>
+                    <div className="text-[10px] font-light text-foreground truncate">{a.label}</div>
                     {a.detail && (
-                      <div className="text-[8px] text-muted-foreground/60 font-mono truncate">{a.detail}</div>
+                      <div className="text-[8px] text-muted-foreground font-mono truncate">{a.detail}</div>
                     )}
                   </div>
                   <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${STATUS_DOT[a.status]}`} />

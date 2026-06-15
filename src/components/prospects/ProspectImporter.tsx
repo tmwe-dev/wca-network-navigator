@@ -395,7 +395,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
           <div ref={logRef} className="flex-1 overflow-y-auto p-3 space-y-0.5 font-mono text-[11px]">
             {logs.map((l, i) => (
               <div key={i} className="text-muted-foreground">
-                <span className="text-muted-foreground/50">
+                <span className="text-muted-foreground">
                   {new Date(l.time).toLocaleTimeString()}
                 </span>{" "}
                 {l.msg}

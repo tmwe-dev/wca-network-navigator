@@ -91,7 +91,7 @@ export function BulkMergeOriginsDialog({
 
         <div className="space-y-3">
           <div>
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground/80 pb-1">
+            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground pb-1">
               Origini sorgente
             </div>
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
@@ -109,7 +109,7 @@ export function BulkMergeOriginsDialog({
           <div>
             <label
               htmlFor="merge-origin"
-              className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground/80"
+              className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground"
             >
               Nuova origine
             </label>
@@ -141,7 +141,7 @@ export function BulkMergeOriginsDialog({
           </div>
 
           <div>
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground/80 pb-1">
+            <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground pb-1">
               {trimmed ? "Suggerimenti" : "Origini più frequenti"}
             </div>
             <div className="max-h-56 overflow-y-auto border border-border/40 rounded-md divide-y divide-border/30">

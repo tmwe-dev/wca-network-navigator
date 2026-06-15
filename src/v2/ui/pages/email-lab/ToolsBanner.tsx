@@ -32,8 +32,8 @@ export function ToolsBanner(): React.ReactElement {
           <Button variant="ghost" className="h-auto w-full justify-start gap-2 rounded-md px-3 py-2 text-left">
             {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <div className="flex-1">
-              <div className="text-sm font-semibold text-foreground/90">Strumenti già attivi sui prompt</div>
-              <div className="text-xs text-foreground/60">8 pagine collegate per editing, versioning, test, tracing e log dei prompt.</div>
+              <div className="text-sm font-semibold text-foreground">Strumenti già attivi sui prompt</div>
+              <div className="text-xs text-foreground">8 pagine collegate per editing, versioning, test, tracing e log dei prompt.</div>
             </div>
           </Button>
         </CollapsibleTrigger>
@@ -41,11 +41,11 @@ export function ToolsBanner(): React.ReactElement {
           <CardContent className="grid gap-2 pt-0 sm:grid-cols-2 lg:grid-cols-4">
             {TOOLS.map((t) => (
               <Link key={t.to} to={t.to} className="group rounded-md border border-border/50 bg-background/40 p-3 transition hover:border-primary/40 hover:bg-primary/5">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground/90 group-hover:text-foreground">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground group-hover:text-foreground">
                   <t.icon className="h-4 w-4 text-primary" />
                   {t.label}
                 </div>
-                <div className="mt-1 text-[11px] leading-snug text-foreground/60">{t.desc}</div>
+                <div className="mt-1 text-[11px] leading-snug text-foreground">{t.desc}</div>
               </Link>
             ))}
           </CardContent>

@@ -70,7 +70,7 @@ const ToolActivationBar = ({
                 <div key={step} className="flex items-center gap-1">
                   <motion.span
                     className={`text-[7px] tracking-[0.15em] font-mono transition-all duration-500 ${
-                      isCurrent ? "text-primary" : isActive ? "text-muted-foreground" : "text-muted-foreground/50"
+                      isCurrent ? "text-primary" : isActive ? "text-muted-foreground" : "text-muted-foreground"
                     }`}
                     animate={isCurrent ? { opacity: [0.7, 1, 0.7] } : {}}
                     transition={{ duration: 1.5, repeat: Infinity }}
@@ -78,7 +78,7 @@ const ToolActivationBar = ({
                     {step}
                   </motion.span>
                   {i < chainSteps.length - 1 && (
-                    <span className={`text-[8px] ${isActive ? "text-muted-foreground" : "text-muted-foreground/30"}`}>→</span>
+                    <span className={`text-[8px] ${isActive ? "text-muted-foreground" : "text-muted-foreground"}`}>→</span>
                   )}
                 </div>
               );

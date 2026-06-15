@@ -43,7 +43,7 @@ export function JournalistBadge({ review, compact = false }: Props): React.React
         )}
       </div>
       {!compact && review.reasoning && (
-        <p className="text-[11px] italic text-foreground/60 px-1">{review.reasoning}</p>
+        <p className="text-[11px] italic text-foreground px-1">{review.reasoning}</p>
       )}
       {!compact && (review.verdict === "warn" || review.verdict === "block") && review.warnings.length > 0 && (
         <div className={cn(
@@ -51,23 +51,23 @@ export function JournalistBadge({ review, compact = false }: Props): React.React
           review.verdict === "block" ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5",
         )}>
           {review.warnings.map((w, i) => (
-            <div key={i} className="text-foreground/80">
+            <div key={i} className="text-foreground">
               <span className="font-mono opacity-50">[{w.type}]</span> {w.description}
-              {w.upstream_fix && <div className="ml-2 mt-0.5 italic text-primary/70">→ {w.upstream_fix}</div>}
+              {w.upstream_fix && <div className="ml-2 mt-0.5 italic text-primary">→ {w.upstream_fix}</div>}
             </div>
           ))}
         </div>
       )}
       {!compact && review.edits.length > 0 && (
         <details className="text-[11px]">
-          <summary className="cursor-pointer text-primary/70">{review.edits.length} correzioni editoriali</summary>
+          <summary className="cursor-pointer text-primary">{review.edits.length} correzioni editoriali</summary>
           <div className="mt-1 space-y-2 p-2 rounded border border-border/40 bg-card max-h-60 overflow-auto">
             {review.edits.map((e, i) => (
               <div key={i} className="space-y-0.5">
                 <span className="font-mono opacity-40">[{e.type}]</span>
-                <div className="line-through text-destructive/70">{e.original_fragment}</div>
+                <div className="line-through text-destructive">{e.original_fragment}</div>
                 <div className="text-success">{e.edited_fragment}</div>
-                <div className="italic text-foreground/50">{e.reason}</div>
+                <div className="italic text-foreground">{e.reason}</div>
               </div>
             ))}
           </div>

@@ -220,7 +220,7 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
         </div>
 
         {mainJob.error_message && (
-          <div className={`mt-1 text-[10px] truncate ${isDark ? "text-primary/80" : "text-primary"}`}>
+          <div className={`mt-1 text-[10px] truncate ${isDark ? "text-primary" : "text-primary"}`}>
             ⚠ {mainJob.error_message}
           </div>
         )}

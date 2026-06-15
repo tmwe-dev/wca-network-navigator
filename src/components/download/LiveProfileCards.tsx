@@ -66,7 +66,7 @@ export function LiveProfileCards() {
 
   if (!profiles || profiles.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground/50">
+      <div className="h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center">
           <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
           <p className="text-xs">I profili appariranno qui durante il download</p>
@@ -145,7 +145,7 @@ export function LiveProfileCards() {
                 <div className="mt-2 pt-2 border-t border-border/30 space-y-1">
                   {p.partner_contacts.slice(0, 3).map((c, ci) => (
                     <div key={ci} className="flex items-center gap-1.5 text-[10px]">
-                      <User className="w-2.5 h-2.5 text-muted-foreground/50" />
+                      <User className="w-2.5 h-2.5 text-muted-foreground" />
                       <span className="font-medium truncate">{c.name}</span>
                       {c.title && <span className="text-muted-foreground truncate">· {c.title}</span>}
                       {c.email && <Mail className="w-2.5 h-2.5 text-emerald-400 ml-auto shrink-0" />}

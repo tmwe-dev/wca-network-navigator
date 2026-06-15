@@ -44,7 +44,7 @@ export function DeepSearchPipelines({
 }: DeepSearchPipelinesProps) {
   return (
     <div className="p-3 space-y-2 border-b border-border/60 shrink-0">
-      <div className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
+      <div className="text-xs font-semibold uppercase tracking-wider text-foreground">
         Pipeline rapide
       </div>
       <div className="grid grid-cols-1 gap-1.5">
@@ -70,7 +70,7 @@ export function DeepSearchPipelines({
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-[11px] font-medium truncate">{p.label}</div>
-                <div className="text-[11px] text-foreground/70 truncate">
+                <div className="text-[11px] text-foreground truncate">
                   {p.description}
                 </div>
               </div>
@@ -80,7 +80,7 @@ export function DeepSearchPipelines({
       </div>
 
       <div className="pt-2 border-t border-border/60 space-y-1">
-        <div className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
+        <div className="text-xs font-semibold uppercase tracking-wider text-foreground">
           URL manuale
         </div>
         <div className="flex gap-1">

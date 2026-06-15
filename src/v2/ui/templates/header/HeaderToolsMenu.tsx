@@ -43,7 +43,7 @@ export function HeaderToolsMenu({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-foreground/70 hover:text-primary"
+          className="h-7 w-7 text-foreground hover:text-primary"
           aria-label="Strumenti"
         >
           <MoreHorizontal className="h-4 w-4" />

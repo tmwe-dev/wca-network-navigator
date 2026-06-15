@@ -124,20 +124,20 @@ export function DashboardPage() {
               className="glass-panel group flex flex-col justify-between rounded-xl border border-border/60 p-3 text-left transition-all hover:border-primary/40 min-h-[90px]"
             >
               <div className="flex items-center justify-between">
-                <card.icon className="h-4 w-4 text-foreground/80" />
-                <ArrowRight className="h-3 w-3 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                <card.icon className="h-4 w-4 text-foreground" />
+                <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
               <div className="mt-2">
                 <div className="text-xs font-semibold text-foreground">{card.title}</div>
                 <div className="text-[10px] text-muted-foreground">{card.description}</div>
               </div>
-              <div className="mt-1 text-[10px] font-medium text-primary/80">{statForCard(card.key)}</div>
+              <div className="mt-1 text-[10px] font-medium text-primary">{statForCard(card.key)}</div>
             </button>
           ))}
         </section>
 
         <Collapsible open={briefingOpen} onOpenChange={setBriefingOpen}>
-          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left px-1 py-1.5 text-xs font-medium text-muted-foreground/60 hover:text-foreground transition-colors">
+          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left px-1 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
             <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", briefingOpen && "rotate-180")} />
             Briefing AI
             {briefingLoading && <span className="text-[10px] ml-1">caricamento…</span>}

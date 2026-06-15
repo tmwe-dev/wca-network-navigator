@@ -41,7 +41,7 @@ const ExecutionFlow = ({ visible, steps, progress }: ExecutionFlowProps) => (
                 transition={{ duration: 0.8, ease }}
               />
             </div>
-            <div className="text-[9px] text-muted-foreground/88 mt-1.5 text-right font-mono">{progress}%</div>
+            <div className="text-[9px] text-muted-foreground mt-1.5 text-right font-mono">{progress}%</div>
           </div>
         )}
 
@@ -56,9 +56,9 @@ const ExecutionFlow = ({ visible, steps, progress }: ExecutionFlowProps) => (
             >
               <div className="flex-shrink-0 w-4 flex justify-center">
                 {step.status === "done" ? (
-                  <CheckCircle2 className="w-3 h-3 text-success/80" />
+                  <CheckCircle2 className="w-3 h-3 text-success" />
                 ) : step.status === "running" ? (
-                  <Loader2 className="w-3 h-3 text-primary/92 animate-spin" />
+                  <Loader2 className="w-3 h-3 text-primary animate-spin" />
                 ) : step.status === "error" ? (
                   <div className="w-2 h-2 rounded-full bg-destructive/50" />
                 ) : (
@@ -66,12 +66,12 @@ const ExecutionFlow = ({ visible, steps, progress }: ExecutionFlowProps) => (
                 )}
               </div>
               <span className={`text-[11px] font-light flex-1 ${
-                step.status === "done" ? "text-foreground/100" :
-                step.status === "running" ? "text-foreground/100" :
-                "text-muted-foreground/88"
+                step.status === "done" ? "text-foreground" :
+                step.status === "running" ? "text-foreground" :
+                "text-muted-foreground"
               }`}>{step.label}</span>
               {step.detail && (
-                <span className="text-[9px] text-muted-foreground/88 font-mono">{step.detail}</span>
+                <span className="text-[9px] text-muted-foreground font-mono">{step.detail}</span>
               )}
             </motion.div>
           ))}

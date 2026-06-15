@@ -52,7 +52,7 @@ function confidenceColor(c: number): string {
 function confidenceBadge(c: number): string {
   if (c >= 85) return "bg-emerald-500/15 text-emerald-400";
   if (c >= 70) return "bg-primary/15 text-primary";
-  return "bg-primary/10 text-primary/80";
+  return "bg-primary/10 text-primary";
 }
 
 export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -196,9 +196,9 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
           {!loading && !hasRun && (
             <div className="flex flex-col items-center justify-center py-16 gap-2">
-              <Sparkles className="w-8 h-8 text-primary/30" />
+              <Sparkles className="w-8 h-8 text-primary" />
               <p className="text-sm text-muted-foreground">Clicca "Avvia analisi AI" per trovare match</p>
-              <p className="text-xs text-muted-foreground/60">L'AI confronterà i biglietti senza match con il database partner</p>
+              <p className="text-xs text-muted-foreground">L'AI confronterà i biglietti senza match con il database partner</p>
             </div>
           )}
 
@@ -268,7 +268,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                         )}
                         {candidate.partner_country && <span>{candidate.partner_country}</span>}
                       </div>
-                      <p className="text-[10px] text-muted-foreground/70 ml-5 italic">{candidate.reason}</p>
+                      <p className="text-[10px] text-muted-foreground ml-5 italic">{candidate.reason}</p>
                     </div>
                   </div>
                 );

@@ -148,7 +148,7 @@ export function ContactActionMenu({ contact, children }: Props) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           {/* Communication group */}
-          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
             Comunicazione
           </DropdownMenuLabel>
           <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={handleSendEmail} disabled={!contact.email}>
@@ -163,7 +163,7 @@ export function ContactActionMenu({ contact, children }: Props) {
           <DropdownMenuSeparator />
 
           {/* Organization group */}
-          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
             Organizza
           </DropdownMenuLabel>
           <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={() => setNoteOpen(true)}>
@@ -178,7 +178,7 @@ export function ContactActionMenu({ contact, children }: Props) {
           <DropdownMenuSeparator />
 
           {/* Completion group */}
-          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
             Completa
           </DropdownMenuLabel>
           <DropdownMenuSub>

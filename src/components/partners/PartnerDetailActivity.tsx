@@ -86,7 +86,7 @@ export function PartnerDetailActivity({ partnerId, interactions, reminders, isBl
           <ShieldAlert className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-destructive">⚠️ BLACKLIST WCA</p>
-            <p className="text-sm text-destructive/80 mt-0.5">
+            <p className="text-sm text-destructive mt-0.5">
               {blacklistEntries.length} segnalazione/i.
               {blacklistEntries[0]?.total_owed_amount && (
                 <> Importo: <strong>${Number(blacklistEntries[0].total_owed_amount).toLocaleString()}</strong></>
@@ -143,7 +143,7 @@ export function PartnerDetailActivity({ partnerId, interactions, reminders, isBl
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <DirIcon className={cn("w-3 h-3 shrink-0", isInbound ? "text-emerald-500" : "text-sky-500")} />
                       {flag && <span className="text-[11px]" aria-hidden>{flag}</span>}
-                      <span className="text-[11px] text-foreground/90 font-medium truncate">
+                      <span className="text-[11px] text-foreground font-medium truncate">
                         {it_.contact_name || meta.label}
                       </span>
                       {it_.contact_address && (
@@ -156,7 +156,7 @@ export function PartnerDetailActivity({ partnerId, interactions, reminders, isBl
                     {it_.subject && (
                       <p className="font-medium text-xs text-foreground mt-0.5 truncate">{it_.subject}</p>
                     )}
-                    {it_.notes && <p className="text-[11px] text-foreground/70 mt-0.5 line-clamp-2">{it_.notes}</p>}
+                    {it_.notes && <p className="text-[11px] text-foreground mt-0.5 line-clamp-2">{it_.notes}</p>}
                     {it_.message_id && (
                       <Link
                         to={`/v2/inbox?messageId=${it_.message_id}`}

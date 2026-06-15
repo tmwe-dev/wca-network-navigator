@@ -54,7 +54,7 @@ function StepHeader({ n, title, hint }: { n: number; title: string; hint?: strin
     <div className="mb-2 flex items-center gap-2">
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">{n}</span>
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      {hint ? <span className="text-xs text-foreground/55">— {hint}</span> : null}
+      {hint ? <span className="text-xs text-foreground">— {hint}</span> : null}
     </div>
   );
 }
@@ -133,18 +133,18 @@ export function ProductionTab(): React.ReactElement {
                 }`}
               >
                 <div className="text-sm font-medium text-foreground">{s.label}</div>
-                <div className="mt-1 text-[11px] leading-snug text-foreground/60">{s.desc}</div>
+                <div className="mt-1 text-[11px] leading-snug text-foreground">{s.desc}</div>
               </button>
             );
           })}
         </div>
         {activeScenario ? (
-          <div className="mt-2 flex items-center gap-2 text-xs text-foreground/60">
-            <span>Scenario attivo: <strong className="text-foreground/80">{SCENARIOS.find((s) => s.id === activeScenario)?.label}</strong></span>
+          <div className="mt-2 flex items-center gap-2 text-xs text-foreground">
+            <span>Scenario attivo: <strong className="text-foreground">{SCENARIOS.find((s) => s.id === activeScenario)?.label}</strong></span>
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearScenario}>Pulisci</Button>
           </div>
         ) : (
-          <p className="mt-2 text-[11px] text-foreground/55">
+          <p className="mt-2 text-[11px] text-foreground">
             Salta questo passo se vuoi configurare manualmente obiettivo e tono nello step 2.
           </p>
         )}
@@ -187,12 +187,12 @@ export function ProductionTab(): React.ReactElement {
             variant="ghost"
             onClick={iter.reset}
             disabled={iter.iterations.length === 0}
-            className="gap-1.5 text-foreground/70"
+            className="gap-1.5 text-foreground"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Reset serie
           </Button>
-          <div className="ml-auto text-xs text-foreground/60">
+          <div className="ml-auto text-xs text-foreground">
             {iter.iterations.length === 0
               ? "Nessuna iterazione"
               : `${iter.iterations.length} iterazione${iter.iterations.length === 1 ? "" : "i"}`}
@@ -200,14 +200,14 @@ export function ProductionTab(): React.ReactElement {
         </div>
 
         {!hasRecipient && iter.iterations.length === 0 ? (
-          <div className="flex flex-1 min-h-[180px] items-center justify-center rounded-md border border-dashed border-border/50 bg-background/30 px-6 text-center text-sm text-foreground/60">
+          <div className="flex flex-1 min-h-[180px] items-center justify-center rounded-md border border-dashed border-border/50 bg-background/30 px-6 text-center text-sm text-foreground">
             Seleziona un destinatario nello step 2 per attivare la generazione.
           </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden rounded-md border border-border/40 bg-background/30 p-3">
             {iter.iterations.length === 0 ? (
-              <div className="flex h-full min-h-[180px] items-center justify-center text-center text-sm text-foreground/55">
-                Pronto. Clicca <strong className="mx-1 text-foreground/80">Genera bozza</strong> per la prima versione.
+              <div className="flex h-full min-h-[180px] items-center justify-center text-center text-sm text-foreground">
+                Pronto. Clicca <strong className="mx-1 text-foreground">Genera bozza</strong> per la prima versione.
               </div>
             ) : (
               <div className="flex h-full gap-3">

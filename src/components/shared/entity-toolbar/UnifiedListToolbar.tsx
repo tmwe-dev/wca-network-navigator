@@ -39,7 +39,7 @@ interface Props {
 }
 
 const TONE_CLS: Record<ChipTone, string> = {
-  neutral: "bg-muted/60 text-foreground/80 border-border/40",
+  neutral: "bg-muted/60 text-foreground border-border/40",
   primary: "bg-primary/15 text-primary border-primary/25",
   "circuit-out": "bg-sky-500/15 text-sky-400 border-sky-500/25",
   "circuit-in": "bg-destructive/15 text-destructive border-destructive/25",

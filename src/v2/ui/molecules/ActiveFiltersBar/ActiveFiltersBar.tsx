@@ -48,7 +48,7 @@ export function ActiveFiltersBar({
         className
       )}
     >
-      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 font-medium">
+      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
         <Filter className="w-3 h-3" />
         <span>{label}:</span>
       </div>
@@ -63,7 +63,7 @@ export function ActiveFiltersBar({
             chip.tone === "warning" &&
               "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400",
             (!chip.tone || chip.tone === "default") &&
-              "bg-card/60 text-foreground/80 border-border/50"
+              "bg-card/60 text-foreground border-border/50"
           )}
         >
           {chip.icon === "holding" && <Plane className="w-2.5 h-2.5" />}

@@ -70,7 +70,7 @@ export const InteractionMarkers = memo(function InteractionMarkers({
         );
       })}
       {overflow > 0 && (
-        <span className="text-[8px] text-muted-foreground/60">+{overflow}</span>
+        <span className="text-[8px] text-muted-foreground">+{overflow}</span>
       )}
     </div>
   );

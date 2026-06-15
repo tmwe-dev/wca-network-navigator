@@ -57,7 +57,7 @@ export function EmailRecipientFields({
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); onAddManualEmail(); } }}
           onBlur={() => { if (manualEmail.trim()) onAddManualEmail(); }}
           placeholder={recipients.length === 0 ? "Digita email o usa il picker a sinistra..." : "Aggiungi email..."}
-          className="flex-1 min-w-[160px] text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 h-6"
+          className="flex-1 min-w-[160px] text-xs bg-transparent outline-none placeholder:text-muted-foreground h-6"
         />
       </div>
 

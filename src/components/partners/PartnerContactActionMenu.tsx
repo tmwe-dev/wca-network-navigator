@@ -141,7 +141,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
             Comunicazione
           </DropdownMenuLabel>
           <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={handleEmail} disabled={!contact.email}>
@@ -155,7 +155,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider py-1">
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
             Organizza
           </DropdownMenuLabel>
           <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={() => setNoteOpen(true)}>

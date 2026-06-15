@@ -57,7 +57,7 @@ function RatingStars({ rating }: { rating: number | null | undefined }) {
               ? "fill-primary text-primary"
               : i === full && half
               ? "fill-primary/50 text-primary"
-              : "text-muted-foreground/30"
+              : "text-muted-foreground"
           }`}
         />
       ))}

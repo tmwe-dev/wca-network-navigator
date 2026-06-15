@@ -123,7 +123,7 @@ export function AgendaPage() {
                     "border border-transparent",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted/30 hover:bg-muted/60 text-foreground/80",
+                      : "bg-muted/30 hover:bg-muted/60 text-foreground",
                     !isActive && isToday && "border-primary/40",
                   )}
                   title={format(d, "EEEE d MMMM yyyy", { locale: it })}

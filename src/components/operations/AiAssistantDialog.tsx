@@ -79,7 +79,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
         <div ref={chat.scrollRef} className="flex-1 overflow-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[60vh]">
           {chat.messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
-              <Bot className={`w-12 h-12 text-muted-foreground/20`} />
+              <Bot className={`w-12 h-12 text-muted-foreground`} />
               <p className={`text-xs text-center ${th.sub}`}>Sono il tuo segretario operativo.<br />Ho memoria, creo piani e agisco sul sistema.</p>
               <div className="flex flex-wrap gap-1.5 justify-center">
                 {quickPrompts.map(q => (
@@ -106,7 +106,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                       <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1">
                         <ReactMarkdown components={{
                           a: ({ href, children }) => href?.startsWith("/")
-                            ? <button className="text-primary hover:text-primary/80 underline underline-offset-2 font-medium" onClick={() => { navigate(href!); onClose(); }}>{children}</button>
+                            ? <button className="text-primary hover:text-primary underline underline-offset-2 font-medium" onClick={() => { navigate(href!); onClose(); }}>{children}</button>
                             : <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
                         }}>{parsed.text}</ReactMarkdown>
                       </div>

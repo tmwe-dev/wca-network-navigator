@@ -57,7 +57,7 @@ function Pill({ icon: Icon, label, status }: {
     <div className={cn(
       "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border",
       status === "active" && "bg-success/10 text-success border-success/30",
-      status === "empty" && "bg-card/40 text-foreground/40 border-border/40",
+      status === "empty" && "bg-card/40 text-foreground border-border/40",
       status === "warning" && "bg-warning/10 text-warning border-warning/30",
       status === "error" && "bg-destructive/10 text-destructive border-destructive/30",
     )}>
@@ -103,14 +103,14 @@ function ExpandedSummary({ pre, post }: { pre: PreGenerationContext; post?: Post
   type Item = { label: string; value: string; status: "ok" | "missing" };
   const Section = ({ icon: Icon, title, items }: { icon: React.ElementType; title: string; items: Item[] }) => (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground/80">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
         <Icon className="h-3 w-3" />{title}
       </div>
       <div className="space-y-0.5">
         {items.map((it, i) => (
           <div key={i} className="flex items-baseline justify-between gap-2 text-[10px]">
-            <span className="text-foreground/50">{it.label}</span>
-            <span className={cn("text-right truncate", it.status === "ok" ? "text-foreground/90" : "text-foreground/30 italic")}>
+            <span className="text-foreground">{it.label}</span>
+            <span className={cn("text-right truncate", it.status === "ok" ? "text-foreground" : "text-foreground italic")}>
               {it.value}
             </span>
           </div>
@@ -121,7 +121,7 @@ function ExpandedSummary({ pre, post }: { pre: PreGenerationContext; post?: Post
 
   return (
     <div className="rounded-lg border border-border/50 bg-card p-3 space-y-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground/70">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
         {post ? "Contesto usato dall'AI" : "Contesto disponibile per l'AI"}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -175,13 +175,13 @@ function ExpandedSummary({ pre, post }: { pre: PreGenerationContext; post?: Post
             <CircleAlert className="h-3 w-3" /> Avvisi contratto
           </div>
           {post.warnings.map((w, i) => (
-            <div key={i} className="text-[10px] text-warning/80">⚠ {w}</div>
+            <div key={i} className="text-[10px] text-warning">⚠ {w}</div>
           ))}
         </div>
       )}
 
       {post && post.warnings.length === 0 && pre.type_resolution?.proceed && (
-        <div className="pt-1 text-[10px] text-success/70 flex items-center gap-1">
+        <div className="pt-1 text-[10px] text-success flex items-center gap-1">
           <CircleCheck className="h-3 w-3" /> Contesto coerente, nessuna segnalazione
         </div>
       )}

@@ -36,7 +36,7 @@ export function OraclePanelGoalInput({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-[10px] font-semibold uppercase tracking-wide text-foreground/70">
+      <label className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
         Obiettivo della mail
       </label>
       <div className="relative">
@@ -78,7 +78,7 @@ export function OraclePanelGoalInput({
         <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-md bg-warning/10 border border-warning/30 text-[10px] text-warning-foreground/90">
           <Info className="w-3 h-3 shrink-0 mt-[1px] text-warning" />
           <div className="flex-1">
-            <div className="text-foreground/90">{coherence.warning}</div>
+            <div className="text-foreground">{coherence.warning}</div>
             {coherence.suggestion && (
               <div className="text-muted-foreground mt-0.5">
                 {coherence.suggestion}

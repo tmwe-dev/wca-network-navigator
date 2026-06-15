@@ -184,7 +184,7 @@ export default function OraclePanel({
           <div title={"Tono: " + (currentToneOption?.label || "Professionale")}>
             <Select value={tone} onValueChange={setTone}>
               <SelectTrigger className="h-7 w-9 p-0 border-0 bg-transparent justify-center [&>svg:last-child]:hidden">
-                <SlidersHorizontal className="w-4 h-4 text-foreground/70" />
+                <SlidersHorizontal className="w-4 h-4 text-foreground" />
               </SelectTrigger>
               <SelectContent>
                 {TONE_OPTIONS.map((t) => (
@@ -204,7 +204,7 @@ export default function OraclePanel({
                   "p-1.5 rounded-md border transition-all",
                   useKB
                     ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground/40 hover:border-primary/30 hover:text-foreground"
+                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                 )}
               >
                 <BookOpen className="w-4 h-4" />
@@ -313,7 +313,7 @@ export default function OraclePanel({
           {showTemplates && (
             <div className="max-h-[200px] overflow-y-auto rounded-md border border-border/30 bg-muted/20">
               {templates.length === 0 ? (
-                <p className="text-xs text-foreground/70 px-2 py-4 text-center">
+                <p className="text-xs text-foreground px-2 py-4 text-center">
                   Nessun template
                 </p>
               ) : (
@@ -325,7 +325,7 @@ export default function OraclePanel({
                         onLoadTemplate(t.name || "", t.file_url || "");
                         setShowTemplates(false);
                       }}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-[11px] hover:bg-muted/50 text-foreground/70 transition-colors"
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-[11px] hover:bg-muted/50 text-foreground transition-colors"
                     >
                       <span className="shrink-0">📄</span>
                       <span className="truncate">{t.name}</span>

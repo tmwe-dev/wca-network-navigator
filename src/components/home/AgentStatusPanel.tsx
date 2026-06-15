@@ -152,7 +152,7 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
           <div className="flex-1 min-w-0 space-y-3">
             {/* Primary metric: completati */}
             <div className="flex items-baseline gap-2">
-              <span className={cn("text-3xl font-bold leading-none", completed > 0 ? "text-emerald-500" : "text-muted-foreground/40")}>
+              <span className={cn("text-3xl font-bold leading-none", completed > 0 ? "text-emerald-500" : "text-muted-foreground")}>
                 {completed}
               </span>
               <span className="text-xs text-muted-foreground">completati oggi</span>
@@ -166,14 +166,14 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
                 <MetricPill label="In coda" count={bd.pending} color="text-orange-500" />
               </div>
             ) : (
-              <div className="text-xs text-muted-foreground/60">
+              <div className="text-xs text-muted-foreground">
                 {selected.activeTasks > 0 ? `${selected.activeTasks} task attivi` : "Nessun task attivo"}
               </div>
             )}
 
             {/* Last task */}
             {selected.lastTask && (
-              <div className="text-[10px] text-muted-foreground/60 truncate italic">
+              <div className="text-[10px] text-muted-foreground truncate italic">
                 Ultimo: {selected.lastTask}
               </div>
             )}
@@ -181,7 +181,7 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
             {/* Navigate to agent */}
             <button
               onClick={() => navigate(`/v2/agents?agent=${selected.id}`)}
-              className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-medium transition-colors mt-1"
+              className="flex items-center gap-1 text-[11px] text-primary hover:text-primary font-medium transition-colors mt-1"
             >
               Vai all'agente <ChevronRight className="h-3 w-3" />
             </button>
@@ -195,8 +195,8 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
 function MetricPill({ label, count, color }: { label: string; count: number; color: string }) {
   return (
     <div className="flex items-baseline gap-1">
-      <span className={cn("text-sm font-bold", count > 0 ? color : "text-muted-foreground/40")}>{count}</span>
-      <span className="text-[10px] text-muted-foreground/60">{label}</span>
+      <span className={cn("text-sm font-bold", count > 0 ? color : "text-muted-foreground")}>{count}</span>
+      <span className="text-[10px] text-muted-foreground">{label}</span>
     </div>
   );
 }

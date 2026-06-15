@@ -64,7 +64,7 @@ export function ErrorBox({ message }: { message: string }) {
     <div className="max-w-3xl p-4 rounded-xl border border-destructive/20 bg-destructive/5 text-sm text-destructive">
       <div className="font-semibold mb-1">Errore caricamento telemetria</div>
       <div className="text-xs font-mono">{message}</div>
-      <div className="text-[11px] text-destructive/80 mt-2">
+      <div className="text-[11px] text-destructive mt-2">
         Verifica che la migration Wave 6 sia stata applicata e che le RLS permettano la lettura.
       </div>
     </div>

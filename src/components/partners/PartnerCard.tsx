@@ -112,7 +112,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                       "w-3 h-3",
                       i < Math.round(partner.rating ?? 0)
                         ? "fill-primary text-primary"
-                        : "text-muted-foreground/50"
+                        : "text-muted-foreground"
                     )}
                   />
                 ))}

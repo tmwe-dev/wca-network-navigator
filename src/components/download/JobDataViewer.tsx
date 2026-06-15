@@ -141,8 +141,8 @@ export function JobDataViewer({
 
   const bg = "bg-card backdrop-blur-xl border-border text-foreground";
   const subColor = "text-muted-foreground";
-  const dimColor = "text-muted-foreground/70";
-  const bodyColor = "text-foreground/80";
+  const dimColor = "text-muted-foreground";
+  const bodyColor = "text-foreground";
   const cardBg = "bg-muted/30 border-border";
   const hi = "text-primary";
 
@@ -347,11 +347,11 @@ function DataRow({ icon, value, label, isDark }: { icon: React.ReactNode; value:
       ) : (
         <XCircle className="w-3 h-3 text-destructive flex-shrink-0" />
       )}
-      <span className="text-muted-foreground/70">{icon}</span>
+      <span className="text-muted-foreground">{icon}</span>
       {has ? (
         <span className="text-foreground">{value}</span>
       ) : (
-        <span className="text-destructive/70">{label} mancante</span>
+        <span className="text-destructive">{label} mancante</span>
       )}
     </div>
   );

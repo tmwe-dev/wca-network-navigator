@@ -125,7 +125,7 @@ export function DownloadAgendaView() {
                     {isProcessed ? (
                       <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
                     ) : (
-                      <Clock className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                      <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
                     )}
                   </div>
                   <span className="text-muted-foreground truncate">{p.city}</span>
@@ -145,12 +145,12 @@ export function DownloadAgendaView() {
                   {hasEmail ? (
                     <Mail className="w-3 h-3 text-emerald-500" />
                   ) : (
-                    <Mail className="w-3 h-3 text-muted-foreground/20" />
+                    <Mail className="w-3 h-3 text-muted-foreground" />
                   )}
                   {hasPhone ? (
                     <Phone className="w-3 h-3 text-blue-400" />
                   ) : (
-                    <Phone className="w-3 h-3 text-muted-foreground/20" />
+                    <Phone className="w-3 h-3 text-muted-foreground" />
                   )}
                 </div>
 

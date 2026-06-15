@@ -33,10 +33,10 @@ export function EnrichmentStatusHeader({
         {/* COL 1 — titolo + numeri */}
         <div className="min-w-0">
           <h3 className="text-base font-semibold text-foreground">Stato Arricchimento</h3>
-          <p className="text-sm text-foreground/70 mt-0.5">
+          <p className="text-sm text-foreground mt-0.5">
             <span className="font-semibold text-foreground">{completeCount}</span> su {totalCount} completi ({pct}%)
             {partialCount > 0 && (
-              <span className="text-foreground/60"> · {partialCount} parziali</span>
+              <span className="text-foreground"> · {partialCount} parziali</span>
             )}
           </p>
         </div>
@@ -55,7 +55,7 @@ export function EnrichmentStatusHeader({
               title={`${partialCount} parziali`}
             />
           </div>
-          <div className="flex justify-between mt-1 text-xs text-foreground/60">
+          <div className="flex justify-between mt-1 text-xs text-foreground">
             <span>{completeCount} completi</span>
             <span>{missingCount} da arricchire</span>
           </div>
@@ -88,7 +88,7 @@ export function EnrichmentStatusHeader({
       </div>
 
       {isRunning && progressTotal > 0 && (
-        <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2 text-xs text-foreground/70">
+        <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2 text-xs text-foreground">
           <Loader2 className="w-3 h-3 animate-spin text-primary" />
           <span>Arricchimento in corso: {progressDone} di {progressTotal}</span>
         </div>

@@ -186,7 +186,7 @@ export function OraclePanelSlim({
         {showTemplates && (
           <div className="max-h-[200px] overflow-y-auto rounded-md border border-border/30 bg-muted/20">
             {templates.length === 0 ? (
-              <p className="text-xs text-foreground/70 px-2 py-4 text-center">Nessun template</p>
+              <p className="text-xs text-foreground px-2 py-4 text-center">Nessun template</p>
             ) : (
               <div className="p-1 space-y-0.5">
                 {templates.map((t) => (
@@ -196,7 +196,7 @@ export function OraclePanelSlim({
                       onLoadTemplate(t.name || "", t.file_url || "");
                       setShowTemplates(false);
                     }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-[11px] hover:bg-muted/50 text-foreground/70 transition-colors"
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-[11px] hover:bg-muted/50 text-foreground transition-colors"
                   >
                     <span className="shrink-0">📄</span>
                     <span className="truncate">{t.name}</span>

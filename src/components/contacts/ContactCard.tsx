@@ -144,11 +144,11 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             {displayContact && (
               <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
                 <User className="w-3 h-3 text-muted-foreground shrink-0" />
-                <span className="truncate text-foreground/80 text-[10px]">{displayContact}</span>
+                <span className="truncate text-foreground text-[10px]">{displayContact}</span>
               </Filterable>
             )}
             {cPosition && (
-              <span className="text-[10px] text-primary/70 truncate">· {capitalizeLabel(cPosition)}</span>
+              <span className="text-[10px] text-primary truncate">· {capitalizeLabel(cPosition)}</span>
             )}
           </div>
         </div>
@@ -160,7 +160,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
               {capitalizeLabel(cCity)}
             </Filterable>
           ) : (
-            <span className="text-muted-foreground/30 text-[11px]">—</span>
+            <span className="text-muted-foreground text-[11px]">—</span>
           )}
           <div className="flex items-center gap-1.5">
             <ChannelIcons
@@ -206,7 +206,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           {cEmail ? (
             <span className="text-muted-foreground truncate text-[10px]">{cEmail}</span>
           ) : (
-            <span className="text-muted-foreground/40 italic text-[10px]">no email</span>
+            <span className="text-muted-foreground italic text-[10px]">no email</span>
           )}
         </div>
         {/* Col 4: lead status + origine */}

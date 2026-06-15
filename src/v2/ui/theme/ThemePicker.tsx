@@ -193,7 +193,7 @@ function ThemePickerIcon({
         onClick={() => setOpen((v) => !v)}
         aria-label={`Tema corrente: ${currentTheme.label}. Cambia tema`}
         title={`Tema · ${currentTheme.label}`}
-        className="h-9 w-9 md:h-7 md:w-7 inline-flex items-center justify-center rounded-md text-foreground/70 hover:text-primary hover:bg-white/5 transition-colors"
+        className="h-9 w-9 md:h-7 md:w-7 inline-flex items-center justify-center rounded-md text-foreground hover:text-primary hover:bg-white/5 transition-colors"
       >
         <Palette className="h-4 w-4" />
       </button>

@@ -79,7 +79,7 @@ export function ChannelFilterBar({
         className,
       )}
     >
-      <Filter className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
+      <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
       {showAll && (
         <button

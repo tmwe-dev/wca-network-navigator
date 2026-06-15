@@ -81,7 +81,7 @@ export function OutreachRow({
         {/* Riga 3: icona azione + soggetto */}
         <div className="flex items-center gap-1.5">
           <ActionIcon kind={actionKind} size="sm" />
-          <span className="text-[11px] text-foreground/90 truncate">
+          <span className="text-[11px] text-foreground truncate">
             <span className="text-muted-foreground">{actionLabel(actionKind)}:</span>{" "}
             <span className="italic">{subject || preview || "—"}</span>
           </span>

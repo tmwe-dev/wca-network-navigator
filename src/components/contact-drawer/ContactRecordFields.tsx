@@ -49,7 +49,7 @@ function FieldRow({ icon, label, value, editing, onChange, type = "text" }: Fiel
           type={type}
         />
       ) : (
-        <span className={cn("text-xs flex-1 truncate", value ? "text-foreground" : "text-muted-foreground/50")}>
+        <span className={cn("text-xs flex-1 truncate", value ? "text-foreground" : "text-muted-foreground")}>
           {value || "—"}
         </span>
       )}
@@ -163,7 +163,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
           {editing ? (
             <Input value={val("email") || record.email || ""} onChange={e => setDraft(d => ({ ...d, email: e.target.value }))} className="h-7 text-xs flex-1" type="email" />
           ) : (
-            <span className={cn("text-xs flex-1 truncate flex items-center gap-1.5", (val("email") || record.email) ? "text-foreground" : "text-muted-foreground/50")}>
+            <span className={cn("text-xs flex-1 truncate flex items-center gap-1.5", (val("email") || record.email) ? "text-foreground" : "text-muted-foreground")}>
               {val("email") || record.email || "—"}
               {record.emailStatus === "bounced" && (
                 <Badge variant="destructive" className="text-[10px] h-4 px-1.5">Bounced</Badge>
@@ -203,7 +203,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
             placeholder="Aggiungi note..."
           />
         ) : (
-          <p className={cn("text-xs rounded-lg bg-muted/20 p-2 min-h-[40px]", record.note ? "text-foreground" : "text-muted-foreground/50")}>
+          <p className={cn("text-xs rounded-lg bg-muted/20 p-2 min-h-[40px]", record.note ? "text-foreground" : "text-muted-foreground")}>
             {record.note || "Nessuna nota"}
           </p>
         )}

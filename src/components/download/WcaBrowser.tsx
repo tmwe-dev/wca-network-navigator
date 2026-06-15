@@ -71,7 +71,7 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
   const panel = "bg-card/80 backdrop-blur-xl border-border";
   const h2 = "text-foreground";
   const sub = "text-muted-foreground";
-  const body = "text-foreground/80";
+  const body = "text-foreground";
   const input = "bg-muted border-border text-foreground";
   const cardBg = "bg-card border-border";
 

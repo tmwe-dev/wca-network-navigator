@@ -107,7 +107,7 @@ function ManualEmailField(props: Pick<RecipientHeroCardProps, "manualEmail" | "o
         }}
         onBlur={() => { if (manualEmail.trim()) onAddManualEmail(); }}
         placeholder={isFirst ? "Aggiungi email destinatario…" : "Aggiungi un altro destinatario…"}
-        className="flex-1 min-w-[160px] text-xs bg-transparent outline-none placeholder:text-muted-foreground/60 h-5"
+        className="flex-1 min-w-[160px] text-xs bg-transparent outline-none placeholder:text-muted-foreground h-5"
       />
     </div>
   );
@@ -231,7 +231,7 @@ export function RecipientHeroCard({
           </div>
 
           {(contactName || email) && (
-            <div className="mt-1 flex items-center gap-2 text-xs text-foreground/80 flex-wrap">
+            <div className="mt-1 flex items-center gap-2 text-xs text-foreground flex-wrap">
               {contactName && <span className="font-medium">{contactName}</span>}
               {email && (
                 <span className="inline-flex items-center gap-1 text-muted-foreground">

@@ -30,14 +30,14 @@ interface Props {
 function statusClasses(status: EmailPipelineStatus): string {
   switch (status) {
     case "ok":
-      return "bg-success/10 border-success/30 text-success/90";
+      return "bg-success/10 border-success/30 text-success";
     case "warn":
-      return "bg-warning/10 border-warning/30 text-warning/90";
+      return "bg-warning/10 border-warning/30 text-warning";
     case "failed":
-      return "bg-destructive/10 border-destructive/30 text-destructive/90";
+      return "bg-destructive/10 border-destructive/30 text-destructive";
     case "skipped":
     default:
-      return "bg-muted/30 border-border/40 text-muted-foreground/80";
+      return "bg-muted/30 border-border/40 text-muted-foreground";
   }
 }
 
@@ -60,11 +60,11 @@ export default function EmailPipelineBadge({ pipeline, summary }: Props): React.
       }}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[9px] uppercase tracking-[0.18em] font-mono text-muted-foreground/90">
+        <span className="text-[9px] uppercase tracking-[0.18em] font-mono text-muted-foreground">
           Pipeline mail
         </span>
         {summary && (
-          <span className="text-[10px] font-mono text-muted-foreground/70 truncate">{summary}</span>
+          <span className="text-[10px] font-mono text-muted-foreground truncate">{summary}</span>
         )}
       </div>
       <div className="flex items-center gap-1 flex-wrap">
@@ -80,11 +80,11 @@ export default function EmailPipelineBadge({ pipeline, summary }: Props): React.
               <StatusIcon status={stage.status} />
               <span className="font-medium">{stage.label}</span>
               {stage.detail && (
-                <span className="text-foreground/60 font-light">· {stage.detail}</span>
+                <span className="text-foreground font-light">· {stage.detail}</span>
               )}
             </span>
             {i < pipeline.length - 1 && (
-              <ChevronRight className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+              <ChevronRight className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
             )}
           </React.Fragment>
         ))}

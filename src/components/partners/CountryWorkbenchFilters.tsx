@@ -168,7 +168,7 @@ export function CountryWorkbenchFilters({
 
         {hasAnyFilter && (
           <button onClick={clearAllFilters}
-            className="p-1.5 rounded-full text-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all ml-auto">
+            className="p-1.5 rounded-full text-foreground hover:text-destructive hover:bg-destructive/10 transition-all ml-auto">
             <X className="w-3.5 h-3.5" />
           </button>
         )}

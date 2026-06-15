@@ -130,7 +130,7 @@ export default function FunnemailTab(): React.ReactElement {
                       <td className="px-3 py-2 font-medium">{g.nome_gruppo}</td>
                       <td className="px-3 py-2">
                         {acts.length === 0 ? (
-                          <span className="text-muted-foreground/60">— nessuna —</span>
+                          <span className="text-muted-foreground">— nessuna —</span>
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {acts.map((a) => (
@@ -171,7 +171,7 @@ export default function FunnemailTab(): React.ReactElement {
                   <div className="flex items-center gap-2">
                     <StatusIcon status={a.status} />
                     <span className="font-medium">{a.action}</span>
-                    <span className="ml-auto text-muted-foreground/70">
+                    <span className="ml-auto text-muted-foreground">
                       {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: it })}
                     </span>
                   </div>

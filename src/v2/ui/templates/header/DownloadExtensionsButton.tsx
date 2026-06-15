@@ -99,7 +99,7 @@ export function DownloadExtensionsButton(): React.ReactElement {
       disabled={busy}
       aria-label="Scarica tutte le estensioni Chrome"
       title="Scarica tutte le estensioni Chrome"
-      className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors"
+      className="h-7 w-7 text-foreground hover:text-primary transition-colors"
     >
       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
     </Button>

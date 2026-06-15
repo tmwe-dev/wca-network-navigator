@@ -216,7 +216,7 @@ function KpiPill({
       <span className={cn("font-semibold tabular-nums", toneCls)}>
         {value.toLocaleString("it-IT")}
       </span>
-      <span className="text-muted-foreground/80">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
     </span>
   );
 }

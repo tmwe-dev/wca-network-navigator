@@ -151,7 +151,7 @@ export function ContactPipelineView(): React.ReactElement {
                 <span className={cn("font-medium", s.colorClass)}>{count}</span>
                 <span className="text-muted-foreground">({pct}%)</span>
               </div>
-              {i < STAGES.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground/30 shrink-0" />}
+              {i < STAGES.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />}
             </React.Fragment>
           );
         })}
@@ -203,16 +203,16 @@ export function ContactPipelineView(): React.ReactElement {
                               <p className="text-[10px] text-muted-foreground truncate">{contact.company_name}</p>
                             )}
                           </div>
-                          <GripVertical className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" />
+                          <GripVertical className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />
                         </div>
-                        <p className="text-[10px] text-muted-foreground/70 font-mono truncate">{contact.email || "—"}</p>
-                        <div className="flex items-center justify-between text-[9px] text-muted-foreground/60">
+                        <p className="text-[10px] text-muted-foreground font-mono truncate">{contact.email || "—"}</p>
+                        <div className="flex items-center justify-between text-[9px] text-muted-foreground">
                           <span>{contact.interaction_count || 0} interazioni</span>
                         </div>
                       </div>
                     ))}
                     {items.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground/50 text-center py-4">
+                      <p className="text-[10px] text-muted-foreground text-center py-4">
                         {isOver ? "Rilascia qui" : "Vuoto"}
                       </p>
                     )}

@@ -188,7 +188,7 @@ function SenderCardImpl({
                 >
                   {sender.companyName}
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-foreground/70 mt-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-foreground mt-0.5">
                   {flag && (
                     <span className="text-sm leading-none flex-shrink-0" title={sender.domain}>
                       {flag}
@@ -201,11 +201,11 @@ function SenderCardImpl({
 
             {/* ULTIMA email — label esplicita, leggibile */}
             {sender.lastSeen && (
-              <div className="flex items-center gap-1.5 text-[11px] text-foreground/60">
+              <div className="flex items-center gap-1.5 text-[11px] text-foreground">
                 <Clock className="h-3 w-3 flex-shrink-0" />
                 <span>
                   Ultima:{" "}
-                  <span className="text-foreground/80 font-medium">
+                  <span className="text-foreground font-medium">
                     {new Date(sender.lastSeen).toLocaleDateString("it-IT", {
                       day: "2-digit", month: "short", year: "2-digit",
                     })}
@@ -229,7 +229,7 @@ function SenderCardImpl({
                     >
                       <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
                       <div className="flex-1 min-w-0">
-                        <div className="text-[10px] uppercase tracking-wide text-primary/80 leading-none">
+                        <div className="text-[10px] uppercase tracking-wide text-primary leading-none">
                           Suggerito AI — clicca per cambiare
                         </div>
                         <div className="text-xs font-semibold text-foreground truncate leading-tight mt-0.5">
@@ -326,7 +326,7 @@ function SenderCardImpl({
               </div>
             ) : (
               <div
-                className="flex items-center gap-1.5 mt-0.5 min-h-[40px] px-2 py-1.5 rounded-md border border-dashed border-border/50 text-[11px] text-muted-foreground/70"
+                className="flex items-center gap-1.5 mt-0.5 min-h-[40px] px-2 py-1.5 rounded-md border border-dashed border-border/50 text-[11px] text-muted-foreground"
                 aria-hidden="true"
               >
                 <Sparkles className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />

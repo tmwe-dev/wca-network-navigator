@@ -30,9 +30,9 @@ const TemplateSuggest = forwardRef<HTMLButtonElement, TemplateSuggestProps>(
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.6, ease }}
       onClick={handleSave}
-      className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground/88 hover:text-primary/92 transition-all duration-700 group"
+      className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground hover:text-primary transition-all duration-700 group"
       >
-        <Bookmark className="w-3 h-3 group-hover:text-primary/65 transition-colors duration-500" />
+        <Bookmark className="w-3 h-3 group-hover:text-primary transition-colors duration-500" />
         <span className="font-light tracking-wide">{label}</span>
       </motion.button>
     );

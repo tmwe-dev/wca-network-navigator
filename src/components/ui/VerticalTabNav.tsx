@@ -60,7 +60,7 @@ export function VerticalTabNav({ tabs, value, onChange, filterSlot, fluid }: Ver
                   <TooltipTrigger asChild>
                     <span
                       onClick={(e) => e.stopPropagation()}
-                      className="ml-1 text-muted-foreground/60 hover:text-foreground"
+                      className="ml-1 text-muted-foreground hover:text-foreground"
                       aria-label="Info"
                     >
                       <Info className="w-3 h-3" />

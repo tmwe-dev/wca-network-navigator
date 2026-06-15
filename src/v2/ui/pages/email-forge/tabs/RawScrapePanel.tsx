@@ -162,7 +162,7 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
             <div className="text-[11px] font-semibold text-warning dark:text-warning">
               Nessun markdown grezzo disponibile
             </div>
-            <div className="text-[10px] text-warning/80 dark:text-warning/80 mt-0.5">
+            <div className="text-[10px] text-warning dark:text-warning mt-0.5">
               Lancia una Deep Search per popolare i markdown da FireScrape, oppure verifica che la pipeline V2 stia salvando i risultati.
               Per ispezionare gli scrape manuali apri <span className="font-mono">chrome://extensions</span> → Partner Connect → "service worker" → tab Console.
             </div>
@@ -174,7 +174,7 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
 
   return (
     <div className="space-y-1.5">
-      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80 flex items-center gap-1">
+      <div className="text-xs font-semibold uppercase tracking-wide text-foreground flex items-center gap-1">
         <FileText className="w-3 h-3" />
         Markdown grezzi · {allEntries.length}
       </div>
@@ -191,18 +191,18 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Badge variant="secondary" className="text-[9px] py-0 px-1.5 h-4 font-mono">{entry.source}</Badge>
-                  <span className="text-[11px] text-foreground/70 font-mono">{entry.markdown.length} char</span>
+                  <span className="text-[11px] text-foreground font-mono">{entry.markdown.length} char</span>
                   {entry.scrapedAt && (
-                    <span className="text-[11px] text-foreground/70">
+                    <span className="text-[11px] text-foreground">
                       {new Date(entry.scrapedAt).toLocaleString("it-IT")}
                     </span>
                   )}
                 </div>
                 {entry.url && (
-                  <div className="text-[10px] text-primary/80 truncate font-mono mt-0.5">{entry.url}</div>
+                  <div className="text-[10px] text-primary truncate font-mono mt-0.5">{entry.url}</div>
                 )}
                 {!isOpen && (
-                  <div className="text-xs text-foreground/70 mt-1 line-clamp-2">{preview}…</div>
+                  <div className="text-xs text-foreground mt-1 line-clamp-2">{preview}…</div>
                 )}
               </div>
             </button>

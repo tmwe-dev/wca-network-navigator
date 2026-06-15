@@ -71,7 +71,7 @@ export default function MissionPlanReview({ plan, visible, isApproving, onApprov
                     <p className="text-[10px] text-muted-foreground truncate">{action.details}</p>
                   )}
                 </div>
-                <Zap className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                <Zap className="w-3 h-3 text-muted-foreground shrink-0" />
               </motion.div>
             ))}
           </div>
@@ -85,7 +85,7 @@ export default function MissionPlanReview({ plan, visible, isApproving, onApprov
             <span>•</span>
             <span>{plan.totalContacts} contatti</span>
             <span>•</span>
-            <span className="font-mono text-[10px] text-muted-foreground/50">{plan.idempotencyKey.slice(0, 20)}…</span>
+            <span className="font-mono text-[10px] text-muted-foreground">{plan.idempotencyKey.slice(0, 20)}…</span>
           </div>
 
           {/* Action buttons */}

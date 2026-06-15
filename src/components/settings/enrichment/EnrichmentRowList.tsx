@@ -71,11 +71,11 @@ function EnrichmentStatusCell({ row }: { row: EnrichedRow }) {
 function StatusLine({ label, available, value }: { label: string; available: boolean; value?: string | null }) {
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <span className={cn("shrink-0 text-sm leading-none", available ? "text-emerald-600 dark:text-emerald-400" : "text-foreground/30")}>
+      <span className={cn("shrink-0 text-sm leading-none", available ? "text-emerald-600 dark:text-emerald-400" : "text-foreground")}>
         {available ? "✓" : "○"}
       </span>
-      <span className="text-foreground/70 shrink-0">{label}</span>
-      {value && <span className="text-foreground/60 truncate">— {value}</span>}
+      <span className="text-foreground shrink-0">{label}</span>
+      {value && <span className="text-foreground truncate">— {value}</span>}
     </div>
   );
 }
@@ -127,7 +127,7 @@ export function EnrichmentRowList({
     <>
       {/* Header */}
       <div
-        className="grid items-center gap-3 px-3 py-2 bg-muted/40 rounded-t-lg border border-border/60 text-xs font-medium text-foreground/70 uppercase tracking-wider"
+        className="grid items-center gap-3 px-3 py-2 bg-muted/40 rounded-t-lg border border-border/60 text-xs font-medium text-foreground uppercase tracking-wider"
         style={{ gridTemplateColumns: COL_TEMPLATE.replace(/_/g, " ") }}
       >
         <div className="flex justify-center">
@@ -151,7 +151,7 @@ export function EnrichmentRowList({
         className="h-[calc(100vh-420px)] min-h-[300px] border border-t-0 border-border/60 rounded-b-lg overflow-auto"
       >
         {rows.length === 0 ? (
-          <div className="text-center py-10 text-sm text-foreground/80">Nessun risultato trovato</div>
+          <div className="text-center py-10 text-sm text-foreground">Nessun risultato trovato</div>
         ) : (
           <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualItem) => {
@@ -185,7 +185,7 @@ export function EnrichmentRowList({
                     <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox checked={isSelected} onCheckedChange={() => onToggleOne(row.id)} className="h-3.5 w-3.5" />
                     </div>
-                    <div className="text-foreground/60 shrink-0">
+                    <div className="text-foreground shrink-0">
                       {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </div>
                     {/* Azienda con logo + nome + dominio + linkedin badge */}
@@ -193,13 +193,13 @@ export function EnrichmentRowList({
                       {row.logoUrl ? (
                         <img src={row.logoUrl} alt={row.name} className="w-8 h-8 rounded object-contain bg-card border border-border/60 shrink-0" />
                       ) : (
-                        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-foreground/60 text-sm font-bold shrink-0">
+                        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-foreground text-sm font-bold shrink-0">
                           {initial}
                         </div>
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{row.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-foreground/60">
+                        <div className="flex items-center gap-2 text-xs text-foreground">
                           {row.domain && <span className="truncate">{row.domain}</span>}
                           {row.hasLinkedin && (
                             <span className="text-cyan-600 dark:text-cyan-400 shrink-0 flex items-center gap-0.5">
@@ -211,23 +211,23 @@ export function EnrichmentRowList({
                               <Brain className="w-2.5 h-2.5" /> Deep
                             </span>
                           )}
-                          <span className="shrink-0 text-foreground/50">· {sourceLabel(row.source)}</span>
+                          <span className="shrink-0 text-foreground">· {sourceLabel(row.source)}</span>
                         </div>
                       </div>
                     </div>
                     {/* Paese */}
-                    <div className="flex items-center gap-1.5 text-foreground/70">
+                    <div className="flex items-center gap-1.5 text-foreground">
                       {flag && <span className="text-lg leading-none">{flag}</span>}
                       {row.country && <span className="text-xs uppercase">{row.country}</span>}
                     </div>
                     {/* Email */}
-                    <div className="text-xs text-foreground/70 truncate">
+                    <div className="text-xs text-foreground truncate">
                       {row.emailCount ? (
                         <span className="font-semibold text-foreground">{row.emailCount} msg</span>
                       ) : row.email ? (
                         <span className="truncate" title={row.email}>{row.email}</span>
                       ) : (
-                        <span className="text-foreground/40">—</span>
+                        <span className="text-foreground">—</span>
                       )}
                     </div>
                     {/* Stato */}
@@ -250,7 +250,7 @@ export function EnrichmentRowList({
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         {/* COL 1 — Dati base */}
                         <div>
-                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Dati disponibili</p>
+                          <p className="font-semibold text-foreground mb-2 uppercase tracking-wide text-xs">Dati disponibili</p>
                           <div className="space-y-1.5">
                             <StatusLine label="LinkedIn" available={row.hasLinkedin} value={row.linkedinUrl} />
                             <StatusLine label="Sito web" available={!!row.hasWebsiteExcerpt} value={ed?.description?.slice(0, 60)} />
@@ -262,25 +262,25 @@ export function EnrichmentRowList({
 
                         {/* COL 2 — Deep Search status */}
                         <div>
-                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Deep Search</p>
+                          <p className="font-semibold text-foreground mb-2 uppercase tracking-wide text-xs">Deep Search</p>
                           {row.hasDeepSearch && row.deepSearchAt ? (
-                            <div className="space-y-1 text-foreground/70">
+                            <div className="space-y-1 text-foreground">
                               <p>Eseguito: <span className="text-foreground">{formatDate(row.deepSearchAt)}</span></p>
                               <p className="text-primary text-[11px]">✓ Contatti / Reputazione / Mentions</p>
                             </div>
                           ) : ed?.scraped_at ? (
-                            <div className="space-y-1 text-foreground/70">
+                            <div className="space-y-1 text-foreground">
                               <p>Scraping: <span className="text-foreground">{formatDate(ed.scraped_at)}</span></p>
-                              <p className="text-foreground/50 italic text-[11px]">Solo Base — manca Deep Search</p>
+                              <p className="text-foreground italic text-[11px]">Solo Base — manca Deep Search</p>
                             </div>
                           ) : (
-                            <p className="text-foreground/50 italic">Mai eseguito</p>
+                            <p className="text-foreground italic">Mai eseguito</p>
                           )}
                         </div>
 
                         {/* COL 3 — Azioni */}
                         <div>
-                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Azioni</p>
+                          <p className="font-semibold text-foreground mb-2 uppercase tracking-wide text-xs">Azioni</p>
                           <div className="flex flex-col gap-1.5 items-stretch">
                             <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start" onClick={() => onDeepSearch([row])}>
                               <Brain className="w-3.5 h-3.5" /> Deep Search

@@ -261,7 +261,7 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/40">
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
                     <Users className="w-8 h-8 mb-2" />
                     <p className="text-xs font-medium">Caricamento...</p>
                   </div>

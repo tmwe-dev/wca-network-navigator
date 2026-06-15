@@ -158,7 +158,7 @@ export default function OperativeJobsBoard() {
                   onClick={() => openPromptDialog(job)}
                   className={cn(
                     "shrink-0 rounded-md p-1.5 transition-colors",
-                    hasPrompt ? "text-amber-500 hover:bg-amber-500/10" : "text-muted-foreground/40 hover:bg-muted"
+                    hasPrompt ? "text-amber-500 hover:bg-amber-500/10" : "text-muted-foreground hover:bg-muted"
                   )}
                   title={hasPrompt ? "Visualizza prompt AI" : "Nessun prompt generato"}
                 >

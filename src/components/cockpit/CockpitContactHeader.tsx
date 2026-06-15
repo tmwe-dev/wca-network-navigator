@@ -80,7 +80,7 @@ export function CockpitContactHeader({
             <span className="truncate font-semibold text-sky-200">{contact.company}</span>
             {contact.country && <span className="text-emerald-300/90 text-[10px] uppercase tracking-wide">· {contact.country}</span>}
           </div>
-          {contact.role && <div className="text-[11px] text-foreground/80 truncate">{contact.role}</div>}
+          {contact.role && <div className="text-[11px] text-foreground truncate">{contact.role}</div>}
 
           {/* Riga 3: TIPO AZIONE + dettaglio leggibile (subject pulito o canale) */}
           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -98,7 +98,7 @@ export function CockpitContactHeader({
             </InfoTooltip>
             {/* Dettaglio: oggetto/contesto reale, non solo "Risposta email" */}
             {detail && (
-              <span className="text-[11px] text-foreground/85 truncate max-w-[220px]" title={detail}>
+              <span className="text-[11px] text-foreground truncate max-w-[220px]" title={detail}>
                 {detail
                   .replace(/^risposta(?:\s+(?:a\s+)?email[^:]*)?:\s*/i, "")
                   .replace(/^re:\s*/i, "")

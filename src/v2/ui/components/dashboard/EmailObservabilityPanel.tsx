@@ -107,7 +107,7 @@ export function EmailObservabilityPanel() {
                       {e.status}
                     </Badge>
                     <span className="text-muted-foreground">{e.send_method}</span>
-                    <span className="text-muted-foreground/70">·</span>
+                    <span className="text-muted-foreground">·</span>
                     <span className="text-muted-foreground">{formatRelative(e.sent_at)}</span>
                   </div>
                   <div className="mt-1 truncate font-medium text-foreground" title={e.subject}>
@@ -117,7 +117,7 @@ export function EmailObservabilityPanel() {
                     → {e.recipient_email}
                   </div>
                   {e.error_message && (
-                    <div className="mt-0.5 truncate text-destructive/80" title={e.error_message}>
+                    <div className="mt-0.5 truncate text-destructive" title={e.error_message}>
                       {e.error_message}
                     </div>
                   )}

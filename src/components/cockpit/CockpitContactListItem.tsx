@@ -90,7 +90,7 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
           className="h-3.5 w-3.5 flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         />
-        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground/80 flex-shrink-0" />
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground flex-shrink-0" />
         <InfoTooltip content={contact.country || "?"}>
           <span className="text-base leading-none flex-shrink-0">{flag}</span>
         </InfoTooltip>
@@ -110,16 +110,16 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
             </InfoTooltip>
           </div>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
-            <span className="truncate font-medium text-foreground/70">{contact.company}</span>
+            <span className="truncate font-medium text-foreground">{contact.company}</span>
             {contact.role && (
               <>
-                <span className="text-muted-foreground/40">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span className="truncate">{contact.role}</span>
               </>
             )}
             {contact.country && (
               <>
-                <span className="text-muted-foreground/40">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span className="inline-flex items-center gap-0.5 shrink-0">
                   <MapPin className="w-2.5 h-2.5" />
                   {contact.country}
@@ -137,7 +137,7 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
               : !!contact.phone;
             return (
               <InfoTooltip key={ch} content={isAvailable ? `${ch} disponibile` : `${ch} non disponibile`}>
-                <span><Icon className={cn("w-3 h-3", isAvailable ? "text-muted-foreground/80" : "text-muted-foreground/25")} /></span>
+                <span><Icon className={cn("w-3 h-3", isAvailable ? "text-muted-foreground" : "text-muted-foreground")} /></span>
               </InfoTooltip>
             );
           })}

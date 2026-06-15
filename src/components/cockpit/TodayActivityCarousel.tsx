@@ -61,13 +61,13 @@ function ActivityMini({ activity }: { activity: TodayActivity }) {
           <span className="max-w-[60px] truncate">{activity.contactName}</span>
           {activity.status === "completed"
             ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
-            : <Circle className="w-2.5 h-2.5 text-muted-foreground/50 flex-shrink-0" />}
+            : <Circle className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0" />}
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs max-w-[200px]">
         <div className="font-semibold">{activity.contactName}</div>
         {activity.company && <div className="text-muted-foreground">{activity.company}</div>}
-        {activity.description && <div className="text-muted-foreground/80 mt-0.5 line-clamp-2">{activity.description}</div>}
+        {activity.description && <div className="text-muted-foreground mt-0.5 line-clamp-2">{activity.description}</div>}
       </TooltipContent>
     </Tooltip>
   );

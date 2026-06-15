@@ -39,7 +39,7 @@ const TONE_ICONS: Record<string, LucideIcon> = {
 // Massimo 3 colori in gioco: primary (attivo/accent), foreground (testo),
 // muted (sfondo sfumato).
 const TILE_BASE =
-  "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-muted/40 to-muted/10 text-foreground/80";
+  "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-muted/40 to-muted/10 text-foreground";
 const TILE_IDLE = "border-border/40 hover:border-primary/40 hover:text-foreground";
 const TILE_ACTIVE =
   "border-primary border-2 text-primary ring-2 ring-primary/20 from-primary/15 to-primary/5";
@@ -139,7 +139,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
                   "h-12 rounded-md border text-[9px] font-semibold transition-all flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-muted/40 to-muted/10",
                   selected
                     ? "border-primary border-2 text-primary ring-2 ring-primary/20 from-primary/15 to-primary/5"
-                    : "border-border/40 text-foreground/70 hover:border-primary/40 hover:text-foreground",
+                    : "border-border/40 text-foreground hover:border-primary/40 hover:text-foreground",
                 )}
                 aria-pressed={selected}
                 title={t.label}

@@ -48,7 +48,7 @@ export function CommandHistory({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, ease }}
-          className="text-2xl font-extralight tracking-tight text-foreground/100"
+          className="text-2xl font-extralight tracking-tight text-foreground"
         >
           Cosa vuoi ottenere?
         </motion.h2>
@@ -88,7 +88,7 @@ export function CommandHistory({
                       }}
                     />
                   ))}
-                  <span className="text-[11px] text-muted-foreground/100 ml-2 font-light">
+                  <span className="text-[11px] text-muted-foreground ml-2 font-light">
                     Attivo tool operativi...
                   </span>
                 </div>
@@ -133,17 +133,17 @@ export function CommandHistory({
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.15 }}
-                      className="text-[10px] text-primary/100 font-mono mb-2.5 tracking-[0.2em] uppercase"
+                      className="text-[10px] text-primary font-mono mb-2.5 tracking-[0.2em] uppercase"
                     >
                       {msg.agentName}
                     </motion.div>
                   )}
-                  <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground/100">
+                  <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground">
                     {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
                       part.startsWith("**") && part.endsWith("**") ? (
                         <span
                           key={i}
-                          className="text-primary/92 font-mono text-[12px]"
+                          className="text-primary font-mono text-[12px]"
                         >
                           {part.slice(2, -2)}
                         </span>
@@ -159,8 +159,8 @@ export function CommandHistory({
                       transition={{ delay: 0.4 }}
                       className="flex items-center gap-2 mt-3 pt-2 border-t border-border/[0.16]"
                     >
-                      <Wand2 className="w-2.5 h-2.5 text-primary/92" />
-                      <span className="text-[10px] text-muted-foreground/100 font-light font-mono">
+                      <Wand2 className="w-2.5 h-2.5 text-primary" />
+                      <span className="text-[10px] text-muted-foreground font-light font-mono">
                         {msg.meta}
                       </span>
                     </motion.div>
@@ -173,7 +173,7 @@ export function CommandHistory({
                       className="flex items-center gap-2 mt-1.5"
                     >
                       <div className="w-1 h-1 rounded-full bg-success/90" />
-                      <span className="text-[9px] text-muted-foreground/100 font-mono">
+                      <span className="text-[9px] text-muted-foreground font-mono">
                         {msg.governance}
                       </span>
                     </motion.div>
@@ -189,14 +189,14 @@ export function CommandHistory({
                         <button
                           key={`${action.label}-${i}`}
                           onClick={() => onQuickPrompt(action.prompt)}
-                          className="text-[11px] px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary/90 hover:text-primary border border-primary/20 hover:border-primary/40 transition-all duration-300 font-light"
+                          className="text-[11px] px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary border border-primary/20 hover:border-primary/40 transition-all duration-300 font-light"
                         >
                           {action.label}
                         </button>
                       ))}
                     </motion.div>
                   )}
-                  <span className="text-[10px] text-muted-foreground/100 mt-2 block">
+                  <span className="text-[10px] text-muted-foreground mt-2 block">
                     {msg.timestamp}
                   </span>
                 </motion.div>

@@ -87,7 +87,7 @@ export function DownloadedEmailList({ emails, selectedEmailId, onSelect, isRunni
                       </span>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <CountryFlag email={email.from} size={16} />
-                        <span className="text-[10px] text-muted-foreground/70">{formatTime(email.date)}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatTime(email.date)}</span>
                       </div>
                     </div>
                     <div className="mt-0.5 truncate text-xs leading-tight text-foreground">{email.subject}</div>

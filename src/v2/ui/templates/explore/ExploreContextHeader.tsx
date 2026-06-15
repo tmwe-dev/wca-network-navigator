@@ -87,7 +87,7 @@ export function ExploreContextHeader(): React.ReactElement | null {
       <button
         type="button"
         onClick={() => goTo(-1)}
-        className="h-7 w-6 inline-flex items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 transition-colors"
+        className="h-7 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         aria-label="Tab precedente"
         title="Tab precedente"
       >
@@ -105,7 +105,7 @@ export function ExploreContextHeader(): React.ReactElement | null {
         title={`Vai a: ${nextTab.label}`}
         data-testid="explore-header-cycler"
       >
-        <Icon className="h-4 w-4 text-primary/80 shrink-0" />
+        <Icon className="h-4 w-4 text-primary shrink-0" />
         <span className="text-sm font-semibold text-foreground truncate">
           {active.label}
         </span>
@@ -120,7 +120,7 @@ export function ExploreContextHeader(): React.ReactElement | null {
       <button
         type="button"
         onClick={() => goTo(1)}
-        className="h-7 w-6 inline-flex items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 transition-colors"
+        className="h-7 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         aria-label="Tab successiva"
         title={`Vai a: ${nextTab.label}`}
       >

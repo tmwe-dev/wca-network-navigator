@@ -24,7 +24,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
         transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
         className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-4"
       >
-        <Icon className="w-6 h-6 text-muted-foreground/30" />
+        <Icon className="w-6 h-6 text-muted-foreground" />
       </motion.div>
       <motion.h3
         initial={{ opacity: 0 }}

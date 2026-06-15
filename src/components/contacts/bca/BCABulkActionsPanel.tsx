@@ -87,7 +87,7 @@ export function BCABulkActionsPanel({ cards, onClear, onRemove, onCockpit, onDee
         <div className="space-y-1 max-h-[40vh] overflow-y-auto rounded-lg border border-border/30 bg-muted/10 p-1.5">
           {cards.map(c => (
             <div key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/30 group">
-              <Building2 className="w-3 h-3 text-muted-foreground/60 shrink-0" />
+              <Building2 className="w-3 h-3 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="text-[11px] font-medium text-foreground truncate">{c.contact_name || "—"}</div>
                 <div className="text-[10px] text-muted-foreground truncate">{c.company_name || "—"}</div>

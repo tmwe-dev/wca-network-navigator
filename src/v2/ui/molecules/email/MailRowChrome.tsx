@@ -124,25 +124,25 @@ export function MailRowChrome({
                   <CompanyLogoInline email={fromAddress} size={size === "sm" ? 16 : 18} />
                   {inHolding && <Plane className="h-3.5 w-3.5 animate-pulse text-primary" />}
                 </div>
-                <p className="truncate text-xs text-foreground/65">{secondaryLine}</p>
+                <p className="truncate text-xs text-foreground">{secondaryLine}</p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-0.5">
                 {groupBadge}
-                <span className="text-xs font-semibold text-foreground/85">{formatMailListDate(date)}</span>
+                <span className="text-xs font-semibold text-foreground">{formatMailListDate(date)}</span>
               </div>
             </div>
 
             <p
               className={cn(
                 "truncate text-sm",
-                isUnread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
+                isUnread ? "font-semibold text-foreground" : "font-medium text-foreground",
               )}
             >
               {subject}
             </p>
 
             {previewText && (
-              <p className="line-clamp-2 text-xs leading-snug text-foreground/70">
+              <p className="line-clamp-2 text-xs leading-snug text-foreground">
                 {previewText}
               </p>
             )}

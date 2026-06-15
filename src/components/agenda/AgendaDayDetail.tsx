@@ -223,7 +223,7 @@ export default function AgendaDayDetail({
           })}
 
           {filteredActivities.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground/50">
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <CheckCircle2 className="w-8 h-8 mb-2 opacity-30" />
               <p className="text-xs">Nessuna azione richiesta oggi</p>
               <p className="text-[10px] mt-1">Tutto in ordine ✨</p>
@@ -256,7 +256,7 @@ function ActionGroup({
     <section>
       <header className="flex items-center gap-2 mb-2 px-1">
         <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground/80">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
           {def.label}
         </h3>
         <span className="text-[10px] text-muted-foreground">· {activities.length}</span>
@@ -421,7 +421,7 @@ function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) 
     <section className="pt-2">
       <header className="flex items-center gap-2 mb-2 px-1">
         <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground/80">Reminder</h3>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground">Reminder</h3>
         <span className="text-[10px] text-muted-foreground">· {reminders.length}</span>
       </header>
       <div className="space-y-1">

@@ -132,10 +132,10 @@ export function EmailCard({
     <>
       {email.personName ? (
         <>
-          <span className="truncate font-medium text-foreground/70">{email.personName}</span>
+          <span className="truncate font-medium text-foreground">{email.personName}</span>
           {email.personRole && (
             <>
-              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground">·</span>
               <span className="truncate">{email.personRole}</span>
             </>
           )}
@@ -143,8 +143,8 @@ export function EmailCard({
       ) : null}
       {email.fromAddress && (
         <>
-          {email.personName && <span className="text-muted-foreground/40">·</span>}
-          <span className="truncate text-[10px] text-muted-foreground/80" title={email.fromAddress}>
+          {email.personName && <span className="text-muted-foreground">·</span>}
+          <span className="truncate text-[10px] text-muted-foreground" title={email.fromAddress}>
             {email.fromAddress.replace(/.*<|>.*/g, "") || email.fromAddress}
           </span>
         </>
@@ -154,11 +154,11 @@ export function EmailCard({
 
   const previewSlot = email.subject ? (
     <>
-      <span className={cn("font-medium", email.unread ? "text-foreground" : "text-foreground/80")}>
+      <span className={cn("font-medium", email.unread ? "text-foreground" : "text-foreground")}>
         {email.subject}
       </span>
       {email.preview && (
-        <span className="text-muted-foreground/80"> — {email.preview}</span>
+        <span className="text-muted-foreground"> — {email.preview}</span>
       )}
     </>
   ) : null;
@@ -170,7 +170,7 @@ export function EmailCard({
         recency.tone === "ok" && "text-emerald-500",
         recency.tone === "warn" && "text-amber-500",
         recency.tone === "alert" && "text-destructive",
-        recency.tone === "muted" && "text-muted-foreground/50"
+        recency.tone === "muted" && "text-muted-foreground"
       )}
       title={email.dateIso ? new Date(email.dateIso).toLocaleString() : undefined}
     >

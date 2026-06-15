@@ -24,7 +24,7 @@ export function PlaceholderPage({ pageKey }: { pageKey: string }) {
       >
         <h1 className="text-2xl font-light tracking-[-0.03em] text-gradient-hero">{info.title}</h1>
         <p className="text-[12px] text-muted-foreground">{info.subtitle}</p>
-        <p className="text-[10px] text-muted-foreground/50 font-mono mt-4">Disponibile nella prossima versione</p>
+        <p className="text-[10px] text-muted-foreground font-mono mt-4">Disponibile nella prossima versione</p>
       </motion.div>
     </div>
   );

@@ -30,7 +30,7 @@ export function BriefingPanel({ briefing, onPromptSelect }: Props) {
             Briefing all'apertura
           </span>
         </div>
-        <p className="text-sm text-foreground/95 font-light leading-relaxed">
+        <p className="text-sm text-foreground font-light leading-relaxed">
           {briefing.summary}
         </p>
         {briefing.chips.length > 0 && (

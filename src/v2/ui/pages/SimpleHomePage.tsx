@@ -81,7 +81,7 @@ export default function SimpleHomePage() {
           })}
         </div>
 
-        <p className="text-[11px] text-muted-foreground/70 mt-8 text-center">
+        <p className="text-[11px] text-muted-foreground mt-8 text-center">
           Aggiungeremo nuove voci qui in funzione delle necessità di sviluppo. Tutto il resto resta
           accessibile da <Link to="/v2/command" className="underline hover:text-foreground">Sistema avanzato</Link>.
         </p>

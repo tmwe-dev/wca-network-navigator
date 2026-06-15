@@ -68,7 +68,7 @@ export function TopCommandBar({ viewMode, onViewChange, sourceTab, onSourceTabCh
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 transition-all duration-200 border border-dashed border-border/50 whitespace-nowrap h-7"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 border border-dashed border-border/50 whitespace-nowrap h-7"
             >
               <UserPlus className="w-3 h-3" />
               Nuovo
@@ -80,7 +80,7 @@ export function TopCommandBar({ viewMode, onViewChange, sourceTab, onSourceTabCh
               onClick={() => onViewChange("card")}
               className={cn(
                 "p-1 rounded transition-all duration-200",
-                viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground/70 hover:text-foreground"
+                viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -90,7 +90,7 @@ export function TopCommandBar({ viewMode, onViewChange, sourceTab, onSourceTabCh
               onClick={() => onViewChange("list")}
               className={cn(
                 "p-1 rounded transition-all duration-200",
-                viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground/70 hover:text-foreground"
+                viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <List className="w-3.5 h-3.5" />

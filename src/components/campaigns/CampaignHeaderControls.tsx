@@ -96,7 +96,7 @@ export function CampaignHeaderControls({
                     <Check className={cn("mr-2 h-4 w-4", selectedCountry === country.code ? "opacity-100 text-primary" : "opacity-0")} />
                     <span>{getCountryFlag(country.code)}</span>
                     <span className="ml-1.5 truncate">{country.name}</span>
-                    <span className={cn("ml-auto text-xs", country.count > 0 ? "text-primary" : "text-muted-foreground/40")}>{country.count}</span>
+                    <span className={cn("ml-auto text-xs", country.count > 0 ? "text-primary" : "text-muted-foreground")}>{country.count}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -125,7 +125,7 @@ export function CampaignHeaderControls({
       {selectedCountry && (
         <>
           <div className="w-px h-6 bg-border" />
-          <Button variant="ghost" size="sm" onClick={() => onCountrySelect(null)} className="text-primary hover:text-primary/80 hover:bg-primary/10">
+          <Button variant="ghost" size="sm" onClick={() => onCountrySelect(null)} className="text-primary hover:text-primary hover:bg-primary/10">
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />Reset
           </Button>
         </>
@@ -135,14 +135,14 @@ export function CampaignHeaderControls({
 
       {campaignPartners.length > 0 && (
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-foreground/80">
+          <div className="flex items-center gap-2 text-sm text-foreground">
             <Send className="w-4 h-4 text-emerald-400" />
             <span className="text-emerald-400">{campaignPartners.length}</span>
             <span className="text-muted-foreground">aziende</span>
-            <span className="text-muted-foreground/40">·</span>
+            <span className="text-muted-foreground">·</span>
             <span className="text-primary">{uniqueCountries}</span>
             <span className="text-muted-foreground">paesi</span>
-            <span className="text-muted-foreground/40">·</span>
+            <span className="text-muted-foreground">·</span>
             <span className="text-foreground">{totalWithEmail}</span>
             <span className="text-muted-foreground">email</span>
           </div>

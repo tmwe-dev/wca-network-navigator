@@ -97,7 +97,7 @@ export function SortingList({
                       {job.selected_contact?.contact_alias || job.selected_contact?.name || "—"} · {job.selected_contact?.email || "no email"}
                     </div>
                     {job.email_subject && (
-                      <div className="text-xs text-muted-foreground/70 truncate mt-0.5">✉ {job.email_subject}</div>
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">✉ {job.email_subject}</div>
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">

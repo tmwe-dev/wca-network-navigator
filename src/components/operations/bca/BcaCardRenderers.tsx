@@ -60,7 +60,7 @@ function BcaNotesFormatted({ text }: { text: string }) {
             <dt className="text-[10px] font-semibold uppercase tracking-wide text-cyan-400 [text-shadow:0_0_6px_hsl(190_100%_60%/0.6)]">
               {row.label}
             </dt>
-            <dd className="text-[11px] text-foreground/90 break-words">{row.value}</dd>
+            <dd className="text-[11px] text-foreground break-words">{row.value}</dd>
           </div>
         ))}
       </dl>
@@ -103,7 +103,7 @@ export function BcaCompactCard({ card, isSelected, isOpened, onToggle, groupComp
             e.dataTransfer.setData(BCA_DRAG_MIME, card.id);
             e.dataTransfer.setData("text/plain", card.id);
           }}
-          className="inline-flex items-center justify-center w-4 h-4 rounded text-muted-foreground/60 hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          className="inline-flex items-center justify-center w-4 h-4 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0"
         >
           <GripVertical className="w-3 h-3" />
         </button>
@@ -113,7 +113,7 @@ export function BcaCompactCard({ card, isSelected, isOpened, onToggle, groupComp
       {card.position && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{card.position}</span>}
       <div className="flex items-center gap-1 flex-shrink-0">
         {card.email && (
-          <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); onSendEmail({ email: card.email!, name: card.contact_name || undefined, company: groupCompanyName }); }} className="hover:scale-110 transition-transform"><Mail className="w-3 h-3 text-primary/60 hover:text-primary" /></button></TooltipTrigger><TooltipContent className="text-[10px]">Invia email a {card.email}</TooltipContent></Tooltip></TooltipProvider>
+          <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); onSendEmail({ email: card.email!, name: card.contact_name || undefined, company: groupCompanyName }); }} className="hover:scale-110 transition-transform"><Mail className="w-3 h-3 text-primary hover:text-primary" /></button></TooltipTrigger><TooltipContent className="text-[10px]">Invia email a {card.email}</TooltipContent></Tooltip></TooltipProvider>
         )}
         {(card.phone || card.mobile) && (
           <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); onSendWhatsApp({ phone: (card.mobile || card.phone)!, contactName: card.contact_name || undefined, companyName: groupCompanyName, sourceType: "contact", sourceId: card.id }); }} className="hover:scale-110 transition-transform"><MessageCircle className="w-3 h-3 text-emerald-500/60 hover:text-emerald-500" /></button></TooltipTrigger><TooltipContent className="text-[10px]">WhatsApp {card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
@@ -149,7 +149,7 @@ export function BcaGridCard({ card, isSelected, isOpened, onToggle, groupCompany
             e.dataTransfer.setData(BCA_DRAG_MIME, card.id);
             e.dataTransfer.setData("text/plain", card.id);
           }}
-          className="absolute top-1.5 left-1.5 z-10 inline-flex items-center justify-center w-5 h-5 rounded-md text-muted-foreground/60 hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1.5 left-1.5 z-10 inline-flex items-center justify-center w-5 h-5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100 transition-opacity"
         >
           <span className="relative inline-flex">
             <GripVertical className="w-3 h-3" />
@@ -163,13 +163,13 @@ export function BcaGridCard({ card, isSelected, isOpened, onToggle, groupCompany
         {card.position && <div className="text-[10px] text-muted-foreground truncate">{card.position}</div>}
         <div className="flex items-center gap-1 mt-1">
           {card.email && (
-            <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); onSendEmail({ email: card.email!, name: card.contact_name || undefined, company: groupCompanyName }); }} className="hover:scale-110 transition-transform"><Mail className="w-3 h-3 text-primary/60 hover:text-primary" /></button></TooltipTrigger><TooltipContent className="text-[10px]">Invia email a {card.email}</TooltipContent></Tooltip></TooltipProvider>
+            <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); onSendEmail({ email: card.email!, name: card.contact_name || undefined, company: groupCompanyName }); }} className="hover:scale-110 transition-transform"><Mail className="w-3 h-3 text-primary hover:text-primary" /></button></TooltipTrigger><TooltipContent className="text-[10px]">Invia email a {card.email}</TooltipContent></Tooltip></TooltipProvider>
           )}
           {(card.phone || card.mobile) && (
             <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><button onClick={(e) => { e.stopPropagation(); onSendWhatsApp({ phone: (card.mobile || card.phone)!, contactName: card.contact_name || undefined, companyName: groupCompanyName, sourceType: "contact", sourceId: card.id }); }} className="hover:scale-110 transition-transform"><MessageCircle className="w-3 h-3 text-emerald-500/60 hover:text-emerald-500" /></button></TooltipTrigger><TooltipContent className="text-[10px]">WhatsApp {card.mobile || card.phone}</TooltipContent></Tooltip></TooltipProvider>
           )}
         </div>
-        {card.event_name && <div className="text-[9px] text-muted-foreground/60 truncate mt-1">📍 {card.event_name}</div>}
+        {card.event_name && <div className="text-[9px] text-muted-foreground truncate mt-1">📍 {card.event_name}</div>}
       </div>
     </div>
   );
@@ -195,7 +195,7 @@ export function BcaExpandedCard({ card, isSelected, isOpened, onToggle, groupCom
             e.dataTransfer.setData(BCA_DRAG_MIME, card.id);
             e.dataTransfer.setData("text/plain", card.id);
           }}
-          className="absolute top-1.5 left-1.5 z-10 inline-flex items-center justify-center w-5 h-5 rounded-md text-muted-foreground/60 hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1.5 left-1.5 z-10 inline-flex items-center justify-center w-5 h-5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100 transition-opacity"
         >
           <span className="relative inline-flex">
             <GripVertical className="w-3 h-3" />
@@ -211,8 +211,8 @@ export function BcaExpandedCard({ card, isSelected, isOpened, onToggle, groupCom
           {card.email && <button onClick={(e) => { e.stopPropagation(); onSendEmail({ email: card.email!, name: card.contact_name || undefined, company: groupCompanyName }); }} className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-mono hover:bg-primary/20 transition-colors cursor-pointer">{card.email}</button>}
           {(card.phone || card.mobile) && <button onClick={(e) => { e.stopPropagation(); onSendWhatsApp({ phone: (card.mobile || card.phone)!, contactName: card.contact_name || undefined, companyName: groupCompanyName, sourceType: "contact", sourceId: card.id }); }} className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-mono hover:bg-emerald-500/20 transition-colors cursor-pointer">{card.mobile || card.phone}</button>}
         </div>
-        {card.event_name && <div className="text-[10px] text-muted-foreground/60 mt-1">📍 {card.event_name}</div>}
-        {card.location && <div className="text-[10px] text-muted-foreground/60">📌 {card.location}</div>}
+        {card.event_name && <div className="text-[10px] text-muted-foreground mt-1">📍 {card.event_name}</div>}
+        {card.location && <div className="text-[10px] text-muted-foreground">📌 {card.location}</div>}
         {card.notes && <BcaNotesFormatted text={card.notes} />}
       </div>
     </div>

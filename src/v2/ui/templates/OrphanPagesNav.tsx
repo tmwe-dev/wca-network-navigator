@@ -40,7 +40,7 @@ export function OrphanPagesNav({ onNavigate }: Props): React.ReactElement {
         <div className="mt-1 space-y-3 px-1 pb-2">
           {SECONDARY_NAV.map((group) => (
             <div key={group.title}>
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {group.title}
               </div>
               <div className="space-y-0.5">
@@ -64,7 +64,7 @@ export function OrphanPagesNav({ onNavigate }: Props): React.ReactElement {
                 })}
                 {(group.subGroups ?? []).map((sg) => (
                   <div key={sg.title} className="mt-1.5">
-                    <div className="px-3 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    <div className="px-3 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {sg.title}
                     </div>
                     <div className="space-y-0.5 border-l border-border/40 ml-3 pl-1">

@@ -30,16 +30,16 @@ export function EmailLabPage(): React.ReactElement {
         {/* Info popup con descrizione + 3 passi */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/60" aria-label="Cos'è questa pagina">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground" aria-label="Cos'è questa pagina">
               <Info className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-80 text-sm">
-            <p className="text-foreground/80">
+            <p className="text-foreground">
               Genera o smista un'email finta e vedi come la produce/classifica l'AI.
               Nessuna scrittura su CRM, contatti o caselle reali.
             </p>
-            <ol className="mt-3 space-y-1.5 text-xs text-foreground/70">
+            <ol className="mt-3 space-y-1.5 text-xs text-foreground">
               <li className="flex items-start gap-2">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">1</span>
                 Scegli uno scenario o parti da bianco
@@ -79,7 +79,7 @@ export function EmailLabPage(): React.ReactElement {
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 gap-1.5 text-foreground/70"
+            className="h-7 gap-1.5 text-foreground"
             onClick={() => setToolsOpen((v) => !v)}
             aria-expanded={toolsOpen}
           >

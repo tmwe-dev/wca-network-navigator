@@ -54,7 +54,7 @@ export function NotificationCenter(): React.ReactElement {
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors relative"
+          className="h-7 w-7 text-foreground hover:text-primary transition-colors relative"
           aria-label="Notifiche"
         >
           <Bell className="h-4 w-4" />

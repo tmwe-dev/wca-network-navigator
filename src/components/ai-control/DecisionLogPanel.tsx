@@ -92,7 +92,7 @@ export function DecisionLogPanel() {
         <div className="flex items-center justify-center h-40"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
       ) : rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <Brain className="h-12 w-12 mb-3 text-primary/30" />
+          <Brain className="h-12 w-12 mb-3 text-primary" />
           <p className="text-sm">Nessuna decisione trovata</p>
         </div>
       ) : (

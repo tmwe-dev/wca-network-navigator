@@ -162,9 +162,9 @@ export function ABTestResults() {
   if (tests.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <FlaskConical className="w-10 h-10 text-muted-foreground/30 mb-3" />
+        <FlaskConical className="w-10 h-10 text-muted-foreground mb-3" />
         <p className="text-sm text-muted-foreground">Nessun A/B test creato</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">Crea il tuo primo test dalla sezione "Da Inviare"</p>
+        <p className="text-xs text-muted-foreground mt-1">Crea il tuo primo test dalla sezione "Da Inviare"</p>
       </div>
     );
   }

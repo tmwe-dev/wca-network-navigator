@@ -107,7 +107,7 @@ export function FallitiSubTab() {
                     <span className="text-xs font-medium text-foreground truncate">{item.label}</span>
                     {item.email && <span className="text-[10px] text-muted-foreground truncate">{item.email}</span>}
                   </div>
-                  <p className="text-[10px] text-destructive/80 truncate">{item.error}</p>
+                  <p className="text-[10px] text-destructive truncate">{item.error}</p>
                   <div className="flex items-center gap-2 mt-0.5 text-[9px] text-muted-foreground">
                     <span>Tentativi: {item.retry_count}</span>
                     <span>Ultimo: {format(new Date(item.updated_at), "dd MMM HH:mm", { locale: it })}</span>

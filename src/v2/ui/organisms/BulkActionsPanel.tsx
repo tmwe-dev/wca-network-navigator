@@ -105,7 +105,7 @@ export function BulkActionsPanel({
 
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
         <div>
-          <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/80 px-1 pb-1.5">
+          <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground px-1 pb-1.5">
             Azioni bulk
           </div>
           <div className="space-y-1.5">
@@ -150,7 +150,7 @@ export function BulkActionsPanel({
         </div>
 
         <div>
-          <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/80 px-1 pb-1.5">
+          <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground px-1 pb-1.5">
             Anteprima selezione
           </div>
           <div className="space-y-1">
@@ -165,7 +165,7 @@ export function BulkActionsPanel({
               </div>
             ))}
             {selected.length > 12 && (
-              <div className="text-[10px] text-muted-foreground/70 italic px-2 pt-1">
+              <div className="text-[10px] text-muted-foreground italic px-2 pt-1">
                 + altri {selected.length - 12}…
               </div>
             )}

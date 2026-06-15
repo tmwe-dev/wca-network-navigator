@@ -279,7 +279,7 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
                   onClick={ind.onClick}
                   className={cn(
                     "h-7 px-1.5 flex items-center gap-1 rounded-lg transition-all text-[10px] font-semibold",
-                    hasItems ? `${ind.bg} ${ind.color}` : "text-muted-foreground/50 hover:bg-muted/40"
+                    hasItems ? `${ind.bg} ${ind.color}` : "text-muted-foreground hover:bg-muted/40"
                   )}
                 >
                   <Icon className="w-3 h-3" />

@@ -45,7 +45,7 @@ export function ForgeSummaryPanel() {
             <SidebarQualityButton icon={ThumbsUp} label="Standard" q="standard" active={lab.quality === "standard"} />
             <SidebarQualityButton icon={Trophy} label="Premium" q="premium" active={lab.quality === "premium"} />
           </div>
-          <div className="text-[11px] text-foreground/70 mt-1 leading-tight">
+          <div className="text-[11px] text-foreground mt-1 leading-tight">
             {getDeepSearchMeta(lab.quality).description}
           </div>
         </Section>
@@ -74,9 +74,9 @@ export function ForgeSummaryPanel() {
                 <div className="text-muted-foreground truncate">{lab.recipient.contactName}</div>
               )}
               {lab.recipient.email && (
-                <div className="text-xs text-foreground/70 truncate">{lab.recipient.email}</div>
+                <div className="text-xs text-foreground truncate">{lab.recipient.email}</div>
               )}
-              <div className="flex items-center gap-2 pt-0.5 text-xs text-foreground/70">
+              <div className="flex items-center gap-2 pt-0.5 text-xs text-foreground">
                 <span>
                   {lab.recipient.source === "partner" ? "Partner WCA" :
                    lab.recipient.source === "contact" ? "Contatto" :
@@ -101,7 +101,7 @@ export function ForgeSummaryPanel() {
 function Section({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
   return (
     <section className="space-y-1">
-      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-primary/80">
+      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-primary">
         <Icon className="w-3 h-3" /> {label}
       </div>
       <div className="pl-4">{children}</div>

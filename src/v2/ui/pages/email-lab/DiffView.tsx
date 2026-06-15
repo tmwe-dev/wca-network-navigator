@@ -56,7 +56,7 @@ export function DiffView({ before, after, className }: Props): React.ReactElemen
   return (
     <div className={`whitespace-pre-wrap text-sm leading-relaxed ${className ?? ""}`}>
       {ops.map((op, i) => {
-        if (op.type === "eq") return <span key={i} className="text-foreground/85">{op.text}</span>;
+        if (op.type === "eq") return <span key={i} className="text-foreground">{op.text}</span>;
         if (op.type === "add") return <span key={i} className="bg-emerald-500/20 text-emerald-300 rounded-sm px-0.5">{op.text}</span>;
         return <span key={i} className="bg-rose-500/20 text-rose-300 rounded-sm px-0.5 line-through">{op.text}</span>;
       })}

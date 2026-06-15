@@ -67,7 +67,7 @@ export function PickerHeader({ picker }: PickerHeaderProps) {
             </Button>
           </>
         ) : (
-          <span className="text-[9px] text-muted-foreground/50 italic">Nessun destinatario selezionato</span>
+          <span className="text-[9px] text-muted-foreground italic">Nessun destinatario selezionato</span>
         )}
       </div>
 

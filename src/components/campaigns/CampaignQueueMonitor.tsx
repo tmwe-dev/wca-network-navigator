@@ -105,7 +105,7 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
                 <div key={item.id} className="flex items-center gap-2 text-xs py-1 border-b border-border/30">
                   <StatusIcon status={item.status} />
                   <span className="truncate flex-1 text-muted-foreground">{item.recipient_email}</span>
-                  <span className="truncate max-w-[120px] text-muted-foreground/60">{item.recipient_name}</span>
+                  <span className="truncate max-w-[120px] text-muted-foreground">{item.recipient_name}</span>
                   {item.error_message && (
                     <span className="text-destructive truncate max-w-[150px]" title={item.error_message}>
                       {item.error_message}

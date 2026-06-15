@@ -101,7 +101,7 @@ export function CompanyCardList({
   if (total === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 py-10">
-        <p className="text-sm text-muted-foreground/60">{emptyMessage}</p>
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       </div>
     );
   }

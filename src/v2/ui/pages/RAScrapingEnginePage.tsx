@@ -265,7 +265,7 @@ function LogsPanel({ s }: { s: ReturnType<typeof useRAScrapingState> }) {
       <CardContent>
         <div className="rounded-lg p-3 sm:p-4 text-xs space-y-1 max-h-64 overflow-y-auto border border-border bg-muted/20 font-mono">
           {s.statusLogs.length === 0 ? <div className="text-muted-foreground text-center py-4">Nessun log disponibile</div>
-          : s.statusLogs.map((log, i) => <div key={i} className="text-foreground/80">{log}</div>)}
+          : s.statusLogs.map((log, i) => <div key={i} className="text-foreground">{log}</div>)}
         </div>
       </CardContent>
     </Card>

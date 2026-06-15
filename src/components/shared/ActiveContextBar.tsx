@@ -96,7 +96,7 @@ export function ActiveContextBar() {
       )}
 
       {!hasAnything && (
-        <span className="text-[10px] text-muted-foreground/60 ml-1">
+        <span className="text-[10px] text-muted-foreground ml-1">
           Usa le sidebar per configurare obiettivo, proposta e destinatari
         </span>
       )}

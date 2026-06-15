@@ -62,7 +62,7 @@ export default function EmailPreviewDialog({
           {/* Body */}
           <div className="p-5">
             {showRaw ? (
-              <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-foreground/80">
+              <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-foreground">
                 {body}
               </pre>
             ) : (

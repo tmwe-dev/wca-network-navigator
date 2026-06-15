@@ -95,7 +95,7 @@ export function SystemPromptTab() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground/70 hover:text-foreground transition-colors">
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
                   <Info className="h-3.5 w-3.5" />
                 </button>
               </TooltipTrigger>

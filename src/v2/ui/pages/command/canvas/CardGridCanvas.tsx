@@ -49,12 +49,12 @@ const CardGridCanvas = ({
           {title ?? `${items.length} contatti inattivi`}
         </span>
         {sourceLabel && (
-          <span className="text-[9px] text-muted-foreground/60 font-mono ml-auto">{sourceLabel}</span>
+          <span className="text-[9px] text-muted-foreground font-mono ml-auto">{sourceLabel}</span>
         )}
         {selectable && allIds.length > 0 && (
           <button
             onClick={() => allSelected ? onClearSelection?.() : onSelectAll?.(allIds)}
-            className="text-[9px] text-muted-foreground/70 hover:text-primary font-mono transition-colors ml-2"
+            className="text-[9px] text-muted-foreground hover:text-primary font-mono transition-colors ml-2"
           >
             {allSelected ? "deseleziona tutti" : "seleziona tutti"}
           </button>
@@ -72,11 +72,11 @@ const CardGridCanvas = ({
             className="float-panel-subtle p-3 rounded-xl flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-2">
-              <Wand2 className="w-3 h-3 text-primary/80" />
+              <Wand2 className="w-3 h-3 text-primary" />
               <span className="text-[11px] font-light text-foreground">
                 <span className="text-gradient-primary font-mono">{selectedCount}</span> selezionati
               </span>
-              <button onClick={onClearSelection} className="text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors ml-2">
+              <button onClick={onClearSelection} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors ml-2">
                 annulla
               </button>
             </div>
@@ -85,7 +85,7 @@ const CardGridCanvas = ({
                 <button
                   key={action.id}
                   onClick={() => onBulkAction?.(action, Array.from(selectedIds ?? []))}
-                  className="px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 text-[10px] text-foreground/90 font-light transition-colors"
+                  className="px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 text-[10px] text-foreground font-light transition-colors"
                 >
                   {action.label}
                 </button>
@@ -97,9 +97,9 @@ const CardGridCanvas = ({
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Inbox className="w-8 h-8 text-muted-foreground/30 mb-3" />
-          <p className="text-[12px] text-muted-foreground/60 font-light">Nessun contatto trovato</p>
-          <p className="text-[10px] text-muted-foreground/40 font-light mt-1">Tutti i contatti sono stati aggiornati di recente</p>
+          <Inbox className="w-8 h-8 text-muted-foreground mb-3" />
+          <p className="text-[12px] text-muted-foreground font-light">Nessun contatto trovato</p>
+          <p className="text-[10px] text-muted-foreground font-light mt-1">Tutti i contatti sono stati aggiornati di recente</p>
         </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -130,7 +130,7 @@ const CardGridCanvas = ({
               )}
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-primary/60" />
+                  <User className="w-4 h-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] font-light text-foreground truncate pr-6">{item.name}</div>
@@ -138,19 +138,19 @@ const CardGridCanvas = ({
                   {item.meta && item.meta.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       {item.meta.map((m, idx) => (
-                        <span key={idx} className="text-[8px] text-muted-foreground/60 font-mono bg-secondary/10 px-1 py-0.5 rounded">{m}</span>
+                        <span key={idx} className="text-[8px] text-muted-foreground font-mono bg-secondary/10 px-1 py-0.5 rounded">{m}</span>
                       ))}
                     </div>
                   )}
                   <div className="flex items-center gap-1 mt-1.5">
-                    <Clock className="w-2.5 h-2.5 text-muted-foreground/50" />
+                    <Clock className="w-2.5 h-2.5 text-muted-foreground" />
                     <span className="text-[9px] text-muted-foreground font-mono">{item.lastContact}</span>
                   </div>
                 </div>
               </div>
               <div className="mt-3 pt-2.5 border-t border-border/10 flex items-center justify-between">
-                <span className="text-[9px] text-primary/70 font-light">{item.action}</span>
-                <ArrowRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary/50 transition-colors duration-300" />
+                <span className="text-[9px] text-primary font-light">{item.action}</span>
+                <ArrowRight className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
               </div>
             </motion.div>
           );

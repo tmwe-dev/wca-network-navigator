@@ -52,10 +52,10 @@ export function ActiveProcessIndicator() {
                   {runningCount > 0 ? `${runningCount} attivo` : `${totalCount} in coda`}
                 </span>
                 {mainProcess?.countdownLabel && (
-                  <span className="tabular-nums text-primary/70 text-[10px]">{mainProcess.countdownLabel}</span>
+                  <span className="tabular-nums text-primary text-[10px]">{mainProcess.countdownLabel}</span>
                 )}
                 {mainProcess?.progress !== undefined && mainProcess.progress > 0 && !mainProcess?.countdownLabel && (
-                  <span className="tabular-nums text-primary/70">{mainProcess.progress}%</span>
+                  <span className="tabular-nums text-primary">{mainProcess.progress}%</span>
                 )}
                 {processes.length > 1 && (
                   expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />

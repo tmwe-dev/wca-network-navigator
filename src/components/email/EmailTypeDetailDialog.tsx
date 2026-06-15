@@ -105,7 +105,7 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
             {obiettivo && (
               <div>
                 <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Obiettivo</h4>
-                <p className="text-foreground/80">{obiettivo}</p>
+                <p className="text-foreground">{obiettivo}</p>
               </div>
             )}
 
@@ -121,7 +121,7 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
                     </span>
                   ))}
                 </div>
-                <ol className="space-y-1.5 list-decimal list-inside text-foreground/70">
+                <ol className="space-y-1.5 list-decimal list-inside text-foreground">
                   {struttura.map((s, i) => (
                     <li key={i} className="text-xs leading-relaxed">{s.replace(/^\d+\.\s*/, "")}</li>
                   ))}
@@ -133,7 +133,7 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
             {vincoli.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5">Vincoli</h4>
-                <ul className="space-y-1 list-disc list-inside text-foreground/70">
+                <ul className="space-y-1 list-disc list-inside text-foreground">
                   {vincoli.map((v, i) => (
                     <li key={i} className="text-xs leading-relaxed">{v}</li>
                   ))}

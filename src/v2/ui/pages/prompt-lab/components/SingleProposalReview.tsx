@@ -273,7 +273,7 @@ export function SingleProposalReview({
             <CollapsibleContent className="mt-2 space-y-2">
               <div>
                 <div className="text-xs font-semibold text-muted-foreground">Perché:</div>
-                <p className="text-sm text-foreground/90">{proposal.reasoning}</p>
+                <p className="text-sm text-foreground">{proposal.reasoning}</p>
               </div>
               <div>
                 <div className="text-xs font-semibold text-muted-foreground">Evidenza ({proposal.evidence.source}):</div>

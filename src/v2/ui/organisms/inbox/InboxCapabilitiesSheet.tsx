@@ -119,7 +119,7 @@ export function InboxCapabilitiesSheet({ trigger }: InboxCapabilitiesSheetProps)
         <div className="mt-6 space-y-6">
           {SECTIONS.map((section) => (
             <section key={section.title} className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 {section.title}
               </h3>
               <ul className="space-y-2">
@@ -129,7 +129,7 @@ export function InboxCapabilitiesSheet({ trigger }: InboxCapabilitiesSheetProps)
                     className="rounded-md border border-border/60 bg-muted/30 px-2.5 py-2"
                   >
                     <div className="text-xs font-semibold text-foreground">{item.title}</div>
-                    <div className="text-[11px] leading-snug text-foreground/70">{item.detail}</div>
+                    <div className="text-[11px] leading-snug text-foreground">{item.detail}</div>
                   </li>
                 ))}
               </ul>

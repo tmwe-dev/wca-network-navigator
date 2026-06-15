@@ -13,16 +13,16 @@ function EnrichmentRow({ on, label, age }: Row) {
       <span
         className={cn(
           "shrink-0 w-3 text-center",
-          on ? "text-success" : "text-muted-foreground/50"
+          on ? "text-success" : "text-muted-foreground"
         )}
       >
         {on ? "✓" : "○"}
       </span>
-      <span className={on ? "text-foreground/80" : "text-muted-foreground"}>
+      <span className={on ? "text-foreground" : "text-muted-foreground"}>
         {label}
       </span>
       {age !== null && (
-        <span className="text-muted-foreground/60 ml-auto pl-1">{age}gg fa</span>
+        <span className="text-muted-foreground ml-auto pl-1">{age}gg fa</span>
       )}
     </div>
   );
@@ -44,7 +44,7 @@ export default function EnrichmentStatusBadges({
 
   return (
     <div className="rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 space-y-1">
-      <div className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground/80 mb-0.5">
+      <div className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
         Dati disponibili
       </div>
       <EnrichmentRow

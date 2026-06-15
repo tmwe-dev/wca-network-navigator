@@ -31,8 +31,8 @@ export function CompactRow({ card, isSelected, onSelect, onShowDetail, onGoogleL
         {flag && <span className="text-sm shrink-0">{flag}</span>}
         <span className="text-sm font-semibold text-foreground truncate flex-1">{card.company_name || "—"}</span>
         <span className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0", sc)}>{STATUS_LABELS[card.match_status] || "Attesa"}</span>
-        {card.email && <Mail className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
-        {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
+        {card.email && <Mail className="w-3 h-3 text-muted-foreground shrink-0" />}
+        {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground shrink-0" />}
         <BCAQuickActions card={card} />
       </div>
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground ml-8 min-w-0">
@@ -81,8 +81,8 @@ export function CardGridItem({ card, isSelected, onSelect, onShowDetail, onGoogl
         <div className="flex items-center gap-1 flex-wrap">
           <Badge className={cn("text-[8px] px-1 py-0", sc)}>{STATUS_LABELS[card.match_status] || "Attesa"}</Badge>
           {wcaYear && <Badge variant="outline" className="text-[8px] px-1 py-0 border-chart-1/20 text-chart-1">WCA {wcaYear}</Badge>}
-          {card.email && <Mail className="w-3 h-3 text-muted-foreground/40" />}
-          {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground/40" />}
+          {card.email && <Mail className="w-3 h-3 text-muted-foreground" />}
+          {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground" />}
         </div>
       </div>
     </div>
@@ -120,14 +120,14 @@ export function ExpandedCardItem({ card, isSelected, onSelect, onShowDetail, onG
             <div className="flex items-center gap-1">
               <Handshake className="w-3 h-3 text-primary shrink-0" />
               <span className="text-[10px] text-muted-foreground truncate">{card.event_name}</span>
-              {card.met_at && <span className="text-[10px] text-muted-foreground/60">{format(new Date(card.met_at), "dd MMM yy", { locale: it })}</span>}
+              {card.met_at && <span className="text-[10px] text-muted-foreground">{format(new Date(card.met_at), "dd MMM yy", { locale: it })}</span>}
             </div>
           )}
           <div className="flex items-center gap-1 flex-wrap">
             <Badge className={cn("text-[8px] px-1 py-0", sc)}>{STATUS_LABELS[card.match_status] || "Attesa"}</Badge>
             {wcaYear && <Badge variant="outline" className="text-[8px] px-1 py-0 border-chart-1/20 text-chart-1">WCA {wcaYear}</Badge>}
-            {card.email && <Mail className="w-3 h-3 text-muted-foreground/40" />}
-            {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground/40" />}
+            {card.email && <Mail className="w-3 h-3 text-muted-foreground" />}
+            {(card.phone || card.mobile) && <Phone className="w-3 h-3 text-muted-foreground" />}
             {card.partner && (
               <Badge variant="outline" className="text-[8px] px-1 py-0 border-emerald-500/20 text-emerald-400">
                 <Building2 className="w-2.5 h-2.5 mr-0.5" />{card.partner.company_name}

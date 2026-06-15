@@ -199,7 +199,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
           <span className="text-[10px] text-muted-foreground">
             {tokensUsed.credits_consumed} crediti AI
           </span>
-          <span className="text-[9px] text-muted-foreground/60 ml-auto">
+          <span className="text-[9px] text-muted-foreground ml-auto">
             {tokensUsed.prompt?.toLocaleString()}↑ {tokensUsed.completion?.toLocaleString()}↓
           </span>
         </div>

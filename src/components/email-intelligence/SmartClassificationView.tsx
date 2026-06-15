@@ -175,7 +175,7 @@ export function SmartClassificationView() {
         ) : (
           <div className="h-full flex items-center justify-center bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
             <div className="text-center space-y-3 p-8">
-              <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto" />
               <h3 className="text-lg font-semibold">Seleziona una classificazione</h3>
               <p className="text-sm text-muted-foreground">
                 Clicca su un'email classificata per vedere i dettagli

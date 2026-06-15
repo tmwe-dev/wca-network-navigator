@@ -148,7 +148,7 @@ export function ConversationalShell() {
             </Button>
           </form>
           {aiResponse && (
-            <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-xs text-foreground/80">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-xs text-foreground">
               <Sparkles className="h-3 w-3 text-primary inline mr-1.5" />
               {aiResponse}
             </div>
@@ -205,7 +205,7 @@ export function ConversationalShell() {
         {activePanel === "email" && (
           <div className="h-full flex items-center justify-center rounded-xl border border-border/60 bg-card">
             <div className="text-center text-sm text-muted-foreground p-6">
-              <Mail className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+              <Mail className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
               <p>Seleziona un contatto per comporre un'email</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={() => setActivePanel("contacts")}>
                 Vai ai contatti

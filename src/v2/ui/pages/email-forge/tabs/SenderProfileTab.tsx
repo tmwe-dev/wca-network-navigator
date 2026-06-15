@@ -94,7 +94,7 @@ export function SenderProfileTab() {
             <div key={key} className="rounded border border-border/60 bg-card p-2 space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label className="text-[11px]">{label}</Label>
-                <span className="font-mono text-[11px] text-foreground/70">{key}</span>
+                <span className="font-mono text-[11px] text-foreground">{key}</span>
               </div>
               {textarea ? (
                 <Textarea
@@ -110,7 +110,7 @@ export function SenderProfileTab() {
                 />
               )}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-foreground/70">{value.length} char</span>
+                <span className="text-xs text-foreground">{value.length} char</span>
                 {dirty && (
                   <Button size="sm" onClick={() => handleSave(key)} disabled={saving === key} className="h-6 text-[10px]">
                     {saving === key ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}

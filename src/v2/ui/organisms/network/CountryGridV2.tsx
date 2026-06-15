@@ -16,8 +16,8 @@ interface CountryGridV2Props {
 function getDensityClass(count: number, maxCount: number): string {
   const ratio = maxCount > 0 ? count / maxCount : 0;
   if (ratio >= 0.7) return "bg-primary/30 text-primary border-primary/40";
-  if (ratio >= 0.4) return "bg-primary/15 text-primary/80 border-primary/25";
-  if (ratio >= 0.15) return "bg-primary/8 text-foreground/70 border-primary/15";
+  if (ratio >= 0.4) return "bg-primary/15 text-primary border-primary/25";
+  if (ratio >= 0.15) return "bg-primary/8 text-foreground border-primary/15";
   return "bg-muted/40 text-muted-foreground border-border/50";
 }
 

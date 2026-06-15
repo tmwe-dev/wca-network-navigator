@@ -68,7 +68,7 @@ function ChipMulti({
   onToggle: (v: string) => void;
 }): React.ReactElement {
   if (options.length === 0) {
-    return <div className="text-[10px] text-muted-foreground/60 italic px-1">Nessuna opzione disponibile</div>;
+    return <div className="text-[10px] text-muted-foreground italic px-1">Nessuna opzione disponibile</div>;
   }
   return (
     <div className="flex flex-wrap gap-1">
@@ -97,7 +97,7 @@ function ChipMulti({
 function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return (
     <div className="space-y-2">
-      <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/80 px-1">{title}</div>
+      <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground px-1">{title}</div>
       {children}
     </div>
   );
@@ -191,7 +191,7 @@ export function EntityFiltersDrawer({
               ))}
             </div>
             <div className="pt-2">
-              <div className="text-[10px] text-muted-foreground/80 pb-1">Lead status</div>
+              <div className="text-[10px] text-muted-foreground pb-1">Lead status</div>
               <ChipMulti
                 options={leadStatusOptions}
                 selected={filters.leadStatus ?? []}
@@ -203,7 +203,7 @@ export function EntityFiltersDrawer({
           {source === "wca" && (
             <Section title="Affiliazione WCA">
               <div>
-                <div className="text-[10px] text-muted-foreground/80 pb-1">Anni in WCA</div>
+                <div className="text-[10px] text-muted-foreground pb-1">Anni in WCA</div>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -224,7 +224,7 @@ export function EntityFiltersDrawer({
               </div>
               {officeTypeOptions.length > 0 && (
                 <div className="pt-2">
-                  <div className="text-[10px] text-muted-foreground/80 pb-1">Tipo ufficio</div>
+                  <div className="text-[10px] text-muted-foreground pb-1">Tipo ufficio</div>
                   <div className="grid grid-cols-3 gap-1">
                     <button
                       type="button"
@@ -254,7 +254,7 @@ export function EntityFiltersDrawer({
               )}
               {networkOptions.length > 0 && (
                 <div className="pt-2">
-                  <div className="text-[10px] text-muted-foreground/80 pb-1">Network</div>
+                  <div className="text-[10px] text-muted-foreground pb-1">Network</div>
                   <ChipMulti options={networkOptions} selected={filters.networks ?? []} onToggle={(v) => toggleArr("networks", v)} />
                 </div>
               )}
@@ -263,7 +263,7 @@ export function EntityFiltersDrawer({
 
           <Section title="Score e attività">
             <div>
-              <div className="text-[10px] text-muted-foreground/80 pb-1">Score (0-100)</div>
+              <div className="text-[10px] text-muted-foreground pb-1">Score (0-100)</div>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
@@ -283,7 +283,7 @@ export function EntityFiltersDrawer({
               </div>
             </div>
             <div className="pt-2">
-              <div className="text-[10px] text-muted-foreground/80 pb-1">Ultimo contatto</div>
+              <div className="text-[10px] text-muted-foreground pb-1">Ultimo contatto</div>
               <div className="grid grid-cols-5 gap-1">
                 {(["any", "lt7", "lt30", "gt90", "never"] as RecencyBucket[]).map((b) => (
                   <button
@@ -304,7 +304,7 @@ export function EntityFiltersDrawer({
               </div>
             </div>
             <div className="pt-2">
-              <div className="text-[10px] text-muted-foreground/80 pb-1">Deep Search</div>
+              <div className="text-[10px] text-muted-foreground pb-1">Deep Search</div>
               <div className="grid grid-cols-3 gap-1">
                 {(["any", "yes", "no"] as TriBool[]).map((v) => (
                   <button
@@ -327,13 +327,13 @@ export function EntityFiltersDrawer({
             <Section title="Servizi & certificazioni">
               {serviceOptions.length > 0 && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground/80 pb-1">Servizi</div>
+                  <div className="text-[10px] text-muted-foreground pb-1">Servizi</div>
                   <ChipMulti options={serviceOptions} selected={filters.services ?? []} onToggle={(v) => toggleArr("services", v)} />
                 </div>
               )}
               {certOptions.length > 0 && (
                 <div className="pt-2">
-                  <div className="text-[10px] text-muted-foreground/80 pb-1">Certificazioni</div>
+                  <div className="text-[10px] text-muted-foreground pb-1">Certificazioni</div>
                   <ChipMulti options={certOptions} selected={filters.certifications ?? []} onToggle={(v) => toggleArr("certifications", v)} />
                 </div>
               )}

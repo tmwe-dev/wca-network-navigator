@@ -310,11 +310,11 @@ export function AIAutomationDashboard() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <AlertCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
                   Nessuna regola AI configurata
                 </p>
-                <p className="text-sm text-muted-foreground/60 mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                   Vai su Email Intelligence per configurare regole AI per i tuoi contatti
                 </p>
               </div>

@@ -264,7 +264,7 @@ export function SystemDiagnosticsBadge() {
                 value={formatRelative(data.last_email_sync)}
                 danger={isSyncStale(data.last_email_sync)}
               />
-              <div className="pt-1 text-[10px] text-muted-foreground/60">
+              <div className="pt-1 text-[10px] text-muted-foreground">
                 Aggiornato {formatRelative(data.generated_at)}
               </div>
             </>

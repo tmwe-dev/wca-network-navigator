@@ -337,14 +337,14 @@ export function NetworkFiltersSection() {
                                 </span>
                               )}
                               {c.email && (
-                                <span className="text-[9px] text-primary/70 truncate ml-auto">
+                                <span className="text-[9px] text-primary truncate ml-auto">
                                   {String(c.email)}
                                 </span>
                               )}
                             </div>
                           ))}
                           {p.partner_contacts.length > 3 && (
-                            <span className="text-[9px] text-muted-foreground/60">
+                            <span className="text-[9px] text-muted-foreground">
                               +{p.partner_contacts.length - 3} altri
                             </span>
                           )}
