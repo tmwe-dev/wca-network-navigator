@@ -23,6 +23,7 @@ const COUNTRY_LABELS: Record<string, string> = {
   CN: "Cina",
   GB: "Regno Unito",
   UK: "Regno Unito",
+  MT: "Malta",
   NL: "Olanda",
   BE: "Belgio",
   CH: "Svizzera",
@@ -300,6 +301,24 @@ export function tryLocalComment(
     return {
       message,
       spokenSummary,
+      suggestedActions: actions,
+    };
+  }
+
+  // ── PARTNER LIST MODE (> 5 rows) ──
+  // Anche per liste ampie il commento è deterministico: evitiamo un secondo hop
+  // AI solo per proporre le azioni successive, così la ricerca resta usabile
+  // anche quando il gateway è sotto rate limit.
+  if (table === "partners" && isListMode) {
+    const filtersDesc = describeFilters(filters);
+    const actions = suggestedActionsFor(table, filters);
+    const proposal = buildProposalSentence(actions);
+    const countFmt = count.toLocaleString("it-IT");
+    const base = `Trovati **${countFmt}** partner${filtersDesc ? " " + filtersDesc : ""}.`;
+    const baseSpoken = `Trovati ${countFmt} partner ${filtersDesc}`.trim();
+    return {
+      message: proposal ? `${base} ${proposal}` : base,
+      spokenSummary: proposal ? `${baseSpoken}. ${stripMarkdown(proposal)}` : baseSpoken,
       suggestedActions: actions,
     };
   }

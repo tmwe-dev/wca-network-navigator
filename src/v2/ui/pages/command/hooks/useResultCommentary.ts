@@ -11,6 +11,7 @@ import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 import { tryLocalComment, tryLocalCommentMulti } from "../lib/localResultFormatter";
 import { formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
 import { buildAuditFromTrace } from "../lib/auditFromTrace";
+import type { QueryPlan } from "../lib/safeQueryExecutor";
 
 interface CommentaryDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -43,9 +44,21 @@ export function useResultCommentary(deps: CommentaryDeps) {
 
       // Try LOCAL formatter (skip LLM for simple count/short list)
       if (toolId === "ai-query") {
+        const fallbackPlan: QueryPlan | null = result.kind === "table"
+          ? {
+              table: String(result.liveSource ?? "partners"),
+              columns: [],
+              filters: [...(result.queryFilters ?? [])] as QueryPlan["filters"],
+              limit: 50,
+              title: result.title,
+            }
+          : null;
+        const localPlan = getLastSuccessfulQueryPlan() ?? (result.kind === "table"
+          ? fallbackPlan
+          : null);
         const local = result.kind === "multi"
           ? tryLocalCommentMulti(userPrompt, result.parts)
-          : tryLocalComment(userPrompt, result, getLastSuccessfulQueryPlan());
+          : tryLocalComment(userPrompt, result, localPlan);
         if (local) {
           const finalTrace = trace?.finish();
           const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;

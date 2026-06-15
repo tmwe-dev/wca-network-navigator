@@ -27,6 +27,39 @@ export function clearLastSuccessfulQueryPlan(): void {
   _lastSuccessfulPlan = null;
 }
 
+const COUNTRY_CODE_BY_NAME: Record<string, string> = {
+  malta: "MT", italia: "IT", italy: "IT", francia: "FR", france: "FR",
+  spagna: "ES", spain: "ES", germania: "DE", germany: "DE",
+  "regno unito": "GB", uk: "GB", inghilterra: "GB", olanda: "NL", "paesi bassi": "NL",
+  netherlands: "NL", belgio: "BE", belgium: "BE", portogallo: "PT", portugal: "PT",
+  grecia: "GR", greece: "GR", svizzera: "CH", switzerland: "CH", austria: "AT",
+  polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
+  "stati uniti": "US", usa: "US", "united states": "US", canada: "CA", brasile: "BR",
+  brazil: "BR", cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
+  emirati: "AE", uae: "AE", egitto: "EG", egypt: "EG", marocco: "MA", morocco: "MA",
+  australia: "AU", singapore: "SG", "hong kong": "HK",
+};
+
+function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
+  const lower = prompt.toLowerCase();
+  if (!/\bpartners?\b/i.test(lower)) return null;
+  const country = Object.entries(COUNTRY_CODE_BY_NAME).find(([name]) => new RegExp(`\\b${name}\\b`, "i").test(lower));
+  if (!country) return null;
+
+  const [countryLabel, countryCode] = country;
+  const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
+  const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
+
+  return {
+    table: "partners",
+    columns: isCountIntent ? ["id"] : ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
+    filters: [{ column: "country_code", op: "eq", value: countryCode }],
+    limit: isCountIntent ? 1 : 200,
+    title: isCountIntent ? `Conteggio partner · ${countryLabel}` : `Partner · ${countryLabel}`,
+    rationale: "Piano deterministico locale per partner+paese: evita un hop AI quando la query è univoca.",
+  };
+}
+
 /* ─── Bulk action templates per tabella ─── */
 
 const BULK_ACTIONS_BY_TABLE: Record<string, ToolResult & { kind: "table" } extends infer T ? T extends { bulkActions?: infer B } ? B : never : never> = {} as never;
@@ -147,25 +180,28 @@ export const aiQueryTool: Tool = {
             return prompt;
           })();
 
-    // 1) Genera QueryPlan via AI (passing optional contextHint for follow-ups).
-    //    Nessuna riscrittura del prompt: l'AI vede lo schema reale del DB
-    //    (con i veri valori enum) e decide da sola come tradurre i termini.
-    const planRes = await planQuery({
-      prompt: naturalPrompt,
-      history: context?.history,
-      contextHint: context?.contextHint,
-    });
+    // 1) Genera QueryPlan. Per query partner+paese univoche usiamo un piano
+    //    deterministico locale: è il percorso storico operativo e non consuma
+    //    un ulteriore hop AI solo per tradurre "Malta" → "MT".
+    const localPlan = deterministicPartnerCountryPlan(naturalPrompt);
+    let plans: QueryPlan[] | null = localPlan ? [localPlan] : null;
+    if (!plans) {
+      const planRes = await planQuery({
+        prompt: naturalPrompt,
+        history: context?.history,
+        contextHint: context?.contextHint,
+      });
 
-    if (!isOk(planRes)) {
-      return {
-        kind: "result",
-        title: "Query AI · Errore planner",
-        message: `Non sono riuscito a interpretare la richiesta. Riformulala in modo più specifico (es. "mostra partner US attivi", "ultimi 20 contatti", "messaggi non letti").`,
-        meta: { count: 0, sourceLabel: "AI Query Planner" },
-      };
+      if (!isOk(planRes)) {
+        return {
+          kind: "result",
+          title: "Query AI · Errore planner",
+          message: `Non sono riuscito a interpretare la richiesta. Riformulala in modo più specifico (es. "mostra partner US attivi", "ultimi 20 contatti", "messaggi non letti").`,
+          meta: { count: 0, sourceLabel: "AI Query Planner" },
+        };
+      }
+      plans = planRes.value.plans;
     }
-
-    const { plans } = planRes.value;
 
     // Caso INVALID: planner ha esplicitamente segnalato richiesta non-query.
     const firstPlan = plans[0];

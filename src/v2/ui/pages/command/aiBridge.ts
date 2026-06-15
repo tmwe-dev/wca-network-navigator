@@ -216,13 +216,27 @@ Rispondi SOLO con questo JSON valido, niente altro testo:
     });
 
     // ai-assistant returns { reply: "..." } or { message: "..." } depending on mode.
-    // We try multiple shapes and parse the inner JSON.
+    // If the commentary hop is rate-limited, never surface that as the business
+    // answer: the DB/tool result is already valid, so degrade to a local recap.
+    const dataObj = typeof data === "object" && data !== null ? (data as Record<string, unknown>) : null;
+    if (
+      dataObj?.ok === false ||
+      dataObj?.code === "AI_RATE_LIMITED" ||
+      dataObj?.code === "AI_CREDITS_EXHAUSTED"
+    ) {
+      return fallbackComment(toolLabel);
+    }
+
     const raw =
-      (typeof data === "object" && data !== null
-        ? ((data as Record<string, unknown>).reply as string | undefined) ??
-          ((data as Record<string, unknown>).message as string | undefined) ??
-          ((data as Record<string, unknown>).content as string | undefined)
+      (dataObj
+        ? (dataObj.reply as string | undefined) ??
+          (dataObj.message as string | undefined) ??
+          (dataObj.content as string | undefined)
         : undefined) ?? "";
+
+    if (/troppe richieste ai|rate limit|crediti ai esauriti/i.test(raw)) {
+      return fallbackComment(toolLabel);
+    }
 
     if (!raw) {
       return fallbackComment(toolLabel);
