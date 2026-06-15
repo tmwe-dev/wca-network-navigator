@@ -184,12 +184,8 @@ export const aiQueryTool: Tool = {
     //    deterministico locale: è il percorso storico operativo e non consuma
     //    un ulteriore hop AI solo per tradurre "Malta" → "MT".
     const localPlan = deterministicPartnerCountryPlan(naturalPrompt);
-    const plans = localPlan
-      ? [localPlan]
-      : (() => null)();
-    const resolvedPlans = plans ?? (() => null)();
-    let finalPlans = resolvedPlans;
-    if (!finalPlans) {
+    let plans: QueryPlan[] | null = localPlan ? [localPlan] : null;
+    if (!plans) {
       const planRes = await planQuery({
         prompt: naturalPrompt,
         history: context?.history,
@@ -204,7 +200,7 @@ export const aiQueryTool: Tool = {
           meta: { count: 0, sourceLabel: "AI Query Planner" },
         };
       }
-      finalPlans = planRes.value.plans;
+      plans = planRes.value.plans;
     }
 
     // Caso INVALID: planner ha esplicitamente segnalato richiesta non-query.
