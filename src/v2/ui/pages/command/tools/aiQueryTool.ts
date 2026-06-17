@@ -52,9 +52,9 @@ function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
   if (isGlobalPartnerCount) {
     return {
       table: "partners",
-      columns: ["id"],
+      columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
       filters: [],
-      limit: 1,
+      limit: 25,
       title: "Conteggio partner · totale",
       rationale: "Piano deterministico locale per conteggio partner totale: evita planner AI quando la query è univoca.",
     };
@@ -66,9 +66,9 @@ function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
 
   return {
     table: "partners",
-    columns: isCountIntent ? ["id"] : ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
+    columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
     filters: [{ column: "country_code", op: "eq", value: countryCode }],
-    limit: isCountIntent ? 1 : 200,
+    limit: isCountIntent ? 25 : 200,
     title: isCountIntent ? `Conteggio partner · ${countryLabel}` : `Partner · ${countryLabel}`,
     rationale: "Piano deterministico locale per partner+paese: evita un hop AI quando la query è univoca.",
   };
