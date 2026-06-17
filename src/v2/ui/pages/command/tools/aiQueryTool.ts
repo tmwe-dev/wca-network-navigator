@@ -46,9 +46,21 @@ function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
   // Tollerante a refusi/varianti vocali: partner, partners, parte, parti.
   if (!/\bpart(?:ner|ners|e|i)?\b/i.test(lower)) return null;
   const country = Object.entries(COUNTRY_CODE_BY_NAME).find(([name]) => new RegExp(`\\b${name}\\b`, "i").test(lower));
-  if (!country) return null;
+  const isGlobalPartnerCount = !country && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
+  if (!country && !isGlobalPartnerCount) return null;
 
-  const [countryLabel, countryCode] = country;
+  if (isGlobalPartnerCount) {
+    return {
+      table: "partners",
+      columns: ["id"],
+      filters: [],
+      limit: 1,
+      title: "Conteggio partner · totale",
+      rationale: "Piano deterministico locale per conteggio partner totale: evita planner AI quando la query è univoca.",
+    };
+  }
+
+  const [countryLabel, countryCode] = country!;
   const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
   const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
 
