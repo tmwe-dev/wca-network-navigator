@@ -194,6 +194,7 @@ const COUNTRY_LOOKUP: Record<string, string> = {
   svizzera: "CH", switzerland: "CH", austria: "AT",
   polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
   "stati uniti": "US", usa: "US", "united states": "US",
+  america: "US", "nord america": "US",
   canada: "CA", brasile: "BR", brazil: "BR",
   cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
   emirati: "AE", uae: "AE", egitto: "EG", egypt: "EG",

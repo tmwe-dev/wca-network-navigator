@@ -35,6 +35,7 @@ const COUNTRY_CODE_BY_NAME: Record<string, string> = {
   grecia: "GR", greece: "GR", svizzera: "CH", switzerland: "CH", austria: "AT",
   polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
   "stati uniti": "US", usa: "US", "united states": "US", canada: "CA", brasile: "BR",
+  america: "US", "negli stati uniti": "US", "nord america": "US",
   brazil: "BR", cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
   emirati: "AE", uae: "AE", egitto: "EG", egypt: "EG", marocco: "MA", morocco: "MA",
   australia: "AU", singapore: "SG", "hong kong": "HK",
@@ -42,7 +43,8 @@ const COUNTRY_CODE_BY_NAME: Record<string, string> = {
 
 function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
   const lower = prompt.toLowerCase();
-  if (!/\bpartners?\b/i.test(lower)) return null;
+  // Tollerante a refusi/varianti vocali: partner, partners, parte, parti.
+  if (!/\bpart(?:ner|ners|e|i)?\b/i.test(lower)) return null;
   const country = Object.entries(COUNTRY_CODE_BY_NAME).find(([name]) => new RegExp(`\\b${name}\\b`, "i").test(lower));
   if (!country) return null;
 
