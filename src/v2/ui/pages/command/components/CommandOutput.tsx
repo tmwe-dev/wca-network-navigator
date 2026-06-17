@@ -90,6 +90,80 @@ export function CommandOutput({
               </div>
             ) : null
           )}
+          {canvas === "live-result" && liveResult && liveResult.kind === "result" && (
+            <div
+              className="h-full flex flex-col rounded-2xl p-6"
+              style={{
+                background: "hsl(var(--card) / 0.75)",
+                backdropFilter: "blur(40px) saturate(1.1)",
+                border: "1px solid hsl(var(--foreground) / 0.12)",
+                boxShadow:
+                  "0 0 80px hsl(var(--primary) / 0.03), 0 30px 60px -20px hsl(0 0% 0% / 0.65)",
+              }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                <button
+                  onClick={onClose}
+                  className="text-muted-foreground hover:text-foreground p-1.5"
+                  aria-label="Chiudi canvas"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {liveResult.meta && (
+                <div className="mb-4 text-[10px] text-muted-foreground font-mono">
+                  {liveResult.meta.count} risultati · {liveResult.meta.sourceLabel}
+                </div>
+              )}
+              <div className="rounded-xl border border-border/30 bg-background/35 p-4 text-[12px] leading-relaxed text-foreground whitespace-pre-line">
+                {liveResult.message}
+              </div>
+            </div>
+          )}
+          {canvas === "live-multi" && liveResult && liveResult.kind === "multi" && (
+            <div className="float-panel p-6 rounded-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider bg-success/20 text-success">
+                    LIVE
+                  </span>
+                  <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                </div>
+                <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-[10px]">
+                  ✕
+                </button>
+              </div>
+              {liveResult.meta?.sourceLabel && (
+                <div className="text-[9px] text-muted-foreground font-mono mb-3">{liveResult.meta.sourceLabel}</div>
+              )}
+              <div className="space-y-6">
+                {liveResult.parts.map((part, i) => (
+                  <div key={`${part.table}-${i}`} className="border border-border/30 rounded-lg p-4">
+                    <div className="flex items-baseline justify-between mb-3">
+                      <h4 className="text-[12px] font-medium text-foreground">{part.title}</h4>
+                      <span className="text-[10px] font-mono text-muted-foreground">
+                        {part.error ? "errore" : `${part.count.toLocaleString("it-IT")} record`}
+                        {part.durationMs ? ` · ${part.durationMs}ms` : ""}
+                      </span>
+                    </div>
+                    {part.error ? (
+                      <p className="text-[11px] text-destructive">⚠️ {part.error}</p>
+                    ) : part.rows.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground">Nessun risultato.</p>
+                    ) : (
+                      <TableCanvas
+                        columns={[...part.columns]}
+                        rows={[...part.rows]}
+                        isLive
+                        meta={{ count: part.count, sourceLabel: `${part.table}` }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {canvas === "live-card-grid" &&
             liveResult &&
             liveResult.kind === "card-grid" && (
