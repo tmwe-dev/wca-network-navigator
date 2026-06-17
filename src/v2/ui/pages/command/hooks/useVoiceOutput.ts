@@ -12,6 +12,12 @@ const log = createLogger("useVoiceOutput");
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
 
+const AUDIO_MIME_BY_CONTENT_TYPE: ReadonlyArray<[RegExp, string]> = [
+  [/mpeg|mp3/i, "audio/mpeg"],
+  [/wav/i, "audio/wav"],
+  [/ogg/i, "audio/ogg"],
+];
+
 export function useVoiceOutput() {
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState<boolean>(
@@ -93,11 +99,25 @@ export function useVoiceOutput() {
           return;
         }
 
-        const blob = await response.blob();
+        const responseBlob = await response.blob();
+        const contentType = response.headers.get("content-type") ?? responseBlob.type;
+        if (contentType.includes("application/json")) {
+          const detail = await responseBlob.text().catch(() => "");
+          log.warn("[tts] unexpected json response", { detail: detail.slice(0, 240) });
+          cleanup();
+          return;
+        }
+
+        const normalizedType =
+          AUDIO_MIME_BY_CONTENT_TYPE.find(([pattern]) => pattern.test(contentType))?.[1] ??
+          responseBlob.type ||
+          "audio/mpeg";
+        const blob = responseBlob.type ? responseBlob : responseBlob.slice(0, responseBlob.size, normalizedType);
         const url = URL.createObjectURL(blob);
         urlRef.current = url;
 
         const audio = new Audio(url);
+        audio.preload = "auto";
         audioRef.current = audio;
         audio.onended = () => cleanup();
         audio.onerror = () => cleanup();
