@@ -12,6 +12,12 @@ const log = createLogger("useVoiceOutput");
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
 
+const AUDIO_MIME_BY_CONTENT_TYPE: ReadonlyArray<[RegExp, string]> = [
+  [/mpeg|mp3/i, "audio/mpeg"],
+  [/wav/i, "audio/wav"],
+  [/ogg/i, "audio/ogg"],
+];
+
 export function useVoiceOutput() {
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState<boolean>(
@@ -93,11 +99,30 @@ export function useVoiceOutput() {
           return;
         }
 
-        const blob = await response.blob();
+        const responseBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(responseBuffer.slice(0, 12));
+        const signature = String.fromCharCode(...bytes);
+        const contentType = response.headers.get("content-type") ?? "";
+        const detectedType = signature.startsWith("ID3") || bytes[0] === 0xff
+          ? "audio/mpeg"
+          : signature.startsWith("RIFF")
+            ? "audio/wav"
+            : signature.startsWith("OggS")
+              ? "audio/ogg"
+              : AUDIO_MIME_BY_CONTENT_TYPE.find(([pattern]) => pattern.test(contentType))?.[1];
+        if (!detectedType) {
+          const detail = new TextDecoder().decode(responseBuffer).slice(0, 240);
+          log.warn("[tts] unexpected non-audio response", { contentType, detail });
+          cleanup();
+          return;
+        }
+
+        const blob = new Blob([responseBuffer], { type: detectedType });
         const url = URL.createObjectURL(blob);
         urlRef.current = url;
 
         const audio = new Audio(url);
+        audio.preload = "auto";
         audioRef.current = audio;
         audio.onended = () => cleanup();
         audio.onerror = () => cleanup();

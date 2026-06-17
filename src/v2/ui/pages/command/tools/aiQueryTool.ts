@@ -46,17 +46,29 @@ function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
   // Tollerante a refusi/varianti vocali: partner, partners, parte, parti.
   if (!/\bpart(?:ner|ners|e|i)?\b/i.test(lower)) return null;
   const country = Object.entries(COUNTRY_CODE_BY_NAME).find(([name]) => new RegExp(`\\b${name}\\b`, "i").test(lower));
-  if (!country) return null;
+  const isGlobalPartnerCount = !country && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
+  if (!country && !isGlobalPartnerCount) return null;
 
-  const [countryLabel, countryCode] = country;
+  if (isGlobalPartnerCount) {
+    return {
+      table: "partners",
+      columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
+      filters: [],
+      limit: 25,
+      title: "Conteggio partner · totale",
+      rationale: "Piano deterministico locale per conteggio partner totale: evita planner AI quando la query è univoca.",
+    };
+  }
+
+  const [countryLabel, countryCode] = country!;
   const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
   const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
 
   return {
     table: "partners",
-    columns: isCountIntent ? ["id"] : ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
+    columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
     filters: [{ column: "country_code", op: "eq", value: countryCode }],
-    limit: isCountIntent ? 1 : 200,
+    limit: isCountIntent ? 25 : 200,
     title: isCountIntent ? `Conteggio partner · ${countryLabel}` : `Partner · ${countryLabel}`,
     rationale: "Piano deterministico locale per partner+paese: evita un hop AI quando la query è univoca.",
   };
