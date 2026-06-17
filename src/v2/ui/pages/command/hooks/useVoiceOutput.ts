@@ -99,20 +99,25 @@ export function useVoiceOutput() {
           return;
         }
 
-        const responseBlob = await response.blob();
-        const contentType = response.headers.get("content-type") ?? responseBlob.type;
-        if (contentType.includes("application/json")) {
-          const detail = await responseBlob.text().catch(() => "");
-          log.warn("[tts] unexpected json response", { detail: detail.slice(0, 240) });
+        const responseBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(responseBuffer.slice(0, 12));
+        const signature = String.fromCharCode(...bytes);
+        const contentType = response.headers.get("content-type") ?? "";
+        const detectedType = signature.startsWith("ID3") || bytes[0] === 0xff
+          ? "audio/mpeg"
+          : signature.startsWith("RIFF")
+            ? "audio/wav"
+            : signature.startsWith("OggS")
+              ? "audio/ogg"
+              : AUDIO_MIME_BY_CONTENT_TYPE.find(([pattern]) => pattern.test(contentType))?.[1];
+        if (!detectedType) {
+          const detail = new TextDecoder().decode(responseBuffer).slice(0, 240);
+          log.warn("[tts] unexpected non-audio response", { contentType, detail });
           cleanup();
           return;
         }
 
-        const normalizedType =
-          AUDIO_MIME_BY_CONTENT_TYPE.find(([pattern]) => pattern.test(contentType))?.[1] ??
-          responseBlob.type ||
-          "audio/mpeg";
-        const blob = responseBlob.type ? responseBlob : responseBlob.slice(0, responseBlob.size, normalizedType);
+        const blob = new Blob([responseBuffer], { type: detectedType });
         const url = URL.createObjectURL(blob);
         urlRef.current = url;
 
