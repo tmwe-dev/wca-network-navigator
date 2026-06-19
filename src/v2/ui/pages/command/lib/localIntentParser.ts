@@ -91,7 +91,9 @@ export function parseLocalIntent(prompt: string, contextHint?: string): QueryPla
   const table = detectEntity(lower) ?? context?.table ?? null;
   if (!table) return null;
 
-  const country = table === "partners" ? detectCountry(lower) : null;
+  const rawCountry = detectCountry(lower);
+  if (rawCountry && table !== "partners" && !detectEntity(lower)) return null;
+  const country = table === "partners" ? rawCountry : null;
   const isList = LIST_RE.test(lower);
   const isCount = !isList && (COUNT_RE.test(lower) || context?.mode === "count");
 
