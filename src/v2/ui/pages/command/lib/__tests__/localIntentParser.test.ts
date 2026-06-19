@@ -22,4 +22,20 @@ describe("localIntentParser", () => {
 
     expect(parseLocalIntent("quanti in USA?", contactContext)).toBeNull();
   });
+
+  it("eredita partner per follow-up ellittici (e in Francia?, Spagna, e la Germania?)", () => {
+    const ctx =
+      'CONTESTO TURNO PRECEDENTE: tabella=partners, mode=count, filtri=[country_code eq "IT"].';
+    const cases: Array<[string, string]> = [
+      ["e in Francia?", "FR"],
+      ["Spagna", "ES"],
+      ["e la Germania?", "DE"],
+      ["quanti in Italia", "IT"],
+    ];
+    for (const [prompt, code] of cases) {
+      const plan = parseLocalIntent(prompt, ctx);
+      expect(plan?.table).toBe("partners");
+      expect(plan?.filters).toEqual([{ column: "country_code", op: "eq", value: code }]);
+    }
+  });
 });
