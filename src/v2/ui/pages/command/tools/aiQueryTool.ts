@@ -16,6 +16,7 @@ import type { Tool, ToolResult, ToolResultColumn, MultiResultPart } from "./type
 import { planQuery } from "@/v2/io/edge/aiQueryPlanner";
 import { executeQueryPlan, QueryValidationError, type QueryPlan } from "../lib/safeQueryExecutor";
 import { isOk } from "@/v2/core/domain/result";
+import { parseLocalIntent } from "../lib/localIntentParser";
 
 /** Module-level cache of the LAST successful QueryPlan, read by useCommandSubmit
  *  to update conversational query context. Single-tab assumption is fine here. */
@@ -25,53 +26,6 @@ export function getLastSuccessfulQueryPlan(): QueryPlan | null {
 }
 export function clearLastSuccessfulQueryPlan(): void {
   _lastSuccessfulPlan = null;
-}
-
-const COUNTRY_CODE_BY_NAME: Record<string, string> = {
-  malta: "MT", italia: "IT", italy: "IT", francia: "FR", france: "FR",
-  spagna: "ES", spain: "ES", germania: "DE", germany: "DE",
-  "regno unito": "GB", uk: "GB", inghilterra: "GB", olanda: "NL", "paesi bassi": "NL",
-  netherlands: "NL", belgio: "BE", belgium: "BE", portogallo: "PT", portugal: "PT",
-  grecia: "GR", greece: "GR", svizzera: "CH", switzerland: "CH", austria: "AT",
-  polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
-  "stati uniti": "US", usa: "US", "united states": "US", canada: "CA", brasile: "BR",
-  america: "US", "negli stati uniti": "US", "nord america": "US",
-  brazil: "BR", cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
-  emirati: "AE", uae: "AE", egitto: "EG", egypt: "EG", marocco: "MA", morocco: "MA",
-  australia: "AU", singapore: "SG", "hong kong": "HK",
-};
-
-function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
-  const lower = prompt.toLowerCase();
-  // Tollerante a refusi/varianti vocali: partner, partners, parte, parti.
-  if (!/\bpart(?:ner|ners|e|i)?\b/i.test(lower)) return null;
-  const country = Object.entries(COUNTRY_CODE_BY_NAME).find(([name]) => new RegExp(`\\b${name}\\b`, "i").test(lower));
-  const isGlobalPartnerCount = !country && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
-  if (!country && !isGlobalPartnerCount) return null;
-
-  if (isGlobalPartnerCount) {
-    return {
-      table: "partners",
-      columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
-      filters: [],
-      limit: 25,
-      title: "Conteggio partner · totale",
-      rationale: "Piano deterministico locale per conteggio partner totale: evita planner AI quando la query è univoca.",
-    };
-  }
-
-  const [countryLabel, countryCode] = country!;
-  const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
-  const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
-
-  return {
-    table: "partners",
-    columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
-    filters: [{ column: "country_code", op: "eq", value: countryCode }],
-    limit: isCountIntent ? 25 : 200,
-    title: isCountIntent ? `Conteggio partner · ${countryLabel}` : `Partner · ${countryLabel}`,
-    rationale: "Piano deterministico locale per partner+paese: evita un hop AI quando la query è univoca.",
-  };
 }
 
 /* ─── Bulk action templates per tabella ─── */
@@ -194,31 +148,49 @@ export const aiQueryTool: Tool = {
             return prompt;
           })();
 
-    // 1) Genera QueryPlan. Per query partner+paese univoche usiamo un piano
-    //    deterministico locale: è il percorso storico operativo e non consuma
-    //    un ulteriore hop AI solo per tradurre "Malta" → "MT".
-    const localPlan = deterministicPartnerCountryPlan(naturalPrompt);
+    // 1) Genera QueryPlan. Per le query di routine (conteggi/elenchi per
+    //    entità, opzionalmente filtrate per paese) usiamo un piano
+    //    DETERMINISTICO locale: niente hop AI, quindi immune al rate-limit.
+    const localPlan = parseLocalIntent(naturalPrompt);
     let plans: QueryPlan[] | null = localPlan ? [localPlan] : null;
     if (!plans) {
-      const planRes = await planQuery({
-        prompt: naturalPrompt,
-        history: context?.history,
-        contextHint: context?.contextHint,
-      });
-
-      if (!isOk(planRes)) {
-        return {
-          kind: "result",
-          title: "Query AI · Errore planner",
-          message: `Non sono riuscito a interpretare la richiesta. Riformulala in modo più specifico (es. "mostra partner US attivi", "ultimi 20 contatti", "messaggi non letti").`,
-          meta: { count: 0, sourceLabel: "AI Query Planner" },
-        };
+      // Helper: 1 retry con piccolo backoff per assorbire un 429 transitorio.
+      const tryPlan = async () =>
+        planQuery({
+          prompt: naturalPrompt,
+          history: context?.history,
+          contextHint: context?.contextHint,
+        });
+      let planRes = await tryPlan();
+      let aiPlans = isOk(planRes) ? planRes.value.plans : null;
+      const isRateLimited = (p: QueryPlan[] | null) =>
+        !p || (p[0]?.table === "INVALID" && /troppe richieste|rate limit|riprova tra/i.test(p[0]?.rationale ?? ""));
+      if (isRateLimited(aiPlans)) {
+        await new Promise((r) => setTimeout(r, 1200));
+        planRes = await tryPlan();
+        aiPlans = isOk(planRes) ? planRes.value.plans : null;
       }
-      plans = planRes.value.plans;
+      // Se anche dopo il retry siamo strozzati o falliti, prova un fallback
+      // deterministico best-effort invece di mostrare "Richiesta non supportata".
+      if (isRateLimited(aiPlans)) {
+        const fallback = parseLocalIntent(naturalPrompt);
+        if (fallback) {
+          plans = [fallback];
+        } else {
+          return {
+            kind: "result",
+            title: "Query AI · Errore planner",
+            message: `Non sono riuscito a interpretare la richiesta. Riformulala in modo più specifico (es. "mostra partner US attivi", "ultimi 20 contatti", "messaggi non letti").`,
+            meta: { count: 0, sourceLabel: "AI Query Planner" },
+          };
+        }
+      } else {
+        plans = aiPlans;
+      }
     }
 
     // Caso INVALID: planner ha esplicitamente segnalato richiesta non-query.
-    const firstPlan = plans[0];
+    const firstPlan = plans![0];
     if (firstPlan.table === "INVALID") {
       return {
         kind: "result",
@@ -229,11 +201,14 @@ export const aiQueryTool: Tool = {
       };
     }
 
+    // A questo punto `plans` è garantito non-null e non-INVALID.
+    const planList: QueryPlan[] = plans!;
+
     // 2) Esegui i piani in PARALLELO. allSettled: una query può fallire senza
     //    bloccare le altre (es. tabella valida + colonna inventata in una sola).
     const t0 = Date.now();
     const settled = await Promise.allSettled(
-      plans.map(async (p) => {
+      planList.map(async (p) => {
         const start = Date.now();
         const exec = await executeQueryPlan(p);
         return { plan: p, exec, durationMs: Date.now() - start };
@@ -280,7 +255,7 @@ export const aiQueryTool: Tool = {
     };
 
     const parts: MultiResultPart[] = settled.map((s, i) => {
-      const plan = plans[i];
+      const plan = planList[i];
       if (s.status === "fulfilled") {
         return buildPart(plan, s.value.exec, null, s.value.durationMs);
       }
@@ -292,7 +267,7 @@ export const aiQueryTool: Tool = {
     // ── Caso 1 piano: mantengo retro-compatibilità totale (kind:"table"). ──
     if (parts.length === 1) {
       const part = parts[0];
-      const plan = plans[0];
+      const plan = planList[0];
       if (part.error) {
         return {
           kind: "result",
@@ -322,7 +297,7 @@ export const aiQueryTool: Tool = {
     // ── Caso N piani: kind:"multi". Cache il primo piano riuscito per follow-up. ──
     const firstSuccessIdx = parts.findIndex((p) => !p.error);
     if (firstSuccessIdx >= 0) {
-      _lastSuccessfulPlan = plans[firstSuccessIdx];
+      _lastSuccessfulPlan = planList[firstSuccessIdx];
     }
     const totalCount = parts.reduce((s, p) => s + (p.error ? 0 : p.count), 0);
     const tableNames = parts.map((p) => p.table).join(" + ");

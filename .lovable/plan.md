@@ -1,90 +1,48 @@
-# Piano: Template di struttura unico + zero sovrapposizioni
-
-## Diagnosi (perché si accavallano)
-
-Oggi convivono **più sistemi di intestazione in parallelo**, ognuno con regole, altezze e z-index diversi:
-
-| Sistema | Dove vive | Pagine | Altezza |
-|---|---|---|---|
-| `LayoutHeader` (top bar globale) | sempre montata | tutte | 44px (`h-11`) |
-| `PageTitleHeader` (portal in `#page-title-slot`) | dentro LayoutHeader | **22 pagine** | inline |
-| `StandardPageFrame` (header in-mask + ✦AI) | nella maschera | **2 pagine** | 36px (`h-9`) |
-| `GoldenHeaderBar` | — | 0 (orfano) | 32px |
-| `ExploreContextHeader` / `CommandPageHeader` | speciali | 2+ | varie |
-| `LayoutIconRail` (☰ fluttuante) | `fixed left-3 top-3` | globale | 40px |
-
-**Causa diretta dell'overlap in alto** (screenshot): il pulsante ☰ è `fixed` a `left-3 top-3` e **galleggia sopra** la top bar, che però inizia a `px-4` senza riservare spazio a sinistra → ☰ copre lo StatusPill / inizio del cluster sinistro.
-
-**Cause sistemiche delle altre sovrapposizioni:**
-- Due paradigmi opposti (header globale con portal **vs** header in-maschera) → titoli che compaiono in due punti o si accavallano.
-- Ogni pagina impila toolbar proprie (barra sincronizzazione, riga ricerca, chip filtri) con spaziature e z-index arbitrari.
-- Nessun token condiviso per altezze, gap, z-index, padding di sicurezza.
-
 ## Obiettivo
 
-Un **unico template strutturale** (zone fisse, altezze fisse, z-index a livelli) applicato a tutte le pagine "normali". Le maschere speciali restano fuori e si analizzano una per una. La priorità è l'**uniformità** del resto.
+Far sì che Command **converse sempre** e mostri sempre il canvas per le query di routine, eliminando la dipendenza dall'AI gateway (causa dei 429 "Troppe richieste") per conteggi ed elenchi standard.
 
----
+## Causa radice confermata
 
-## Fase 0 — Fix immediato dell'overlap ☰ / top bar
+Ogni interazione fa **2 chiamate AI** che vengono strozzate (429):
+1. `ai-query-planner` → su 429 ritorna piano `INVALID` → canvas "Richiesta non supportata · 0 risultati".
+2. `ai-assistant` (commento) → su 429 scatta `fallbackComment` → "Risultato disponibile nel canvas" senza voce.
 
-Senza rifattorizzare nulla:
-- Riservare lo spazio del ☰ nella top bar: aggiungere padding-left sul cluster sinistro di `LayoutHeader` (desktop) pari alla larghezza del pulsante + gap, così ☰ e StatusPill non si toccano mai.
-- Allineare ☰ verticalmente all'altezza esatta della top bar (stessa `h`, stesso asse) invece di `top-3` arbitrario.
-- Definire una scala z-index unica (vedi Fase 2) e applicarla a ☰, top bar, popover, drawer, toast/notifiche per evitare che la notifica email in alto copra i controlli.
+Il piano deterministico locale attuale copre SOLO `partner + paese`, quindi qualsiasi variante ("pannelli", refusi, dettato) ricade sull'AI e prende 429.
 
-Risultato: la barra in alto torna leggibile e cliccabile su tutte le pagine.
+## Principio (Codex)
 
-## Fase 1 — Audit categorizzato di tutti gli elementi
+Modifica **minima, locale, reversibile** su UN nodo: il parser di intento. Niente refactor opportunistici, niente tocchi a submit/batch/memoria/edge.
 
-Censimento sistematico, **una categoria alla volta**, con inventario file→componente e regole target:
+## Intervento
 
-1. **Top bar globale** — cluster sinistro/destro, slot portal, comportamento mobile.
-2. **Header di pagina / titoli** — `PageTitleHeader` (22), `StandardPageFrame` (2), `ExploreContextHeader`, `GoldenHeaderBar` (orfano da rimuovere).
-3. **Toolbar contestuali** — barre azioni di pagina (es. SINCRONIZZAZIONE / AZIONI in Inbox), riga ricerca, chip filtri attivi.
-4. **Badge** — NEW, contatori, stato (online/offline), "Condivisa".
-5. **Icone & pulsanti icona** — dimensioni, hit-area minima, allineamento.
-6. **Campi di ricerca** — globale (⌘K) vs di pagina vs nel popover.
-7. **Rail laterali** — filtri (sx) e workflow (dx) già governati da `pageContract`.
+### 1. Generalizzare il parser deterministico (`aiQueryTool.ts`)
+Estrarre `deterministicPartnerCountryPlan` in un piccolo **`localIntentParser`** che riconosce, senza AI:
+- **Entità**: partner, contatti, prospect, attività, messaggi (sinonimi + tolleranza refusi/dettato).
+- **Filtro geografico**: paese (mappa esistente) o città.
+- **Intento**: conteggio vs elenco.
 
-Output: tabella unica "elemento → dove sta oggi → regola standard".
+Se il parser riconosce entità+intento → costruisce il `QueryPlan` localmente e **salta del tutto il planner AI**. Questo copre l'80% delle query operative e le rende immuni al 429.
 
-## Fase 2 — Definizione del template standard (design tokens)
+### 2. Degradare il planner AI con retry, non con "non supportata"
+In `aiQueryTool.execute`, quando `planQuery` torna rate-limited:
+- 1 retry con piccolo backoff (es. 1.2s);
+- se ancora 429, fallback al `localIntentParser` (best-effort) invece di mostrare "Richiesta non supportata".
 
-Sorgente unica di verità per la struttura, senza colori custom (solo token semantici):
+### 3. Commento sempre presente anche senza AI
+`useResultCommentary` già prova il formatter locale per `ai-query`. Assicurare che quando il piano è deterministico il **commento locale** (dato + proposta + voce) venga sempre generato, così la voce parla anche durante i 429 del commentatore.
 
-- **Zone fisse** (dall'alto): `[Top bar globale]` → `[Header di pagina]` → `[Toolbar pagina opz.]` → `[Contenuto]`, con rail sx/dx ai lati.
-- **Altezze fisse** standard: top bar, header pagina, toolbar (un token ciascuna, riusato ovunque).
-- **Scala z-index a livelli** documentata: contenuto < rail < header < ☰/top bar < popover/drawer < toast.
-- **Padding di sicurezza**: offset costante per gli elementi `fixed` (☰, linguette) così non coprono mai contenuto.
-- **Un solo componente header**: consolidare su **`StandardPageFrame`** come unico header di pagina (titolo/breadcrumb + ✦AI + slot azioni + tabs pill), ritirando `PageTitleHeader`, `GoldenHeaderBar` e lo slot portal.
-- Documentare in `mem/architecture/` (estende il contratto shell esistente).
+## Cosa NON tocco
+- Edge functions (`ai-query-planner`, `ai-assistant`, `tts`).
+- Logica submit, batch email, memoria/history, dedup, RLS.
+- `safeQueryExecutor`, governance, audit.
 
-## Fase 3 — Migrazione pagine "normali" all'header unico
+## Verifica prima di "fatto"
+- "quanti partner abbiamo a Malta" → conteggio + canvas + voce (deterministico).
+- "quanti pannelli abbiamo Malta" (refuso) → riconosciuto come partner → canvas + voce.
+- Query non-standard → planner AI con retry; su 429 persistente, fallback locale invece di "non supportata".
+- Nessun side-effect duplicato, ordine messaggi invariato.
 
-Migrazione incrementale, pagina per pagina, **senza toccare la logica** (solo presentazione), riusando il pattern già applicato a Cockpit/Comms:
-- Sostituire `PageTitleHeader` con `StandardPageFrame` (titolo + eventuali azioni nello slot).
-- Spostare le toolbar di pagina nella zona dedicata sotto l'header, con altezza/gap standard.
-- Verifica visiva desktop + mobile (drawer) per ogni pagina migrata.
-- A migrazione completa: rimozione di `PageTitleHeader`, `GoldenHeaderBar`, slot `#page-title-slot`.
-
-## Fase 4 — Maschere speciali (analisi individuale, dopo l'uniformità)
-
-Non toccate nella standardizzazione di massa; ognuna avrà una mini-analisi dedicata, preservandone il comportamento. Candidate: **Command**, **Cockpit**, **Comms**, **Campagne**, **Network/Explore**, **Lab**, **Settings**. Per ciascuna: cosa conservare (funzioni custom) e come agganciare l'header standard senza regressioni.
-
----
-
-## Note tecniche
-
-- File chiave: `LayoutHeader.tsx`, `LayoutIconRail.tsx`, `AuthenticatedLayout.tsx`, `StandardPageFrame.tsx`, `PageTitleHeader.tsx`, `GoldenHeaderBar.tsx`, `SectionTabs.tsx`.
-- Solo modifiche frontend/presentazione; nessun cambiamento a hook, dati, RLS o edge.
-- Modifiche minime, locali e reversibili; ogni pagina verificata prima di passare alla successiva.
-- I rail filtri (sx) / workflow (dx) restano governati da `pageContract.ts`.
-
-## Ordine di esecuzione proposto
-
-1. Fase 0 (fix overlap ☰) — sblocca subito la leggibilità.
-2. Fase 2 (token + scelta header unico) — fondamenta.
-3. Fase 1 (audit) in parallelo come riferimento.
-4. Fase 3 (migrazione pagine normali).
-5. Fase 4 (speciali, una ad una).
+## Sezione tecnica
+- File toccati: `src/v2/ui/pages/command/tools/aiQueryTool.ts` (estrazione parser + retry), eventualmente un nuovo `lib/localIntentParser.ts`, e ritocco minimo a `hooks/useResultCommentary.ts` solo se il commento locale non scatta sul piano deterministico.
+- Nessuna migrazione DB, nessun deploy edge.
