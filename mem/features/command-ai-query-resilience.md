@@ -20,3 +20,9 @@ Configurazione confermata funzionante dall'utente. NON regredire.
 
 ## Principio
 NON allargare regex caso-per-caso: il parser deterministico (`localIntentParser`) è il nodo unico da estendere. Niente nuovi cerotti.
+
+## Follow-up ellittici (fix 2026-06)
+- `aiQueryTool.execute` costruisce un contextHint dal contesto DUREVOLE (`getLastQueryResultContext()`) quando il `contextHint` React (`queryContext`) è vuoto/non fresco. Così "e in Francia?", "Spagna", "e la Germania?" ereditano l'entità (partner) dal turno precedente e restano sul parser locale.
+- `useFastLane`: `onContextUpdate()` viene chiamato DOPO il salvataggio di `lastQueryResultContext` (prima azzerava `_lastSuccessfulPlan` troppo presto).
+- `localResultFormatter.tryLocalComment`: tratta come conteggio anche i piani con title "Conteggio …" (follow-up ellittici senza la parola "quanti"), evitando il commento AI generico "Risultato disponibile nel canvas".
+- Verificato dal vivo: "quanti partner" → "e in Francia?" (99) → "Spagna" (170), tutti fast-lane <0.5s con risposta parlata specifica.

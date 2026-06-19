@@ -219,9 +219,16 @@ export function tryLocalComment(
   // Only when the user really asked "how many" — never auto-trigger from the
   // planner having reduced columns to ["id"], that is a planner heuristic, not
   // user intent.
+  //
+  // Eccezione: i follow-up ellittici ("e in Francia?", "Spagna") non contengono
+  // la parola "quanti" ma ereditano un piano di CONTEGGIO dal turno precedente
+  // (title "Conteggio …"). In quel caso trattiamo il risultato come conteggio,
+  // così il Direttore risponde "Abbiamo X partner in …" invece di cadere sul
+  // commento AI generico ("Risultato disponibile nel canvas").
+  const planIsCount = /^\s*conteggio\b/i.test(plan.title ?? "");
   const isCountMode =
     !isListMode &&
-    /\b(quanti|quante|conteggio|totale|numero)\b/i.test(userPrompt);
+    (/\b(quanti|quante|conteggio|totale|numero)\b/i.test(userPrompt) || planIsCount);
 
   // ── ZERO RESULTS (any mode) ──
   // Handle this BEFORE falling through to AI commentary, otherwise the LLM
