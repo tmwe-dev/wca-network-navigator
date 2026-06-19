@@ -17,6 +17,25 @@ import { planQuery } from "@/v2/io/edge/aiQueryPlanner";
 import { executeQueryPlan, QueryValidationError, type QueryPlan } from "../lib/safeQueryExecutor";
 import { isOk } from "@/v2/core/domain/result";
 import { parseLocalIntent } from "../lib/localIntentParser";
+import { getLastQueryResultContext } from "../lib/lastQueryResultContext";
+
+/**
+ * Sintetizza un contextHint dal contesto DUREVOLE dell'ultima query
+ * (`lastQueryResultContext`, singleton di modulo con TTL 5 min) nello stesso
+ * formato che `detectContext`/`parseLocalIntent` si aspettano. Questo rende i
+ * follow-up ellittici ("e in Francia?", "Spagna") affidabili anche quando lo
+ * stato React `queryContext` è vuoto/non fresco al momento del submit.
+ */
+function buildHintFromDurableContext(): string | undefined {
+  const ctx = getLastQueryResultContext();
+  if (!ctx?.table) return undefined;
+  const filterDesc = (ctx.filters ?? [])
+    .map((f) => `${f.column} ${f.op} ${JSON.stringify(f.value)}`)
+    .join(" AND ");
+  // mode non è memorizzato nel contesto durevole: per le query di routine
+  // (conteggi/elenchi per paese) "count" è il default sicuro.
+  return `CONTESTO TURNO PRECEDENTE: tabella=${ctx.table}, mode=count, filtri=[${filterDesc || "nessuno"}].`;
+}
 
 /** Module-level cache of the LAST successful QueryPlan, read by useCommandSubmit
  *  to update conversational query context. Single-tab assumption is fine here. */
