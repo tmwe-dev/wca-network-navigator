@@ -201,11 +201,14 @@ export const aiQueryTool: Tool = {
       };
     }
 
+    // A questo punto `plans` è garantito non-null e non-INVALID.
+    const planList: QueryPlan[] = plans!;
+
     // 2) Esegui i piani in PARALLELO. allSettled: una query può fallire senza
     //    bloccare le altre (es. tabella valida + colonna inventata in una sola).
     const t0 = Date.now();
     const settled = await Promise.allSettled(
-      plans.map(async (p) => {
+      planList.map(async (p) => {
         const start = Date.now();
         const exec = await executeQueryPlan(p);
         return { plan: p, exec, durationMs: Date.now() - start };
@@ -252,7 +255,7 @@ export const aiQueryTool: Tool = {
     };
 
     const parts: MultiResultPart[] = settled.map((s, i) => {
-      const plan = plans[i];
+      const plan = planList[i];
       if (s.status === "fulfilled") {
         return buildPart(plan, s.value.exec, null, s.value.durationMs);
       }
@@ -264,7 +267,7 @@ export const aiQueryTool: Tool = {
     // ── Caso 1 piano: mantengo retro-compatibilità totale (kind:"table"). ──
     if (parts.length === 1) {
       const part = parts[0];
-      const plan = plans[0];
+      const plan = planList[0];
       if (part.error) {
         return {
           kind: "result",
@@ -294,7 +297,7 @@ export const aiQueryTool: Tool = {
     // ── Caso N piani: kind:"multi". Cache il primo piano riuscito per follow-up. ──
     const firstSuccessIdx = parts.findIndex((p) => !p.error);
     if (firstSuccessIdx >= 0) {
-      _lastSuccessfulPlan = plans[firstSuccessIdx];
+      _lastSuccessfulPlan = planList[firstSuccessIdx];
     }
     const totalCount = parts.reduce((s, p) => s + (p.error ? 0 : p.count), 0);
     const tableNames = parts.map((p) => p.table).join(" + ");
