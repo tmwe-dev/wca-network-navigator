@@ -1,48 +1,44 @@
 ## Obiettivo
 
-Far sì che Command **converse sempre** e mostri sempre il canvas per le query di routine, eliminando la dipendenza dall'AI gateway (causa dei 429 "Troppe richieste") per conteggi ed elenchi standard.
+Far sì che il Command "segua il discorso": dopo "quanti partner" (o "quanti partner a Malta"), i follow-up ellittici come "e in Francia?", "Spagna", "e la Germania?", "quanti in Italia" devono ereditare automaticamente l'entità (partner) ed essere risolti dal parser deterministico locale — niente hop AI lento, niente risposta generica "Risultato disponibile nel canvas".
 
-## Causa radice confermata
+## Diagnosi (verificata dal vivo)
 
-Ogni interazione fa **2 chiamate AI** che vengono strozzate (429):
-1. `ai-query-planner` → su 429 ritorna piano `INVALID` → canvas "Richiesta non supportata · 0 risultati".
-2. `ai-assistant` (commento) → su 429 scatta `fallbackComment` → "Risultato disponibile nel canvas" senza voce.
+- Il parser locale gestisce correttamente i follow-up SE riceve l'hint di contesto (verificato con test puri).
+- A runtime l'hint viene costruito SOLO da `queryContext` (stato React volatile). Sui follow-up ellittici quello stato a volte risulta vuoto/non fresco → il parser locale ritorna `null` → si cade sull'AI planner (3.98s) → commento generico senza voce.
+- Esiste già `lastQueryResultContext` (singleton di modulo, TTL 5 min, contiene `table` + `filters`): è durevole tra i render ma NON viene usato per costruire l'hint.
 
-Il piano deterministico locale attuale copre SOLO `partner + paese`, quindi qualsiasi variante ("pannelli", refusi, dettato) ricade sull'AI e prende 429.
+## Modifiche (minime, locali, reversibili)
 
-## Principio (Codex)
+### 1. Fonte di contesto durevole nel parser locale
+File: `src/v2/ui/pages/command/tools/aiQueryTool.ts`
+- Prima di chiamare `parseLocalIntent`, se `context?.contextHint` è assente o non contiene `tabella=`, sintetizzare un hint dal contesto durevole leggendo `getLastQueryResultContext()`:
+  - costruire la stringa nello stesso formato che `detectContext` si aspetta: `CONTESTO TURNO PRECEDENTE: tabella=<table>, mode=<count|list>, filtri=[...]`.
+  - `mode` derivato dalla presenza di `count` (default `count`).
+- Usare questo hint sintetizzato come fallback per `parseLocalIntent`, sia nel primo tentativo sia nel fallback post-429.
+- Nessuna modifica al flusso AI esistente: il planner resta come ultimo fallback.
 
-Modifica **minima, locale, reversibile** su UN nodo: il parser di intento. Niente refactor opportunistici, niente tocchi a submit/batch/memoria/edge.
+### 2. Non azzerare il piano prima di salvarlo come contesto
+File: `src/v2/ui/pages/command/hooks/useFastLane.ts`
+- Oggi `onContextUpdate()` (che fa `clearLastSuccessfulQueryPlan()`) viene chiamato PRIMA del blocco che legge `getLastSuccessfulQueryPlan()` per arricchire `lastQueryResultContext` (riga ~117), che quindi riceve `null`.
+- Spostare `onContextUpdate()` DOPO il salvataggio di `lastQueryResultContext`, così sia `queryContext` sia `lastQueryResultContext` ricevono tabella+filtri reali. Questo rende il contesto durevole sempre popolato → il fix #1 ha sempre da cui ereditare.
 
-## Intervento
+### 3. Commento locale per i conteggi (no "Risultato disponibile nel canvas")
+File: `src/v2/ui/pages/command/hooks/useResultCommentary.ts`
+- Quando il risultato è un conteggio con tabella nota (es. partners) e il commento AI fallisce/è rate-limited, generare localmente la frase parlata specifica (es. "Abbiamo 99 partner in Francia.") invece del fallback generico. Riusa le label già presenti (`TABLE_LABEL`, `COUNTRY_CODE_BY_NAME`).
 
-### 1. Generalizzare il parser deterministico (`aiQueryTool.ts`)
-Estrarre `deterministicPartnerCountryPlan` in un piccolo **`localIntentParser`** che riconosce, senza AI:
-- **Entità**: partner, contatti, prospect, attività, messaggi (sinonimi + tolleranza refusi/dettato).
-- **Filtro geografico**: paese (mappa esistente) o città.
-- **Intento**: conteggio vs elenco.
+### 4. Test di regressione
+File: `src/v2/ui/pages/command/lib/__tests__/localIntentParser.test.ts` (estensione)
+- Aggiungere casi: con contesto `tabella=partners,mode=count`, i prompt "e in Francia?", "Spagna", "e la Germania?", "quanti in Italia" ritornano un piano `partners` col `country_code` corretto.
+- Caso negativo invariato: senza contesto né entità, "quanti in USA?" → `null`.
 
-Se il parser riconosce entità+intento → costruisce il `QueryPlan` localmente e **salta del tutto il planner AI**. Questo copre l'80% delle query operative e le rende immuni al 429.
+## Fuori scope
 
-### 2. Degradare il planner AI con retry, non con "non supportata"
-In `aiQueryTool.execute`, quando `planQuery` torna rate-limited:
-- 1 retry con piccolo backoff (es. 1.2s);
-- se ancora 429, fallback al `localIntentParser` (best-effort) invece di mostrare "Richiesta non supportata".
+- Nessuna modifica a edge function (`ai-query-planner`, `super-mario`), submit, batch, dedup, invio email, RLS, DB.
+- Nessun refactor dei 4 sistemi di contesto: si collega solo `lastQueryResultContext` come fonte di fallback per l'hint.
 
-### 3. Commento sempre presente anche senza AI
-`useResultCommentary` già prova il formatter locale per `ai-query`. Assicurare che quando il piano è deterministico il **commento locale** (dato + proposta + voce) venga sempre generato, così la voce parla anche durante i 429 del commentatore.
+## Verifica
 
-## Cosa NON tocco
-- Edge functions (`ai-query-planner`, `ai-assistant`, `tts`).
-- Logica submit, batch email, memoria/history, dedup, RLS.
-- `safeQueryExecutor`, governance, audit.
-
-## Verifica prima di "fatto"
-- "quanti partner abbiamo a Malta" → conteggio + canvas + voce (deterministico).
-- "quanti pannelli abbiamo Malta" (refuso) → riconosciuto come partner → canvas + voce.
-- Query non-standard → planner AI con retry; su 429 persistente, fallback locale invece di "non supportata".
-- Nessun side-effect duplicato, ordine messaggi invariato.
-
-## Sezione tecnica
-- File toccati: `src/v2/ui/pages/command/tools/aiQueryTool.ts` (estrazione parser + retry), eventualmente un nuovo `lib/localIntentParser.ts`, e ritocco minimo a `hooks/useResultCommentary.ts` solo se il commento locale non scatta sul piano deterministico.
-- Nessuna migrazione DB, nessun deploy edge.
+- Test unitari verdi.
+- Riproduzione dal vivo nella preview: `quanti partner` → `e in Francia?` → `Spagna` → `e in Germania?` devono rispondere via fast-lane locale (<1s, niente "Risultato disponibile nel canvas") con risposta parlata specifica.
+- Controllo non-regressione: `quanti partner a Malta` → `quanti in Italia` continua a funzionare.
