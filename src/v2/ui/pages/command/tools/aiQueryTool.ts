@@ -151,7 +151,7 @@ export const aiQueryTool: Tool = {
     // 1) Genera QueryPlan. Per le query di routine (conteggi/elenchi per
     //    entità, opzionalmente filtrate per paese) usiamo un piano
     //    DETERMINISTICO locale: niente hop AI, quindi immune al rate-limit.
-    const localPlan = parseLocalIntent(naturalPrompt);
+    const localPlan = parseLocalIntent(naturalPrompt, context?.contextHint);
     let plans: QueryPlan[] | null = localPlan ? [localPlan] : null;
     if (!plans) {
       // Helper: 1 retry con piccolo backoff per assorbire un 429 transitorio.
@@ -173,7 +173,7 @@ export const aiQueryTool: Tool = {
       // Se anche dopo il retry siamo strozzati o falliti, prova un fallback
       // deterministico best-effort invece di mostrare "Richiesta non supportata".
       if (isRateLimited(aiPlans)) {
-        const fallback = parseLocalIntent(naturalPrompt);
+        const fallback = parseLocalIntent(naturalPrompt, context?.contextHint);
         if (fallback) {
           plans = [fallback];
         } else {

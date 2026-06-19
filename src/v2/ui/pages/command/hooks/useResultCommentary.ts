@@ -44,6 +44,23 @@ export function useResultCommentary(deps: CommentaryDeps) {
 
       // Try LOCAL formatter (skip LLM for simple count/short list)
       if (toolId === "ai-query") {
+        if (result.kind === "result") {
+          const finalTrace = trace?.finish();
+          const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
+          const audit = finalTrace ? buildAuditFromTrace(finalTrace) : undefined;
+          addMessage({
+            role: "assistant",
+            content: result.message,
+            agentName: "Direttore",
+            timestamp: ts(),
+            meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
+            governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
+            spokenSummary: result.message.replace(/[*_`#>❌]/g, "").slice(0, 200),
+            audit,
+          });
+          setVoiceSpeaking(false);
+          return;
+        }
         const fallbackPlan: QueryPlan | null = result.kind === "table"
           ? {
               table: String(result.liveSource ?? "partners"),

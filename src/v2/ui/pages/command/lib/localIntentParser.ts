@@ -54,6 +54,16 @@ const TABLE_LABEL: Record<string, string> = {
   channel_messages: "messaggi",
 };
 
+const ALLOWED_CONTEXT_TABLES = new Set(Object.keys(TABLE_LABEL));
+
+function detectContext(hint?: string): { table: string; mode: "count" | "list" } | null {
+  if (!hint) return null;
+  const table = hint.match(/tabella=([a-z_]+)/i)?.[1];
+  const mode = hint.match(/mode=(count|list)/i)?.[1] as "count" | "list" | undefined;
+  if (!table || !mode || !ALLOWED_CONTEXT_TABLES.has(table)) return null;
+  return { table, mode };
+}
+
 function detectEntity(lower: string): string | null {
   for (const { table, re } of ENTITY_PATTERNS) {
     if (re.test(lower)) return table;
@@ -75,14 +85,15 @@ const PARTNER_COLUMNS = ["id", "company_name", "city", "country_code", "email", 
  * Costruisce un QueryPlan deterministico, o null se la richiesta non è una
  * query di routine riconoscibile senza AI.
  */
-export function parseLocalIntent(prompt: string): QueryPlan | null {
+export function parseLocalIntent(prompt: string, contextHint?: string): QueryPlan | null {
   const lower = prompt.toLowerCase();
-  const table = detectEntity(lower);
+  const context = detectContext(contextHint);
+  const table = detectEntity(lower) ?? context?.table ?? null;
   if (!table) return null;
 
   const country = table === "partners" ? detectCountry(lower) : null;
   const isList = LIST_RE.test(lower);
-  const isCount = !isList && COUNT_RE.test(lower);
+  const isCount = !isList && (COUNT_RE.test(lower) || context?.mode === "count");
 
   // Serve almeno un segnale chiaro: conteggio, elenco, oppure un filtro paese.
   if (!isCount && !isList && !country) return null;
