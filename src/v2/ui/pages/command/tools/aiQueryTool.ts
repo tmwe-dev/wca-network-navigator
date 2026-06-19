@@ -16,6 +16,7 @@ import type { Tool, ToolResult, ToolResultColumn, MultiResultPart } from "./type
 import { planQuery } from "@/v2/io/edge/aiQueryPlanner";
 import { executeQueryPlan, QueryValidationError, type QueryPlan } from "../lib/safeQueryExecutor";
 import { isOk } from "@/v2/core/domain/result";
+import { parseLocalIntent } from "../lib/localIntentParser";
 
 /** Module-level cache of the LAST successful QueryPlan, read by useCommandSubmit
  *  to update conversational query context. Single-tab assumption is fine here. */
@@ -25,53 +26,6 @@ export function getLastSuccessfulQueryPlan(): QueryPlan | null {
 }
 export function clearLastSuccessfulQueryPlan(): void {
   _lastSuccessfulPlan = null;
-}
-
-const COUNTRY_CODE_BY_NAME: Record<string, string> = {
-  malta: "MT", italia: "IT", italy: "IT", francia: "FR", france: "FR",
-  spagna: "ES", spain: "ES", germania: "DE", germany: "DE",
-  "regno unito": "GB", uk: "GB", inghilterra: "GB", olanda: "NL", "paesi bassi": "NL",
-  netherlands: "NL", belgio: "BE", belgium: "BE", portogallo: "PT", portugal: "PT",
-  grecia: "GR", greece: "GR", svizzera: "CH", switzerland: "CH", austria: "AT",
-  polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
-  "stati uniti": "US", usa: "US", "united states": "US", canada: "CA", brasile: "BR",
-  america: "US", "negli stati uniti": "US", "nord america": "US",
-  brazil: "BR", cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
-  emirati: "AE", uae: "AE", egitto: "EG", egypt: "EG", marocco: "MA", morocco: "MA",
-  australia: "AU", singapore: "SG", "hong kong": "HK",
-};
-
-function deterministicPartnerCountryPlan(prompt: string): QueryPlan | null {
-  const lower = prompt.toLowerCase();
-  // Tollerante a refusi/varianti vocali: partner, partners, parte, parti.
-  if (!/\bpart(?:ner|ners|e|i)?\b/i.test(lower)) return null;
-  const country = Object.entries(COUNTRY_CODE_BY_NAME).find(([name]) => new RegExp(`\\b${name}\\b`, "i").test(lower));
-  const isGlobalPartnerCount = !country && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
-  if (!country && !isGlobalPartnerCount) return null;
-
-  if (isGlobalPartnerCount) {
-    return {
-      table: "partners",
-      columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
-      filters: [],
-      limit: 25,
-      title: "Conteggio partner · totale",
-      rationale: "Piano deterministico locale per conteggio partner totale: evita planner AI quando la query è univoca.",
-    };
-  }
-
-  const [countryLabel, countryCode] = country!;
-  const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
-  const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|numero|conteggio|count)\b/i.test(prompt);
-
-  return {
-    table: "partners",
-    columns: ["id", "company_name", "city", "country_code", "email", "website", "lead_status"],
-    filters: [{ column: "country_code", op: "eq", value: countryCode }],
-    limit: isCountIntent ? 25 : 200,
-    title: isCountIntent ? `Conteggio partner · ${countryLabel}` : `Partner · ${countryLabel}`,
-    rationale: "Piano deterministico locale per partner+paese: evita un hop AI quando la query è univoca.",
-  };
 }
 
 /* ─── Bulk action templates per tabella ─── */
