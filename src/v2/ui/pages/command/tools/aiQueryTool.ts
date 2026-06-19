@@ -148,31 +148,49 @@ export const aiQueryTool: Tool = {
             return prompt;
           })();
 
-    // 1) Genera QueryPlan. Per query partner+paese univoche usiamo un piano
-    //    deterministico locale: è il percorso storico operativo e non consuma
-    //    un ulteriore hop AI solo per tradurre "Malta" → "MT".
-    const localPlan = deterministicPartnerCountryPlan(naturalPrompt);
+    // 1) Genera QueryPlan. Per le query di routine (conteggi/elenchi per
+    //    entità, opzionalmente filtrate per paese) usiamo un piano
+    //    DETERMINISTICO locale: niente hop AI, quindi immune al rate-limit.
+    const localPlan = parseLocalIntent(naturalPrompt);
     let plans: QueryPlan[] | null = localPlan ? [localPlan] : null;
     if (!plans) {
-      const planRes = await planQuery({
-        prompt: naturalPrompt,
-        history: context?.history,
-        contextHint: context?.contextHint,
-      });
-
-      if (!isOk(planRes)) {
-        return {
-          kind: "result",
-          title: "Query AI · Errore planner",
-          message: `Non sono riuscito a interpretare la richiesta. Riformulala in modo più specifico (es. "mostra partner US attivi", "ultimi 20 contatti", "messaggi non letti").`,
-          meta: { count: 0, sourceLabel: "AI Query Planner" },
-        };
+      // Helper: 1 retry con piccolo backoff per assorbire un 429 transitorio.
+      const tryPlan = async () =>
+        planQuery({
+          prompt: naturalPrompt,
+          history: context?.history,
+          contextHint: context?.contextHint,
+        });
+      let planRes = await tryPlan();
+      let aiPlans = isOk(planRes) ? planRes.value.plans : null;
+      const isRateLimited = (p: QueryPlan[] | null) =>
+        !p || (p[0]?.table === "INVALID" && /troppe richieste|rate limit|riprova tra/i.test(p[0]?.rationale ?? ""));
+      if (isRateLimited(aiPlans)) {
+        await new Promise((r) => setTimeout(r, 1200));
+        planRes = await tryPlan();
+        aiPlans = isOk(planRes) ? planRes.value.plans : null;
       }
-      plans = planRes.value.plans;
+      // Se anche dopo il retry siamo strozzati o falliti, prova un fallback
+      // deterministico best-effort invece di mostrare "Richiesta non supportata".
+      if (isRateLimited(aiPlans)) {
+        const fallback = parseLocalIntent(naturalPrompt);
+        if (fallback) {
+          plans = [fallback];
+        } else {
+          return {
+            kind: "result",
+            title: "Query AI · Errore planner",
+            message: `Non sono riuscito a interpretare la richiesta. Riformulala in modo più specifico (es. "mostra partner US attivi", "ultimi 20 contatti", "messaggi non letti").`,
+            meta: { count: 0, sourceLabel: "AI Query Planner" },
+          };
+        }
+      } else {
+        plans = aiPlans;
+      }
     }
 
     // Caso INVALID: planner ha esplicitamente segnalato richiesta non-query.
-    const firstPlan = plans[0];
+    const firstPlan = plans![0];
     if (firstPlan.table === "INVALID") {
       return {
         kind: "result",
