@@ -101,9 +101,6 @@ export function useFastLane(deps: FastLaneDeps) {
         setExecProgress(100);
         setShowTools(false);
 
-        // Update query context
-        onContextUpdate();
-
         // Memorizza partnerIds/paese per il successivo compose-email "vai avanti…".
         const partnerIds = extractPartnerIdsFromResult(result);
         const country = detectCountryFromPrompt(userPrompt);
@@ -145,6 +142,11 @@ export function useFastLane(deps: FastLaneDeps) {
             selectionLabel,
           });
         }
+
+        // Update query context (DOPO aver salvato il contesto durevole, così
+        // sia queryContext sia lastQueryResultContext ricevono tabella+filtri
+        // reali — `updateQueryContextFromLastPlan` azzera `_lastSuccessfulPlan`).
+        onContextUpdate();
 
         // Show step recap
         const countLabel = result.meta && "count" in result.meta ? ` · ${result.meta.count}` : "";
