@@ -63,7 +63,8 @@ export function useUnreadCount(channel?: string, mailboxFilter?: MailboxFilter) 
         .from("channel_messages")
         .select("id", { count: "planned", head: true })
         .eq("direction", "inbound")
-        .is("read_at", null);
+        .is("read_at", null)
+        .not("hidden_by_rule", "is", true);
       if (channel) q = q.eq("channel", channel);
       if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
       else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
