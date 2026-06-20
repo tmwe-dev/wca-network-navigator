@@ -19,21 +19,24 @@ async function fetchUnreadCounts(): Promise<UnreadCounts> {
       .select("id", { count: "planned", head: true })
       .eq("channel", "email")
       .eq("direction", "inbound")
-      .is("read_at", null),
+      .is("read_at", null)
+      .not("hidden_by_rule", "is", true),
     // Unread WhatsApp
     supabase
       .from("channel_messages")
       .select("id", { count: "planned", head: true })
       .eq("channel", "whatsapp")
       .eq("direction", "inbound")
-      .is("read_at", null),
+      .is("read_at", null)
+      .not("hidden_by_rule", "is", true),
     // Unread LinkedIn
     supabase
       .from("channel_messages")
       .select("id", { count: "planned", head: true })
       .eq("channel", "linkedin")
       .eq("direction", "inbound")
-      .is("read_at", null),
+      .is("read_at", null)
+      .not("hidden_by_rule", "is", true),
     // Holding pattern (circuito) — partner attivamente nel ciclo (post primo touch, pre conversione)
     supabase
       .from("partners")

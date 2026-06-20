@@ -16,6 +16,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
+import { resolveMailbox, MailboxNotConfiguredError } from "../_shared/resolveMailbox.ts";
 
 /**
  * manage-email-folders — IMAP folder operations (move, archive, spam, list)
@@ -62,11 +63,27 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "Invalid action. Must be one of: " + VALID_ACTIONS.join(", ") }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    const IMAP_HOST = Deno.env.get("IMAP_HOST");
-    const IMAP_USER = Deno.env.get("IMAP_USER");
-    const IMAP_PASSWORD = Deno.env.get("IMAP_PASSWORD");
-
-    if (!IMAP_HOST || !IMAP_USER || !IMAP_PASSWORD) {
+    // Risolve le credenziali della casella ATTIVA (header x-mailbox-id):
+    // personale (env legacy) oppure condivisa (shared_mailboxes + ENV secrets).
+    // Senza questo, archivia/cancella/sposta operavano sempre sull'account
+    // personale anche quando l'utente lavorava su una casella condivisa.
+    const requestedMailboxId = req.headers.get("x-mailbox-id");
+    const supabaseAdmin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    let IMAP_HOST: string;
+    let IMAP_USER: string;
+    let IMAP_PASSWORD: string;
+    try {
+      const resolved = await resolveMailbox(supabaseAdmin as never, requestedMailboxId);
+      IMAP_HOST = resolved.imap_host;
+      IMAP_USER = resolved.imap_user;
+      IMAP_PASSWORD = resolved.imap_password;
+    } catch (resolveErr: unknown) {
+      if (resolveErr instanceof MailboxNotConfiguredError) {
+        return new Response(
+          JSON.stringify({ error: "MAILBOX_NOT_CONFIGURED", slug: resolveErr.slug, message: resolveErr.message }),
+          { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
       return new Response(JSON.stringify({ error: "IMAP not configured" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
@@ -204,7 +221,7 @@ serve(async (req) => {
         if (moved > 0) await sendCommand("EXPUNGE");
 
         // Update metadata in channel_messages
-        const supabaseService = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const supabaseService = supabaseAdmin;
         for (const uid of uids) {
           const metaUpdate: Record<string, unknown> = {};
           if (action === "archive") { metaUpdate.archived = true; metaUpdate.archived_at = new Date().toISOString(); }

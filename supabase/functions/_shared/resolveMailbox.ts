@@ -27,6 +27,20 @@ export interface ResolvedMailbox {
   reply_to: string | null;
 }
 
+/**
+ * Errore tipizzato: la casella esiste ma NON è configurabile (slug senza
+ * mapping ENV, password mancante, config incompleta). I chiamanti devono
+ * trattarlo come "materiale non disponibile" → skip pulito, MAI 500/crash loop.
+ */
+export class MailboxNotConfiguredError extends Error {
+  readonly slug: string;
+  constructor(slug: string, reason: string) {
+    super(`Mailbox "${slug}" non configurata: ${reason}`);
+    this.name = "MailboxNotConfiguredError";
+    this.slug = slug;
+  }
+}
+
 /** Mappa slug della casella condivisa → nomi ENV per password IMAP/SMTP. */
 const ENV_PASSWORD_MAP: Record<string, { imap: string; smtp: string }> = {
   booking: { imap: "IMAP_PASSWORD_BOOKING", smtp: "SMTP_PASSWORD_BOOKING" },
@@ -109,13 +123,18 @@ export async function resolveSharedMailbox(
   if (!data.is_active) throw new Error(`resolveSharedMailbox: mailbox ${data.slug} inactive`);
 
   const envMap = ENV_PASSWORD_MAP[data.slug];
-  if (!envMap) throw new Error(`resolveSharedMailbox: no ENV password mapping for slug "${data.slug}"`);
+  if (!envMap) {
+    throw new MailboxNotConfiguredError(data.slug, "nessun mapping ENV per la password");
+  }
 
-  const imap_password = envOrThrow(envMap.imap);
-  const smtp_password = envOrThrow(envMap.smtp);
+  const imap_password = Deno.env.get(envMap.imap);
+  const smtp_password = Deno.env.get(envMap.smtp);
+  if (!imap_password || !smtp_password) {
+    throw new MailboxNotConfiguredError(data.slug, "credenziali ENV assenti");
+  }
 
   if (!data.imap_host || !data.imap_user || !data.smtp_host || !data.smtp_user) {
-    throw new Error(`resolveSharedMailbox: incomplete config for slug "${data.slug}" (host/user missing)`);
+    throw new MailboxNotConfiguredError(data.slug, "host/user mancanti");
   }
 
   return {

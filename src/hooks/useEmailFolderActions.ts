@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 
 export type EmailAction = "archive" | "spam" | "move" | "delete" | "hide";
 
@@ -68,6 +69,8 @@ export function useDbFolders() {
 
 export function useBulkEmailAction() {
   const qc = useQueryClient();
+  const { activeMailbox } = useActiveMailbox();
+  const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
 
   return useMutation({
     mutationFn: async ({ messages, action, targetFolder }: BulkActionInput) => {
@@ -109,6 +112,7 @@ export function useBulkEmailAction() {
           ...(targetFolder ? { target_folder: targetFolder } : {}),
         },
         context: `useBulkEmailAction.${action}`,
+        headers: mailboxId ? { "x-mailbox-id": mailboxId } : undefined,
       });
 
       // Sync folder lato DB

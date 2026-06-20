@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
-import { resolveMailbox } from "../_shared/resolveMailbox.ts";
+import { resolveMailbox, MailboxNotConfiguredError } from "../_shared/resolveMailbox.ts";
 
 import {
   createImapConfig,
@@ -108,7 +108,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    const resolved = await resolveMailbox(supabase as never, requestedMailboxId);
+    let resolved;
+    try {
+      resolved = await resolveMailbox(supabase as never, requestedMailboxId);
+    } catch (resolveErr: unknown) {
+      // Casella esistente ma non configurabile (credenziali assenti): NON è un
+      // errore di sistema. Rileviamo e usciamo pulito (200) per evitare crash
+      // loop e toast ripetuti lato client.
+      if (resolveErr instanceof MailboxNotConfiguredError) {
+        endMetrics(metrics, true, 200);
+        return new Response(
+          JSON.stringify({
+            skipped: true,
+            reason: "MAILBOX_NOT_CONFIGURED",
+            slug: resolveErr.slug,
+            total: 0,
+            matched: 0,
+            message: `Casella "${resolveErr.slug}" non configurata: credenziali non disponibili.`,
+          }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+      throw resolveErr;
+    }
     const imapHost = resolved.imap_host;
     const imapUser = resolved.imap_user;
     const imapPassword = resolved.imap_password;
