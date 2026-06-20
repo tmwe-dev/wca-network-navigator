@@ -61,7 +61,11 @@ export const MODEL_MAP: Record<string, Record<string, string>> = {
     "openai/gpt-5-nano": "gpt-4o-mini",
     "google/gemini-2.5-flash": "gpt-4o-mini",
     "google/gemini-2.5-flash-lite": "gpt-4o-mini",
-    "google/gemini-3-flash-preview": "gpt-4o",
+    // I modelli "flash" sono tier economico → mappa su gpt-4o-mini (~16× meno caro di gpt-4o).
+    "google/gemini-3-flash-preview": "gpt-4o-mini",
+    // finder-api-chat e altri usano gemini-2.5-pro: senza mapping il nome passava
+    // invariato a OpenAI e falliva. Mappa sul modello pieno gpt-4o.
+    "google/gemini-2.5-pro": "gpt-4o",
   },
   anthropic: {
     "google/gemini-3-flash-preview": "claude-sonnet-4-5",
