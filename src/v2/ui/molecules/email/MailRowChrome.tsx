@@ -13,9 +13,9 @@
  */
 import * as React from "react";
 import { Plane } from "lucide-react";
-import { CompanyLogoInline } from "@/components/ui/CompanyLogo";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/utils";
-import { EntityRowFlag } from "@/v2/ui/atoms/EntityRowFlag";
+import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 
 export interface MailRowChromeProps {
   fromAddress: string | null | undefined;
@@ -55,6 +55,71 @@ export function formatMailListDate(value: string): string {
   return `${dd}/${mm} ${hh}:${mi}`;
 }
 
+/**
+ * MailAvatar — blocco identità unico a sinistra della card.
+ * Mostra il logo aziendale (logo partner → favicon dominio → iniziali) con
+ * una bandiera in sovrimpressione nell'angolo. Sostituisce il vecchio mix
+ * "bandiera grande + logo duplicato nel brand" che rendeva confusa la card.
+ */
+function MailAvatar({
+  logoUrl,
+  fromAddress,
+  brand,
+  countryCode,
+  size,
+}: {
+  logoUrl?: string | null;
+  fromAddress?: string | null;
+  brand: string;
+  countryCode?: string | null;
+  size: number;
+}): React.ReactElement {
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const flag = countryCode ? countryCodeToFlag(countryCode.trim()) : "";
+  const flagSize = Math.max(13, Math.round(size * 0.42));
+
+  if (logoUrl && !logoFailed) {
+    return (
+      <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+        <img
+          src={logoUrl}
+          alt=""
+          loading="lazy"
+          className="h-full w-full rounded-md border border-border/50 bg-background object-contain"
+          onError={() => setLogoFailed(true)}
+        />
+        {flag && (
+          <span
+            className="absolute -bottom-1 -right-1 leading-none"
+            style={{ fontSize: flagSize }}
+          >
+            {flag}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <CompanyLogo
+      email={fromAddress}
+      name={brand}
+      size={size}
+      showFlag={!flag}
+      className="rounded-md border border-border/50"
+    >
+      {flag ? (
+        <span
+          className="absolute -bottom-1 -right-1 leading-none"
+          style={{ fontSize: flagSize }}
+        >
+          {flag}
+        </span>
+      ) : undefined}
+    </CompanyLogo>
+  );
+}
+
 export function MailRowChrome({
   fromAddress,
   brand,
@@ -77,6 +142,7 @@ export function MailRowChrome({
   onClick,
 }: MailRowChromeProps): React.ReactElement {
   const brandText = size === "sm" ? "text-sm" : "text-base";
+  const avatarSize = size === "sm" ? 40 : 44;
   return (
     <div
       className={cn(
@@ -94,44 +160,41 @@ export function MailRowChrome({
     >
       <div className="flex w-full items-start gap-2.5">
         <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-start gap-3 text-left">
-          {/* Col 1: bandiera grande + ISO sotto (template canonico app) */}
-          <div className="mt-0.5 flex-shrink-0 w-[44px] flex items-start justify-center">
-            <EntityRowFlag countryCode={countryCode ?? null} size={size === "sm" ? "md" : "lg"} />
-          </div>
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  {logoUrl && (
-                    <img
-                      src={logoUrl}
-                      alt=""
-                      loading="lazy"
-                      className="h-4 w-4 rounded-sm object-contain bg-background border border-border/40 flex-shrink-0"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
+          {/* Col 1: identità unica — logo + bandiera in un solo blocco. */}
+          <MailAvatar
+            logoUrl={logoUrl}
+            fromAddress={fromAddress}
+            brand={brand}
+            countryCode={countryCode}
+            size={avatarSize}
+          />
+
+          {/* Col 2: contenuto allineato su una colonna pulita. */}
+          <div className="min-w-0 flex-1 space-y-1">
+            {/* Riga 1: brand + data, allineati alla stessa baseline. */}
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span
+                  className={cn(
+                    "truncate font-semibold uppercase tracking-wide",
+                    brandText,
+                    isUnread ? "text-primary" : "text-foreground",
                   )}
-                  <span
-                    className={cn(
-                      "truncate font-semibold uppercase tracking-wide",
-                      brandText,
-                      isUnread ? "text-primary" : "text-foreground",
-                    )}
-                    title={countryName ?? undefined}
-                  >
-                    {brand}
-                  </span>
-                  <CompanyLogoInline email={fromAddress} size={size === "sm" ? 16 : 18} />
-                  {inHolding && <Plane className="h-3.5 w-3.5 animate-pulse text-primary" />}
-                </div>
-                <p className="truncate text-xs text-foreground">{secondaryLine}</p>
+                  title={countryName ?? undefined}
+                >
+                  {brand}
+                </span>
+                {inHolding && <Plane className="h-3.5 w-3.5 flex-shrink-0 animate-pulse text-primary" />}
               </div>
-              <div className="flex shrink-0 flex-col items-end gap-0.5">
-                {groupBadge}
-                <span className="text-xs font-semibold text-foreground">{formatMailListDate(date)}</span>
-              </div>
+              <span className="flex-shrink-0 text-[11px] font-medium text-muted-foreground tabular-nums">
+                {formatMailListDate(date)}
+              </span>
             </div>
 
+            {/* Riga 2: mittente. */}
+            <p className="truncate text-xs text-muted-foreground">{secondaryLine}</p>
+
+            {/* Riga 3: oggetto. */}
             <p
               className={cn(
                 "truncate text-sm",
@@ -141,13 +204,21 @@ export function MailRowChrome({
               {subject}
             </p>
 
+            {/* Riga 4: anteprima corpo. */}
             {previewText && (
-              <p className="line-clamp-2 text-xs leading-snug text-foreground">
+              <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
                 {previewText}
               </p>
             )}
 
-            {chips && <div className="flex flex-wrap items-center gap-1.5 [&>*]:h-5 [&>*]:leading-none">{chips}</div>}
+            {/* Riga 5: classificazione (gruppo/suggerito) + chip di stato,
+                tutti sulla stessa riga con tipografia uniforme. */}
+            {(groupBadge || chips) && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5 [&>*]:h-5 [&>*]:leading-none">
+                {groupBadge}
+                {chips}
+              </div>
+            )}
           </div>
         </button>
         {trailing}
