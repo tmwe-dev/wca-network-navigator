@@ -13,6 +13,7 @@ import {
   setLastQueryResultContext,
 } from "../lib/lastQueryResultContext";
 import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
+import { COUNTRY_LABELS } from "../lib/localResultFormatter";
 
 interface FastLaneDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -103,7 +104,6 @@ export function useFastLane(deps: FastLaneDeps) {
 
         // Memorizza partnerIds/paese per il successivo compose-email "vai avanti…".
         const partnerIds = extractPartnerIdsFromResult(result);
-        const country = detectCountryFromPrompt(userPrompt);
         // Estrai filtri/tabella/count dal risultato (table o multi → prima parte partners).
         const metaRaw = extractQueryMetaFromResult(result);
         let metaTable = metaRaw.table;
@@ -118,6 +118,17 @@ export function useFastLane(deps: FastLaneDeps) {
           }
         }
         const meta = { table: metaTable, filters: metaFilters, count: metaCount };
+        // Paese derivato dai FILTRI REALI del piano (country_code), non da regex
+        // sul prompt: è l'AI che ha deciso il filtro, noi lo leggiamo soltanto.
+        const countryFilter = meta.filters.find(
+          (f) => f.column === "country_code" && f.op === "eq" && typeof f.value === "string",
+        );
+        const country = countryFilter
+          ? {
+              code: String(countryFilter.value),
+              label: COUNTRY_LABELS[String(countryFilter.value)] ?? String(countryFilter.value),
+            }
+          : null;
         const cityFilter = meta.filters.find(
           (f) => f.column === "city" && (f.op === "eq" || f.op === "ilike"),
         );
