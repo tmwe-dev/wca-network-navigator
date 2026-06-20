@@ -6,6 +6,7 @@ import { useState, Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo, Bot, Pause, CreditCard, Linkedin, Zap } from "lucide-react";
 import { PageShell } from "@/v2/ui/templates/PageShell";
+import { Wallet } from "lucide-react";
 
 const AIAutomationDashboard = lazy(() => import("@/components/ai-control/AIAutomationDashboard").then(m => ({ default: m.AIAutomationDashboard })));
 const PendingActionsPanel = lazy(() => import("@/components/ai-control/PendingActionsPanel").then(m => ({ default: m.PendingActionsPanel })));
@@ -17,15 +18,16 @@ const GlobalAIAutomationPause = lazy(() => import("@/components/ai-control/Globa
 const CostDashboardWidget = lazy(() => import("@/components/ai-control/CostDashboardWidget").then(m => ({ default: m.CostDashboardWidget })));
 const LinkedInLimitsPanel = lazy(() => import("@/components/ai-control/LinkedInLimitsPanel").then(m => ({ default: m.LinkedInLimitsPanel })));
 const TokenSettingsPanel = lazy(() => import("@/components/ai-control/TokenSettingsPanel").then(m => ({ default: m.TokenSettingsPanel })));
+const CostControlPanel = lazy(() => import("@/components/ai-control/CostControlPanel").then(m => ({ default: m.CostControlPanel })));
 
-type SubView = "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor" | "optimus" | "controls" | "costs" | "linkedin-limits" | "token-settings";
+type SubView = "cost-control" | "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor" | "optimus" | "controls" | "costs" | "linkedin-limits" | "token-settings";
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 }
 
 export function AIControlCenterPage(): React.ReactElement {
-  const [subView, setSubView] = useState<SubView>("dashboard");
+  const [subView, setSubView] = useState<SubView>("cost-control");
 
   return (
     <PageShell
@@ -38,6 +40,9 @@ export function AIControlCenterPage(): React.ReactElement {
       description="Supervisione decisioni AI, azioni pending e performance"
       toolbar={
         <>
+        <Button variant={subView === "cost-control" ? "default" : "outline"} size="sm" onClick={() => setSubView("cost-control")}>
+          <Wallet className="mr-2 h-4 w-4" /> Controllo Costi
+        </Button>
         <Button variant={subView === "dashboard" ? "default" : "outline"} size="sm" onClick={() => setSubView("dashboard")}>
           <Sparkles className="mr-2 h-4 w-4" /> Dashboard
         </Button>
@@ -74,6 +79,7 @@ export function AIControlCenterPage(): React.ReactElement {
       {/* Content */}
       <div>
         <Suspense fallback={<TabFallback />}>
+          {subView === "cost-control" && <CostControlPanel />}
           {subView === "dashboard" && <AIAutomationDashboard />}
           {subView === "pending" && <PendingActionsPanel />}
           {subView === "learning" && <LearningDashboard />}
