@@ -101,22 +101,23 @@ function MailAvatar({
   }
 
   return (
-    <CompanyLogo
-      email={fromAddress}
-      name={brand}
-      size={size}
-      showFlag={!flag}
-      className="rounded-md border border-border/50"
-    >
-      {flag ? (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <CompanyLogo
+        email={fromAddress}
+        name={brand}
+        size={size}
+        showFlag={!flag}
+        className="rounded-md border border-border/50"
+      />
+      {flag && (
         <span
           className="absolute -bottom-1 -right-1 leading-none"
           style={{ fontSize: flagSize }}
         >
           {flag}
         </span>
-      ) : undefined}
-    </CompanyLogo>
+      )}
+    </div>
   );
 }
 
