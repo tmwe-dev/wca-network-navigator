@@ -212,32 +212,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
             </button>
           ) : null;
 
-          const actions = (
-            <>
-              <DeepSearchEmailButton
-                email={emailAddress}
-                source={{
-                  displayName: displayBrand,
-                  partnerId: msg.partner_id ?? partner?.id ?? null,
-                  city: partner?.city ?? null,
-                  countryName: partner?.country_name ?? null,
-                  countryCode: partner?.country_code ?? null,
-                  website: partner?.website ?? null,
-                }}
-                size="sm"
-                variant="ghost"
-                label="Deep Search"
-                className="h-7 gap-1 text-[10px] border border-border/60 bg-transparent hover:bg-muted/60"
-                onComplete={() => onDeepSearchComplete(emailAddress)}
-              />
-              <EmailMessageActions message={msg} />
-              <InlineGroupAssigner
-                fromAddress={msg.from_address}
-                currentGroupName={group?.groupName ?? null}
-              />
-            </>
-          );
-
           return (
             <div
               key={msg.id}
