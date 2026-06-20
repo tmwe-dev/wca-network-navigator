@@ -170,7 +170,10 @@ Deno.serve(async (req: Request) => {
         messages: messages as { role: "system" | "user" | "assistant"; content: string }[],
         context: "ai-query-planner",
         functionName: "ai-query-planner",
-        scope: "query_planning",
+        // Scope DEVE combaciare con la riga in ai_routing_config (provider openai,
+        // model gpt-4o). Un nome diverso bypassa il routing e ricade su un
+        // provider di fallback potenzialmente sotto rate-limit.
+        scope: "ai_query_planner",
         temperature: 0.1,
       });
       content = r.content ?? "";
