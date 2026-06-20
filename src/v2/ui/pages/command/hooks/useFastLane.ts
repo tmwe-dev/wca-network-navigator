@@ -198,32 +198,6 @@ export function useFastLane(deps: FastLaneDeps) {
 
 /* ─── Helpers ──────────────────────────────────────────────────────── */
 
-const COUNTRY_LOOKUP: Record<string, string> = {
-  malta: "MT", italia: "IT", italy: "IT", francia: "FR", france: "FR",
-  spagna: "ES", spain: "ES", germania: "DE", germany: "DE",
-  "regno unito": "GB", uk: "GB", inghilterra: "GB",
-  olanda: "NL", "paesi bassi": "NL", netherlands: "NL", belgio: "BE", belgium: "BE",
-  portogallo: "PT", portugal: "PT", grecia: "GR", greece: "GR",
-  svizzera: "CH", switzerland: "CH", austria: "AT",
-  polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
-  "stati uniti": "US", usa: "US", "united states": "US",
-  america: "US", "nord america": "US",
-  canada: "CA", brasile: "BR", brazil: "BR",
-  cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
-  emirati: "AE", uae: "AE", egitto: "EG", egypt: "EG",
-  marocco: "MA", morocco: "MA",
-  australia: "AU", singapore: "SG", "hong kong": "HK",
-};
-
-function detectCountryFromPrompt(prompt: string): { code: string; label: string } | null {
-  const lower = prompt.toLowerCase();
-  for (const [name, code] of Object.entries(COUNTRY_LOOKUP)) {
-    const re = new RegExp(`\\b${name}\\b`, "i");
-    if (re.test(lower)) return { code, label: name };
-  }
-  return null;
-}
-
 /** Estrae table/filters/count dal ToolResult AI Query (kind:"table" o "multi"). */
 function extractQueryMetaFromResult(result: unknown): {
   table: string | null;
