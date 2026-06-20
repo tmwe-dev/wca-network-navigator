@@ -245,17 +245,12 @@ export async function findPersonLinkedInSlug(
   return null;
 }
 
-// ── Step 3: logo (Clearbit con fallback Google Favicon) ─────────────────────
+// ── Step 3: logo (Google Favicon — Clearbit Logo API dismesso 08/12/2025) ───
 
 export async function findCompanyLogo(domain: string): Promise<string | null> {
   if (!domain) return null;
   const d = extractDomain(domain);
   if (!d) return null;
-  const clearbitUrl = `https://logo.clearbit.com/${d}`;
-  try {
-    const res = await fetch(clearbitUrl, { method: "HEAD", mode: "no-cors" });
-    if (res.type === "opaque" || res.ok) return clearbitUrl;
-  } catch { /* ignore */ }
   return `https://www.google.com/s2/favicons?domain=${d}&sz=128`;
 }
 
