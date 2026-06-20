@@ -14,7 +14,7 @@ import type { SuggestedAction } from "../aiBridge";
 
 const ANALYSIS_KEYWORDS = /\b(analizza|analisi|spiegami|spiega|perch[éè]|perche|come mai|valuta|consiglia|suggerisci|approfond|opinione|raccomanda)\b/i;
 
-const COUNTRY_LABELS: Record<string, string> = {
+export const COUNTRY_LABELS: Record<string, string> = {
   US: "Stati Uniti",
   IT: "Italia",
   DE: "Germania",

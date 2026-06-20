@@ -102,7 +102,8 @@ LIBERTÀ:
 - Decidi tu la tabella più probabile. Se la richiesta è ambigua spiega in "rationale".
 - Se interpreti termini (es. "attive" → quali enum?), guarda i valori reali della colonna nello schema sopra e scegli quelli che semanticamente corrispondono.
 - Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"plans":[{"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}]}.
-- Se ricevi CONTESTO TURNO PRECEDENTE (vedi sotto) e il prompt è ellittico ("e a Milano?", "solo gli attivi"), eredita tabella e filtri compatibili, sovrascrivi solo ciò che cambia.
+- CONVERSAZIONE: hai la cronologia COMPLETA dei turni precedenti (messaggi user/assistant). Usala come fonte primaria per capire il contesto. Se il prompt è ellittico ("e a Milano?", "e in USA?", "solo gli attivi", "Spagna"), DEDUCI dall'ultima query dell'utente la tabella e i filtri, e sostituisci solo ciò che cambia (di norma il paese/città). Esempio: turno 1 "quanti partner?" → turno 2 "e in Italia?" significa "quanti partner in Italia" → table=partners, filtro country_code=IT.
+- SMALLTALK / CONVERSAZIONE LIBERA: se il prompt è un saluto, un ringraziamento, una chiacchiera o una domanda conversazionale che NON richiede dati dal DB, rispondi: {"plans":[{"table":"SMALLTALK","filters":[],"limit":1,"title":"Conversazione","rationale":"<la tua risposta conversazionale in italiano, calorosa e breve>"}]}. Il campo "rationale" verrà letto all'utente: scrivilo come risposta diretta, non come spiegazione.
 - Per ricerche testuali (nomi azienda, persona, città) usa ilike. Per nomi paese usa il codice ISO-2 se la colonna si chiama country_code, altrimenti il nome libero.
 - Per "ultimi N" usa sort desc + limit N. Per "quanti/totale" usa columns:["id"] + limit:1 (il count viene dal DB).
 - Zero risultati è un risultato valido, NON un errore.`;
@@ -169,7 +170,10 @@ Deno.serve(async (req: Request) => {
         messages: messages as { role: "system" | "user" | "assistant"; content: string }[],
         context: "ai-query-planner",
         functionName: "ai-query-planner",
-        scope: "query_planning",
+        // Scope DEVE combaciare con la riga in ai_routing_config (provider openai,
+        // model gpt-4o). Un nome diverso bypassa il routing e ricade su un
+        // provider di fallback potenzialmente sotto rate-limit.
+        scope: "ai_query_planner",
         temperature: 0.1,
       });
       content = r.content ?? "";
@@ -220,12 +224,13 @@ Deno.serve(async (req: Request) => {
     // quanti partner..." → user wants the list, not just a number).
     const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
     const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|conteggio|count)\b/i.test(prompt);
+    const isRealTable = (t: unknown) => typeof t === "string" && t !== "INVALID" && t !== "SMALLTALK";
     for (const plan of plans) {
-      if (isCountIntent && plan.table && plan.table !== "INVALID") {
+      if (isCountIntent && isRealTable(plan.table)) {
         plan.columns = ["id"];
         delete plan.sort;
         plan.limit = 1;
-      } else if (isListIntent && plan.table && plan.table !== "INVALID") {
+      } else if (isListIntent && isRealTable(plan.table)) {
         if (Array.isArray(plan.columns) && plan.columns.length === 1 && plan.columns[0] === "id") {
           delete plan.columns;
         }

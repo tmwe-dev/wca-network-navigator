@@ -1,28 +1,31 @@
 ---
 name: Command AI Query Resilience
-description: Come la ricerca AI in Command resiste ai rate-limit (429) e usa fallback deterministici per query partner+paese
+description: Architettura AI-native del Command — il planner AI è l'unica autorità, niente parser hardcoded; routing scope e provider
 type: feature
 ---
-# Command — Ricerca AI resiliente (config approvata 2026-06)
+# Command — Ricerca AI-native (refactor 2026-06)
 
-Configurazione confermata funzionante dall'utente. NON regredire.
+## Principio (richiesto esplicitamente dall'utente)
+NIENTE binari hardcoded / parser deterministici nell'interpretazione delle query.
+L'AI riceve schema live + scopo tabelle + storia COMPLETA della conversazione e
+decide liberamente: tabella, filtri, count/list, follow-up ellittici, smalltalk.
+I guardrail (whitelist tabelle, solo-SELECT, validazione colonne/enum, RLS) restano
+in codice nel `safeQueryExecutor` — la libertà è nel *cosa* chiedere, non nei limiti.
 
 ## Componenti
-- `src/v2/ui/pages/command/lib/localIntentParser.ts`: `parseLocalIntent` costruisce un QueryPlan DETERMINISTICO (zero AI) per le query di routine — entità (partner/contatti/attività/outreach/campagne/messaggi, con tolleranza refusi e dettato es. "pannelli"→partners) + intento (conteggio/elenco) + paese opzionale. Copre l'80% delle query → immune al rate-limit 429.
-- `src/v2/ui/pages/command/tools/aiQueryTool.ts`: usa `parseLocalIntent` per primo; se ricade sul planner AI e questo è rate-limited, fa 1 retry (backoff 1.2s) e poi fallback al parser locale invece di mostrare "Richiesta non supportata".
-- `src/v2/ui/pages/command/aiBridge.ts`: intercetta AI_RATE_LIMITED / 429 e degrada con `fallbackComment` invece di errore.
-- `src/v2/ui/pages/command/lib/localResultFormatter.ts`: con un piano deterministico il commento (dato+proposta+voce) è generato localmente, quindi la voce parla anche durante i 429 del commentatore.
-- `src/v2/ui/pages/command/tools/composeEmail/batchDrafts.ts`: bozze email serializzate con delay 250ms.
+- `supabase/functions/ai-query-planner/index.ts`: UNICA autorità. Riceve prompt + history + schema live. Output: `plans[]` con table reale, oppure `table:"SMALLTALK"` (rationale = risposta conversazionale da leggere all'utente) oppure `table:"INVALID"` (azione/non-query). Usa la cronologia per i follow-up ellittici ("e in Italia?" eredita partners + country_code).
+- `src/v2/ui/pages/command/tools/aiQueryTool.ts`: chiama SEMPRE il planner (niente parser locale). 1 retry su 429; gestisce SMALLTALK/INVALID; esegue i piani via `safeQueryExecutor`.
+- `src/v2/ui/pages/command/lib/localResultFormatter.ts`: formatta il commento (dato+proposta+voce) dai dati REALI del risultato per evitare un secondo hop AI. NON interpreta il prompt — solo display. `COUNTRY_LABELS` esportato (code→label) e riusato da `useFastLane`.
+- `src/v2/ui/pages/command/hooks/useFastLane.ts`: deriva il paese dai FILTRI REALI del piano (country_code), non da regex sul prompt.
+- RIMOSSI: `lib/localIntentParser.ts` (+test), `buildHintFromDurableContext`, `COUNTRY_LOOKUP` duplicato, hint sintetici "CONTESTO TURNO PRECEDENTE: tabella=...".
 
-## Comportamento atteso
-- "quanti partner abbiamo a Malta" / "quanti pannelli abbiamo Malta" (refuso) → conteggio + canvas + voce, senza passare dall'AI.
-- Il rate-limit AI degrada sempre con fallback (planner→parser locale, commento→locale), mai oscura i dati DB né mostra "Richiesta non supportata" per query di routine.
+## Routing provider (CAUSA RADICE storica dei fallimenti AI — 2026-06)
+- Lo scope passato a `aiChat` DEVE combaciare con una riga di `ai_routing_config`. Il planner passava `scope:"query_planning"` ma la riga è `ai_query_planner` → bypass del routing.
+- `OPENAI_API_KEY` ha la QUOTA ESAURITA ("exceeded your current quota"): qualsiasi scope su provider `openai` (gpt-4o) restituisce 429. Era la vera ragione per cui "l'AI non rispondeva più a nulla".
+- FIX: `ai_query_planner` instradato su `provider:google, model:gemini-2.5-flash` (chiave separata, quota disponibile). Gli altri scope ancora su openai falliranno finché la quota OpenAI non viene ripristinata o reinstradata.
 
-## Principio
-NON allargare regex caso-per-caso: il parser deterministico (`localIntentParser`) è il nodo unico da estendere. Niente nuovi cerotti.
-
-## Follow-up ellittici (fix 2026-06)
-- `aiQueryTool.execute` costruisce un contextHint dal contesto DUREVOLE (`getLastQueryResultContext()`) quando il `contextHint` React (`queryContext`) è vuoto/non fresco. Così "e in Francia?", "Spagna", "e la Germania?" ereditano l'entità (partner) dal turno precedente e restano sul parser locale.
-- `useFastLane`: `onContextUpdate()` viene chiamato DOPO il salvataggio di `lastQueryResultContext` (prima azzerava `_lastSuccessfulPlan` troppo presto).
-- `localResultFormatter.tryLocalComment`: tratta come conteggio anche i piani con title "Conteggio …" (follow-up ellittici senza la parola "quanti"), evitando il commento AI generico "Risultato disponibile nel canvas".
-- Verificato dal vivo: "quanti partner" → "e in Francia?" (99) → "Spagna" (170), tutti fast-lane <0.5s con risposta parlata specifica.
+## Comportamento atteso (verificato dal vivo 2026-06)
+- "ciao, tutto bene?" → SMALLTALK con risposta conversazionale parlata.
+- "quanti partner a Malta?" → partners + country_code=MT, conteggio.
+- "e in Italia?" (follow-up) → eredita partners + country_code=IT dalla storia, conteggio.
+- Su 429 reale: messaggio chiaro "servizio AI occupato, riprova", NON un fallback che inventa.
