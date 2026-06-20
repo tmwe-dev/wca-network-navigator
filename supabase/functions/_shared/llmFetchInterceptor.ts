@@ -180,17 +180,33 @@ function install() {
 
     const startedAt = Date.now();
     const isAnthropic = provider === "anthropic";
-    const parsed = tryParseRequestBody(init?.body, isAnthropic);
+    let usedInit = init;
+    // Per le richieste in streaming OpenAI/Lovable/Google forziamo include_usage
+    // così l'ultimo chunk SSE contiene i token (altrimenti non misurabili).
+    if (!isAnthropic && typeof init?.body === "string") {
+      try {
+        const b = JSON.parse(init.body);
+        if (b && b.stream === true && !b.stream_options) {
+          b.stream_options = { include_usage: true };
+          usedInit = { ...init, body: JSON.stringify(b) };
+        }
+      } catch { /* body non-JSON: lascia invariato */ }
+    }
+    const parsed = tryParseRequestBody(usedInit?.body, isAnthropic);
     const functionName = getCallerFunctionName();
 
     try {
-      const resp = await originalFetch(input as RequestInfo, init);
+      const resp = await originalFetch(input as RequestInfo, usedInit);
 
       // Clone per non consumare il body originale
       const cloned = resp.clone();
+      const contentType = resp.headers.get("content-type") || "";
+      const isStream = contentType.includes("text/event-stream");
       // Logging async, non blocchiamo la risposta
-      cloned.json().then((data) => {
-        const { tokensIn, tokensOut } = extractUsage(data, isAnthropic);
+      const usagePromise: Promise<{ tokensIn: number; tokensOut: number }> = isStream
+        ? cloned.text().then((t) => extractUsageFromSse(t, isAnthropic))
+        : cloned.json().then((d) => extractUsage(d, isAnthropic));
+      usagePromise.then(({ tokensIn, tokensOut }) => {
         if (tokensIn === 0 && tokensOut === 0 && !resp.ok) {
           // Errore senza token usage: logga comunque come failure
           const { sysChars, userChars, otherChars } = charsByRole(parsed.messages);
