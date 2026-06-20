@@ -22,6 +22,7 @@ import { AttachmentThumbnail } from "./email/AttachmentThumbnail";
 import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
+import { EmailMessageActions } from "./EmailMessageActions";
 import { stripReplyPrefixes } from "@/v2/ui/pages/funnemail-inbox/utils";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { cn } from "@/lib/utils";
