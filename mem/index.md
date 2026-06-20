@@ -43,3 +43,4 @@
 - [Command AI Query Resilience](mem://features/command-ai-query-resilience) — Ricerca AI Command resiliente: fallback deterministico partner+paese, degrado su 429, batch email serializzato 250ms. Config approvata utente 2026-06, non regredire.
 - [IMAP PEEK no auto-read](mem://tech/imap-peek-no-auto-read) — Fetch IMAP SEMPRE con BODY.PEEK[]; vietato BODY[]/RFC822 (marcano \Seen in automatico). \Seen solo su azione utente via mark-imap-seen. Fix email-imap-proxy 2026-06-20.
 - [Email Cron Drain Loop](mem://tech/email-cron-drain-loop) — email-cron-sync chiama check-inbox in loop (budget 50s, cap 40/casella). BATCH_SIZE=1 lasciava le caselle con arretrato perennemente indietro (Personale ferma al 1 giugno). Fix 2026-06-20.
+- [AI Cost Control & Deep Mail Gate](mem://tech/ai-cost-control-deep-mail-gate)
