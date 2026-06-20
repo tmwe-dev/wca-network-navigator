@@ -41,9 +41,12 @@ function getCallerFunctionName(): string {
   if (explicit) return explicit;
 
   // 2) Stack trace inspection — cerca il primo frame in /functions/<name>/
+  //    saltando i frame "infrastruttura" (_shared) per attribuire alla funzione reale.
   const stack = new Error().stack ?? "";
-  const match = stack.match(/\/functions\/([^/]+)\//);
-  if (match) return match[1];
+  const all = [...stack.matchAll(/\/functions\/([^/]+)\//g)].map((m) => m[1]);
+  const real = all.find((n) => n !== "_shared");
+  if (real) return real;
+  if (all.length > 0) return all[0];
 
   return "unknown";
 }
@@ -83,6 +86,22 @@ function extractUsage(data: unknown, isAnthropic: boolean): { tokensIn: number; 
     tokensIn: Number(usage?.prompt_tokens || 0),
     tokensOut: Number(usage?.completion_tokens || 0),
   };
+}
+
+/** Estrae la usage da una risposta SSE (stream) leggendo l'ultimo chunk con `usage`. */
+function extractUsageFromSse(text: string, isAnthropic: boolean): { tokensIn: number; tokensOut: number } {
+  let last = { tokensIn: 0, tokensOut: 0 };
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") continue;
+    try {
+      const u = extractUsage(JSON.parse(payload), isAnthropic);
+      if (u.tokensIn || u.tokensOut) last = u;
+    } catch { /* chunk non-JSON */ }
+  }
+  return last;
 }
 
 function charsByRole(messages: Array<{ role: string; content?: unknown }>) {
