@@ -123,13 +123,18 @@ export async function resolveSharedMailbox(
   if (!data.is_active) throw new Error(`resolveSharedMailbox: mailbox ${data.slug} inactive`);
 
   const envMap = ENV_PASSWORD_MAP[data.slug];
-  if (!envMap) throw new Error(`resolveSharedMailbox: no ENV password mapping for slug "${data.slug}"`);
+  if (!envMap) {
+    throw new MailboxNotConfiguredError(data.slug, "nessun mapping ENV per la password");
+  }
 
-  const imap_password = envOrThrow(envMap.imap);
-  const smtp_password = envOrThrow(envMap.smtp);
+  const imap_password = Deno.env.get(envMap.imap);
+  const smtp_password = Deno.env.get(envMap.smtp);
+  if (!imap_password || !smtp_password) {
+    throw new MailboxNotConfiguredError(data.slug, "credenziali ENV assenti");
+  }
 
   if (!data.imap_host || !data.imap_user || !data.smtp_host || !data.smtp_user) {
-    throw new Error(`resolveSharedMailbox: incomplete config for slug "${data.slug}" (host/user missing)`);
+    throw new MailboxNotConfiguredError(data.slug, "host/user mancanti");
   }
 
   return {
