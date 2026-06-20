@@ -221,12 +221,13 @@ Deno.serve(async (req: Request) => {
     // quanti partner..." → user wants the list, not just a number).
     const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
     const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|conteggio|count)\b/i.test(prompt);
+    const isRealTable = (t: unknown) => typeof t === "string" && t !== "INVALID" && t !== "SMALLTALK";
     for (const plan of plans) {
-      if (isCountIntent && plan.table && plan.table !== "INVALID") {
+      if (isCountIntent && isRealTable(plan.table)) {
         plan.columns = ["id"];
         delete plan.sort;
         plan.limit = 1;
-      } else if (isListIntent && plan.table && plan.table !== "INVALID") {
+      } else if (isListIntent && isRealTable(plan.table)) {
         if (Array.isArray(plan.columns) && plan.columns.length === 1 && plan.columns[0] === "id") {
           delete plan.columns;
         }
