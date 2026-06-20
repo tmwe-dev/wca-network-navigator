@@ -61,9 +61,9 @@ export function EmailToolbar({
               onClick={onStartSync}
               disabled={downloading}
               className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-              title="Avvia download massivo continuo (solo email non lette)"
+              title="Avvia download massivo continuo delle nuove email"
             >
-              <Download className="h-3 w-3" /> Download non lette
+              <Download className="h-3 w-3" /> Recupera tutto
             </Button>
           )}
           <button
