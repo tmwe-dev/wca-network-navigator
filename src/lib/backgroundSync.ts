@@ -92,10 +92,10 @@ export function bgSyncIsRunning(): boolean {
 
 export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?: boolean } = {}) {
   if (running) return;
-  // Default: download massivo limitato alle mail NON LETTE per evitare di
-  // scaricare l'intera storia della casella (può essere decine di migliaia
-  // di email su caselle condivise). Il chiamante può forzare `unreadOnly:false`.
-  const unreadOnly = opts.unreadOnly ?? true;
+  // Default: recupera tutte le nuove UID senza marcare nulla come letto
+  // (check-inbox usa BODY.PEEK). Limitarsi alle sole UNSEEN nasconde le mail
+  // già lette da altri client ma mai importate nell'app.
+  const unreadOnly = opts.unreadOnly ?? false;
 
   running = true;
   abortSync = false;

@@ -42,9 +42,10 @@ export function useCheckInbox() {
   const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
 
   return useMutation({
-    // Default doctrine: "Scarica nuove" lavora solo sulle non lette.
-    // Evita flag_resync massivi su email già viste (vedi audit 2026-05-12).
-    mutationFn: () => callCheckInbox(mailboxId, { unreadOnly: true }),
+    // "Scarica nuove" deve recuperare tutte le nuove UID della casella attiva.
+    // BODY.PEEK lato IMAP evita auto-read: non serve limitarci a UNSEEN, altrimenti
+    // le mail già lette da altri client restano invisibili nell'app.
+    mutationFn: () => callCheckInbox(mailboxId, { unreadOnly: false }),
     onSuccess: (raw) => {
       // Realtime handles list updates; only refresh count
       queryClient.invalidateQueries({ queryKey: queryKeys.email.count });

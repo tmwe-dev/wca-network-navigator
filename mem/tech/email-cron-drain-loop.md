@@ -26,3 +26,12 @@ modifica a check-inbox. Pattern identico a `email-sync-worker`.
 
 NON aumentare BATCH_SIZE per "andare più veloce": rischia WORKER_RESOURCE_LIMIT
 (già colpito in passato, vedi postSync detach). Il loop nel cron è la via sicura.
+
+# Aggiornamento 2026-06-20 — visibilità mail Luca
+`Scarica nuove` e il download continuo NON devono usare `x-unread-only` di default:
+BODY.PEEK[] garantisce che l'import non marchi nulla come letto, mentre il filtro
+UNSEEN nasconde nell'app le mail già lette da altri client ma mai importate.
+
+`email-cron-sync` deve inoltre saltare/ruotare le vecchie righe personali senza
+credenziali proprie: in passato più operatori avevano sync_state storico puntato
+a `luca@tmwe.it`, rallentando il drenaggio della casella personale reale di Luca.
