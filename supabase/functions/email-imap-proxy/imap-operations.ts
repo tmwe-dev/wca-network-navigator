@@ -63,7 +63,11 @@ export async function imapFetchMessage(
   imap: ImapConn,
   uid: number
 ): Promise<string> {
-  const res = await sendCommand(imap, `UID FETCH ${uid} (BODY[])`);
+  // BODY.PEEK[] NON imposta il flag \Seen: la sincronizzazione deve solo
+  // scaricare il contenuto, MAI marcare la mail come letta sul server.
+  // La lettura (\Seen) avviene esclusivamente su azione utente via
+  // mark-imap-seen. (Audit ricezione email 2026-06-20)
+  const res = await sendCommand(imap, `UID FETCH ${uid} (BODY.PEEK[])`);
   const literalMatch = res.match(/\{(\d+)\}\r\n/);
   if (literalMatch) {
     const start = res.indexOf(literalMatch[0]) + literalMatch[0].length;
