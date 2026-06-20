@@ -102,7 +102,8 @@ LIBERTÀ:
 - Decidi tu la tabella più probabile. Se la richiesta è ambigua spiega in "rationale".
 - Se interpreti termini (es. "attive" → quali enum?), guarda i valori reali della colonna nello schema sopra e scegli quelli che semanticamente corrispondono.
 - Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"plans":[{"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}]}.
-- Se ricevi CONTESTO TURNO PRECEDENTE (vedi sotto) e il prompt è ellittico ("e a Milano?", "solo gli attivi"), eredita tabella e filtri compatibili, sovrascrivi solo ciò che cambia.
+- CONVERSAZIONE: hai la cronologia COMPLETA dei turni precedenti (messaggi user/assistant). Usala come fonte primaria per capire il contesto. Se il prompt è ellittico ("e a Milano?", "e in USA?", "solo gli attivi", "Spagna"), DEDUCI dall'ultima query dell'utente la tabella e i filtri, e sostituisci solo ciò che cambia (di norma il paese/città). Esempio: turno 1 "quanti partner?" → turno 2 "e in Italia?" significa "quanti partner in Italia" → table=partners, filtro country_code=IT.
+- SMALLTALK / CONVERSAZIONE LIBERA: se il prompt è un saluto, un ringraziamento, una chiacchiera o una domanda conversazionale che NON richiede dati dal DB, rispondi: {"plans":[{"table":"SMALLTALK","filters":[],"limit":1,"title":"Conversazione","rationale":"<la tua risposta conversazionale in italiano, calorosa e breve>"}]}. Il campo "rationale" verrà letto all'utente: scrivilo come risposta diretta, non come spiegazione.
 - Per ricerche testuali (nomi azienda, persona, città) usa ilike. Per nomi paese usa il codice ISO-2 se la colonna si chiama country_code, altrimenti il nome libero.
 - Per "ultimi N" usa sort desc + limit N. Per "quanti/totale" usa columns:["id"] + limit:1 (il count viene dal DB).
 - Zero risultati è un risultato valido, NON un errore.`;
