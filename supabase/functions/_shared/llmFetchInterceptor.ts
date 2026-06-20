@@ -41,9 +41,12 @@ function getCallerFunctionName(): string {
   if (explicit) return explicit;
 
   // 2) Stack trace inspection — cerca il primo frame in /functions/<name>/
+  //    saltando i frame "infrastruttura" (_shared) per attribuire alla funzione reale.
   const stack = new Error().stack ?? "";
-  const match = stack.match(/\/functions\/([^/]+)\//);
-  if (match) return match[1];
+  const all = [...stack.matchAll(/\/functions\/([^/]+)\//g)].map((m) => m[1]);
+  const real = all.find((n) => n !== "_shared");
+  if (real) return real;
+  if (all.length > 0) return all[0];
 
   return "unknown";
 }
@@ -83,6 +86,22 @@ function extractUsage(data: unknown, isAnthropic: boolean): { tokensIn: number; 
     tokensIn: Number(usage?.prompt_tokens || 0),
     tokensOut: Number(usage?.completion_tokens || 0),
   };
+}
+
+/** Estrae la usage da una risposta SSE (stream) leggendo l'ultimo chunk con `usage`. */
+function extractUsageFromSse(text: string, isAnthropic: boolean): { tokensIn: number; tokensOut: number } {
+  let last = { tokensIn: 0, tokensOut: 0 };
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") continue;
+    try {
+      const u = extractUsage(JSON.parse(payload), isAnthropic);
+      if (u.tokensIn || u.tokensOut) last = u;
+    } catch { /* chunk non-JSON */ }
+  }
+  return last;
 }
 
 function charsByRole(messages: Array<{ role: string; content?: unknown }>) {
@@ -161,17 +180,33 @@ function install() {
 
     const startedAt = Date.now();
     const isAnthropic = provider === "anthropic";
-    const parsed = tryParseRequestBody(init?.body, isAnthropic);
+    let usedInit = init;
+    // Per le richieste in streaming OpenAI/Lovable/Google forziamo include_usage
+    // così l'ultimo chunk SSE contiene i token (altrimenti non misurabili).
+    if (!isAnthropic && typeof init?.body === "string") {
+      try {
+        const b = JSON.parse(init.body);
+        if (b && b.stream === true && !b.stream_options) {
+          b.stream_options = { include_usage: true };
+          usedInit = { ...init, body: JSON.stringify(b) };
+        }
+      } catch { /* body non-JSON: lascia invariato */ }
+    }
+    const parsed = tryParseRequestBody(usedInit?.body, isAnthropic);
     const functionName = getCallerFunctionName();
 
     try {
-      const resp = await originalFetch(input as RequestInfo, init);
+      const resp = await originalFetch(input as RequestInfo, usedInit);
 
       // Clone per non consumare il body originale
       const cloned = resp.clone();
+      const contentType = resp.headers.get("content-type") || "";
+      const isStream = contentType.includes("text/event-stream");
       // Logging async, non blocchiamo la risposta
-      cloned.json().then((data) => {
-        const { tokensIn, tokensOut } = extractUsage(data, isAnthropic);
+      const usagePromise: Promise<{ tokensIn: number; tokensOut: number }> = isStream
+        ? cloned.text().then((t) => extractUsageFromSse(t, isAnthropic))
+        : cloned.json().then((d) => extractUsage(d, isAnthropic));
+      usagePromise.then(({ tokensIn, tokensOut }) => {
         if (tokensIn === 0 && tokensOut === 0 && !resp.ok) {
           // Errore senza token usage: logga comunque come failure
           const { sysChars, userChars, otherChars } = charsByRole(parsed.messages);

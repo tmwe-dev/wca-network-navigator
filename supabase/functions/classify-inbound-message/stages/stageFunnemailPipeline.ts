@@ -20,7 +20,14 @@ export async function runFunnemailScoutAndClassify(
   if (body.channel !== "email") return;
   try {
     let senderIntel: unknown = null;
+    // Gate: lo scout mittente fa ricerca web + LLM su ogni mail sconosciuta.
+    // Parte solo se l'utente ha abilitato esplicitamente l'analisi profonda.
+    let deepEnabled = false;
     try {
+      const { isDeepMailAnalysisEnabled } = await import("../../_shared/deepMailAnalysis.ts");
+      deepEnabled = await isDeepMailAnalysisEnabled(supabase, body.user_id ?? null);
+    } catch (_) { /* fail-safe: deep OFF */ }
+    if (deepEnabled) try {
       const { data: scoutData } = await supabase.functions.invoke("funnemail-scout-sender", {
         headers: internalHeaders(),
         body: {
