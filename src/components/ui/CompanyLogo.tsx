@@ -98,7 +98,9 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
     );
   }
 
-  const clearbitUrl = `https://logo.clearbit.com/${domain}`;
+  // Clearbit Logo API è stato dismesso (sunset 8 dic 2025). Usiamo il
+  // servizio favicon di Google come fonte logo affidabile e gratuita.
+  const clearbitUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 
   if (src === "none") {
     return (
@@ -200,7 +202,7 @@ export function CompanyLogoInline({ domain: domainProp, email, size = 18, classN
 
   return (
     <img
-      src={`https://logo.clearbit.com/${domain}`}
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
       alt=""
       width={size}
       height={size}
