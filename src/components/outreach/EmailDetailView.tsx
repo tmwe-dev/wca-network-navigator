@@ -22,6 +22,7 @@ import { AttachmentThumbnail } from "./email/AttachmentThumbnail";
 import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
+import { EmailMessageActions } from "./EmailMessageActions";
 import { stripReplyPrefixes } from "@/v2/ui/pages/funnemail-inbox/utils";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { cn } from "@/lib/utils";
@@ -225,6 +226,7 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
               <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-7 px-1.5 text-xs" title="Vista fedele (originale)">
                 <Eye className="h-3 w-3" />
               </Button>
+              <EmailMessageActions message={message} />
               <Button size="sm" variant="ghost" onClick={onClose} className="h-7 px-2 text-[11px]">Chiudi</Button>
         </div>
 

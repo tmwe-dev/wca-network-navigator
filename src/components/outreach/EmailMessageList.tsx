@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Building2, User, MailOpen, HelpCircle, Sparkles, Gauge, CheckCheck } from "lucide-react";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
@@ -6,13 +6,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useHoldingPatternEmails } from "@/hooks/useHoldingPatternEmails";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
-import { EmailMessageActions } from "./EmailMessageActions";
-import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
-import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { MailRowChrome } from "@/v2/ui/molecules/email/MailRowChrome";
 import { useInboxEnrichment } from "@/hooks/useInboxEnrichment";
-import { invokeAi } from "@/lib/ai/invokeAi";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -26,8 +21,6 @@ const ROW_HEIGHT = 168;
 
 export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter = false }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
-  const qc = useQueryClient();
-  
   const sourceIds = useMemo(() => {
     const ids: { partnerId?: string; contactId?: string }[] = [];
     messages.forEach(msg => {
@@ -50,31 +43,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
       return false;
     });
   }, [messages, holdingFilter, holdingSet]);
-
-  // Hook post-DeepSearch: chiede a `suggest-email-groups` di proporre un
-  // gruppo per il mittente, poi invalida la cache enrichment per mostrare
-  // subito il chip "Suggerito: …".
-  const onDeepSearchComplete = useCallback(
-    (email: string) => {
-      if (!email) return;
-      void invokeAi("suggest-email-groups", {
-        scope: "classify",
-        context: {
-          source: "EmailMessageList",
-          route: "/v2/inbox",
-          mode: "post-deep-search",
-          extra: { email },
-        },
-        body: { emails: [email], min_email_count: 1, batch_size: 5 },
-      })
-        .then(() => {
-          qc.invalidateQueries({ queryKey: ["inbox-enrichment", "ai-suggestions"] });
-          qc.invalidateQueries({ queryKey: ["email-address-groups"] });
-        })
-        .catch(() => { /* silent */ });
-    },
-    [qc],
-  );
 
   const virtualizer = useVirtualizer({
     count: displayMessages.length,
@@ -117,8 +85,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           const aiSuggestedGroup = enrichment.aiSuggestedGroup;
           const enriched = !!partner || !!intel;
           const displayBrand = partner?.company_alias || partner?.company_name || brand;
-          const emailAddress = msg.from_address?.match(/<(.+?)>/)?.[1] || msg.from_address || "";
-
           // Sorgente (partner / contact) mostrata come piccolo chip in alto a destra,
           // sopra al group badge — niente più chip “buttati al centro card”.
           const sourceChip = (msg.source_type && msg.source_type !== "unknown") ? (
@@ -212,32 +178,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
             </button>
           ) : null;
 
-          const actions = (
-            <>
-              <DeepSearchEmailButton
-                email={emailAddress}
-                source={{
-                  displayName: displayBrand,
-                  partnerId: msg.partner_id ?? partner?.id ?? null,
-                  city: partner?.city ?? null,
-                  countryName: partner?.country_name ?? null,
-                  countryCode: partner?.country_code ?? null,
-                  website: partner?.website ?? null,
-                }}
-                size="sm"
-                variant="ghost"
-                label="Deep Search"
-                className="h-7 gap-1 text-[10px] border border-border/60 bg-transparent hover:bg-muted/60"
-                onComplete={() => onDeepSearchComplete(emailAddress)}
-              />
-              <EmailMessageActions message={msg} />
-              <InlineGroupAssigner
-                fromAddress={msg.from_address}
-                currentGroupName={group?.groupName ?? null}
-              />
-            </>
-          );
-
           return (
             <div
               key={msg.id}
@@ -269,7 +209,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 groupColor={groupColor}
                 chips={chips}
                 trailing={trailing}
-                actions={actions}
                 onClick={() => onSelect(msg)}
               />
             </div>
