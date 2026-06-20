@@ -8,7 +8,6 @@ import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
 import { MailRowChrome } from "@/v2/ui/molecules/email/MailRowChrome";
 import { useInboxEnrichment } from "@/hooks/useInboxEnrichment";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -22,8 +21,6 @@ const ROW_HEIGHT = 168;
 
 export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter = false }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
-  const qc = useQueryClient();
-  
   const sourceIds = useMemo(() => {
     const ids: { partnerId?: string; contactId?: string }[] = [];
     messages.forEach(msg => {
@@ -88,8 +85,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           const aiSuggestedGroup = enrichment.aiSuggestedGroup;
           const enriched = !!partner || !!intel;
           const displayBrand = partner?.company_alias || partner?.company_name || brand;
-          const emailAddress = msg.from_address?.match(/<(.+?)>/)?.[1] || msg.from_address || "";
-
           // Sorgente (partner / contact) mostrata come piccolo chip in alto a destra,
           // sopra al group badge — niente più chip “buttati al centro card”.
           const sourceChip = (msg.source_type && msg.source_type !== "unknown") ? (
