@@ -147,55 +147,52 @@ export const aiQueryTool: Tool = {
             return prompt;
           })();
 
-    // 1) Genera QueryPlan. Per le query di routine (conteggi/elenchi per
-    //    entità, opzionalmente filtrate per paese) usiamo un piano
-    //    DETERMINISTICO locale: niente hop AI, quindi immune al rate-limit.
-    //    Hint effettivo: preferisci quello passato dal chiamante; se mancante o
-    //    privo di tabella, ricadi sul contesto DUREVOLE dell'ultima query.
-    const effectiveHint =
-      context?.contextHint && /tabella=/i.test(context.contextHint)
-        ? context.contextHint
-        : buildHintFromDurableContext() ?? context?.contextHint;
-    const localPlan = parseLocalIntent(naturalPrompt, effectiveHint);
-    let plans: QueryPlan[] | null = localPlan ? [localPlan] : null;
-    if (!plans) {
-      // Helper: 1 retry con piccolo backoff per assorbire un 429 transitorio.
-      const tryPlan = async () =>
-        planQuery({
-          prompt: naturalPrompt,
-          history: context?.history,
-          contextHint: context?.contextHint,
-        });
-      let planRes = await tryPlan();
-      let aiPlans = isOk(planRes) ? planRes.value.plans : null;
-      const isRateLimited = (p: QueryPlan[] | null) =>
-        !p || (p[0]?.table === "INVALID" && /troppe richieste|rate limit|riprova tra/i.test(p[0]?.rationale ?? ""));
-      if (isRateLimited(aiPlans)) {
-        await new Promise((r) => setTimeout(r, 1200));
-        planRes = await tryPlan();
-        aiPlans = isOk(planRes) ? planRes.value.plans : null;
-      }
-      // Se anche dopo il retry siamo strozzati o falliti, prova un fallback
-      // deterministico best-effort invece di mostrare "Richiesta non supportata".
-      if (isRateLimited(aiPlans)) {
-        const fallback = parseLocalIntent(naturalPrompt, effectiveHint);
-        if (fallback) {
-          plans = [fallback];
-        } else {
-          return {
-            kind: "result",
-            title: "Query AI · Errore planner",
-            message: `Non sono riuscito a interpretare la richiesta. Riformulala in modo più specifico (es. "mostra partner US attivi", "ultimi 20 contatti", "messaggi non letti").`,
-            meta: { count: 0, sourceLabel: "AI Query Planner" },
-          };
-        }
-      } else {
-        plans = aiPlans;
-      }
+    // 1) Genera QueryPlan tramite l'AI Query Planner. È l'UNICA autorità: riceve
+    //    prompt + storia COMPLETA della conversazione + schema live dal DB e
+    //    decide tabella, filtri, count/list, follow-up ellittici e smalltalk.
+    //    Nessun parser deterministico, nessun binario hardcoded.
+    //    Un solo retry con backoff per assorbire un 429 transitorio.
+    const tryPlan = async () =>
+      planQuery({
+        prompt: naturalPrompt,
+        history: context?.history,
+        contextHint: context?.contextHint,
+      });
+    let planRes = await tryPlan();
+    let plans: QueryPlan[] | null = isOk(planRes) ? planRes.value.plans : null;
+    const isRateLimited = (p: QueryPlan[] | null) =>
+      !p || (p[0]?.table === "INVALID" && /troppe richieste|rate limit|riprova tra/i.test(p[0]?.rationale ?? ""));
+    if (isRateLimited(plans)) {
+      await new Promise((r) => setTimeout(r, 1200));
+      planRes = await tryPlan();
+      plans = isOk(planRes) ? planRes.value.plans : null;
+    }
+    if (isRateLimited(plans)) {
+      return {
+        kind: "result",
+        title: "Query AI · Servizio AI momentaneamente occupato",
+        message:
+          (plans?.[0]?.rationale && /troppe richieste|rate limit|riprova/i.test(plans[0].rationale))
+            ? plans[0].rationale
+            : "Il motore AI è momentaneamente occupato (troppe richieste). Riprova tra qualche secondo.",
+        meta: { count: 0, sourceLabel: "AI Query Planner" },
+      };
+    }
+
+    const firstPlan = plans![0];
+
+    // Caso SMALLTALK: il planner ha riconosciuto una conversazione libera
+    // (saluto, ringraziamento, chiacchiera) e ha formulato una risposta.
+    if (firstPlan.table === "SMALLTALK") {
+      return {
+        kind: "result",
+        title: "Conversazione",
+        message: firstPlan.rationale ?? "Ciao! Come posso aiutarti?",
+        meta: { count: 0, sourceLabel: "Direttore" },
+      };
     }
 
     // Caso INVALID: planner ha esplicitamente segnalato richiesta non-query.
-    const firstPlan = plans![0];
     if (firstPlan.table === "INVALID") {
       return {
         kind: "result",
