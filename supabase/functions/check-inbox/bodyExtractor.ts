@@ -43,12 +43,53 @@ export async function extractBodyAndAttachments(
 
   const { extractErrorMessage } = await import("../_shared/handleEdgeError.ts");
 
-  // ─── Oversized message: metadata only ───
+  const sizeMB = (rfc822Size / (1024 * 1024)).toFixed(1);
+
+  // ─── Oversized message: estrai SOLO le parti di testo (leggere), salta allegati ───
+  // Le email pesanti lo sono quasi sempre per gli allegati: il corpo testuale
+  // resta piccolo e leggibile. Recuperiamo text/plain + text/html tramite
+  // BODYSTRUCTURE (fetch mirato per singola sezione, sempre BODY.PEEK[]),
+  // così l'operatore vede almeno il messaggio invece del solo banner.
   if (isOversized) {
-    const sizeMB = (rfc822Size / (1024 * 1024)).toFixed(1);
-    result.bodyText = `⚠️ Messaggio troppo grande per il download completo (${sizeMB} MB). Sono stati salvati solo oggetto e dati principali.`;
-    result.bodyHtml = `<div style="padding:16px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif"><strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/><p>Questo messaggio supera il limite operativo per il parsing completo.</p><p>Sono stati salvati solo: oggetto, mittente, destinatari e data.</p><p>Corpo completo e allegati non sono stati scaricati per evitare errori di elaborazione.</p></div>`;
-    result.parseWarnings.push(`oversized message (${sizeMB}MB) — saved metadata only`);
+    const banner =
+      `<div style="padding:12px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif;margin-bottom:12px"><strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/><span>Allegati non scaricati per evitare errori. Di seguito il testo del messaggio.</span></div>`;
+
+    let textParts: MimeLeafPart[] = [];
+    if (bodyStructure) {
+      try {
+        textParts = collectMimeLeafParts(bodyStructure).filter((p) => p.isInlineBody);
+      } catch (bsErr: unknown) {
+        result.parseWarnings.push(`BODYSTRUCTURE parse failed (oversized): ${extractErrorMessage(bsErr)}`);
+      }
+    }
+
+    for (const part of textParts) {
+      const target = part.subtype === "html" ? "html" : "text";
+      if (target === "html" && result.bodyHtml) continue;
+      if (target === "text" && result.bodyText) continue;
+      try {
+        const bodyResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[${part.section}])`);
+        const partBytes = extractLiteralBytesFromResponse(bodyResponse);
+        if (partBytes.length > 5) {
+          const decoded = decodeMimePart(partBytes, part.encoding, part.charset);
+          if (target === "html") result.bodyHtml = decoded.slice(0, MAX_HTML_LENGTH);
+          else result.bodyText = decoded.slice(0, MAX_TEXT_LENGTH);
+        }
+      } catch (bodyErr: unknown) {
+        result.parseWarnings.push(`oversized body section ${part.section} error: ${extractErrorMessage(bodyErr)}`);
+      }
+    }
+
+    if (result.bodyHtml) {
+      result.bodyHtml = banner + result.bodyHtml;
+    } else if (result.bodyText) {
+      result.bodyHtml = banner + `<pre style="white-space:pre-wrap;font-family:sans-serif">${result.bodyText.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c))}</pre>`;
+    } else {
+      // Nessuna parte testo recuperabile: fallback al solo banner informativo.
+      result.bodyText = `⚠️ Messaggio troppo grande per il download completo (${sizeMB} MB). Salvati solo oggetto e dati principali.`;
+      result.bodyHtml = `<div style="padding:16px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif"><strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/><p>Non è stato possibile estrarre il testo. Salvati solo: oggetto, mittente, destinatari e data.</p></div>`;
+    }
+    result.parseWarnings.push(`oversized message (${sizeMB}MB) — text-only extraction, attachments skipped`);
     return result;
   }
 
