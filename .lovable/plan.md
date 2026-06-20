@@ -1,44 +1,70 @@
+# Piano: Command AI senza binari hardcoded
+
+## Diagnosi
+Oggi il Command non è "AI-driven": è un programma a regole con l'AI relegata a comparsa. Ci sono **6 strati hardcoded** che intercettano il prompt PRIMA che l'AI ragioni, e spesso si contraddicono — è la causa del dialogo che si rompe ("quanti partner" → "in Italia?" non capisce più di cosa parliamo).
+
+Strati hardcoded attuali (tutti da rimuovere/snellire):
+
+```text
+prompt utente
+  │
+  ├─ 1. detectSmalltalk()         regex saluti/grazie → risposta finta
+  ├─ 2. normalizePrompt()          mappe refusi hardcoded
+  ├─ 3. looksLikeSimpleQuery()     regex verbi/sostantivi → sceglie la corsia
+  ├─ 4. aiQueryTool.match()        regex azioni vs letture
+  ├─ 5. parseLocalIntent()         ENTITY_PATTERNS + COUNTRY_CODE_BY_NAME
+  │                                + buildHintFromDurableContext (hint sintetici)
+  └─ 6. localResultFormatter       COUNTRY_LABELS + template count/list
+```
+
+Il problema NON è l'edge function `ai-query-planner`: quella è già AI-native (riceve schema live dal DB, nessun esempio rigido). Il problema sono i 6 strati client che la scavalcano e perdono il contesto del dialogo.
+
 ## Obiettivo
+Un solo cervello: l'**AI planner**, che riceve `prompt + storia completa della conversazione + schema live + scopo tabelle (KB)` e decide TUTTO (tabella, filtri, count vs list, se è smalltalk, se è azione). Il client diventa un trasporto sottile: invia, esegue il piano validato, mostra il risultato.
 
-Far sì che il Command "segua il discorso": dopo "quanti partner" (o "quanti partner a Malta"), i follow-up ellittici come "e in Francia?", "Spagna", "e la Germania?", "quanti in Italia" devono ereditare automaticamente l'entità (partner) ed essere risolti dal parser deterministico locale — niente hop AI lento, niente risposta generica "Risultato disponibile nel canvas".
+## Cosa si elimina (deadcode hardcoded)
+- `lib/localIntentParser.ts` → **eliminato** (ENTITY_PATTERNS, COUNTRY_CODE_BY_NAME, COUNT_RE/LIST_RE).
+- `buildHintFromDurableContext()` e gli hint sintetici "CONTESTO TURNO PRECEDENTE: tabella=..." in `aiQueryTool.ts` → **eliminati**.
+- `aiQueryTool.match()` con i pattern azione/lettura → ridotto a sempre-disponibile (il planner decide INVALID).
+- `usePromptAnalysis.looksLikeSimpleQuery()` regex → **eliminata**; il routing fast-lane non dipende più da regex di dominio.
+- `lib/lexicalNormalizer` mappe refusi hardcoded → rimosse dal percorso (normalizzazione tipografica neutra soltanto, niente "pane→partner").
+- `localResultFormatter` mappe `COUNTRY_LABELS` e template → sostituiti: il commento parlato lo genera l'AI con i dati reali (con fallback minimo non-semantico).
+- `COUNTRY_LOOKUP` duplicata in `useFastLane.ts` → rimossa.
+- `detectSmalltalk()` regex → il planner riconosce smalltalk e ritorna una risposta conversazionale (niente tabella).
 
-## Diagnosi (verificata dal vivo)
+NB: NON si tocca la sicurezza. Restano intatti: whitelist tabelle (`ALLOWED_TABLES`), solo-SELECT, validazione colonne/enum nel `safeQueryExecutor`, RLS. La libertà dell'AI è nel *cosa* chiedere; i *guardrail* restano in codice.
 
-- Il parser locale gestisce correttamente i follow-up SE riceve l'hint di contesto (verificato con test puri).
-- A runtime l'hint viene costruito SOLO da `queryContext` (stato React volatile). Sui follow-up ellittici quello stato a volte risulta vuoto/non fresco → il parser locale ritorna `null` → si cade sull'AI planner (3.98s) → commento generico senza voce.
-- Esiste già `lastQueryResultContext` (singleton di modulo, TTL 5 min, contiene `table` + `filters`): è durevole tra i render ma NON viene usato per costruire l'hint.
+## Come diventa il flusso
+```text
+prompt utente + storia completa (DB-backed)
+        │
+        ▼
+ai-query-planner (AI + schema live + scopo tabelle + storia)
+        │  decide: smalltalk | INVALID(azione) | 1..N QueryPlan
+        ▼
+safeQueryExecutor (whitelist, solo SELECT, valida colonne/enum)  ← guardrail
+        ▼
+risultato → commento AI sui dati reali (TTS)
+```
 
-## Modifiche (minime, locali, reversibili)
+Il contesto del dialogo non viaggia più come "hint sintetico" fragile: l'AI riceve **la storia reale dei messaggi** (già persistita via `useConversation`) e segue il filo da sola. "Quanti partner?" → "in Italia?" funziona perché l'AI legge il turno precedente, non perché una regex ha indovinato `tabella=partners`.
 
-### 1. Fonte di contesto durevole nel parser locale
-File: `src/v2/ui/pages/command/tools/aiQueryTool.ts`
-- Prima di chiamare `parseLocalIntent`, se `context?.contextHint` è assente o non contiene `tabella=`, sintetizzare un hint dal contesto durevole leggendo `getLastQueryResultContext()`:
-  - costruire la stringa nello stesso formato che `detectContext` si aspetta: `CONTESTO TURNO PRECEDENTE: tabella=<table>, mode=<count|list>, filtri=[...]`.
-  - `mode` derivato dalla presenza di `count` (default `count`).
-- Usare questo hint sintetizzato come fallback per `parseLocalIntent`, sia nel primo tentativo sia nel fallback post-429.
-- Nessuna modifica al flusso AI esistente: il planner resta come ultimo fallback.
+## Passi tecnici
+1. **Planner come unica autorità** (`supabase/functions/ai-query-planner/index.ts`):
+   - Estendere l'output con un ramo `kind:"smalltalk"` + `reply` (l'AI risponde a saluti/chiacchiere senza query).
+   - Rafforzare la sezione "CONTESTO" del system prompt: usare la storia messaggi per i follow-up ellittici (già passata, ora diventa il meccanismo primario).
+   - Mantenere il post-processing count/list (è un'ottimizzazione DB innocua, non un binario semantico).
+2. **aiQueryTool.ts**: rimuovere `buildHintFromDurableContext`, semplificare `match()` (sempre candidato lettura), gestire il nuovo `kind:"smalltalk"`.
+3. **useCommandSubmit.ts**: rimuovere lo short-circuit `detectSmalltalk` e il routing `looksLikeSimpleQuery`/`isElliptical`. Tutte le richieste non-azione passano dal planner con storia completa; il planner stesso classifica smalltalk/INVALID/query.
+4. **useFastLane.ts**: rimuovere `COUNTRY_LOOKUP`; il contesto durevole si popola dai filtri reali del piano (già disponibili), non da regex sul prompt.
+5. **localResultFormatter.ts**: sostituire i template con un riepilogo generato dai dati reali del risultato (count + nomi tabella reali). Niente mappe paese hardcoded.
+6. **Cleanup**: eliminare `localIntentParser.ts` + i suoi test, aggiornare `usePromptAnalysis`, rimuovere le mappe refusi semantiche da `lexicalNormalizer`.
+7. **Verifica**: build, e poi test live della sequenza "quanti partner" → "in Italia" → "e in USA" → "grazie" (smalltalk) dal preview.
 
-### 2. Non azzerare il piano prima di salvarlo come contesto
-File: `src/v2/ui/pages/command/hooks/useFastLane.ts`
-- Oggi `onContextUpdate()` (che fa `clearLastSuccessfulQueryPlan()`) viene chiamato PRIMA del blocco che legge `getLastSuccessfulQueryPlan()` per arricchire `lastQueryResultContext` (riga ~117), che quindi riceve `null`.
-- Spostare `onContextUpdate()` DOPO il salvataggio di `lastQueryResultContext`, così sia `queryContext` sia `lastQueryResultContext` ricevono tabella+filtri reali. Questo rende il contesto durevole sempre popolato → il fix #1 ha sempre da cui ereditare.
+## Rischi e mitigazioni (nodi critici: orchestratore AI + memoria/history)
+- Più richieste passano dal planner → più chiamate AI. Mitigazione: il post-processing count/list resta; storia limitata agli ultimi N turni significativi; 1 retry su 429 già presente.
+- Rate-limit (429): invece del vecchio fallback deterministico che "indovinava", il sistema mostra un errore chiaro e ritenta — coerente con la richiesta dell'utente di NON avere binari finti.
+- Reversibilità: ogni rimozione è locale; i guardrail di sicurezza non vengono toccati.
 
-### 3. Commento locale per i conteggi (no "Risultato disponibile nel canvas")
-File: `src/v2/ui/pages/command/hooks/useResultCommentary.ts`
-- Quando il risultato è un conteggio con tabella nota (es. partners) e il commento AI fallisce/è rate-limited, generare localmente la frase parlata specifica (es. "Abbiamo 99 partner in Francia.") invece del fallback generico. Riusa le label già presenti (`TABLE_LABEL`, `COUNTRY_CODE_BY_NAME`).
-
-### 4. Test di regressione
-File: `src/v2/ui/pages/command/lib/__tests__/localIntentParser.test.ts` (estensione)
-- Aggiungere casi: con contesto `tabella=partners,mode=count`, i prompt "e in Francia?", "Spagna", "e la Germania?", "quanti in Italia" ritornano un piano `partners` col `country_code` corretto.
-- Caso negativo invariato: senza contesto né entità, "quanti in USA?" → `null`.
-
-## Fuori scope
-
-- Nessuna modifica a edge function (`ai-query-planner`, `super-mario`), submit, batch, dedup, invio email, RLS, DB.
-- Nessun refactor dei 4 sistemi di contesto: si collega solo `lastQueryResultContext` come fonte di fallback per l'hint.
-
-## Verifica
-
-- Test unitari verdi.
-- Riproduzione dal vivo nella preview: `quanti partner` → `e in Francia?` → `Spagna` → `e in Germania?` devono rispondere via fast-lane locale (<1s, niente "Risultato disponibile nel canvas") con risposta parlata specifica.
-- Controllo non-regressione: `quanti partner a Malta` → `quanti in Italia` continua a funzionare.
+## Risultato atteso
+L'AI riceve informazioni (schema, scopo tabelle, storia) e risolve liberamente. Niente regex che decidono il significato. Il dialogo è continuo perché l'AI legge la conversazione vera.
