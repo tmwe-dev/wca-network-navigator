@@ -27,6 +27,20 @@ export interface ResolvedMailbox {
   reply_to: string | null;
 }
 
+/**
+ * Errore tipizzato: la casella esiste ma NON è configurabile (slug senza
+ * mapping ENV, password mancante, config incompleta). I chiamanti devono
+ * trattarlo come "materiale non disponibile" → skip pulito, MAI 500/crash loop.
+ */
+export class MailboxNotConfiguredError extends Error {
+  readonly slug: string;
+  constructor(slug: string, reason: string) {
+    super(`Mailbox "${slug}" non configurata: ${reason}`);
+    this.name = "MailboxNotConfiguredError";
+    this.slug = slug;
+  }
+}
+
 /** Mappa slug della casella condivisa → nomi ENV per password IMAP/SMTP. */
 const ENV_PASSWORD_MAP: Record<string, { imap: string; smtp: string }> = {
   booking: { imap: "IMAP_PASSWORD_BOOKING", smtp: "SMTP_PASSWORD_BOOKING" },
