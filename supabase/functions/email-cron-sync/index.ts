@@ -73,7 +73,16 @@ Deno.serve(async (req: Request) => {
           .eq("shared_mailbox_id", mbox.id)
           .limit(1)
           .maybeSingle();
-        let ownerUserId = access?.operator_id as string | undefined;
+        let ownerUserId: string | undefined;
+        const accessOperatorId = access?.operator_id as string | undefined;
+        if (accessOperatorId) {
+          const { data: accessOperator } = await supabase
+            .from("operators")
+            .select("user_id")
+            .eq("id", accessOperatorId)
+            .maybeSingle();
+          ownerUserId = accessOperator?.user_id as string | undefined;
+        }
 
         // Fallback: nessun operatore con accesso esplicito → usa il primo
         // admin (o, se non esiste, un operator qualsiasi). Così Amministrazione
@@ -145,6 +154,23 @@ Deno.serve(async (req: Request) => {
       const userId = row.user_id as string;
       const mailboxId = (row.mailbox_id as string | null) ?? null;
       try {
+        if (!mailboxId) {
+          const { data: opRow } = await supabase
+            .from("operators")
+            .select("imap_user, is_active")
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (!opRow?.is_active || !opRow?.imap_user) {
+            await supabase
+              .from("email_sync_state")
+              .update({ last_sync_at: new Date().toISOString() })
+              .eq("user_id", userId)
+              .is("mailbox_id", null);
+            results.push({ userId, mailboxId, status: "skipped: no personal mailbox" });
+            continue;
+          }
+        }
+
         const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase, userId);
         if (isOutsideWorkHours(workStartHour, workEndHour)) {
           results.push({
