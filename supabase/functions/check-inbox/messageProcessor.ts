@@ -162,7 +162,7 @@ export async function processMessage(
         byUid: true,
         uid: true,
         envelope: true,
-        bodyStructure: !oversized,
+        bodyStructure: true,
       } as Record<string, unknown>);
       // deno-lint-ignore no-explicit-any
       const env = (envFetch as unknown as any[])?.[0]?.envelope as Record<string, unknown> | undefined;
