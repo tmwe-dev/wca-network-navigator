@@ -27,7 +27,8 @@ export function useUnreadCountsV2() {
         .from("channel_messages")
         .select("id", { count: "exact", head: true })
         .is("read_at", null)
-        .eq("direction", "inbound");
+        .eq("direction", "inbound")
+        .not("hidden_by_rule", "is", true);
       if (activeMailbox?.kind === "personal") {
         msgQuery = msgQuery.is("mailbox_id", null);
       } else if (activeMailbox?.kind === "shared") {
