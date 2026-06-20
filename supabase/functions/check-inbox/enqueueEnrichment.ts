@@ -36,6 +36,12 @@ export async function enqueueInboundEnrichment(
   let skipped = 0;
   if (!messages || messages.length === 0) return { enqueued, skipped };
 
+  // Gate: l'analisi AI profonda sulle mail in arrivo è OFF salvo abilitazione esplicita.
+  const { isDeepMailAnalysisEnabled } = await import("../_shared/deepMailAnalysis.ts");
+  if (!(await isDeepMailAnalysisEnabled(supabaseAdmin, userId))) {
+    return { enqueued: 0, skipped: messages.length };
+  }
+
   // Estrae candidati: prima mail per dominio (dedup)
   const candidates = new Map<string, { messageId: string; email: string; domain: string }>();
   for (const m of messages) {
