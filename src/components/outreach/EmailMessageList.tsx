@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Building2, User, MailOpen, HelpCircle, Sparkles, Gauge, CheckCheck } from "lucide-react";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
@@ -6,12 +6,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useHoldingPatternEmails } from "@/hooks/useHoldingPatternEmails";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
-import { EmailMessageActions } from "./EmailMessageActions";
-import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
-import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { MailRowChrome } from "@/v2/ui/molecules/email/MailRowChrome";
 import { useInboxEnrichment } from "@/hooks/useInboxEnrichment";
-import { invokeAi } from "@/lib/ai/invokeAi";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -50,31 +46,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
       return false;
     });
   }, [messages, holdingFilter, holdingSet]);
-
-  // Hook post-DeepSearch: chiede a `suggest-email-groups` di proporre un
-  // gruppo per il mittente, poi invalida la cache enrichment per mostrare
-  // subito il chip "Suggerito: …".
-  const onDeepSearchComplete = useCallback(
-    (email: string) => {
-      if (!email) return;
-      void invokeAi("suggest-email-groups", {
-        scope: "classify",
-        context: {
-          source: "EmailMessageList",
-          route: "/v2/inbox",
-          mode: "post-deep-search",
-          extra: { email },
-        },
-        body: { emails: [email], min_email_count: 1, batch_size: 5 },
-      })
-        .then(() => {
-          qc.invalidateQueries({ queryKey: ["inbox-enrichment", "ai-suggestions"] });
-          qc.invalidateQueries({ queryKey: ["email-address-groups"] });
-        })
-        .catch(() => { /* silent */ });
-    },
-    [qc],
-  );
 
   const virtualizer = useVirtualizer({
     count: displayMessages.length,
