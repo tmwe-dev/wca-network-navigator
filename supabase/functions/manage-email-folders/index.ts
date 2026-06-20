@@ -221,7 +221,7 @@ serve(async (req) => {
         if (moved > 0) await sendCommand("EXPUNGE");
 
         // Update metadata in channel_messages
-        const supabaseService = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const supabaseService = supabaseAdmin;
         for (const uid of uids) {
           const metaUpdate: Record<string, unknown> = {};
           if (action === "archive") { metaUpdate.archived = true; metaUpdate.archived_at = new Date().toISOString(); }
