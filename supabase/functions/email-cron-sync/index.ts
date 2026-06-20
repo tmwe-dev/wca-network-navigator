@@ -130,6 +130,17 @@ Deno.serve(async (req: Request) => {
       downloaded?: number;
     }[] = [];
 
+    // ━━━ Budget di drenaggio ━━━
+    // FIX 2026-06-20: con BATCH_SIZE=1 ogni run scaricava UNA sola email per
+    // casella. Una casella con arretrato (es. personale ferma al 1 giugno con
+    // ~1000+ email) non recuperava mai. Ora richiamiamo check-inbox in loop
+    // finché il server segnala `has_more`, entro un budget di tempo globale e
+    // un cap di iterazioni per casella. Ogni chiamata è un'invocazione edge
+    // separata (CPU budget proprio): nessun rischio sul processing per-messaggio.
+    const DRAIN_START = Date.now();
+    const DRAIN_WALL_CLOCK_MS = 50_000; // budget complessivo del run
+    const MAX_ITERATIONS_PER_MAILBOX = 40; // cap di sicurezza per casella
+
     for (const row of syncRows) {
       const userId = row.user_id as string;
       const mailboxId = (row.mailbox_id as string | null) ?? null;
@@ -151,23 +162,40 @@ Deno.serve(async (req: Request) => {
         };
         if (mailboxId) headers["x-mailbox-id"] = mailboxId;
 
-        const checkRes = await fetch(`${supabaseUrl}/functions/v1/check-inbox`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({}),
-        });
+        // Loop di drenaggio: continua finché il server indica altre email
+        // (`has_more`) o finché esauriamo budget/iterazioni.
+        let downloadedTotal = 0;
+        let iterations = 0;
+        let lastStatus = "ok";
+        let keepGoing = true;
+        while (keepGoing) {
+          if (Date.now() - DRAIN_START > DRAIN_WALL_CLOCK_MS) break;
+          if (iterations >= MAX_ITERATIONS_PER_MAILBOX) break;
+          iterations++;
 
-        if (checkRes.ok) {
-          const data = await checkRes.json();
-          results.push({
-            userId,
-            mailboxId,
-            status: "ok",
-            downloaded: data.downloaded || 0,
+          const checkRes = await fetch(`${supabaseUrl}/functions/v1/check-inbox`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({}),
           });
-        } else {
-          results.push({ userId, mailboxId, status: `error: ${checkRes.status}` });
+
+          if (!checkRes.ok) {
+            lastStatus = `error: ${checkRes.status}`;
+            break;
+          }
+          const data = await checkRes.json();
+          downloadedTotal += data.downloaded || 0;
+          // Stop quando non c'è più nulla da scaricare. `has_more` proviene da
+          // buildResponsePayload (check-inbox). Se assente, ci fermiamo per
+          // sicurezza dopo una sola iterazione (comportamento legacy).
+          keepGoing = data.has_more === true;
         }
+        results.push({
+          userId,
+          mailboxId,
+          status: lastStatus,
+          downloaded: downloadedTotal,
+        });
       } catch (err: Record<string, unknown>) {
         results.push({ userId, mailboxId, status: `error: ${err.message}` });
       }
