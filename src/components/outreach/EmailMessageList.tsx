@@ -243,7 +243,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 groupColor={groupColor}
                 chips={chips}
                 trailing={trailing}
-                actions={actions}
                 onClick={() => onSelect(msg)}
               />
             </div>
