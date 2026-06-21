@@ -5,12 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 const log = createLogger("useVoiceOutput");
 
-// 1-frame WAV silenzioso (44 byte) usato per "sbloccare" l'autoplay policy del
+// Mini WAV silenzioso valido usato per "sbloccare" l'autoplay policy del
 // browser durante un gesto utente. Senza questo, i successivi audio.play()
 // chiamati DOPO un await fetch (es. dentro useEffect su messages) vengono
 // bloccati silenziosamente con NotAllowedError → la voce smette di partire.
+// Deve contenere almeno qualche frame PCM: il vecchio header con data vuoto
+// veniva rifiutato da alcuni browser come "no supported source".
 const SILENT_WAV =
-  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+  "data:audio/wav;base64,UklGRjgAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
 
 const AUDIO_MIME_BY_CONTENT_TYPE: ReadonlyArray<[RegExp, string]> = [
   [/mpeg|mp3/i, "audio/mpeg"],
@@ -38,6 +40,9 @@ export function useVoiceOutput() {
     if (!audioRef.current) {
       const el = new Audio();
       el.preload = "auto";
+      el.playsInline = true;
+      el.style.display = "none";
+      document.body.appendChild(el);
       audioRef.current = el;
     }
     return audioRef.current;
@@ -66,6 +71,7 @@ export function useVoiceOutput() {
       const a = getAudioEl();
       a.muted = true;
       a.src = SILENT_WAV;
+      a.load();
       const p = a.play();
       if (p && typeof p.then === "function") {
         p.then(() => {
@@ -145,6 +151,7 @@ export function useVoiceOutput() {
         audio.src = url;
         audio.onended = () => cleanup();
         audio.onerror = () => cleanup();
+        audio.load();
         try {
           await audio.play();
         } catch (playErr) {
