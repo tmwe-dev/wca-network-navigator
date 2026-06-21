@@ -40,7 +40,7 @@ export function useVoiceOutput() {
     if (!audioRef.current) {
       const el = new Audio();
       el.preload = "auto";
-      el.playsInline = true;
+      el.setAttribute("playsinline", "true");
       el.style.display = "none";
       document.body.appendChild(el);
       audioRef.current = el;
