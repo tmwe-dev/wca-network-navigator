@@ -4,11 +4,10 @@
  * Flow for every user prompt:
  *   1. Push user message + thinking indicator
  *   2. Lexical normalization (typo fix: pane→partner, nyc→New York, ecc.)
- *   3. FAST LANE: if prompt clearly matches `ai-query` and is single-shot, skip
- *      planExecution and run aiQueryTool directly (with conversational context).
- *   4. Otherwise: planExecution → planRunner → per-step approval (write tools)
- *   5. Conversational AI comment + suggested next actions on the final result
- *   6. Persist last query "shape" in queryContext for follow-up handling
+ *   3. FLUSSO UNICO: planExecution → planRunner → per-step approval (write tools).
+ *      Nessuna scorciatoia: ogni richiesta carica memoria/KB/prompt operativi.
+ *   4. Conversational AI comment + suggested next actions on the final result
+ *   5. Persist last query "shape" in queryContext for follow-up handling
  *
  * Refactored into sub-modules:
  *   - useCommandHistory: Build and manage conversation history
@@ -17,7 +16,6 @@
  *   - useQueryContext: Manage conversational context persistence
  *   - usePlanExecution: Execute multi-step plans
  *   - usePlanCompletion: Render completed plans
- *   - useFastLane: Direct tool execution for simple queries
  *   - useApprovalHandler: Handle user approvals
  */
 import { useCallback } from "react";
@@ -25,7 +23,7 @@ import { toast } from "sonner";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import { TOOLS, TOOL_METADATA } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
-import { planExecution } from "@/v2/io/edge/aiAssistant";
+import { planExecution, type PlanStep } from "@/v2/io/edge/aiAssistant";
 import {
   buildInitialStepStates,
   MAX_PLAN_STEPS,
@@ -36,7 +34,6 @@ import { detectSmalltalk } from "../lib/smalltalkDetector";
 import {
   contextHint as buildContextHint,
   isContextFresh,
-  isElliptical,
   type QueryContext,
 } from "../lib/queryContext";
 import type { Message, CanvasType, FlowPhase } from "../constants";
@@ -49,7 +46,6 @@ import { useResultCommentary } from "./useResultCommentary";
 import { useQueryContext } from "./useQueryContext";
 import { usePlanExecution } from "./usePlanExecution";
 import { usePlanCompletion } from "./usePlanCompletion";
-import { useFastLane } from "./useFastLane";
 import { useApprovalHandler } from "./useApprovalHandler";
 import { useSuperMarioFlow } from "./useSuperMarioFlow";
 import { isSuperMarioEnabled } from "@/v2/ai/superMarioFlag";
@@ -126,7 +122,7 @@ export function useCommandSubmit(state: CommandStateApi) {
   const { commentOnResult } = useResultCommentary({
     addMessage: _addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
   });
-  const { updateQueryContextFromLastPlan, isContextUsable } = useQueryContext({
+  const { updateQueryContextFromLastPlan } = useQueryContext({
     setQueryContext, queryContext,
   });
   const { renderPlanCompletion, canvasForResult } = usePlanCompletion({
@@ -134,10 +130,6 @@ export function useCommandSubmit(state: CommandStateApi) {
   });
   const { runPlan, handleApproveStep: handleApproveStepFromExecution } = usePlanExecution({
     addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setPlanState, setLiveResult, setCanvas, setShowTools, buildHistory,
-  });
-  const { runFastLane } = useFastLane({
-    addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
-    setActiveToolKey, setToolPhase, setChainHighlight, setExecSteps, buildHistory, canvasForResult,
   });
   const { handleApprove } = useApprovalHandler({
     addMessage: _addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
@@ -170,14 +162,6 @@ export function useCommandSubmit(state: CommandStateApi) {
       );
     },
     [runPlan, renderPlanWithContext],
-  );
-
-  // Wrapper for fast lane that integrates with completion
-  const runFastLaneWrapped = useCallback(
-    async (userPrompt: string, hint: string) => {
-      await runFastLane(userPrompt, hint, commentOnResult, updateQueryContextFromLastPlan);
-    },
-    [runFastLane, commentOnResult, updateQueryContextFromLastPlan],
   );
 
   // Wrapper for handleApproveStep that integrates completion rendering
@@ -317,16 +301,8 @@ export function useCommandSubmit(state: CommandStateApi) {
         });
       }
 
-      // FAST LANE: simple read query OR elliptical follow-up with fresh context
-      const fastLane =
-        looksLikeSimpleQuery(text) ||
-        (isElliptical(text) && isContextUsable());
-
-      if (fastLane) {
-        await runFastLaneWrapped(text, hint);
-        return;
-      }
-
+      // FLUSSO UNICO: ogni richiesta passa dal planner (planExecution → planRunner),
+      // così memoria/KB/prompt operativi vengono sempre caricati. Nessuna scorciatoia.
       setFlowPhase("thinking");
       setShowTools(true);
       setToolPhase("activating");
@@ -378,12 +354,12 @@ export function useCommandSubmit(state: CommandStateApi) {
             setShowTools(false);
             return;
           }
-          // ANTI-ALLUCINAZIONE (2026-04-28):
+          // ANTI-ALLUCINAZIONE:
           // Se il planner non ha generato step ma il prompt sembra una ricerca
           // (verbo di lettura, sostantivo di dominio o nome proprio) NON stampiamo
           // il summary del modello — che spesso inventa "nessun risultato trovato"
-          // senza interrogare il DB — e cadiamo sul fast-lane (ai-query) per
-          // forzare una vera query sul database.
+          // senza interrogare il DB — e forziamo un piano a 1 step su ai-query,
+          // eseguito dallo STESSO planRunner (flusso unico, niente fast-lane).
           const looksLikeSearch =
             looksLikeSimpleQuery(text) ||
             /\b(cerca|trova|mostra|elenca|lista|visualizza|dammi|quanti|quante|ultimi|recenti)\b/i.test(text) ||
@@ -391,7 +367,26 @@ export function useCommandSubmit(state: CommandStateApi) {
             // Nome proprio nudo (es. "Radiant", "Acme Corp")
             /^[A-ZÀ-Ý][\p{L}\p{N}\s'’.&/-]{1,60}$/u.test(text.trim());
           if (looksLikeSearch) {
-            await runFastLaneWrapped(text, hint);
+            const fbSteps: PlanStep[] = [
+              { stepNumber: 1, toolId: "ai-query", reasoning: "Ricerca diretta sul database", params: {} },
+            ];
+            setActiveToolKey("ai-query");
+            setExecSteps([{ label: "Ricerca AI", detail: "Query DB", status: "pending" as const }]);
+            const fbState: PlanExecutionState = {
+              steps: fbSteps,
+              stepStates: buildInitialStepStates(fbSteps),
+              summary: "Ricerca diretta sul database",
+              results: {},
+              currentStep: 0,
+              status: "running",
+            };
+            setPlanState(fbState);
+            setFlowPhase("executing");
+            setChainHighlight(5);
+            const fbTrace = startTrace(text);
+            fbTrace.setPhase("plan-execution");
+            fbTrace.setDriver("ai-query");
+            await runPlanWrapped(fbState, text, hint, fbTrace);
             return;
           }
           _addMessage({
@@ -460,9 +455,9 @@ export function useCommandSubmit(state: CommandStateApi) {
       }
     },
     [
-      _addMessage, addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
+      _addMessage, addMessage, buildHistory, resetForNewMessage, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
-      setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
+      setPlanState, setShowTools, setToolPhase, ts, queryContext, looksLikeSimpleQuery,
       runDirectComposer,
     ],
   );
