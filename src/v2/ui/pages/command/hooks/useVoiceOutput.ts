@@ -27,10 +27,26 @@ export function useVoiceOutput() {
   const urlRef = useRef<string | null>(null);
   const primedRef = useRef(false);
 
+  /**
+   * Elemento <audio> persistente e riutilizzato. Lo sblocco autoplay del
+   * browser è legato all'elemento (Safari) o al documento (Chrome) sbloccato
+   * durante un gesto utente. Creare un NUOVO Audio() ad ogni speak() perdeva
+   * lo sblocco → play() bloccato con "no supported source". Riusiamo sempre
+   * lo stesso elemento sbloccato in prime().
+   */
+  const getAudioEl = useCallback((): HTMLAudioElement => {
+    if (!audioRef.current) {
+      const el = new Audio();
+      el.preload = "auto";
+      audioRef.current = el;
+    }
+    return audioRef.current;
+  }, []);
+
   const cleanup = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current = null;
+      audioRef.current.removeAttribute("src");
     }
     if (urlRef.current) {
       URL.revokeObjectURL(urlRef.current);
@@ -47,22 +63,25 @@ export function useVoiceOutput() {
   const prime = useCallback(() => {
     if (primedRef.current) return;
     try {
-      const a = new Audio(SILENT_WAV);
+      const a = getAudioEl();
       a.muted = true;
+      a.src = SILENT_WAV;
       const p = a.play();
       if (p && typeof p.then === "function") {
         p.then(() => {
           a.pause();
           a.currentTime = 0;
+          a.muted = false;
           primedRef.current = true;
         }).catch(() => { /* gesture mancante: ritenteremo al prossimo click */ });
       } else {
+        a.muted = false;
         primedRef.current = true;
       }
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [getAudioEl]);
 
   const toggleMute = useCallback(() => {
     setMuted((m) => {
@@ -121,9 +140,9 @@ export function useVoiceOutput() {
         const url = URL.createObjectURL(blob);
         urlRef.current = url;
 
-        const audio = new Audio(url);
-        audio.preload = "auto";
-        audioRef.current = audio;
+        const audio = getAudioEl();
+        audio.muted = false;
+        audio.src = url;
         audio.onended = () => cleanup();
         audio.onerror = () => cleanup();
         try {
@@ -143,7 +162,7 @@ export function useVoiceOutput() {
         cleanup();
       }
     },
-    [muted, cleanup],
+    [muted, cleanup, getAudioEl],
   );
 
   const stop = useCallback(() => {
