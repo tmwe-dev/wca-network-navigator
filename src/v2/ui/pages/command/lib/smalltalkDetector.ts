@@ -43,20 +43,20 @@ export function detectSmalltalk(rawText: string): SmalltalkMatch | null {
   if (
     /^c['’\s]*[èe]?\s*qualcun/i.test(t) ||
     /^c['’\s]*[èe]?\s*nessun/i.test(t) ||
-    /^(mi\s+senti|ci\s+sei|sei\s+(li[ìi]|qui|attiv))/i.test(t) ||
-    /^(prova|test|testing)\b/i.test(t)
+    /^(mi\s+senti|ci\s+sei|sei\s+(li[ìi]|qui|attiv[oa]))[\s!.?]*$/i.test(t) ||
+    /^(prova|test|testing|1\s*2\s*3)[\s!.?]*$/i.test(t)
   ) {
     return { kind: "presence", reply: "Sì, ti sento. Sono qui. Dimmi pure cosa vuoi fare." };
   }
 
   // Saluti
-  if (/^(ciao|salve|hey|ehi|hola|hi|hello)\b/i.test(t)) {
+  if (/^(ciao|salve|hey|ehi|hola|hi|hello)[\s!.?]*$/i.test(t)) {
     return { kind: "greeting", reply: "Ciao. Pronto a lavorare. Da dove partiamo?" };
   }
-  if (/^(buongiorno)\b/i.test(t)) {
+  if (/^(buongiorno)[\s!.?]*$/i.test(t)) {
     return { kind: "greeting", reply: "Buongiorno. Cosa facciamo oggi?" };
   }
-  if (/^(buonasera|buonanotte)\b/i.test(t)) {
+  if (/^(buonasera|buonanotte)[\s!.?]*$/i.test(t)) {
     return { kind: "greeting", reply: "Buonasera. Su cosa vuoi che mi muova?" };
   }
 
@@ -66,12 +66,12 @@ export function detectSmalltalk(rawText: string): SmalltalkMatch | null {
   }
 
   // Stato
-  if (/^(come\s+(stai|va)|tutto\s+bene)/i.test(t)) {
+  if (/^(come\s+(stai|va)|tutto\s+bene)[\s!.?]*$/i.test(t)) {
     return { kind: "status", reply: "Tutto operativo. Pipeline attive, agenti pronti. Cosa serve?" };
   }
 
   // Saluti finali
-  if (/^(arrivederci|a\s+presto|ciao\s+ciao|bye)/i.test(t)) {
+  if (/^(arrivederci|a\s+presto|ciao\s+ciao|bye)[\s!.?]*$/i.test(t)) {
     return { kind: "farewell", reply: "A dopo. Resto in ascolto quando torni." };
   }
 
