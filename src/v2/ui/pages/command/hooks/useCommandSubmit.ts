@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import { TOOLS, TOOL_METADATA } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
-import { planExecution } from "@/v2/io/edge/aiAssistant";
+import { planExecution, type PlanStep } from "@/v2/io/edge/aiAssistant";
 import {
   buildInitialStepStates,
   MAX_PLAN_STEPS,
@@ -36,7 +36,6 @@ import { detectSmalltalk } from "../lib/smalltalkDetector";
 import {
   contextHint as buildContextHint,
   isContextFresh,
-  isElliptical,
   type QueryContext,
 } from "../lib/queryContext";
 import type { Message, CanvasType, FlowPhase } from "../constants";
@@ -49,7 +48,6 @@ import { useResultCommentary } from "./useResultCommentary";
 import { useQueryContext } from "./useQueryContext";
 import { usePlanExecution } from "./usePlanExecution";
 import { usePlanCompletion } from "./usePlanCompletion";
-import { useFastLane } from "./useFastLane";
 import { useApprovalHandler } from "./useApprovalHandler";
 import { useSuperMarioFlow } from "./useSuperMarioFlow";
 import { isSuperMarioEnabled } from "@/v2/ai/superMarioFlag";
@@ -126,7 +124,7 @@ export function useCommandSubmit(state: CommandStateApi) {
   const { commentOnResult } = useResultCommentary({
     addMessage: _addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
   });
-  const { updateQueryContextFromLastPlan, isContextUsable } = useQueryContext({
+  const { updateQueryContextFromLastPlan } = useQueryContext({
     setQueryContext, queryContext,
   });
   const { renderPlanCompletion, canvasForResult } = usePlanCompletion({
@@ -134,10 +132,6 @@ export function useCommandSubmit(state: CommandStateApi) {
   });
   const { runPlan, handleApproveStep: handleApproveStepFromExecution } = usePlanExecution({
     addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setPlanState, setLiveResult, setCanvas, setShowTools, buildHistory,
-  });
-  const { runFastLane } = useFastLane({
-    addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
-    setActiveToolKey, setToolPhase, setChainHighlight, setExecSteps, buildHistory, canvasForResult,
   });
   const { handleApprove } = useApprovalHandler({
     addMessage: _addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
@@ -170,14 +164,6 @@ export function useCommandSubmit(state: CommandStateApi) {
       );
     },
     [runPlan, renderPlanWithContext],
-  );
-
-  // Wrapper for fast lane that integrates with completion
-  const runFastLaneWrapped = useCallback(
-    async (userPrompt: string, hint: string) => {
-      await runFastLane(userPrompt, hint, commentOnResult, updateQueryContextFromLastPlan);
-    },
-    [runFastLane, commentOnResult, updateQueryContextFromLastPlan],
   );
 
   // Wrapper for handleApproveStep that integrates completion rendering
