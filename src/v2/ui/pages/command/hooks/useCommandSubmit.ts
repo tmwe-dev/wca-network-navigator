@@ -370,7 +370,7 @@ export function useCommandSubmit(state: CommandStateApi) {
             /^[A-ZÀ-Ý][\p{L}\p{N}\s'’.&/-]{1,60}$/u.test(text.trim());
           if (looksLikeSearch) {
             const fbSteps: PlanStep[] = [
-              { stepNumber: 1, toolId: "ai-query", reasoning: "Ricerca diretta sul database" },
+              { stepNumber: 1, toolId: "ai-query", reasoning: "Ricerca diretta sul database", params: {} },
             ];
             setActiveToolKey("ai-query");
             setExecSteps([{ label: "Ricerca AI", detail: "Query DB", status: "pending" as const }]);
