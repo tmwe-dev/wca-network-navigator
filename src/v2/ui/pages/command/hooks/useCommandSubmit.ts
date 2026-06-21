@@ -457,9 +457,9 @@ export function useCommandSubmit(state: CommandStateApi) {
       }
     },
     [
-      _addMessage, addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
+      _addMessage, addMessage, buildHistory, resetForNewMessage, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
-      setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
+      setPlanState, setShowTools, setToolPhase, ts, queryContext, looksLikeSimpleQuery,
       runDirectComposer,
     ],
   );
