@@ -356,12 +356,12 @@ export function useCommandSubmit(state: CommandStateApi) {
             setShowTools(false);
             return;
           }
-          // ANTI-ALLUCINAZIONE (2026-04-28):
+          // ANTI-ALLUCINAZIONE:
           // Se il planner non ha generato step ma il prompt sembra una ricerca
           // (verbo di lettura, sostantivo di dominio o nome proprio) NON stampiamo
           // il summary del modello — che spesso inventa "nessun risultato trovato"
-          // senza interrogare il DB — e cadiamo sul fast-lane (ai-query) per
-          // forzare una vera query sul database.
+          // senza interrogare il DB — e forziamo un piano a 1 step su ai-query,
+          // eseguito dallo STESSO planRunner (flusso unico, niente fast-lane).
           const looksLikeSearch =
             looksLikeSimpleQuery(text) ||
             /\b(cerca|trova|mostra|elenca|lista|visualizza|dammi|quanti|quante|ultimi|recenti)\b/i.test(text) ||
@@ -369,7 +369,26 @@ export function useCommandSubmit(state: CommandStateApi) {
             // Nome proprio nudo (es. "Radiant", "Acme Corp")
             /^[A-ZÀ-Ý][\p{L}\p{N}\s'’.&/-]{1,60}$/u.test(text.trim());
           if (looksLikeSearch) {
-            await runFastLaneWrapped(text, hint);
+            const fbSteps: PlanStep[] = [
+              { stepNumber: 1, toolId: "ai-query", reasoning: "Ricerca diretta sul database" },
+            ];
+            setActiveToolKey("ai-query");
+            setExecSteps([{ label: "Ricerca AI", detail: "Query DB", status: "pending" as const }]);
+            const fbState: PlanExecutionState = {
+              steps: fbSteps,
+              stepStates: buildInitialStepStates(fbSteps),
+              summary: "Ricerca diretta sul database",
+              results: {},
+              currentStep: 0,
+              status: "running",
+            };
+            setPlanState(fbState);
+            setFlowPhase("executing");
+            setChainHighlight(5);
+            const fbTrace = startTrace(text);
+            fbTrace.setPhase("plan-execution");
+            fbTrace.setDriver("ai-query");
+            await runPlanWrapped(fbState, text, hint, fbTrace);
             return;
           }
           _addMessage({
