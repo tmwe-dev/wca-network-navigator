@@ -30,6 +30,29 @@ export function useVoiceOutput() {
   const primedRef = useRef(false);
 
   /**
+   * Fallback voce nativa del browser (Web Speech API). Usato quando la
+   * riproduzione dell'audio ElevenLabs è bloccata dalle policy autoplay
+   * (tipico nell'iframe di anteprima) o quando l'edge TTS non risponde.
+   * Così l'operatore sente SEMPRE una risposta vocale.
+   */
+  const speakNative = useCallback((text: string) => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth || typeof SpeechSynthesisUtterance === "undefined") return;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "it-IT";
+      u.rate = 1;
+      u.onstart = () => setSpeaking(true);
+      u.onend = () => setSpeaking(false);
+      u.onerror = () => setSpeaking(false);
+      synth.speak(u);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  /**
    * Elemento <audio> persistente e riutilizzato. Lo sblocco autoplay del
    * browser è legato all'elemento (Safari) o al documento (Chrome) sbloccato
    * durante un gesto utente. Creare un NUOVO Audio() ad ogni speak() perdeva
@@ -57,6 +80,7 @@ export function useVoiceOutput() {
       URL.revokeObjectURL(urlRef.current);
       urlRef.current = null;
     }
+    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
     setSpeaking(false);
   }, []);
 
@@ -120,7 +144,8 @@ export function useVoiceOutput() {
 
         if (!response.ok) {
           log.error("[tts] edge error", { error: response.status });
-          setSpeaking(false);
+          // Fallback voce nativa: meglio una voce sintetica che il silenzio.
+          speakNative(text);
           return;
         }
 
@@ -163,13 +188,16 @@ export function useVoiceOutput() {
             primed: primedRef.current,
           });
           cleanup();
+          // Fallback voce nativa quando l'autoplay blocca l'audio ElevenLabs.
+          speakNative(text);
         }
       } catch (e) {
         log.error("[tts] failed", { error: e });
         cleanup();
+        speakNative(text);
       }
     },
-    [muted, cleanup, getAudioEl],
+    [muted, cleanup, getAudioEl, speakNative],
   );
 
   const stop = useCallback(() => {
