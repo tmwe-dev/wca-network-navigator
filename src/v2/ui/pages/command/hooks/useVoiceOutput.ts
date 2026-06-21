@@ -5,35 +5,46 @@ import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 const log = createLogger("useVoiceOutput");
 
-// Mini WAV silenzioso valido usato per "sbloccare" l'autoplay policy del
-// browser durante un gesto utente. Senza questo, i successivi audio.play()
-// chiamati DOPO un await fetch (es. dentro useEffect su messages) vengono
-// bloccati silenziosamente con NotAllowedError → la voce smette di partire.
-// Deve contenere almeno qualche frame PCM: il vecchio header con data vuoto
-// veniva rifiutato da alcuni browser come "no supported source".
-const SILENT_WAV =
-  "data:audio/wav;base64,UklGRjgAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+type AudioCtor = typeof AudioContext;
 
-const AUDIO_MIME_BY_CONTENT_TYPE: ReadonlyArray<[RegExp, string]> = [
-  [/mpeg|mp3/i, "audio/mpeg"],
-  [/wav/i, "audio/wav"],
-  [/ogg/i, "audio/ogg"],
-];
+function getAudioContextCtor(): AudioCtor | null {
+  if (typeof window === "undefined") return null;
+  return (
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext ||
+    null
+  );
+}
 
 export function useVoiceOutput() {
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState<boolean>(
     () => localStorage.getItem("wca_voice_muted") === "1",
   );
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const urlRef = useRef<string | null>(null);
-  const primedRef = useRef(false);
+  // Web Audio API: riproduzione affidabile dell'MP3 ElevenLabs anche dentro
+  // l'iframe di anteprima, dove l'elemento <audio> falliva con
+  // "no supported source" e faceva ripiegare sulla voce nativa robotica.
+  const ctxRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const playTokenRef = useRef(0);
+
+  const getCtx = useCallback((): AudioContext | null => {
+    if (ctxRef.current) return ctxRef.current;
+    const Ctor = getAudioContextCtor();
+    if (!Ctor) return null;
+    try {
+      ctxRef.current = new Ctor();
+    } catch {
+      return null;
+    }
+    return ctxRef.current;
+  }, []);
 
   /**
    * Fallback voce nativa del browser (Web Speech API). Usato quando la
-   * riproduzione dell'audio ElevenLabs è bloccata dalle policy autoplay
-   * (tipico nell'iframe di anteprima) o quando l'edge TTS non risponde.
-   * Così l'operatore sente SEMPRE una risposta vocale.
+   * generazione/riproduzione dell'audio ElevenLabs fallisce davvero (edge
+   * non raggiungibile o decode impossibile). NON usato per blocchi autoplay,
+   * altrimenti l'operatore sentirebbe la voce sintetica al posto di ElevenLabs.
    */
   const speakNative = useCallback((text: string) => {
     try {
@@ -52,66 +63,32 @@ export function useVoiceOutput() {
     }
   }, []);
 
-  /**
-   * Elemento <audio> persistente e riutilizzato. Lo sblocco autoplay del
-   * browser è legato all'elemento (Safari) o al documento (Chrome) sbloccato
-   * durante un gesto utente. Creare un NUOVO Audio() ad ogni speak() perdeva
-   * lo sblocco → play() bloccato con "no supported source". Riusiamo sempre
-   * lo stesso elemento sbloccato in prime().
-   */
-  const getAudioEl = useCallback((): HTMLAudioElement => {
-    if (!audioRef.current) {
-      const el = new Audio();
-      el.preload = "auto";
-      el.setAttribute("playsinline", "true");
-      el.style.display = "none";
-      document.body.appendChild(el);
-      audioRef.current = el;
-    }
-    return audioRef.current;
-  }, []);
-
   const cleanup = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.removeAttribute("src");
-    }
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = null;
+    playTokenRef.current += 1;
+    if (sourceRef.current) {
+      try {
+        sourceRef.current.onended = null;
+        sourceRef.current.stop();
+      } catch { /* ignore */ }
+      try { sourceRef.current.disconnect(); } catch { /* ignore */ }
+      sourceRef.current = null;
     }
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
     setSpeaking(false);
   }, []);
 
   /**
-   * Sblocca la riproduzione audio nel contesto di un gesto utente (click su
-   * "Invia", click sul mic, ecc.). Va chiamato SINCRONICAMENTE dentro
-   * l'handler dell'evento, prima di qualsiasi await. Idempotente.
+   * Sblocca l'AudioContext nel contesto di un gesto utente (click su "Invia",
+   * click sul mic, qualsiasi pointerdown). Va chiamato SINCRONICAMENTE dentro
+   * l'handler dell'evento. Idempotente.
    */
   const prime = useCallback(() => {
-    if (primedRef.current) return;
-    try {
-      const a = getAudioEl();
-      a.muted = true;
-      a.src = SILENT_WAV;
-      a.load();
-      const p = a.play();
-      if (p && typeof p.then === "function") {
-        p.then(() => {
-          a.pause();
-          a.currentTime = 0;
-          a.muted = false;
-          primedRef.current = true;
-        }).catch(() => { /* gesture mancante: ritenteremo al prossimo click */ });
-      } else {
-        a.muted = false;
-        primedRef.current = true;
-      }
-    } catch {
-      /* ignore */
+    const ctx = getCtx();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      void ctx.resume().catch(() => { /* ritenteremo al prossimo gesto */ });
     }
-  }, [getAudioEl]);
+  }, [getCtx]);
 
   const toggleMute = useCallback(() => {
     setMuted((m) => {
@@ -125,8 +102,9 @@ export function useVoiceOutput() {
   const speak = useCallback(
     async (text: string) => {
       if (muted || !text?.trim()) return;
+      cleanup();
+      const myToken = playTokenRef.current;
       try {
-        cleanup();
         setSpeaking(true);
 
         const response = await fetch(
@@ -150,54 +128,39 @@ export function useVoiceOutput() {
         }
 
         const responseBuffer = await response.arrayBuffer();
-        const bytes = new Uint8Array(responseBuffer.slice(0, 12));
-        const signature = String.fromCharCode(...bytes);
-        const contentType = response.headers.get("content-type") ?? "";
-        const detectedType = signature.startsWith("ID3") || bytes[0] === 0xff
-          ? "audio/mpeg"
-          : signature.startsWith("RIFF")
-            ? "audio/wav"
-            : signature.startsWith("OggS")
-              ? "audio/ogg"
-              : AUDIO_MIME_BY_CONTENT_TYPE.find(([pattern]) => pattern.test(contentType))?.[1];
-        if (!detectedType) {
-          const detail = new TextDecoder().decode(responseBuffer).slice(0, 240);
-          log.warn("[tts] unexpected non-audio response", { contentType, detail });
-          cleanup();
+        if (myToken !== playTokenRef.current) return; // superseded da una nuova speak
+
+        const ctx = getCtx();
+        if (!ctx) {
+          speakNative(text);
           return;
         }
-
-        const blob = new Blob([responseBuffer], { type: detectedType });
-        const url = URL.createObjectURL(blob);
-        urlRef.current = url;
-
-        const audio = getAudioEl();
-        audio.muted = false;
-        audio.src = url;
-        audio.onended = () => cleanup();
-        audio.onerror = () => cleanup();
-        audio.load();
-        try {
-          await audio.play();
-        } catch (playErr) {
-          // Autoplay bloccato (NotAllowedError): tipico quando speak() viene
-          // chiamato da useEffect senza prime() preventivo. Logghiamo esplicito
-          // così si vede in console invece di fallire in silenzio.
-          log.warn("[tts] audio.play blocked (autoplay policy)", {
-            error: playErr instanceof Error ? playErr.message : String(playErr),
-            primed: primedRef.current,
-          });
-          cleanup();
-          // Fallback voce nativa quando l'autoplay blocca l'audio ElevenLabs.
-          speakNative(text);
+        if (ctx.state === "suspended") {
+          await ctx.resume().catch(() => { /* ignore */ });
         }
+
+        const audioBuffer = await ctx.decodeAudioData(responseBuffer.slice(0));
+        if (myToken !== playTokenRef.current) return; // superseded durante decode
+
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        source.onended = () => {
+          if (sourceRef.current === source) {
+            sourceRef.current = null;
+            setSpeaking(false);
+          }
+        };
+        sourceRef.current = source;
+        setSpeaking(true);
+        source.start(0);
       } catch (e) {
         log.error("[tts] failed", { error: e });
         cleanup();
         speakNative(text);
       }
     },
-    [muted, cleanup, getAudioEl, speakNative],
+    [muted, cleanup, getCtx, speakNative],
   );
 
   const stop = useCallback(() => {
