@@ -303,16 +303,8 @@ export function useCommandSubmit(state: CommandStateApi) {
         });
       }
 
-      // FAST LANE: simple read query OR elliptical follow-up with fresh context
-      const fastLane =
-        looksLikeSimpleQuery(text) ||
-        (isElliptical(text) && isContextUsable());
-
-      if (fastLane) {
-        await runFastLaneWrapped(text, hint);
-        return;
-      }
-
+      // FLUSSO UNICO: ogni richiesta passa dal planner (planExecution → planRunner),
+      // così memoria/KB/prompt operativi vengono sempre caricati. Nessuna scorciatoia.
       setFlowPhase("thinking");
       setShowTools(true);
       setToolPhase("activating");
