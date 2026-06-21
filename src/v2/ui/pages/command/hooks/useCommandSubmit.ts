@@ -4,11 +4,10 @@
  * Flow for every user prompt:
  *   1. Push user message + thinking indicator
  *   2. Lexical normalization (typo fix: pane→partner, nyc→New York, ecc.)
- *   3. FAST LANE: if prompt clearly matches `ai-query` and is single-shot, skip
- *      planExecution and run aiQueryTool directly (with conversational context).
- *   4. Otherwise: planExecution → planRunner → per-step approval (write tools)
- *   5. Conversational AI comment + suggested next actions on the final result
- *   6. Persist last query "shape" in queryContext for follow-up handling
+ *   3. FLUSSO UNICO: planExecution → planRunner → per-step approval (write tools).
+ *      Nessuna scorciatoia: ogni richiesta carica memoria/KB/prompt operativi.
+ *   4. Conversational AI comment + suggested next actions on the final result
+ *   5. Persist last query "shape" in queryContext for follow-up handling
  *
  * Refactored into sub-modules:
  *   - useCommandHistory: Build and manage conversation history
@@ -17,7 +16,6 @@
  *   - useQueryContext: Manage conversational context persistence
  *   - usePlanExecution: Execute multi-step plans
  *   - usePlanCompletion: Render completed plans
- *   - useFastLane: Direct tool execution for simple queries
  *   - useApprovalHandler: Handle user approvals
  */
 import { useCallback } from "react";
