@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Send, Wand2, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import RealtimeVoiceToggle from "./RealtimeVoiceToggle";
 
 interface CommandInputProps {
   input: string;
@@ -86,6 +87,7 @@ export function CommandInput({
               <Mic className="w-4 h-4" />
             )}
           </motion.button>
+          <RealtimeVoiceToggle compact />
           <input
             type="text"
             placeholder="Scrivi un obiettivo..."

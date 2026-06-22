@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { Activity, Globe2, HelpCircle, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import RealtimeVoiceToggle from "./RealtimeVoiceToggle";
 
 interface AgentDot {
   agent: string;
@@ -125,9 +124,6 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
               <Globe2 className="w-3.5 h-3.5" />
               Lingua: {lang === "it" ? "IT" : "EN"}
             </button>
-            <div className="px-2 py-1">
-              <RealtimeVoiceToggle />
-            </div>
           </div>
         </PopoverContent>
       </Popover>
