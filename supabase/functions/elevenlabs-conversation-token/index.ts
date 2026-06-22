@@ -72,20 +72,11 @@ serve(async (req) => {
   const cors = getCorsHeaders(origin);
 
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
-  const agentId = Deno.env.get("ELEVENLABS_COMMAND_AGENT_ID");
+  const secretAgentId = Deno.env.get("ELEVENLABS_COMMAND_AGENT_ID");
 
   if (!apiKey) {
     return new Response(
       JSON.stringify({ error: "ELEVENLABS_API_KEY non configurato" }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
-    );
-  }
-  if (!agentId) {
-    return new Response(
-      JSON.stringify({
-        error:
-          "ELEVENLABS_COMMAND_AGENT_ID non configurato. Crea un agente in ElevenLabs e imposta il secret.",
-      }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }
@@ -95,6 +86,47 @@ serve(async (req) => {
   const auth = await requireAuth(req, cors);
   if (isAuthError(auth)) return auth;
   const authHeader = req.headers.get("Authorization") || "";
+
+  // Risoluzione agent_id: body (validato contro allowlist DB) → DB → secret.
+  // Gli agenti vocali validi vivono nella tabella `agents` (elevenlabs_agent_id).
+  let requestedAgentId: string | null = null;
+  try {
+    const body = await req.json().catch(() => ({}));
+    requestedAgentId = (body?.agent_id as string | undefined)?.trim() || null;
+  } catch { /* body opzionale */ }
+
+  let agentId: string | null = null;
+  try {
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const { data: rows } = await supabase
+      .from("agents")
+      .select("elevenlabs_agent_id")
+      .not("elevenlabs_agent_id", "is", null);
+    const allowlist = new Set(
+      (rows ?? [])
+        .map((r) => (r.elevenlabs_agent_id as string | null)?.trim())
+        .filter((v): v is string => !!v),
+    );
+    if (requestedAgentId && allowlist.has(requestedAgentId)) {
+      agentId = requestedAgentId;
+    } else if (allowlist.size > 0) {
+      agentId = Array.from(allowlist)[0];
+    }
+  } catch (e) {
+    console.warn("agent allowlist lookup failed", (e as Error).message);
+  }
+  // Fallback finale al secret se la DB non fornisce nulla.
+  if (!agentId) agentId = secretAgentId || null;
+
+  if (!agentId) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Nessun agente vocale configurato. Imposta elevenlabs_agent_id su un agente o il secret ELEVENLABS_COMMAND_AGENT_ID.",
+      }),
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+    );
+  }
 
   try {
     const resp = await fetch(
