@@ -8,7 +8,11 @@ import { useCommandRealtimeVoice } from "../hooks/useCommandRealtimeVoice";
 import { toast as sonnerToast } from "sonner";
 import { useEffect } from "react";
 
-export function RealtimeVoiceToggle() {
+interface Props {
+  compact?: boolean;
+}
+
+export function RealtimeVoiceToggle({ compact }: Props) {
   const rt = useCommandRealtimeVoice();
 
   useEffect(() => {
@@ -17,6 +21,35 @@ export function RealtimeVoiceToggle() {
 
   const active = rt.status === "connected";
   const busy = rt.status === "connecting";
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onClick={() => (active ? void rt.stop() : void rt.start())}
+        disabled={busy}
+        title={
+          active
+            ? "Termina conversazione vocale realtime"
+            : "Avvia conversazione vocale realtime (ElevenLabs)"
+        }
+        aria-label="Voce realtime ElevenLabs"
+        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${
+          active
+            ? "bg-primary/20 text-primary animate-pulse"
+            : "text-muted-foreground hover:text-foreground"
+        } ${busy ? "opacity-60 cursor-not-allowed" : ""}`}
+      >
+        {busy ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : active ? (
+          <MicOff className="w-4 h-4" />
+        ) : (
+          <Mic className="w-4 h-4" />
+        )}
+      </button>
+    );
+  }
 
   return (
     <button

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Send, Wand2, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import RealtimeVoiceToggle from "./RealtimeVoiceToggle";
 
 interface CommandInputProps {
   input: string;

@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { Activity, Globe2, HelpCircle, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import RealtimeVoiceToggle from "./RealtimeVoiceToggle";
 
 interface AgentDot {
   agent: string;
