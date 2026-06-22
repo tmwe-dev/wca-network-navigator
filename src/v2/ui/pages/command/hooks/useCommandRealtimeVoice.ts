@@ -100,20 +100,38 @@ export function useCommandRealtimeVoice(): CommandRealtimeVoice {
       if (!token && !signedUrl) throw new Error("Token ElevenLabs non ricevuto");
 
       // WebSocket (signed URL) preferito: il proxy fetch del preview Lovable
-      // blocca il signaling WebRTC/LiveKit. Fallback a WebRTC se manca l'URL.
+      // può bloccare il signaling WebRTC/LiveKit. Se però il socket viene
+      // chiuso dal provider/proxy, ritentiamo con WebRTC invece di lasciare
+      // l'utente bloccato su "socket error".
+      let startedConversationId: string | null = null;
       if (signedUrl) {
-        await conversation.startSession({
-          signedUrl,
-          connectionType: "websocket",
-        });
+        try {
+          startedConversationId = await conversation.startSession({
+            signedUrl,
+            connectionType: "websocket",
+          });
+        } catch (socketError) {
+          if (!token) throw socketError;
+          log.warn("realtime websocket failed, falling back to webrtc", {
+            error: socketError instanceof Error ? socketError.message : String(socketError),
+          });
+          try {
+            await conversation.endSession();
+          } catch { /* noop: session may not have opened */ }
+          startedConversationId = await conversation.startSession({
+            conversationToken: token,
+            connectionType: "webrtc",
+          });
+        }
       } else {
-        await conversation.startSession({
+        startedConversationId = await conversation.startSession({
           conversationToken: token!,
           connectionType: "webrtc",
         });
       }
+      setError(null);
       try {
-        conversationIdRef.current = conversation.getId() || null;
+        conversationIdRef.current = startedConversationId || conversation.getId() || null;
       } catch { /* noop */ }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
