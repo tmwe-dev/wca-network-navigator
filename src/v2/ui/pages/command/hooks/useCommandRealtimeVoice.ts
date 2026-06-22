@@ -89,15 +89,29 @@ export function useCommandRealtimeVoice(): CommandRealtimeVoice {
         { body: {} },
       );
       if (invokeErr) throw invokeErr;
-      const payload = data as { token?: string; bridge_token?: string } | null;
+      const payload = data as {
+        token?: string;
+        signed_url?: string;
+        bridge_token?: string;
+      } | null;
       const token = payload?.token;
+      const signedUrl = payload?.signed_url;
       bridgeTokenRef.current = payload?.bridge_token || null;
-      if (!token) throw new Error("Token ElevenLabs non ricevuto");
+      if (!token && !signedUrl) throw new Error("Token ElevenLabs non ricevuto");
 
-      await conversation.startSession({
-        conversationToken: token,
-        connectionType: "webrtc",
-      });
+      // WebSocket (signed URL) preferito: il proxy fetch del preview Lovable
+      // blocca il signaling WebRTC/LiveKit. Fallback a WebRTC se manca l'URL.
+      if (signedUrl) {
+        await conversation.startSession({
+          signedUrl,
+          connectionType: "websocket",
+        });
+      } else {
+        await conversation.startSession({
+          conversationToken: token!,
+          connectionType: "webrtc",
+        });
+      }
       try {
         conversationIdRef.current = conversation.getId() || null;
       } catch { /* noop */ }
