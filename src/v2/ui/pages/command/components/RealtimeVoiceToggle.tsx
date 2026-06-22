@@ -3,7 +3,7 @@
  * ElevenLabs Conversational session for Command. Default voice (TTS+STT)
  * keeps working independently.
  */
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Radio, Square, Loader2 } from "lucide-react";
 import { useCommandRealtimeVoice } from "../hooks/useCommandRealtimeVoice";
 import { toast as sonnerToast } from "sonner";
 import { useEffect } from "react";
@@ -43,9 +43,9 @@ export function RealtimeVoiceToggle({ compact }: Props) {
         {busy ? (
           <Loader2 className="w-4 h-4 animate-spin" />
         ) : active ? (
-          <MicOff className="w-4 h-4" />
+          <Square className="w-4 h-4" />
         ) : (
-          <Mic className="w-4 h-4" />
+          <Radio className="w-4 h-4" />
         )}
       </button>
     );
@@ -71,9 +71,9 @@ export function RealtimeVoiceToggle({ compact }: Props) {
       {busy ? (
         <Loader2 className="w-3 h-3 animate-spin" />
       ) : active ? (
-        <MicOff className="w-3 h-3" />
+        <Square className="w-3 h-3" />
       ) : (
-        <Mic className="w-3 h-3" />
+        <Radio className="w-3 h-3" />
       )}
       <span>{active ? "Realtime ON" : "Realtime"}</span>
     </button>
