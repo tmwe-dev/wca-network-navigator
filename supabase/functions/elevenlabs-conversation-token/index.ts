@@ -153,10 +153,26 @@ serve(async (req) => {
       );
     }
 
+    // Signed URL WebSocket — fallback più compatibile del WebRTC, non soggetto
+    // al proxy fetch del preview Lovable che blocca il signaling LiveKit.
+    let signedUrl: string | null = null;
+    try {
+      const sresp = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`,
+        { headers: { "xi-api-key": apiKey } },
+      );
+      if (sresp.ok) {
+        const sdata = await sresp.json();
+        signedUrl = (sdata?.signed_url as string | undefined) || null;
+      }
+    } catch (e) {
+      console.warn("signed url fetch failed", (e as Error).message);
+    }
+
     // Mint bridge_token per autenticare il client tool ask_brain → command-ask-brain
     const bridgeToken = await mintBridgeToken(auth.userId);
 
-    return new Response(JSON.stringify({ token, agentId, bridge_token: bridgeToken }), {
+    return new Response(JSON.stringify({ token, signed_url: signedUrl, agentId, bridge_token: bridgeToken }), {
       status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });
