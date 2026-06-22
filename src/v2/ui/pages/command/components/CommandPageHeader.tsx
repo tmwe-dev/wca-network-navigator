@@ -124,9 +124,6 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
               <Globe2 className="w-3.5 h-3.5" />
               Lingua: {lang === "it" ? "IT" : "EN"}
             </button>
-            <div className="px-2 py-1">
-              <RealtimeVoiceToggle />
-            </div>
           </div>
         </PopoverContent>
       </Popover>
