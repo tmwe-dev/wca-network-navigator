@@ -24,6 +24,27 @@ function canvasForResult(result: ToolResult): CanvasType {
   }
 }
 
+/**
+ * Un risultato è "vuoto" se non porta informazione utile al commento.
+ * Serve per evitare che, in un piano multi-step, il Direttore commenti
+ * sull'ultimo step vuoto (es. "Conteggi paese: nessun dato") ignorando uno
+ * step precedente che ha invece trovato dati (es. "Ricerca AI: 9 partner").
+ */
+function isEmptyResult(result: ToolResult): boolean {
+  switch (result.kind) {
+    case "table":     return result.rows.length === 0;
+    case "card-grid": return result.cards.length === 0;
+    case "multi":     return result.parts.every((p) => (p.count ?? p.rows.length) === 0);
+    case "result": {
+      const count = result.meta && "count" in result.meta ? Number(result.meta.count) : undefined;
+      if (count === 0) return true;
+      return /\bnessun\w*\b|\bnon\s+(?:ci\s+sono|risult|trovat)/i.test(result.message ?? "");
+    }
+    // composer / approval / report / timeline / flow → mai considerati vuoti
+    default: return false;
+  }
+}
+
 interface PlanCompletionDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
   ts: () => string;
@@ -79,7 +100,26 @@ export function usePlanCompletion(deps: PlanCompletionDeps) {
 
       const lastStep = final.steps[final.steps.length - 1];
       const lastResult = final.results[lastStep.stepNumber];
-      if (lastResult) {
+
+      // Scegli lo step su cui commentare: l'ULTIMO step con un risultato
+      // NON vuoto. Così un piano "Ricerca (9 partner) → Conteggi (vuoto)"
+      // fa commentare il Direttore sui 9 partner, non sul vuoto finale.
+      let commentStep = lastStep;
+      let commentResult = lastResult;
+      for (let i = final.steps.length - 1; i >= 0; i--) {
+        const s = final.steps[i];
+        const r = final.results[s.stepNumber];
+        if (r && !isEmptyResult(r)) {
+          commentStep = s;
+          commentResult = r;
+          break;
+        }
+      }
+
+      if (commentResult) {
+        setLiveResult(commentResult);
+        setCanvas(canvasForResult(commentResult));
+      } else if (lastResult) {
         setLiveResult(lastResult);
         setCanvas(canvasForResult(lastResult));
       }
@@ -88,8 +128,8 @@ export function usePlanCompletion(deps: PlanCompletionDeps) {
       setExecProgress(100);
       setShowTools(false);
 
-      if (lastResult && lastResult.kind !== "approval") {
-        await onCommentNeeded(userPrompt, lastStep.toolId, lastResult, trace);
+      if (commentResult && commentResult.kind !== "approval") {
+        await onCommentNeeded(userPrompt, commentStep.toolId, commentResult, trace);
       } else {
         const finalTrace = trace?.finish();
         addMessage({
