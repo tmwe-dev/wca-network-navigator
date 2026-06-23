@@ -72,6 +72,19 @@ export function CommandOutput({
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto">
+                  {liveResult.meta?.count === 0 && (
+                    <div
+                      className="mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-medium"
+                      style={{
+                        color: "hsl(var(--warning))",
+                        background: "hsl(var(--warning) / 0.10)",
+                        border: "1px solid hsl(var(--warning) / 0.30)",
+                      }}
+                    >
+                      <SearchX className="w-3.5 h-3.5 shrink-0" />
+                      <span>Obiettivo non raggiunto · nessun record corrisponde ai filtri</span>
+                    </div>
+                  )}
                   <TableCanvas
                     columns={[...liveResult.columns]}
                     rows={[...liveResult.rows]}
