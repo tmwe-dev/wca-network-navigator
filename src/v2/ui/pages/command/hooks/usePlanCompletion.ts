@@ -24,6 +24,27 @@ function canvasForResult(result: ToolResult): CanvasType {
   }
 }
 
+/**
+ * Un risultato è "vuoto" se non porta informazione utile al commento.
+ * Serve per evitare che, in un piano multi-step, il Direttore commenti
+ * sull'ultimo step vuoto (es. "Conteggi paese: nessun dato") ignorando uno
+ * step precedente che ha invece trovato dati (es. "Ricerca AI: 9 partner").
+ */
+function isEmptyResult(result: ToolResult): boolean {
+  switch (result.kind) {
+    case "table":     return result.rows.length === 0;
+    case "card-grid": return result.cards.length === 0;
+    case "multi":     return result.parts.every((p) => (p.count ?? p.rows.length) === 0);
+    case "result": {
+      const count = result.meta && "count" in result.meta ? Number(result.meta.count) : undefined;
+      if (count === 0) return true;
+      return /\bnessun\w*\b|\bnon\s+(?:ci\s+sono|risult|trovat)/i.test(result.message ?? "");
+    }
+    // composer / approval / report / timeline / flow → mai considerati vuoti
+    default: return false;
+  }
+}
+
 interface PlanCompletionDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
   ts: () => string;
