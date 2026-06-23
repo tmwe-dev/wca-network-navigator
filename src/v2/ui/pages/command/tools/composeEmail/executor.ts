@@ -193,6 +193,47 @@ export const composeEmailTool: Tool = {
 
     const { person, company, email } = extractPersonAndCompany(prompt);
 
+    // ── 0c) Fallback contesto chat: nessun destinatario esplicito nel prompt
+    // ma la conversazione recente indica un paese di lavoro (es. "9 partner a
+    // Malta" → "preparane una per uno dei tanti"). Recuperiamo i partner dal
+    // paese citato in chat invece di ripetere la domanda. ──
+    if (!email && !company && !explicitCountry && !payloadSelection.partnerIds.length) {
+      const histCountry = detectCountryFromHistory(context?.history);
+      if (histCountry) {
+        const partners = await searchPartnersByCountry(histCountry.code);
+        if (partners.length > 0) {
+          const tone = detectTone(prompt);
+          // L'utente chiede un singolo esempio → bozza per il primo partner.
+          if (isSingleSampleIntent(prompt) || partners.length === 1) {
+            setLastQueryResultContext({
+              partnerIds: partners.map((p) => p.id),
+              countryCode: histCountry.code,
+              countryLabel: histCountry.label,
+              originalPrompt: prompt,
+              selectionLabel: `partner in ${histCountry.label}`,
+              count: partners.length,
+            });
+            return buildSingleComposerResult({ partner: partners[0], person: null, email: null, prompt });
+          }
+          // Altrimenti batch per tutti i partner del paese.
+          const drafts = await generateDraftsBatch(partners, tone, prompt);
+          setLastComposerContext({
+            countryCode: histCountry.code,
+            countryLabel: histCountry.label,
+            partnerIds: partners.map((p) => p.id),
+            tone,
+            originalGoal: prompt,
+          });
+          return buildBatchComposerResult({
+            partners, drafts, tone,
+            countryCode: histCountry.code,
+            countryLabel: histCountry.label,
+            prompt,
+          });
+        }
+      }
+    }
+
     // Guardrail anti-falso partner
     if (looksLikeGenericInvite(prompt) && !email) {
       return {
