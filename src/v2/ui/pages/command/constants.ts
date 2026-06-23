@@ -100,6 +100,9 @@ export const quickPrompts = [
   "Mostrami i partner italiani senza email",
   "Quante attività aperte ho oggi?",
   "Cerca contatti inattivi da più di 30 giorni",
+  "Mostrami la posta in arrivo",
+  "Cosa devo fare oggi? Apri l'agenda",
+  "Stato delle missioni autopilot",
   "Stato della coda outreach",
   "Riepilogo agenti nelle ultime 24h",
   "Snapshot dashboard generale",
@@ -112,6 +115,8 @@ export const capabilities = [
   "Composizione Email",
   "Gestione Campagne",
   "Analisi Pipeline",
+  "Posta in arrivo & Agenda",
+  "Controllo Missioni",
   "Knowledge Base",
   "Audit & Governance",
 ];
