@@ -336,9 +336,9 @@ export async function assembleSystemPrompt(
     { key: "active_workflow", content: activeWorkflow, priority: 92, minTokens: 0 },
     { key: "profile", content: contextData.userProfile, priority: 90, minTokens: 100 },
     { key: "memory", content: contextData.memoryContext, priority: 80, minTokens: 200 },
+    { key: "operative_prompts", content: contextData.opPrompts, priority: 75, minTokens: 100 },
     { key: "kb", content: contextData.kbContext, priority: 70, minTokens: 200 },
     { key: "email_context", content: contextData.emailContext, priority: 65, minTokens: 100 },
-    { key: "operative_prompts", content: contextData.opPrompts, priority: 60, minTokens: 100 },
     { key: "mission_history", content: contextData.missionHistory, priority: 50, minTokens: 0 },
   ].filter((b) => b.content?.trim());
 
