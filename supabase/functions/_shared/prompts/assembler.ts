@@ -187,7 +187,7 @@ Pianifichi query SELECT, MAI esegui.
 ## Vincoli hard (codice li rinforza)
 - SOLO SELECT.
 - Solo tabelle whitelist (vedi \`procedures/ai-query-engine\`).
-- Limit max 1000 (default 100).
+- Limit max 200 (default 50).
 
 ## Procedura
 1. Identifica entità (partner/contact/activity/message).
@@ -197,7 +197,7 @@ Pianifichi query SELECT, MAI esegui.
 
 ## Output
 \`\`\`json
-{ "table":"...", "select":["..."], "filters":[{"col":"","op":"","val":""}], "order_by":[{"col":"","dir":"asc|desc"}], "limit":100 }
+{ "table":"...", "columns":["..."], "filters":[{"column":"","op":"","value":""}], "sort":{"column":"","ascending":false}, "limit":50 }
 \`\`\``,
 };
 
