@@ -51,6 +51,30 @@ export function detectCountryCode(prompt: string): { code: string; label: string
   return null;
 }
 
+/**
+ * Recupera il paese di lavoro dalla conversazione recente quando il prompt
+ * corrente non lo nomina esplicitamente (es. "preparane una per uno dei tanti").
+ * Scansiona gli ultimi turni dal più recente al più vecchio.
+ */
+export function detectCountryFromHistory(
+  history: ReadonlyArray<{ role: string; content: string }> | undefined,
+): { code: string; label: string } | null {
+  if (!history || history.length === 0) return null;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const turn = history[i];
+    if (!turn?.content) continue;
+    const hit = detectCountryCode(turn.content);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** True se l'utente chiede un singolo esempio ("per uno", "uno dei tanti"). */
+export function isSingleSampleIntent(prompt: string): boolean {
+  const p = (prompt ?? "").toLowerCase();
+  return /\b(per\s+uno|uno\s+dei|uno\s+di\s+loro|un\s+partner|una\s+sola|un\s+esempio|di\s+esempio|un'?\s*email\s+per\s+uno)\b/i.test(p);
+}
+
 export function isCountryWideIntent(prompt: string): boolean {
   const lower = prompt.toLowerCase();
   return /\b(tutti\s+i\s+(?:nostri\s+)?partner|(?:ai|per\s+(?:i|gli)|i|gli)\s+(?:nostri\s+)?partner\s+(?:a|in|di|del|della|dello|dei|degli)\s+\w+|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower);
