@@ -34,6 +34,9 @@ import { sendWhatsappTool } from "./sendWhatsapp";
 import { sendLinkedinTool } from "./sendLinkedin";
 import { launchMissionTool } from "./launchMission";
 import { dailyBriefingTool } from "./dailyBriefing";
+import { readInboxTool } from "./readInbox";
+import { listAgendaTool } from "./listAgenda";
+import { listMissionsTool } from "./listMissions";
 import { parseBusinessCardTool } from "./parseBusinessCard";
 import { kbIngestDocumentTool } from "./kbIngestDocument";
 import { sendEmailDirectTool } from "./sendEmailDirect";
@@ -66,6 +69,9 @@ const TOOLS: readonly Tool[] = [
   dashboardSnapshotTool,
   outreachQueueStatusTool,
   dailyBriefingTool,
+  readInboxTool,
+  listAgendaTool,
+  listMissionsTool,
   followupBatchTool,
   agentReportTool,
   campaignStatusTool,
