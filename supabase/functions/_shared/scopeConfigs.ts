@@ -374,21 +374,12 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
       // pattern, prompt operativi DB) perché possa decidere quale agente
       // attivare e proporre piani con cognizione di causa.
       return {
-        systemPrompt: [
-          "Sei Command, l'orchestratore vocale/testuale del sistema WCA Network Navigator.",
-          "",
-          "REGOLE OPERATIVE OBBLIGATORIE:",
-          "1. DETAIL-MODE: se la query dell'utente cita un partner/azienda specifica (nome proprio, città+azienda, WCA ID),",
-          "   chiama PRIMA `search_partners` e SE trovi esattamente 1 match (o un match dominante),",
-          "   chiama IMMEDIATAMENTE `get_partner_detail` con il partner_id e rispondi con i dati completi.",
-          "   NON proporre 'top rated' o 'deep search' come prima azione su una query mirata: leggi prima i dati che hai già.",
-          "2. CONTATTI: il campo `contacts_count_total` di `get_partner_detail` è la verità (somma partner_contacts + business_cards + imported_contacts deduplicati per email).",
-          "   Usa SEMPRE `contacts_count_total` quando l'utente chiede 'quanti contatti ha X'.",
-          "   Mostra `contacts_breakdown` se l'utente chiede dettagli sulle fonti.",
-          "3. METADATI PARTNER: per città, WCA ID, scadenza membership, networks, rating, blacklist usa SEMPRE `get_partner_detail` (mai inventare).",
-          "4. DISCOVERY-MODE: solo per query generiche ('chi sono i top in IT', 'partner senza email') usa search_partners + filtri e proponi azioni.",
-          "5. Risposte concise (max 4-6 righe per voce/chat). Mai prose lunghe quando bastano i fatti.",
-        ].join("\n"),
+        // systemPrompt: provided by composeSystemPrompt({ scope: "command" }).
+        // Le regole operative (DETAIL-MODE, grounding contatti, multidominio)
+        // vivono nel Prompt Lab DB (operative_prompts context='command') e sono
+        // iniettate via operativePromptsLoader → raggiungono router, planner e
+        // brain conversazionale. Niente regole duplicate hardcoded qui
+        // (vedi mem://architecture/ai-prompt-freedom-doctrine).
         tools: PLATFORM_TOOLS,
         temperature: 0.3,
         creditLabel: "Command Orchestrator",
