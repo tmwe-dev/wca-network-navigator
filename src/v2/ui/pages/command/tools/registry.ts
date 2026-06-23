@@ -33,7 +33,11 @@ import { browserNavigateAndExtractTool } from "./browserNavigateAndExtract";
 import { sendWhatsappTool } from "./sendWhatsapp";
 import { sendLinkedinTool } from "./sendLinkedin";
 import { launchMissionTool } from "./launchMission";
+import { missionControlTool } from "./missionControl";
 import { dailyBriefingTool } from "./dailyBriefing";
+import { readInboxTool } from "./readInbox";
+import { listAgendaTool } from "./listAgenda";
+import { listMissionsTool } from "./listMissions";
 import { parseBusinessCardTool } from "./parseBusinessCard";
 import { kbIngestDocumentTool } from "./kbIngestDocument";
 import { sendEmailDirectTool } from "./sendEmailDirect";
@@ -66,6 +70,9 @@ const TOOLS: readonly Tool[] = [
   dashboardSnapshotTool,
   outreachQueueStatusTool,
   dailyBriefingTool,
+  readInboxTool,
+  listAgendaTool,
+  listMissionsTool,
   followupBatchTool,
   agentReportTool,
   campaignStatusTool,
@@ -93,6 +100,7 @@ const TOOLS: readonly Tool[] = [
   sendLinkedinTool,
   sendEmailDirectTool,
   launchMissionTool,
+  missionControlTool,
   pendingActionExecutorTool,
   parseBusinessCardTool,
   kbIngestDocumentTool,
@@ -186,6 +194,7 @@ const WRITE_TOOL_IDS = new Set<string>([
   "calculate-lead-scores",
   "deduplicate-contacts",
   "launch-mission",
+  "mission-control",
   "parse-business-card",
   "kb-ingest-document",
   "deduplicate-partners",
