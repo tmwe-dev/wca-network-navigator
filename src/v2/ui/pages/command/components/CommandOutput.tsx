@@ -90,37 +90,74 @@ export function CommandOutput({
               </div>
             ) : null
           )}
-          {canvas === "live-result" && liveResult && liveResult.kind === "result" && (
-            <div
-              className="h-full flex flex-col rounded-2xl p-6"
-              style={{
-                background: "hsl(var(--card) / 0.75)",
-                backdropFilter: "blur(40px) saturate(1.1)",
-                border: "1px solid hsl(var(--foreground) / 0.12)",
-                boxShadow:
-                  "0 0 80px hsl(var(--primary) / 0.03), 0 30px 60px -20px hsl(0 0% 0% / 0.65)",
-              }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
-                <button
-                  onClick={onClose}
-                  className="text-muted-foreground hover:text-foreground p-1.5"
-                  aria-label="Chiudi canvas"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              {liveResult.meta && (
-                <div className="mb-4 text-[10px] text-muted-foreground font-mono">
-                  {liveResult.meta.count} risultati · {liveResult.meta.sourceLabel}
+          {canvas === "live-result" && liveResult && liveResult.kind === "result" && (() => {
+            const status = liveResult.status ?? "ok";
+            const failed = status !== "ok";
+            const tone =
+              status === "error"
+                ? { Icon: AlertTriangle, label: "Obiettivo non raggiunto · errore query", color: "destructive" }
+                : status === "rate-limited"
+                ? { Icon: Clock, label: "Obiettivo non raggiunto · servizio occupato", color: "warning" }
+                : status === "unsupported"
+                ? { Icon: SearchX, label: "Obiettivo non raggiunto · richiesta non supportata", color: "warning" }
+                : status === "empty"
+                ? { Icon: SearchX, label: "Obiettivo non raggiunto · nessun risultato", color: "warning" }
+                : null;
+            return (
+              <div
+                className="h-full flex flex-col rounded-2xl p-6"
+                style={{
+                  background: "hsl(var(--card) / 0.75)",
+                  backdropFilter: "blur(40px) saturate(1.1)",
+                  border: failed
+                    ? `1px solid hsl(var(--${tone?.color}) / 0.45)`
+                    : "1px solid hsl(var(--foreground) / 0.12)",
+                  boxShadow: failed
+                    ? `0 0 60px hsl(var(--${tone?.color}) / 0.10), 0 30px 60px -20px hsl(0 0% 0% / 0.65)`
+                    : "0 0 80px hsl(var(--primary) / 0.03), 0 30px 60px -20px hsl(0 0% 0% / 0.65)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                  <button
+                    onClick={onClose}
+                    className="text-muted-foreground hover:text-foreground p-1.5"
+                    aria-label="Chiudi canvas"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              )}
-              <div className="rounded-xl border border-border/30 bg-background/35 p-4 text-[12px] leading-relaxed text-foreground whitespace-pre-line">
-                {liveResult.message}
+                {failed && tone && (
+                  <div
+                    className="mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-medium"
+                    style={{
+                      color: `hsl(var(--${tone.color}))`,
+                      background: `hsl(var(--${tone.color}) / 0.10)`,
+                      border: `1px solid hsl(var(--${tone.color}) / 0.30)`,
+                    }}
+                  >
+                    <tone.Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{tone.label}</span>
+                  </div>
+                )}
+                {liveResult.meta && (
+                  <div className="mb-4 text-[10px] text-muted-foreground font-mono">
+                    {liveResult.meta.count} risultati · {liveResult.meta.sourceLabel}
+                  </div>
+                )}
+                <div
+                  className="rounded-xl border p-4 text-[12px] leading-relaxed whitespace-pre-line"
+                  style={{
+                    color: failed ? `hsl(var(--${tone?.color}))` : "hsl(var(--foreground))",
+                    background: failed ? `hsl(var(--${tone?.color}) / 0.06)` : "hsl(var(--background) / 0.35)",
+                    borderColor: failed ? `hsl(var(--${tone?.color}) / 0.25)` : "hsl(var(--border) / 0.3)",
+                  }}
+                >
+                  {liveResult.message}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
           {canvas === "live-multi" && liveResult && liveResult.kind === "multi" && (
             <div className="float-panel p-6 rounded-2xl">
               <div className="flex items-center justify-between mb-4">
