@@ -158,6 +158,12 @@ export type ToolResult =
       readonly title: string;
       readonly message: string;
       readonly meta?: ToolResultMeta;
+      /**
+       * Esito della richiesta. Quando diverso da "ok" la card lo evidenzia
+       * visivamente (obiettivo NON raggiunto): errore query, servizio occupato,
+       * richiesta non supportata o nessun risultato.
+       */
+      readonly status?: "ok" | "error" | "rate-limited" | "unsupported" | "empty";
     }
   | {
       readonly kind: "multi";
