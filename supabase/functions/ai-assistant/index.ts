@@ -161,7 +161,7 @@ serve(async (req) => {
         const { block } = await mod.loadOperativePrompts(supabase, userId ?? "", {
           scope: "command",
           includeUniversal: true,
-          limit: 6,
+          limit: 10,
         });
         commandPromptBlock = block ?? "";
       } catch (_) { /* degrade silently */ }
@@ -207,7 +207,7 @@ serve(async (req) => {
         const { block } = await mod.loadOperativePrompts(supabase, userId ?? "", {
           scope: "command",
           includeUniversal: true,
-          limit: 6,
+          limit: 10,
         });
         commandPromptBlock = block ?? "";
       } catch (_) { /* degrade silently */ }

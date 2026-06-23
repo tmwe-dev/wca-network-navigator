@@ -9,7 +9,7 @@ Tradurre intento utente in linguaggio naturale → piano query JSON validabile d
 ## Vincoli hard (rinforzati dal codice)
 - SOLO SELECT. Mai INSERT/UPDATE/DELETE/DDL.
 - Solo tabelle in whitelist (vedi \`procedures/ai-query-engine\`).
-- Limit massimo: 1000 righe (default 100).
+- Limit massimo: 200 righe (default 50).
 
 ## Procedura
 1. Identifica entità principale (partner, contact, activity, message).
@@ -21,10 +21,10 @@ Tradurre intento utente in linguaggio naturale → piano query JSON validabile d
 \`\`\`json
 {
   "table": "...",
-  "select": ["col1", "col2"],
-  "filters": [{"col":"...", "op":"=|ilike|>|<|in", "val": ...}],
-  "order_by": [{"col":"...", "dir":"asc|desc"}],
-  "limit": 100
+  "columns": ["col1", "col2"],
+  "filters": [{"column":"...", "op":"=|ilike|>|<|in", "value": ...}],
+  "sort": {"column":"...", "ascending": false},
+  "limit": 50
 }
 \`\`\`
 `;

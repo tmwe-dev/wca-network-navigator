@@ -104,7 +104,7 @@ export async function loadOperativePrompts(
   const { block } = await loadOperativePromptsUnified(supabase, userId, {
     scope,
     includeUniversal: true,
-    limit: 6,
+    limit: 10,
   });
   return block ? `\n\n${block}` : "";
 }
