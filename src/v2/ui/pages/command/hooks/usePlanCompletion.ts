@@ -100,7 +100,26 @@ export function usePlanCompletion(deps: PlanCompletionDeps) {
 
       const lastStep = final.steps[final.steps.length - 1];
       const lastResult = final.results[lastStep.stepNumber];
-      if (lastResult) {
+
+      // Scegli lo step su cui commentare: l'ULTIMO step con un risultato
+      // NON vuoto. Così un piano "Ricerca (9 partner) → Conteggi (vuoto)"
+      // fa commentare il Direttore sui 9 partner, non sul vuoto finale.
+      let commentStep = lastStep;
+      let commentResult = lastResult;
+      for (let i = final.steps.length - 1; i >= 0; i--) {
+        const s = final.steps[i];
+        const r = final.results[s.stepNumber];
+        if (r && !isEmptyResult(r)) {
+          commentStep = s;
+          commentResult = r;
+          break;
+        }
+      }
+
+      if (commentResult) {
+        setLiveResult(commentResult);
+        setCanvas(canvasForResult(commentResult));
+      } else if (lastResult) {
         setLiveResult(lastResult);
         setCanvas(canvasForResult(lastResult));
       }
@@ -109,8 +128,8 @@ export function usePlanCompletion(deps: PlanCompletionDeps) {
       setExecProgress(100);
       setShowTools(false);
 
-      if (lastResult && lastResult.kind !== "approval") {
-        await onCommentNeeded(userPrompt, lastStep.toolId, lastResult, trace);
+      if (commentResult && commentResult.kind !== "approval") {
+        await onCommentNeeded(userPrompt, commentStep.toolId, commentResult, trace);
       } else {
         const finalTrace = trace?.finish();
         addMessage({
