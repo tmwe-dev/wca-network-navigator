@@ -6,7 +6,7 @@ import TimelineCanvas from "../canvas/TimelineCanvas";
 import FlowCanvas from "../canvas/FlowCanvas";
 import ComposerCanvas from "../canvas/ComposerCanvas";
 import TableCanvas from "../canvas/TableCanvas";
-import { X } from "lucide-react";
+import { X, AlertTriangle, SearchX, Clock } from "lucide-react";
 
 interface CommandOutputProps {
   canvas: CanvasType;
