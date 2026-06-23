@@ -170,6 +170,9 @@ export function useSuperMarioFlow(deps: FlowDeps) {
         const toolResult = await tool.execute(userMessage, {
           payload: first.arguments,
           originalPrompt: userMessage,
+          history: turns
+            .filter((t) => (t.role === "user" || t.role === "assistant") && t.content)
+            .map((t) => ({ role: t.role, content: t.content })),
         });
         setLiveResult(toolResult);
         if (toolResult.kind === "table") setCanvas("live-table");
