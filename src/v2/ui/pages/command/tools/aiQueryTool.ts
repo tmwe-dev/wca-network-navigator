@@ -175,6 +175,7 @@ export const aiQueryTool: Tool = {
           (plans?.[0]?.rationale && /troppe richieste|rate limit|riprova/i.test(plans[0].rationale))
             ? plans[0].rationale
             : "Il motore AI è momentaneamente occupato (troppe richieste). Riprova tra qualche secondo.",
+        status: "rate-limited",
         meta: { count: 0, sourceLabel: "AI Query Planner" },
       };
     }
@@ -188,6 +189,7 @@ export const aiQueryTool: Tool = {
         kind: "result",
         title: "Conversazione",
         message: firstPlan.rationale ?? "Ciao! Come posso aiutarti?",
+        status: "ok",
         meta: { count: 0, sourceLabel: "Direttore" },
       };
     }
@@ -199,6 +201,7 @@ export const aiQueryTool: Tool = {
         title: "Query AI · Richiesta non supportata",
         message:
           firstPlan.rationale ?? "Questa richiesta non è una query di lettura. Prova con un'azione esplicita o riformulala come ricerca.",
+        status: "unsupported",
         meta: { count: 0, sourceLabel: "AI Query Planner" },
       };
     }
@@ -275,6 +278,7 @@ export const aiQueryTool: Tool = {
           kind: "result",
           title: "Query AI · Errore esecuzione",
           message: `❌ ${part.error}`,
+          status: "error",
           meta: { count: 0, sourceLabel: "Safe Query Executor" },
         };
       }
