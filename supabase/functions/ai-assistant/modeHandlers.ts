@@ -143,11 +143,23 @@ export async function handlePlanExecutionMode(
 
   const planSystemPrompt = `Sei un orchestratore. Dato il prompt utente, decomponi il task in una sequenza ordinata di tool da eseguire. Ogni step deve avere: stepNumber, toolId, reasoning, params (oggetto JSON con i parametri estratti dal prompt e dal contesto degli step precedenti). Se uno step dipende dall'output di uno precedente (es: "usa l'id del partner trovato al passo 1"), usa segnaposto {{step1.result.partnerId}}. Ritorna SOLO JSON valido nella forma: { "steps": [{"stepNumber": N, "toolId": "...", "reasoning": "...", "params": {...}}], "summary": "descrizione del piano in 1 frase" }. Se il task è eseguibile con UN solo tool, ritorna 1 step. Se il task non è eseguibile coi tool disponibili, ritorna { "steps": [], "summary": "Nessun piano possibile" }.
 
-REGOLE OPERATIVE IMPORTANTI:
-- Prompt tipo "scrivi/manda/prepara mail/email a (tutti) i partner di <PAESE>" → UN SOLO STEP con toolId "compose-email" e params {prompt: "<prompt utente originale integrale>"}. Il tool risolve internamente il fan-out per paese e prepara una bozza-template. NON spezzare in ai-query + compose-email: produrresti due step disconnessi che NON si passano i destinatari.
-- Prompt tipo "scrivi mail a <PERSONA> di <AZIENDA>" → UN SOLO STEP "compose-email" con params {prompt: "<prompt integrale>"}.
-- Prompt tipo "quanti partner abbiamo a <LUOGO>" / "mostra/elenca/cerca …" → UN SOLO STEP "ai-query" con params {prompt: "<prompt integrale>"}.
-- Per i tool single-step (compose-email, ai-query) passa SEMPRE il prompt utente originale come params.prompt: i tool sanno auto-risolvere il contesto.
+LIBERTÀ DI INTERPRETAZIONE (non seguire frasi "magiche"):
+Interpreta TU l'intento leggendo l'INTERA conversazione, inclusi i turni precedenti (es. "preparane una per uno dei tanti" dopo "9 partner a Malta" → destinatari = partner di Malta, un solo esempio). Deduci destinatario, paese, obiettivo e tono dal linguaggio naturale e dal contesto: non esistono pattern fissi da matchare.
+
+Estrai SEMPRE parametri semantici strutturati (params), non solo il testo grezzo:
+- "compose-email" (prepara bozze, NON invia) → UN SOLO STEP. params = {
+    recipientScope: "single" | "batch",   // "single" = un destinatario / un esempio · "batch" = molti partner (es. tutti i partner di un paese)
+    countryName?: string,                   // paese dei destinatari, dedotto anche dai turni precedenti (es. "Malta")
+    company?: string,                       // ragione sociale del destinatario singolo
+    person?: string,                        // nome della persona destinataria
+    email?: string,                         // email esplicita se presente
+    intent: string,                         // obiettivo del messaggio in linguaggio naturale
+    tone?: "amichevole" | "professionale" | "diretto" | "informale",
+    prompt: string                          // prompt utente integrale (ridondanza di sicurezza)
+  }
+  NON spezzare in ai-query + compose-email: il tool risolve i destinatari dai parametri.
+- "ai-query" (interroga il DB) → UN SOLO STEP. params = { prompt: "<prompt utente integrale>" }.
+- Includi sempre params.prompt con il prompt integrale come fallback.
 - Usa multi-step SOLO quando un'azione di scrittura dipende davvero dall'id puntuale di una entity restituita al passo precedente (es. "trova partner X poi crea attività su quell'id").
 
 Tool disponibili:

@@ -19,6 +19,8 @@ import {
   resolveNaturalPrompt,
   detectCountryFromHistory,
   isSingleSampleIntent,
+  readComposeParams,
+  type ComposeParams,
 } from "./promptParse";
 import {
   fetchPartnersByFilters,
@@ -29,6 +31,118 @@ import {
 import { buildBatchComposerResult, generateDraftsBatch } from "./batchDrafts";
 import { buildSingleComposerResult } from "./singleDraft";
 import type { PartnerRow } from "./types";
+
+/**
+ * PROMPT FREEDOM — esecuzione guidata dai parametri semantici risolti dall'AI.
+ *
+ * Non re-interpreta il linguaggio naturale: consuma i parametri e applica solo
+ * le guardrail (destinatario inesistente, ambiguità, blacklist). Ritorna `null`
+ * quando i parametri non bastano a identificare un destinatario, lasciando il
+ * controllo alla logica fallback (regex) a valle.
+ */
+async function executeFromParams(
+  params: ComposeParams,
+  prompt: string,
+): Promise<ToolResult | null> {
+  const tone = params.tone ?? detectTone(prompt);
+  const goal = params.intent ?? prompt;
+
+  // A) Destinatario singolo identificato da email o azienda.
+  if (params.email || params.company) {
+    const candidates = await searchPartner(params.company, params.email);
+    if (candidates.length === 0) {
+      const parts: string[] = [];
+      if (params.company) parts.push(`azienda "${params.company}"`);
+      if (params.person) parts.push(`persona "${params.person}"`);
+      if (params.email) parts.push(`email ${params.email}`);
+      return {
+        kind: "report",
+        title: "Destinatario non trovato",
+        meta: { count: 0, sourceLabel: "DB · partners + partner_contacts" },
+        sections: [{
+          heading: "Verifica Oracolo",
+          body: `Non ho trovato nessun partner che corrisponda a ${parts.join(", ") || "i dati indicati"}.\n\nConferma la ragione sociale esatta o il dominio email, oppure censisci prima il partner.`,
+        }],
+      };
+    }
+    if (candidates.length > 1 && !params.email) {
+      const list = candidates
+        .map((c, i) => `${i + 1}. **${c.company_name}**${c.city ? ` — ${c.city}` : ""}${c.country_code ? ` (${c.country_code})` : ""} · status: ${c.lead_status ?? "n/d"}`)
+        .join("\n");
+      return {
+        kind: "report",
+        title: "Più partner corrispondono",
+        meta: { count: candidates.length, sourceLabel: "DB · partners" },
+        sections: [{
+          heading: "Verifica Oracolo — disambiguazione",
+          body: `Ho trovato ${candidates.length} partner che corrispondono a "${params.company}". Indicami quale (città o nazione) prima di procedere:\n\n${list}`,
+        }],
+      };
+    }
+    const partner = candidates[0];
+    if (partner.lead_status === "blacklisted") {
+      return {
+        kind: "report",
+        title: "Invio bloccato dall'Oracolo",
+        meta: { count: 1, sourceLabel: "DB · partners" },
+        sections: [{
+          heading: partner.company_name,
+          body: `Questo partner è in **blacklist**${partner.status_reason ? ` (motivo: ${partner.status_reason})` : ""}. Non posso preparare email per loro.`,
+        }],
+      };
+    }
+    return buildSingleComposerResult({ partner, person: params.person, email: params.email, prompt: goal });
+  }
+
+  // B) Destinatari per paese.
+  if (params.countryCode) {
+    const partners = await searchPartnersByCountry(params.countryCode);
+    const label = params.countryLabel ?? params.countryCode;
+    if (partners.length === 0) {
+      return {
+        kind: "report",
+        title: `Nessun partner in ${label.toUpperCase()}`,
+        meta: { count: 0, sourceLabel: "DB · partners" },
+        sections: [{
+          heading: "Verifica Oracolo",
+          body: `Non ho trovato partner attivi in ${label} (${params.countryCode}). Controlla il filtro paese o importa prima i contatti.`,
+        }],
+      };
+    }
+
+    // Singolo esempio richiesto → bozza per il primo partner.
+    if (params.scope === "single" || partners.length === 1) {
+      setLastQueryResultContext({
+        partnerIds: partners.map((p) => p.id),
+        countryCode: params.countryCode,
+        countryLabel: label,
+        originalPrompt: prompt,
+        selectionLabel: `partner in ${label}`,
+        count: partners.length,
+      });
+      return buildSingleComposerResult({ partner: partners[0], person: null, email: null, prompt: goal });
+    }
+
+    // Altrimenti batch per tutti i partner del paese.
+    const drafts = await generateDraftsBatch(partners, tone, goal);
+    setLastComposerContext({
+      countryCode: params.countryCode,
+      countryLabel: label,
+      partnerIds: partners.map((p) => p.id),
+      tone,
+      originalGoal: goal,
+    });
+    return buildBatchComposerResult({
+      partners, drafts, tone,
+      countryCode: params.countryCode,
+      countryLabel: label,
+      prompt: goal,
+    });
+  }
+
+  // Parametri insufficienti: lascia decidere alle guardrail fallback.
+  return null;
+}
 
 export const composeEmailTool: Tool = {
   id: "compose-email",
@@ -158,6 +272,16 @@ export const composeEmailTool: Tool = {
         countryLabel: labelForCtx,
         prompt,
       });
+    }
+
+    // ── 0-params) PROMPT FREEDOM: parametri semantici risolti dall'AI ──
+    // Se il planner ha passato parametri strutturati, li consumiamo senza
+    // re-interpretare il linguaggio naturale. Le regex sotto restano come
+    // fallback quando il payload non contiene parametri semantici.
+    const semantic = readComposeParams(context?.payload, context?.history);
+    if (semantic.hasAny && semantic.hasRecipient) {
+      const fromParams = await executeFromParams(semantic, prompt);
+      if (fromParams) return fromParams;
     }
 
     // ── 0) Country-wide batch intent ──
