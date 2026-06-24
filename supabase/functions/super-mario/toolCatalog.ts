@@ -50,7 +50,7 @@ const COMMAND_TOOLS: ToolDescriptor[] = [
     name: "compose-email",
     description: "Prepara una bozza email (singola o batch) per uno o più partner.",
     when_to_use: "Quando l'utente chiede di preparare/scrivere email. NON invia.",
-    arguments_schema: "{ partnerIds?: string[], partnerName?: string, intent?: string, tone?: string }",
+    arguments_schema: "{ recipientScope?: 'single'|'batch', countryName?: string, company?: string, person?: string, email?: string, intent: string, tone?: 'amichevole'|'professionale'|'diretto'|'informale' }",
     risk_level: "write",
     requires_confirmation: true,
   },
