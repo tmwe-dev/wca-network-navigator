@@ -1,3 +1,5 @@
+import type { DetectedTone } from "../../lib/toneDetector";
+
 export function extractPersonAndCompany(prompt: string): { person: string | null; company: string | null; email: string | null } {
   const emailMatch = prompt.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
   const email = emailMatch ? emailMatch[0] : null;
@@ -154,4 +156,97 @@ export function daysSince(iso: string | null): string {
   if (d <= 0) return "oggi";
   if (d === 1) return "ieri";
   return `${d} giorni fa`;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * PROMPT FREEDOM — Parametri semantici risolti dall'AI (planner).
+ *
+ * Filosofia: l'AI interpreta il linguaggio naturale e produce parametri
+ * strutturati. Il codice NON ridecodifica l'intento con regex: legge i
+ * parametri e applica solo le guardrail (cosa il tool NON può fare).
+ * Le regex restano come fallback di sicurezza quando il planner non passa
+ * parametri semantici (retro-compatibilità).
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export interface ComposeParams {
+  /** "single" = un destinatario / un esempio · "batch" = molti partner */
+  scope: "single" | "batch" | null;
+  countryCode: string | null;
+  countryLabel: string | null;
+  company: string | null;
+  person: string | null;
+  email: string | null;
+  /** Obiettivo del messaggio in linguaggio naturale (per generate-email). */
+  intent: string | null;
+  tone: DetectedTone | null;
+  /** True se almeno un destinatario è identificabile dai parametri. */
+  hasRecipient: boolean;
+  /** True se il planner ha passato almeno un parametro semantico. */
+  hasAny: boolean;
+}
+
+/** Converte un nome paese (o codice ISO2) in { code, label }. */
+export function countryFromName(raw: string | null | undefined): { code: string; label: string } | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  if (!s) return null;
+  if (/^[A-Za-z]{2}$/.test(s)) {
+    const code = s.toUpperCase();
+    const label = Object.entries(COUNTRY_MAP).find(([, c]) => c === code)?.[0] ?? code;
+    return { code, label };
+  }
+  const direct = COUNTRY_MAP[s.toLowerCase()];
+  if (direct) return { code: direct, label: s.toLowerCase() };
+  return detectCountryCode(s);
+}
+
+function asStr(v: unknown): string | null {
+  return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+}
+
+function asTone(v: unknown): DetectedTone | null {
+  return v === "amichevole" || v === "professionale" || v === "diretto" || v === "informale" ? v : null;
+}
+
+/**
+ * Legge i parametri semantici prodotti dall'AI (planner) dal payload del tool.
+ * Se il paese non è esplicito ma serve, lo recupera dalla conversazione.
+ */
+export function readComposeParams(
+  payload: Record<string, unknown> | undefined,
+  history?: ReadonlyArray<{ role: string; content: string }>,
+): ComposeParams {
+  const p = payload ?? {};
+  const scopeRaw = asStr(p.recipientScope ?? p.scope ?? p.mode);
+  const scope: "single" | "batch" | null =
+    scopeRaw === "single" || scopeRaw === "batch" ? scopeRaw : null;
+
+  const email = asStr(p.email ?? p.recipientEmail);
+  const company = asStr(p.company ?? p.recipientCompany ?? p.companyName);
+  const person = asStr(p.person ?? p.recipientPerson ?? p.contactName ?? p.recipientName);
+  const intent = asStr(p.intent ?? p.goal ?? p.message);
+  const tone = asTone(p.tone);
+
+  const countryRaw = asStr(p.countryName ?? p.country ?? p.countryCode ?? p.countryLabel);
+  let country = countryFromName(countryRaw);
+  if (!country && !email && !company) {
+    // Nessun destinatario esplicito: prova a dedurre il paese dalla chat.
+    country = detectCountryFromHistory(history);
+  }
+
+  const hasRecipient = !!(email || company || country);
+  const hasAny = hasRecipient || !!intent || scope !== null;
+
+  return {
+    scope,
+    countryCode: country?.code ?? null,
+    countryLabel: country?.label ?? null,
+    company,
+    person,
+    email,
+    intent,
+    tone,
+    hasRecipient,
+    hasAny,
+  };
 }
