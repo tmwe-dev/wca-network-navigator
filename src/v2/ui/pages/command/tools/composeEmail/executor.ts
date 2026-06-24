@@ -274,6 +274,16 @@ export const composeEmailTool: Tool = {
       });
     }
 
+    // ── 0-params) PROMPT FREEDOM: parametri semantici risolti dall'AI ──
+    // Se il planner ha passato parametri strutturati, li consumiamo senza
+    // re-interpretare il linguaggio naturale. Le regex sotto restano come
+    // fallback quando il payload non contiene parametri semantici.
+    const semantic = readComposeParams(context?.payload, context?.history);
+    if (semantic.hasAny && semantic.hasRecipient) {
+      const fromParams = await executeFromParams(semantic, prompt);
+      if (fromParams) return fromParams;
+    }
+
     // ── 0) Country-wide batch intent ──
     const country = detectCountryCode(prompt);
     if (country && isCountryWideIntent(prompt)) {
