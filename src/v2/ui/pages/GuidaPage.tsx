@@ -34,7 +34,7 @@ import {
   Command, Target, Search, Rocket, Calendar, Trash2,
   MessagesSquare, Inbox, Mail, Brain, Sparkles, Contact,
   Bot, Cpu, FlaskConical, Settings, Workflow, BookOpenCheck,
-  Library, Volume2, Power, SlidersHorizontal, BookMarked,
+  Library, Volume2, Power, SlidersHorizontal,
 } from "lucide-react";
 
 const sectionLabels = [
