@@ -352,8 +352,11 @@ export function V2Routes(): React.ReactElement {
           <Route path="pipeline-traces"         element={<Navigate to="/v2/lab?group=observability&tab=pipeline-traces" replace />} />
           <Route path="token-cockpit"           element={<Navigate to="/v2/lab?group=observability&tab=token-cockpit" replace />} />
           <Route path="staff"                   element={<Navigate to="/v2/ai-staff" replace />} />
-          <Route path="knowledge-base"          element={<Navigate to="/v2/settings/kb" replace />} />
-          <Route path="kb-supervisor"           element={<Navigate to="/v2/settings/kb" replace />} />
+          {/* La Knowledge Base vive nel tab "AI & Prompt → Knowledge Base" di Config.
+              In precedenza queste rotte puntavano a /v2/settings/kb (404). */}
+          <Route path="settings/kb"             element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
+          <Route path="knowledge-base"          element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
+          <Route path="kb-supervisor"           element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
 
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
