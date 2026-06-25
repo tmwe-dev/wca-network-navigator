@@ -94,14 +94,60 @@ export const EXPANDABLE_MAIN_NAV: Record<string, readonly SecondaryNavGroup[]> =
       { label: "Utenti Autorizzati", path: "/v2/settings?tab=utenti" },
       { label: "Team",             path: "/v2/settings?tab=team" },
     ]},
+    { title: "Sistema avanzato", items: [
+      { label: "Admin Users",      path: "/v2/settings/admin-users" },
+      { label: "AI Routing",       path: "/v2/settings/ai-routing" },
+      { label: "Email Download",   path: "/v2/settings/email-download" },
+    ]},
   ],
-  // Agenti / Missioni → riusa il gruppo della SECONDARY_NAV
-  "/v2/agents/autopilot": (
-    SECONDARY_NAV.find((g) => g.title === "Agenti & Missioni")?.subGroups?.map((sg) => ({
-      title: sg.title,
-      items: sg.items,
-    })) ?? []
-  ),
+  // Cervello → Agenti: gestione, persona, capacità, task, strategie
+  "/v2/intelligence/agents": [
+    { title: "Gestione Agenti", items: [
+      { label: "Chi fa cosa",        path: "/v2/agents/overview" },
+      { label: "Editor Persona",     path: "/v2/agents/persona" },
+      { label: "Agent Capabilities", path: "/v2/agents/capabilities" },
+      { label: "Agent Tasks",        path: "/v2/agents/tasks" },
+      { label: "Strategie Email",    path: "/v2/agents/email-strategies" },
+      { label: "AI Staff Hub",       path: "/v2/ai-staff" },
+    ]},
+  ],
+  // Comando → Missioni Autopilot: builder missioni
+  "/v2/agents/autopilot": [
+    { title: "Missioni", items: [
+      { label: "Mission Builder",    path: "/v2/agents/missions" },
+    ]},
+  ],
+  // Esplora → acquisizione & ricerca lead
+  "/v2/explore/network": [
+    { title: "Acquisizione & Ricerca", items: [
+      { label: "Acquisizione Partner", path: "/v2/crm/acquisition" },
+      { label: "Prospects",            path: "/v2/crm/prospects" },
+      { label: "Research",             path: "/v2/research" },
+      { label: "Sorting",              path: "/v2/sorting" },
+      { label: "RA Explorer",          path: "/v2/ra-explorer" },
+      { label: "RA Scraping Engine",   path: "/v2/ra-scraping" },
+    ]},
+  ],
+  // Pipeline → Cockpit: analytics, KPI, notifiche
+  "/v2/cockpit": [
+    { title: "Analytics & Report", items: [
+      { label: "Analytics",      path: "/v2/analytics" },
+      { label: "KPI Dashboard",  path: "/v2/kpi" },
+      { label: "Notifications",  path: "/v2/notifications" },
+    ]},
+  ],
+  // Pipeline → Agenda: campagne
+  "/v2/agenda": [
+    { title: "Campagne", items: [
+      { label: "Campaign Jobs", path: "/v2/campaigns/jobs" },
+    ]},
+  ],
+  // Comunica → Funnemail: sorting
+  "/v2/funnemail-inbox": [
+    { title: "Funnemail", items: [
+      { label: "Funnemail Sorting", path: "/v2/funnemail-inbox/sorting" },
+    ]},
+  ],
 };
 
 /** Estrae la radice di sezione: `/v2/intelligence/agents` → `/v2/intelligence`. */
