@@ -56,6 +56,16 @@ const sectionLabels = [
   "6 · Lab",
   "7 · Config",
   "8 · Automazioni",
+  // === Parte 3: manuale illustrato (foto pagine) ===
+  "Manuale",
+  "M1 · Config",
+  "M2 · Istruire agenti",
+  "M3 · Capacità & Tool",
+  "M4 · Prompt & Provider",
+  "M5 · Voce AI",
+  "M6 · Knowledge Base",
+  "M7 · Processi automatici",
+  "M8 · Autopilot & Attività",
   // === Chiusura ===
   "Chiusura",
 ];
