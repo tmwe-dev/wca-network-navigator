@@ -149,7 +149,7 @@ export function ClassificationCard({ classification, partnerName, onClick, isSel
 
           {/* Urgency */}
           {classification.urgency && ['critical', 'high'].includes(classification.urgency) && (
-            <Badge className="text-[10px] bg-red-500/20 border border-red-500/40 text-red-300 rounded-full px-1.5 py-0 mb-2">
+            <Badge className="text-[10px] bg-red-500/20 border border-red-500/40 text-destructive rounded-full px-1.5 py-0 mb-2">
               ⚡ {classification.urgency}
             </Badge>
           )}
@@ -158,7 +158,7 @@ export function ClassificationCard({ classification, partnerName, onClick, isSel
           {classification.action_suggested && (
             <div className="flex items-start gap-1.5 mb-2 p-2 bg-orange-500/10 border border-orange-500/30 rounded">
               <Target className="w-3 h-3 text-orange-400 shrink-0 mt-0.5" />
-              <span className="text-xs font-medium text-orange-300 leading-tight">
+              <span className="text-xs font-medium text-warning leading-tight">
                 {classification.action_suggested}
               </span>
             </div>

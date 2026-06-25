@@ -22,7 +22,7 @@ const confidenceColors: Record<string, string> = {
 const seniorityColors: Record<string, string> = {
   senior: "bg-primary/20 text-primary border-primary/30",
   mid: "bg-muted text-muted-foreground border-border",
-  junior: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
+  junior: "bg-emerald-500/20 text-success border-emerald-500/30",
 };
 
 function SocialButton({ url, label, icon }: { url: string; label: string; icon: string }) {
@@ -152,7 +152,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
                   <span key={i} className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground">{l}</span>
                 ))}
                 {contactProfile.interests?.map((int: string, i: number) => (
-                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 text-emerald-200">{int}</span>
+                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 text-success">{int}</span>
                 ))}
               </div>
               {(contactProfile.other_companies?.length ?? 0) > 0 && (

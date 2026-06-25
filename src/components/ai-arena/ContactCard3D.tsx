@@ -76,7 +76,7 @@ function FloatingCard({ contact, animState }: ContactCard3DProps) {
         <div className="w-[320px] p-4 text-center select-none">
           <h2 className="text-lg font-bold text-white truncate">{contact.company_name}</h2>
           {contact.contact_name && (
-            <p className="text-sm text-blue-300 mt-1">
+            <p className="text-sm text-chart-3 mt-1">
               {contact.contact_name}
               {contact.contact_position && <span className="text-blue-400/70 ml-1">· {contact.contact_position}</span>}
             </p>
@@ -87,12 +87,12 @@ function FloatingCard({ contact, animState }: ContactCard3DProps) {
           <p className="text-xs text-gray-500 mt-1 font-mono">{contact.email}</p>
           <div className="mt-2 flex justify-center gap-2">
             {contact.partner_match ? (
-              <Badge className="bg-green-500/20 text-green-300 border-0 text-[10px]">🤝 Partner WCA</Badge>
+              <Badge className="bg-green-500/20 text-success border-0 text-[10px]">🤝 Partner WCA</Badge>
             ) : (
-              <Badge className="bg-blue-500/20 text-blue-300 border-0 text-[10px]">🆕 Nuovo</Badge>
+              <Badge className="bg-blue-500/20 text-chart-3 border-0 text-[10px]">🆕 Nuovo</Badge>
             )}
             {contact.rating && (
-              <Badge className="bg-yellow-500/20 text-yellow-300 border-0 text-[10px]">⭐ {contact.rating}</Badge>
+              <Badge className="bg-yellow-500/20 text-warning border-0 text-[10px]">⭐ {contact.rating}</Badge>
             )}
           </div>
         </div>

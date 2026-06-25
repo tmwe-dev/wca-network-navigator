@@ -58,7 +58,7 @@ export function SummaryStep({ isDark, isExtAvailable, atecoCodes, regions, provi
           <div className="flex-1 min-w-0">
             <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Zona geografica</p>
             {regions.length > 0 ? (
-              <p className="text-xs mt-1 text-emerald-300">
+              <p className="text-xs mt-1 text-success">
                 {regions.join(", ")}
                 {provinces.length > 0 && ` · Prov: ${provinces.join(", ")}`}
               </p>
@@ -86,8 +86,8 @@ export function SummaryStep({ isDark, isExtAvailable, atecoCodes, regions, provi
                     👥 {DIPENDENTI_PRESETS[dipendentiPreset].label} ({DIPENDENTI_PRESETS[dipendentiPreset].desc})
                   </span>
                 )}
-                {filters.has_phone && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">📞 Ha telefono</span>}
-                {filters.has_email && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">📧 Ha email</span>}
+                {filters.has_phone && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-success border border-emerald-500/20">📞 Ha telefono</span>}
+                {filters.has_email && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-success border border-emerald-500/20">📧 Ha email</span>}
                 {filters.has_phone_and_email && <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">📞+📧 Entrambi</span>}
               </div>
             ) : (

@@ -48,7 +48,7 @@ export function GeographyStep({ isDark, regions, provinces, onToggleRegion, onTo
             <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Province ({regions.join(", ")})</p>
             <div className="flex flex-wrap gap-1.5">
               {visibleProvinces.map(p => (
-                <button key={p.sigla} onClick={() => onToggleProvince(p.sigla)} className={`px-2 py-1 rounded-lg text-[11px] border transition-all ${provinces.includes(p.sigla) ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>
+                <button key={p.sigla} onClick={() => onToggleProvince(p.sigla)} className={`px-2 py-1 rounded-lg text-[11px] border transition-all ${provinces.includes(p.sigla) ? "bg-emerald-500/20 text-success border-emerald-500/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>
                   <span className="font-mono font-bold">{p.sigla}</span> {p.nome}
                 </button>
               ))}
@@ -57,7 +57,7 @@ export function GeographyStep({ isDark, regions, provinces, onToggleRegion, onTo
         )}
 
         {(regions.length > 0 || provinces.length > 0) && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-emerald-500/10 border border-emerald-500/20 text-success">
             <MapPin className="w-3.5 h-3.5 shrink-0" />
             <span>
               {regions.length > 0 ? `${regions.join(", ")}` : ""}
