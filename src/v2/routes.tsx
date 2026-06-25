@@ -326,9 +326,6 @@ export function V2Routes(): React.ReactElement {
           {/* AI Staff + figli */}
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
-          {/* Knowledge Base — pagina reale (era importata ma mai montata:
-              tutte le rotte KB rimandavano a /v2/settings/kb → 404). */}
-          <Route path="settings/kb" element={guardedPage(KnowledgeBasePage, "KnowledgeBase")} />
           {/* ───── Lab & Verifiche — Hub unificato ─────
               Sorgente tab: src/v2/config/labTabs.ts (UNA riga per tab).
               Tutte le pagine lab/test/prompt/observability/charts vivono
