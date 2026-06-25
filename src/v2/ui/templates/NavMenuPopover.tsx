@@ -444,6 +444,13 @@ export function NavMenuPopover({
           </button>
           {devOpen && (
             <div className="mt-1 space-y-0.5 pb-1 pl-2 ml-3 border-l border-primary/20">
+              <button
+                type="button"
+                onClick={() => handleSelect("/v2/settings?tab=development")}
+                className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground"
+              >
+                ↳ Apri pagina
+              </button>
               {DEV_PAGE_GROUPS.map((group) => {
                 const isGroupOpen = openGroup === group.title;
                 const isGroupActive = activeGroupTitle === group.title;
