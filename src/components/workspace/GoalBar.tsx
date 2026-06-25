@@ -103,11 +103,11 @@ export default function GoalBar({
           </TabsTrigger>
           <TabsTrigger value="docs" className="mission-tab h-6 gap-1.5">
             <Paperclip className="w-3.5 h-3.5" /> Documenti
-            {safeDocuments.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-violet-300 hover:bg-violet-500/20">{safeDocuments.length}</Badge>}
+            {safeDocuments.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-chart-4 hover:bg-violet-500/20">{safeDocuments.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="links" className="mission-tab h-6 gap-1.5">
             <Link2 className="w-3.5 h-3.5" /> Link
-            {safeLinks.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-violet-300 hover:bg-violet-500/20">{safeLinks.length}</Badge>}
+            {safeLinks.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-chart-4 hover:bg-violet-500/20">{safeLinks.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 

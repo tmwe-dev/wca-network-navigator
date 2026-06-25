@@ -109,7 +109,7 @@ export function CompanyListRow({
           {partner.partner_certifications && partner.partner_certifications.length > 0 && (
             <div className="gap-1 mt-2 flex-wrap hidden md:flex">
               {partner.partner_certifications.map((cert, i) => (
-                <Badge key={i} className="text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
+                <Badge key={i} className="text-xs bg-emerald-500/20 border border-emerald-500/40 text-success">
                   {cert.certification}
                 </Badge>
               ))}

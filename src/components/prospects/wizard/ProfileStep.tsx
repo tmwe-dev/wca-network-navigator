@@ -55,10 +55,10 @@ export function ProfileStep({ isDark, filters, fatturatoPreset, dipendentiPreset
         <div className={`${card} p-3 space-y-2`}>
           <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-400/80">📞 Contatti disponibili</p>
           <div className="flex gap-2">
-            <button onClick={() => onSetFilters(f => ({ ...f, has_phone: !f.has_phone, has_phone_and_email: false }))} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${filters.has_phone ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>
+            <button onClick={() => onSetFilters(f => ({ ...f, has_phone: !f.has_phone, has_phone_and_email: false }))} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${filters.has_phone ? "bg-emerald-500/20 text-success border-emerald-500/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>
               <Phone className="w-3.5 h-3.5" /> Ha telefono
             </button>
-            <button onClick={() => onSetFilters(f => ({ ...f, has_email: !f.has_email, has_phone_and_email: false }))} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${filters.has_email ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>
+            <button onClick={() => onSetFilters(f => ({ ...f, has_email: !f.has_email, has_phone_and_email: false }))} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${filters.has_email ? "bg-emerald-500/20 text-success border-emerald-500/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>
               <Mail className="w-3.5 h-3.5" /> Ha email
             </button>
             <button onClick={() => onSetFilters(f => ({ ...f, has_phone_and_email: !f.has_phone_and_email, has_phone: false, has_email: false }))} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${filters.has_phone_and_email ? "bg-primary/20 text-primary border-primary/30" : "bg-muted/20 text-muted-foreground border-border hover:border-primary/20"}`}>

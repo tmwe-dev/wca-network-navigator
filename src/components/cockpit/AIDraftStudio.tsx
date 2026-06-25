@@ -85,7 +85,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           <Icon className={cn("w-4 h-4", meta?.color)} />
           {isReplyDraft && (
             <InfoTooltip content="Risposta a email ricevuta">
-              <span className="inline-flex items-center justify-center rounded-md p-0.5 bg-sky-500/20 text-sky-100 border border-sky-400/40">
+              <span className="inline-flex items-center justify-center rounded-md p-0.5 bg-sky-500/20 text-chart-3 border border-sky-400/40">
                 <Reply className="w-3 h-3" />
               </span>
             </InfoTooltip>

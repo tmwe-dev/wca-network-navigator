@@ -24,7 +24,7 @@ export function ActivePlansBadge({ plans, isDark }: Props) {
     <div
       className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium ${
         isDark
-          ? "bg-amber-500/15 text-amber-300 border border-amber-500/20"
+          ? "bg-amber-500/15 text-warning border border-amber-500/20"
           : "bg-amber-50 text-amber-700 border border-amber-200"
       }`}
       title={plans.map(p => `${p.title} (${p.current_step}/${p.steps.length})`).join("\n")}

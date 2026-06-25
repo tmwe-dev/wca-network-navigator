@@ -47,7 +47,7 @@ const originConfig: Record<ContactOrigin, { label: string; icon: React.Component
   report_aziende: { label: "Prospect", icon: FileSearch, color: "text-chart-3" },
   import:         { label: "Contatto", icon: Users,      color: "text-muted-foreground" },
   bca:            { label: "BCA",      icon: CreditCard, color: "text-warning" },
-  manual:         { label: "Manuale",  icon: Users,      color: "text-emerald-500" },
+  manual:         { label: "Manuale",  icon: Users,      color: "text-success" },
 };
 
 const priorityLabel = (p: number) => p >= 9 ? "Urgente" : p >= 7 ? "Alta" : p >= 5 ? "Media" : "Bassa";

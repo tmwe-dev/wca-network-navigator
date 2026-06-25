@@ -33,7 +33,7 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
   report_aziende: { label: "RA", bg: "bg-chart-4/15", text: "text-chart-4", border: "border-chart-4/30", dot: "bg-chart-4" },
   import: { label: "Import", bg: "bg-chart-3/15", text: "text-chart-3", border: "border-chart-3/30", dot: "bg-chart-3" },
   bca: { label: "BCA", bg: "bg-primary/15", text: "text-primary", border: "border-primary/30", dot: "bg-primary" },
-  manual: { label: "Manuale", bg: "bg-emerald-500/15", text: "text-emerald-500", border: "border-emerald-500/30", dot: "bg-emerald-500" },
+  manual: { label: "Manuale", bg: "bg-success/15", text: "text-success", border: "border-success/30", dot: "bg-success" },
 };
 
 interface CockpitContactHeaderProps {
@@ -64,7 +64,7 @@ export function CockpitContactHeader({
           {/* Riga 1: NOME persona — il dato più importante */}
           <div className="flex items-center gap-1.5">
             {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-            <span className="text-[15px] font-bold text-white truncate leading-tight drop-shadow-sm">
+            <span className="text-[15px] font-bold text-foreground truncate leading-tight">
               {contact.name && contact.name !== "—" ? contact.name : (contact.company || "Contatto")}
             </span>
             <button
@@ -77,8 +77,8 @@ export function CockpitContactHeader({
           </div>
           {/* Riga 2: AZIENDA · paese */}
           <div className="flex items-center gap-1.5 text-xs truncate">
-            <span className="truncate font-semibold text-sky-200">{contact.company}</span>
-            {contact.country && <span className="text-emerald-300/90 text-[10px] uppercase tracking-wide">· {contact.country}</span>}
+            <span className="truncate font-semibold text-foreground/90">{contact.company}</span>
+            {contact.country && <span className="text-success text-[10px] uppercase tracking-wide">· {contact.country}</span>}
           </div>
           {contact.role && <div className="text-[11px] text-foreground truncate">{contact.role}</div>}
 
@@ -88,10 +88,10 @@ export function CockpitContactHeader({
               <span className={cn(
                 "inline-flex items-center justify-center rounded-md p-0.5 border",
                 isReply
-                  ? "bg-sky-500/20 text-sky-100 border-sky-400/40"
+                  ? "bg-chart-3/20 text-chart-3 border-chart-3/40"
                   : isScheduled
-                    ? "bg-amber-500/20 text-amber-100 border-amber-400/40"
-                    : "bg-emerald-500/15 text-emerald-100 border-emerald-400/30"
+                    ? "bg-warning/20 text-warning border-warning/40"
+                    : "bg-success/15 text-success border-success/30"
               )}>
                 <ActionIcon className="w-3 h-3" />
               </span>
@@ -123,7 +123,7 @@ export function CockpitContactHeader({
               )}
               {contact.phone && (
                 <InfoTooltip content={contact.phone}>
-                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 text-emerald-600 text-[10px] px-1.5 py-0.5">
+                  <span className="inline-flex items-center gap-1 rounded bg-success/10 text-success text-[10px] px-1.5 py-0.5">
                     <Phone className="w-2.5 h-2.5 shrink-0" />
                     {contact.phone}
                   </span>
@@ -131,7 +131,7 @@ export function CockpitContactHeader({
               )}
               {contact.linkedinUrl && (
                 <InfoTooltip content="LinkedIn disponibile">
-                  <span className="inline-flex items-center gap-1 rounded bg-[hsl(210,80%,55%)]/10 text-[hsl(210,80%,55%)] text-[10px] px-1.5 py-0.5">
+                  <span className="inline-flex items-center gap-1 rounded bg-chart-3/10 text-chart-3 text-[10px] px-1.5 py-0.5">
                     <Linkedin className="w-2.5 h-2.5 shrink-0" />
                     LinkedIn
                   </span>
@@ -159,7 +159,7 @@ export function CockpitContactHeader({
             P{contact.priority}
           </span>
           {isWorked && (
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border bg-emerald-500/15 text-emerald-500 border-emerald-500/30">
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border bg-success/15 text-success border-success/30">
               ✓ Fatto
             </span>
           )}

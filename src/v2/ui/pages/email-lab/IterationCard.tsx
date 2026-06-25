@@ -21,10 +21,10 @@ interface Props {
 function VerdictBadge({ verdict, score }: { verdict?: string; score?: number }) {
   if (!verdict) return null;
   const map: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
-    pass: { color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40", icon: <ShieldCheck className="h-3 w-3" />, label: "Pass" },
-    pass_with_edits: { color: "bg-sky-500/15 text-sky-300 border-sky-500/40", icon: <Sparkles className="h-3 w-3" />, label: "Pass + edits" },
-    warn: { color: "bg-amber-500/15 text-amber-300 border-amber-500/40", icon: <AlertTriangle className="h-3 w-3" />, label: "Warn" },
-    block: { color: "bg-rose-500/15 text-rose-300 border-rose-500/40", icon: <Ban className="h-3 w-3" />, label: "Block" },
+    pass: { color: "bg-emerald-500/15 text-success border-emerald-500/40", icon: <ShieldCheck className="h-3 w-3" />, label: "Pass" },
+    pass_with_edits: { color: "bg-sky-500/15 text-chart-3 border-sky-500/40", icon: <Sparkles className="h-3 w-3" />, label: "Pass + edits" },
+    warn: { color: "bg-amber-500/15 text-warning border-amber-500/40", icon: <AlertTriangle className="h-3 w-3" />, label: "Warn" },
+    block: { color: "bg-rose-500/15 text-destructive border-rose-500/40", icon: <Ban className="h-3 w-3" />, label: "Block" },
   };
   const m = map[verdict] ?? map.warn;
   return (
@@ -112,7 +112,7 @@ export function IterationCard({ iteration, index, previous }: Props): React.Reac
               {review.warnings.slice(0, 4).map((w, i) => (
                 <li key={i} className="flex gap-1.5">
                   <span className={
-                    w.severity === "blocking" ? "text-rose-300" : w.severity === "warning" ? "text-amber-300" : "text-sky-300"
+                    w.severity === "blocking" ? "text-destructive" : w.severity === "warning" ? "text-warning" : "text-chart-3"
                   }>●</span>
                   <span>{w.description}</span>
                 </li>
