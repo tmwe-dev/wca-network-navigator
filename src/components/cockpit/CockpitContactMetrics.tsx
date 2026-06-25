@@ -30,7 +30,7 @@ const originConfig: Record<ContactOrigin, { text: string }> = {
   report_aziende: { text: "text-chart-4" },
   import: { text: "text-chart-3" },
   bca: { text: "text-primary" },
-  manual: { text: "text-emerald-500" },
+  manual: { text: "text-success" },
 };
 
 function SmartChannelIcons({ contact }: { contact: Contact }) {
@@ -40,8 +40,8 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
 
   const icons = [
     { key: "Email", Icon: Mail, active: hasEmail, activeClass: "text-primary bg-primary/10", value: contact.email },
-    { key: "LinkedIn", Icon: Linkedin, active: hasLinkedin, activeClass: "text-[hsl(210,80%,55%)] bg-[hsl(210,80%,55%)]/10", value: contact.linkedinUrl },
-    { key: "WhatsApp", Icon: MessageCircle, active: hasPhone, activeClass: "text-emerald-500 bg-emerald-500/10", value: contact.phone },
+    { key: "LinkedIn", Icon: Linkedin, active: hasLinkedin, activeClass: "text-chart-3 bg-chart-3/10", value: contact.linkedinUrl },
+    { key: "WhatsApp", Icon: MessageCircle, active: hasPhone, activeClass: "text-success bg-success/10", value: contact.phone },
     { key: "SMS", Icon: Smartphone, active: hasPhone, activeClass: "text-chart-3 bg-chart-3/10", value: contact.phone },
   ];
 
@@ -63,7 +63,7 @@ function EnrichBadge({ icon, label, done }: { icon: React.ReactNode; label: stri
     <InfoTooltip content={`${label}: ${done ? "completato" : "mancante"}`}>
       <span className={cn(
         "flex items-center gap-0.5 text-[8px] font-medium px-1 py-0.5 rounded border",
-        done ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted/30 text-muted-foreground border-border/20"
+        done ? "bg-success/10 text-success border-success/20" : "bg-muted/30 text-muted-foreground border-border/20"
       )}>
         {icon}
         {done ? <Check className="w-2 h-2" /> : <X className="w-2 h-2" />}

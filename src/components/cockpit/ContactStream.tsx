@@ -166,7 +166,7 @@ export function ContactStream({
           className={cn(
             "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
             hideHolding
-              ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+              ? "bg-warning/10 text-warning border border-warning/30"
               : "text-muted-foreground hover:text-foreground"
           )}
           title={hideHolding ? "Mostra tutti" : "Nascondi in circuito"}
