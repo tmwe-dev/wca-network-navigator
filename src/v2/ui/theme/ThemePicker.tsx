@@ -11,59 +11,19 @@
 import * as React from "react";
 import { Palette, Check, Sun, Moon, Type } from "lucide-react";
 import { useTextIntensity, type TextIntensity } from "@/providers/TextIntensityProvider";
+import {
+  THEMES,
+  THEME_EVENT,
+  MODE_EVENT,
+  applyTheme,
+  applyMode,
+  readStoredMode,
+  readStoredTheme,
+  type ThemeId,
+  type ThemeMode,
+} from "@/v2/ui/theme/themeRegistry";
 
-export type ThemeId = "amber" | "lilac" | "space" | "notte";
-export type ThemeMode = "light" | "dark";
-
-const STORAGE_KEY = "wcann.theme";
-const MODE_KEY = "wcann.themeMode";
-const THEME_CLASSES = ["theme-lilac", "theme-space", "theme-notte"] as const;
-const THEME_EVENT = "wcann:theme-change";
-const MODE_EVENT = "wcann:themeMode-change";
-
-const THEMES: ReadonlyArray<{
-  id: ThemeId;
-  label: string;
-  swatch: string;
-  description: string;
-}> = [
-  { id: "amber", label: "Amber",      swatch: "#b45309", description: "Default · Inter" },
-  { id: "lilac", label: "Lilac Blue", swatch: "#4f46e5", description: "Indaco · Manrope" },
-  { id: "space", label: "Space",      swatch: "#22d3ee", description: "Cosmico · Space Grotesk" },
-  { id: "notte", label: "Notte",      swatch: "#b48232", description: "Notturno · Cormorant" },
-];
-
-function applyTheme(id: ThemeId): void {
-  const root = document.documentElement;
-  THEME_CLASSES.forEach((c) => root.classList.remove(c));
-  if (id !== "amber") root.classList.add(`theme-${id}`);
-  try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignore */ }
-  window.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: id }));
-}
-
-function applyMode(mode: ThemeMode): void {
-  const root = document.documentElement;
-  if (mode === "dark") root.classList.add("dark");
-  else root.classList.remove("dark");
-  try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
-  window.dispatchEvent(new CustomEvent(MODE_EVENT, { detail: mode }));
-}
-
-function readStoredMode(): ThemeMode {
-  try {
-    const v = localStorage.getItem(MODE_KEY);
-    if (v === "light" || v === "dark") return v;
-  } catch { /* ignore */ }
-  return "dark";
-}
-
-function readStoredTheme(): ThemeId {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "amber" || v === "lilac" || v === "space" || v === "notte") return v;
-  } catch { /* ignore */ }
-  return "amber";
-}
+export type { ThemeId, ThemeMode } from "@/v2/ui/theme/themeRegistry";
 
 /** Hook che inizializza il tema all'avvio. (main.tsx già lo applica pre-render). */
 export function useInitTheme(): void {
