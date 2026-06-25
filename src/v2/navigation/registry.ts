@@ -47,63 +47,17 @@ export interface SecondaryNavGroup {
  *  - "Calendario & Campagne" rinominato in "Agenda & Pipeline".
  */
 export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
+  // NOTA (2026-06): le pagine "necessarie" (acquisizione, agenti, missioni,
+  // analytics, funnemail, campagne, admin) sono state spostate nelle loro
+  // macro-aree di contesto tramite EXPANDABLE_MAIN_NAV (NavMenuPopover).
+  // Qui restano SOLO pagine dev / test / legacy / orfane.
   {
-    title: "Acquisizione & Ricerca",
-    items: [
-      { label: "Acquisizione Partner", path: "/v2/crm/acquisition" },
-      { label: "Prospects",            path: "/v2/crm/prospects" },
-      { label: "RA Explorer",          path: "/v2/ra-explorer" },
-      { label: "RA Scraping Engine",   path: "/v2/ra-scraping" },
-      { label: "Research",             path: "/v2/research" },
-      { label: "Sorting",              path: "/v2/sorting" },
-    ],
-  },
-  {
-    title: "Agenti & Missioni",
-    subGroups: [
-      {
-        title: "Agenti",
-        items: [
-          { label: "Chi fa cosa",          path: "/v2/agents/overview" },
-          { label: "Strategie Email",      path: "/v2/agents/email-strategies" },
-          { label: "AI Staff Hub",         path: "/v2/ai-staff" },
-          { label: "Agent Capabilities",   path: "/v2/agents/capabilities" },
-          { label: "Agent Tasks",          path: "/v2/agents/tasks" },
-          { label: "Editor Persona",       path: "/v2/agents/persona" },
-        ],
-      },
-      {
-        title: "Missioni",
-        items: [
-          // "Missioni Autopilot" (/v2/agents/autopilot) è già in navItemsDef
-          // come voce pinned principale: rimossa qui per evitare il duplicato.
-          { label: "Mission Builder",      path: "/v2/agents/missions" },
-          { label: "AI Arena 3D",          path: "/v2/ai-arena" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Email & Comunicazione",
-    items: [
-      { label: "Funnemail Sorting",    path: "/v2/funnemail-inbox/sorting" },
-    ],
-  },
-  {
-    title: "Agenda & Pipeline",
-    items: [
-      { label: "Calendar (deep-link)", path: "/v2/calendar" },
-      { label: "Campaign Jobs",        path: "/v2/campaigns/jobs" },
-    ],
-  },
-  {
-    title: "Cockpit & Analytics",
+    title: "Legacy & Controllo",
     items: [
       { label: "AI Control Center",    path: "/v2/ai-control" },
-      { label: "Analytics",            path: "/v2/analytics" },
-      { label: "Dashboard",            path: "/v2/dashboard" },
-      { label: "KPI Dashboard",        path: "/v2/kpi" },
-      { label: "Notifications",        path: "/v2/notifications" },
+      { label: "Dashboard (legacy)",   path: "/v2/dashboard" },
+      { label: "Calendar (deep-link)", path: "/v2/calendar" },
+      { label: "AI Arena 3D",          path: "/v2/ai-arena" },
     ],
   },
   {
@@ -129,11 +83,8 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
     ],
   },
   {
-    title: "Sistema & Admin",
+    title: "Sistema & Diagnostica",
     items: [
-      { label: "Admin Users",          path: "/v2/settings/admin-users" },
-      { label: "AI Routing",           path: "/v2/settings/ai-routing" },
-      { label: "Email Download",       path: "/v2/settings/email-download" },
       { label: "Finder API",           path: "/v2/finder-api" },
       { label: "Finder API Catalog",   path: "/v2/finder-api/schema" },
       { label: "Guida",                path: "/v2/guida" },
