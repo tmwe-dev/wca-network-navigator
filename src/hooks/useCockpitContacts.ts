@@ -408,7 +408,7 @@ export function useDeleteCockpitContacts() {
         if (selectedActivitiesError) throw selectedActivitiesError;
 
         for (const act of selectedActivities ?? []) {
-          if (!act.source_id || !act.due_date || act.status !== "pending") continue;
+          if (!act.user_id || !act.source_id || !act.due_date || act.status !== "pending") continue;
           let siblingsQuery = supabase
             .from("activities")
             .select("id")
