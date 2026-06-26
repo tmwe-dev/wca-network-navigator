@@ -63,7 +63,8 @@ export function useNavBadgeCountsV2() {
           supabase
             .from("activities")
             .select("id", { count: "exact", head: true })
-            .eq("status", "pending"),
+            .eq("status", "pending")
+            .is("deleted_at", null),
         ]);
 
       return {

@@ -36,6 +36,7 @@ export function useAgendaDayActivities(day: Date | null) {
         `)
         .gte("created_at", dayStart)
         .lte("created_at", dayEnd)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(100);
 

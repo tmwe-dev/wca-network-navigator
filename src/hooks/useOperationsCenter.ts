@@ -107,6 +107,7 @@ export function useOperationsCenter() {
       const { data, error } = await supabase
         .from("activities")
         .select("id, title, activity_type, status, scheduled_at, due_date, email_subject, sent_at, created_at, partners(company_name)")
+        .is("deleted_at", null)
         .neq("status", "cancelled")
         .order("created_at", { ascending: false })
         .limit(50);
