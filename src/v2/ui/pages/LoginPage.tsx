@@ -49,7 +49,25 @@ export function LoginPage(): React.ReactElement {
     setTmweSubmitting(true);
     try {
       const url = await tmweLoginStart();
-      window.location.href = url;
+      // Il login OAuth TMWE è cross-origin: dentro un iframe (es. preview Lovable)
+      // la navigazione top viene bloccata e resta lo spinner infinito. In quel
+      // caso usciamo dall'iframe (window.top) o apriamo una nuova scheda.
+      let inIframe = false;
+      try {
+        inIframe = window.self !== window.top;
+      } catch {
+        inIframe = true;
+      }
+      if (inIframe) {
+        if (window.top) {
+          window.top.location.href = url;
+        } else {
+          window.open(url, "_blank", "noopener");
+          setTmweSubmitting(false);
+        }
+      } else {
+        window.location.href = url;
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setTmweError(msg);
