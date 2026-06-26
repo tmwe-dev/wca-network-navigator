@@ -46,6 +46,7 @@ async function fetchUnreadCounts(): Promise<UnreadCounts> {
     supabase
       .from("activities")
       .select("id", { count: "planned", head: true })
+      .is("deleted_at", null)
       .in("status", ["pending", "in_progress"]),
   ]);
 

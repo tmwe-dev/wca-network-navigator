@@ -52,6 +52,7 @@ export function useSortingJobs() {
           selected_contact:partner_contacts!activities_selected_contact_id_fkey(id, name, email, contact_alias)
         `)
         .eq("status", "pending")
+        .is("deleted_at", null)
         .not("email_body", "is", null)
         .is("campaign_batch_id", null)
         .order("scheduled_at", { ascending: true, nullsFirst: false });

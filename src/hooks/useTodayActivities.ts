@@ -27,6 +27,7 @@ export function useTodayActivities() {
         .from("activities")
         .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta, status")
         .gte("created_at", today.toISOString())
+        .is("deleted_at", null)
         .in("status", ["pending", "in_progress", "completed"] as Array<"pending" | "in_progress" | "completed">)
         .order("completed_at", { ascending: false, nullsFirst: false })
         .limit(50);

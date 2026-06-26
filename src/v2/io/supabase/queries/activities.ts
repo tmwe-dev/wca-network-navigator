@@ -20,7 +20,7 @@ export async function fetchActivities(
   filters?: ActivityFilters,
 ): Promise<Result<Activity[], AppError>> {
   try {
-    let query = supabase.from("activities").select("*");
+    let query = supabase.from("activities").select("*").is("deleted_at", null);
 
     if (filters?.partnerId) query = query.eq("partner_id", filters.partnerId);
     if (filters?.status) query = query.eq("status", filters.status);
