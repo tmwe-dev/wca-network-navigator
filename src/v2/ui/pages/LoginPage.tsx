@@ -59,10 +59,26 @@ export function LoginPage(): React.ReactElement {
         inIframe = true;
       }
       if (inIframe) {
-        if (window.top) {
-          window.top.location.href = url;
-        } else {
-          window.open(url, "_blank", "noopener");
+        // Dentro l'editor Lovable il frame parent è cross-origin: scrivere
+        // window.top.location lancia "does not have permission to navigate".
+        // Proviamo la navigazione top, ma se viene bloccata apriamo una nuova
+        // scheda (che esce dall'iframe e completa l'OAuth correttamente).
+        let topNavOk = false;
+        try {
+          if (window.top) {
+            window.top.location.href = url;
+            topNavOk = true;
+          }
+        } catch {
+          topNavOk = false;
+        }
+        if (!topNavOk) {
+          const win = window.open(url, "_blank", "noopener");
+          if (!win) {
+            setTmweError(
+              "Il browser ha bloccato l'apertura del login. Apri l'app in una scheda intera (non nell'editor) e riprova, oppure consenti i popup.",
+            );
+          }
           setTmweSubmitting(false);
         }
       } else {
