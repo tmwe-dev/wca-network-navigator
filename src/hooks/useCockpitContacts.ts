@@ -231,6 +231,7 @@ export function useCockpitContacts() {
         .eq("user_id", user.id)
         .eq("status", "pending")
         .eq("due_date", today)
+        .is("deleted_at", null)
         .limit(100);
 
       return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [], socialLinksMap, contactSocialMap };
