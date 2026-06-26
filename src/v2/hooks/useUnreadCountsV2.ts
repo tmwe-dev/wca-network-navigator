@@ -36,7 +36,7 @@ export function useUnreadCountsV2() {
       }
       const [msgRes, taskRes, queueRes] = await Promise.all([
         msgQuery,
-        supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null),
         supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
       ]);
       return {

@@ -106,6 +106,7 @@ export async function findActivitiesForPartner(partnerId: string): Promise<Activ
     .from("activities")
     .select("*, team_members(name)")
     .eq("partner_id", partnerId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw error;
@@ -116,6 +117,7 @@ export async function findAllActivities(limit = 1000): Promise<AllActivity[]> {
   const { data, error } = await supabase
     .from("activities")
     .select(ALL_ACTIVITIES_SELECT)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -175,7 +177,7 @@ export async function insertActivity(activity: ActivityInsert) {
 }
 
 export async function countActivitiesWithNullPartner() {
-  const { count, error } = await supabase.from("activities").select("*", { count: "exact", head: true }).is("partner_id", null);
+  const { count, error } = await supabase.from("activities").select("*", { count: "exact", head: true }).is("partner_id", null).is("deleted_at", null);
   if (error) throw error;
   return count ?? 0;
 }
@@ -232,6 +234,7 @@ export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCar
   const { data, error } = await supabase
     .from("activities")
     .select("id, title, activity_type, status, priority, due_date, created_at, department, partner_id, description, email_subject, email_body, scheduled_at, partners(company_name, country_code)")
+    .is("deleted_at", null)
     .not("status", "in", "(completed,cancelled)")
     .or(`created_at.gte.${sinceIso},due_date.gte.${sinceIso},scheduled_at.gte.${sinceIso}`)
     .order("created_at", { ascending: false })

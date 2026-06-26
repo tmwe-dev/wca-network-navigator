@@ -398,7 +398,34 @@ export function useDeleteCockpitContacts() {
       for (const entry of sourceEntries) {
         deleted += await deleteCockpitQueueBySource(user.id, entry.type, entry.id);
       }
-      deleted += await deleteActivities(activityIds);
+      if (activityIds.length > 0) {
+        const idsToDelete = new Set(activityIds);
+        const { data: selectedActivities, error: selectedActivitiesError } = await supabase
+          .from("activities")
+          .select("id, user_id, source_type, source_id, due_date, status")
+          .in("id", activityIds)
+          .is("deleted_at", null);
+        if (selectedActivitiesError) throw selectedActivitiesError;
+
+        for (const act of selectedActivities ?? []) {
+          if (!act.user_id || !act.source_id || !act.due_date || act.status !== "pending") continue;
+          let siblingsQuery = supabase
+            .from("activities")
+            .select("id")
+            .eq("user_id", act.user_id)
+            .eq("source_id", act.source_id)
+            .eq("due_date", act.due_date)
+            .eq("status", "pending")
+            .is("deleted_at", null);
+
+          if (act.source_type) siblingsQuery = siblingsQuery.eq("source_type", act.source_type);
+          const { data: siblings, error: siblingsError } = await siblingsQuery;
+          if (siblingsError) throw siblingsError;
+          for (const sibling of siblings ?? []) idsToDelete.add(sibling.id);
+        }
+
+        deleted += await deleteActivities([...idsToDelete]);
+      }
       return deleted;
     },
     onSuccess: () => {
