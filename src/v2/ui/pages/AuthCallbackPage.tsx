@@ -42,6 +42,19 @@ export function AuthCallbackPage(): React.ReactElement {
         }
 
         if (cancelled) return;
+        // Se siamo in una scheda aperta dalla finestra principale (preview
+        // iframe), notifichiamo l'opener così che si ricarichi e raccolga la
+        // sessione appena scritta in localStorage (stesso origin). Poi
+        // chiudiamo questa scheda.
+        try {
+          if (window.opener && window.opener !== window) {
+            window.opener.postMessage({ type: "tmwe-auth-success" }, window.location.origin);
+            window.close();
+            return;
+          }
+        } catch {
+          // best effort — se opener non accessibile, prosegui col redirect
+        }
         // Pulisci l'hash e vai alla home autenticata (Command).
         window.history.replaceState(null, "", "/v2/command");
         navigate("/v2/command", { replace: true });
