@@ -33,7 +33,6 @@ export function LoginPage(): React.ReactElement {
   const { isAuthenticated, isLoading: authLoading } = useAuthV2();
 
   const [tmweSubmitting, setTmweSubmitting] = useState(false);
-  const [tmweLoginUrl, setTmweLoginUrl] = useState<string | null>(null);
   const [tmweError, setTmweError] = useState<string | null>(null);
   const [isEmbedded] = useState(() => {
     try {
@@ -52,56 +51,19 @@ export function LoginPage(): React.ReactElement {
     }
   }, [location.search]);
 
-  const prepareTmweLogin = useCallback(async (): Promise<string | null> => {
+  const handleTmweLogin = useCallback(async () => {
     setTmweError(null);
     setTmweSubmitting(true);
+
     try {
       const url = await tmweLoginStart();
-      setTmweLoginUrl(url);
-      return url;
+      window.location.assign(url);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setTmweError(msg);
-      return null;
-    } finally {
       setTmweSubmitting(false);
     }
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setTmweError(null);
-    setTmweSubmitting(true);
-    tmweLoginStart()
-      .then((url) => {
-        if (!cancelled) setTmweLoginUrl(url);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setTmweError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => {
-        if (!cancelled) setTmweSubmitting(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handleTmweLogin = useCallback(async (event: React.MouseEvent<HTMLAnchorElement>) => {
-    if (tmweLoginUrl) {
-      window.setTimeout(() => void prepareTmweLogin(), 500);
-      return;
-    }
-
-    event.preventDefault();
-    const url = await prepareTmweLogin();
-    if (!url) return;
-    if (isEmbedded) {
-      window.open(url, "_blank", "noopener,noreferrer");
-      return;
-    }
-    window.location.assign(url);
-  }, [isEmbedded, prepareTmweLogin, tmweLoginUrl]);
 
   // Hook order stable: redirect after all hooks.
   if (isAuthenticated && !authLoading) {
@@ -117,17 +79,28 @@ export function LoginPage(): React.ReactElement {
         </p>
       </div>
 
-      <a
-        href={tmweLoginUrl ?? "#"}
-        target={isEmbedded ? "_blank" : "_self"}
-        rel={isEmbedded ? "noopener noreferrer" : undefined}
-        onClick={handleTmweLogin}
-        aria-disabled={tmweSubmitting || authLoading || !tmweLoginUrl}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 aria-disabled:opacity-50 aria-disabled:pointer-events-none transition-colors"
-      >
-        {tmweSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plane className="w-4 h-4" />}
-        {tmweSubmitting && !tmweLoginUrl ? "Preparazione login…" : "Entra con TMWE"}
-      </a>
+      {isEmbedded ? (
+        <a
+          href="/v2/tmwe-login-popup"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={authLoading}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 aria-disabled:opacity-50 aria-disabled:pointer-events-none transition-colors"
+        >
+          <Plane className="w-4 h-4" />
+          Entra con TMWE
+        </a>
+      ) : (
+        <button
+          type="button"
+          onClick={handleTmweLogin}
+          disabled={tmweSubmitting || authLoading}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+        >
+          {tmweSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plane className="w-4 h-4" />}
+          Entra con TMWE
+        </button>
+      )}
 
       {tmweError && (
         <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
