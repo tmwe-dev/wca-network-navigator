@@ -47,44 +47,41 @@ export function LoginPage(): React.ReactElement {
   const handleTmweLogin = useCallback(async () => {
     setTmweError(null);
     setTmweSubmitting(true);
+
+    // Rileva subito l'iframe: in preview/editor non dobbiamo mai provare
+    // a navigare window.top, perché il browser lo blocca come cross-origin.
+    let inIframe = false;
+    try {
+      inIframe = window.self !== window.top;
+    } catch {
+      inIframe = true;
+    }
+
+    // Se siamo in iframe apriamo la tab vuota subito nel gesto utente: dopo
+    // l'await il popup potrebbe essere bloccato. Poi ci carichiamo l'URL OAuth.
+    const tmwePopup = inIframe ? window.open("about:blank", "_blank") : null;
     try {
       const url = await tmweLoginStart();
-      // Il login OAuth TMWE è cross-origin: dentro un iframe (es. preview Lovable)
-      // la navigazione top viene bloccata e resta lo spinner infinito. In quel
-      // caso usciamo dall'iframe (window.top) o apriamo una nuova scheda.
-      let inIframe = false;
-      try {
-        inIframe = window.self !== window.top;
-      } catch {
-        inIframe = true;
-      }
+
       if (inIframe) {
-        // Dentro l'editor Lovable il frame parent è cross-origin: scrivere
-        // window.top.location lancia "does not have permission to navigate".
-        // Proviamo la navigazione top, ma se viene bloccata apriamo una nuova
-        // scheda (che esce dall'iframe e completa l'OAuth correttamente).
-        let topNavOk = false;
-        try {
-          if (window.top) {
-            window.top.location.href = url;
-            topNavOk = true;
+        if (tmwePopup) {
+          try {
+            tmwePopup.opener = null;
+            tmwePopup.location.replace(url);
+          } catch {
+            tmwePopup.location.href = url;
           }
-        } catch {
-          topNavOk = false;
+        } else {
+          setTmweError(
+            "Il browser ha bloccato l'apertura del login. Apri l'app in una scheda intera (non nell'editor) e riprova, oppure consenti i popup.",
+          );
         }
-        if (!topNavOk) {
-          const win = window.open(url, "_blank", "noopener");
-          if (!win) {
-            setTmweError(
-              "Il browser ha bloccato l'apertura del login. Apri l'app in una scheda intera (non nell'editor) e riprova, oppure consenti i popup.",
-            );
-          }
-          setTmweSubmitting(false);
-        }
+        setTmweSubmitting(false);
       } else {
         window.location.href = url;
       }
     } catch (err) {
+      if (tmwePopup && !tmwePopup.closed) tmwePopup.close();
       const msg = err instanceof Error ? err.message : String(err);
       setTmweError(msg);
       setTmweSubmitting(false);
