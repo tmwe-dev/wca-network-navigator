@@ -26,6 +26,47 @@ const REASON_MESSAGES: Record<string, string> = {
   missing_params: "Parametri di login mancanti. Riprova.",
 };
 
+function writeTmwePopupDocument(popup: Window, state: "loading" | "redirecting" | "error", redirectUrl?: string): void {
+  const isError = state === "error";
+  const title = isError ? "Login TMWE non avviato" : "Accesso TMWE";
+  const message = isError
+    ? "Non riesco ad aprire il login. Chiudi questa scheda e riprova."
+    : state === "redirecting"
+      ? "Ti sto portando al login TMWE…"
+      : "Preparazione del login TMWE…";
+  const redirectScript = redirectUrl
+    ? `<script>try{window.opener=null;}catch(e){}window.location.replace(${JSON.stringify(redirectUrl)});<\/script>`
+    : "";
+
+  popup.document.open();
+  popup.document.write(`<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${title}</title>
+    <style>
+      :root { color-scheme: light dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: Canvas; color: CanvasText; }
+      main { width: min(360px, calc(100vw - 32px)); text-align: center; border: 1px solid color-mix(in srgb, CanvasText 16%, transparent); border-radius: 12px; padding: 28px; }
+      .spinner { width: 28px; height: 28px; margin: 0 auto 16px; border: 3px solid color-mix(in srgb, CanvasText 18%, transparent); border-top-color: Highlight; border-radius: 999px; animation: spin .8s linear infinite; }
+      h1 { margin: 0 0 8px; font-size: 18px; }
+      p { margin: 0; font-size: 14px; opacity: .72; line-height: 1.5; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <main>
+      ${isError ? "" : `<div class="spinner" aria-hidden="true"></div>`}
+      <h1>${title}</h1>
+      <p>${message}</p>
+    </main>
+    ${redirectScript}
+  </body>
+</html>`);
+  popup.document.close();
+}
+
 export function LoginPage(): React.ReactElement {
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/v2/command";
@@ -57,24 +98,34 @@ export function LoginPage(): React.ReactElement {
       inIframe = true;
     }
 
-    // In preview/editor il click vive dentro un iframe sandbox: non dobbiamo
-    // pilotare la location di una finestra esterna dall'iframe. Apriamo invece
-    // una rotta same-origin autosufficiente: sarà quella tab a chiamare TMWE e
-    // navigare sé stessa, evitando pagina bianca e SecurityError cross-frame.
+    // In preview/editor il click vive dentro un iframe sandbox: non possiamo
+    // navigare window.top. Apriamo subito una tab same-origin con contenuto
+    // visibile, poi le scriviamo uno script che naviga sé stessa verso TMWE.
     if (inIframe) {
-      const tmwePopup = window.open("/v2/tmwe-login-popup", "_blank");
+      const tmwePopup = window.open("about:blank", "_blank");
       if (!tmwePopup) {
         setTmweError(
           "Il browser ha bloccato l'apertura del login. Apri l'app in una scheda intera (non nell'editor) e riprova, oppure consenti i popup.",
         );
-      } else {
-        try {
-          tmwePopup.opener = null;
-        } catch {
-          // Non critico: la tab popup naviga comunque sé stessa.
-        }
+        setTmweSubmitting(false);
+        return;
       }
-      setTmweSubmitting(false);
+
+      try {
+        writeTmwePopupDocument(tmwePopup, "loading");
+        const url = await tmweLoginStart();
+        if (tmwePopup.closed) {
+          setTmweError("La scheda di login è stata chiusa prima dell'apertura di TMWE.");
+        } else {
+          writeTmwePopupDocument(tmwePopup, "redirecting", url);
+        }
+      } catch (err) {
+        if (!tmwePopup.closed) writeTmwePopupDocument(tmwePopup, "error");
+        const msg = err instanceof Error ? err.message : String(err);
+        setTmweError(msg);
+      } finally {
+        setTmweSubmitting(false);
+      }
       return;
     }
 
