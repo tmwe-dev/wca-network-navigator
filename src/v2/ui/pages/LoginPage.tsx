@@ -51,6 +51,20 @@ export function LoginPage(): React.ReactElement {
     }
   }, [location.search]);
 
+  // Quando il login avviene nella scheda popup (preview iframe), la scheda di
+  // callback ci notifica il successo: ricarichiamo per raccogliere la sessione
+  // già scritta in localStorage (stesso origin) e completare il redirect.
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if ((e.data as { type?: string } | null)?.type === "tmwe-auth-success") {
+        window.location.reload();
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   const handleTmweLogin = useCallback(async () => {
     setTmweError(null);
     setTmweSubmitting(true);
