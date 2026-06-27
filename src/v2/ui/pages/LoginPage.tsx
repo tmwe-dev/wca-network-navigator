@@ -57,31 +57,25 @@ export function LoginPage(): React.ReactElement {
       inIframe = true;
     }
 
-    // Se siamo in iframe apriamo la tab vuota subito nel gesto utente: dopo
-    // l'await il popup potrebbe essere bloccato. Poi ci carichiamo l'URL OAuth.
-    const tmwePopup = inIframe ? window.open("about:blank", "_blank") : null;
+    // In preview/editor il click vive dentro un iframe sandbox: non dobbiamo
+    // pilotare la location di una finestra esterna dall'iframe. Apriamo invece
+    // una rotta same-origin autosufficiente: sarà quella tab a chiamare TMWE e
+    // navigare sé stessa, evitando pagina bianca e SecurityError cross-frame.
+    if (inIframe) {
+      const tmwePopup = window.open("/v2/tmwe-login-popup", "_blank", "noopener,noreferrer");
+      if (!tmwePopup) {
+        setTmweError(
+          "Il browser ha bloccato l'apertura del login. Apri l'app in una scheda intera (non nell'editor) e riprova, oppure consenti i popup.",
+        );
+      }
+      setTmweSubmitting(false);
+      return;
+    }
+
     try {
       const url = await tmweLoginStart();
-
-      if (inIframe) {
-        if (tmwePopup) {
-          try {
-            tmwePopup.opener = null;
-            tmwePopup.location.replace(url);
-          } catch {
-            tmwePopup.location.href = url;
-          }
-        } else {
-          setTmweError(
-            "Il browser ha bloccato l'apertura del login. Apri l'app in una scheda intera (non nell'editor) e riprova, oppure consenti i popup.",
-          );
-        }
-        setTmweSubmitting(false);
-      } else {
-        window.location.href = url;
-      }
+      window.location.href = url;
     } catch (err) {
-      if (tmwePopup && !tmwePopup.closed) tmwePopup.close();
       const msg = err instanceof Error ? err.message : String(err);
       setTmweError(msg);
       setTmweSubmitting(false);
