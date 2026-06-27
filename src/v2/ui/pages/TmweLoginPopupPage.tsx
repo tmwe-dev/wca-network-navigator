@@ -20,6 +20,11 @@ export function TmweLoginPopupPage(): React.ReactElement {
       try {
         const url = await tmweLoginStart();
         if (cancelled) return;
+        try {
+          window.opener = null;
+        } catch {
+          // Non critico: evita solo il legame con la preview quando consentito.
+        }
         window.location.replace(url);
       } catch (err) {
         if (cancelled) return;

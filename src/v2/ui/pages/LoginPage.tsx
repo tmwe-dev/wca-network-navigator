@@ -62,11 +62,17 @@ export function LoginPage(): React.ReactElement {
     // una rotta same-origin autosufficiente: sarà quella tab a chiamare TMWE e
     // navigare sé stessa, evitando pagina bianca e SecurityError cross-frame.
     if (inIframe) {
-      const tmwePopup = window.open("/v2/tmwe-login-popup", "_blank", "noopener,noreferrer");
+      const tmwePopup = window.open("/v2/tmwe-login-popup", "_blank");
       if (!tmwePopup) {
         setTmweError(
           "Il browser ha bloccato l'apertura del login. Apri l'app in una scheda intera (non nell'editor) e riprova, oppure consenti i popup.",
         );
+      } else {
+        try {
+          tmwePopup.opener = null;
+        } catch {
+          // Non critico: la tab popup naviga comunque sé stessa.
+        }
       }
       setTmweSubmitting(false);
       return;
