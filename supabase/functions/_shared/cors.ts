@@ -9,7 +9,6 @@ const PRODUCTION_ORIGINS: readonly string[] = [
   "https://wca-network-navigator.lovable.app",
   "https://id-preview--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app",
   "https://c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovableproject.com",
-  "http://localhost:8080",
 ];
 
 const DEV_ONLY_ORIGINS: readonly string[] = [
