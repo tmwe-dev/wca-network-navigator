@@ -42,6 +42,16 @@ export function AuthCallbackPage(): React.ReactElement {
         }
 
         if (cancelled) return;
+        try {
+          const payload = { type: "tmwe-auth-success" };
+          const channel = new BroadcastChannel("tmwe-auth");
+          channel.postMessage(payload);
+          channel.close();
+          localStorage.setItem("tmwe-auth-success", String(Date.now()));
+        } catch {
+          // best effort — il redirect sotto resta comunque valido
+        }
+
         // Se siamo in una scheda aperta dalla finestra principale (preview
         // iframe), notifichiamo l'opener così che si ricarichi e raccolga la
         // sessione appena scritta in localStorage (stesso origin). Poi

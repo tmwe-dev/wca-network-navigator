@@ -35,6 +35,10 @@ export function LoginPage(): React.ReactElement {
   const [tmweSubmitting, setTmweSubmitting] = useState(false);
   const [tmweError, setTmweError] = useState<string | null>(null);
 
+  const completeExternalLogin = useCallback(() => {
+    window.location.assign(from);
+  }, [from]);
+
   // Surface TMWE callback errors via ?tmwe=error&reason=...
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -44,9 +48,58 @@ export function LoginPage(): React.ReactElement {
     }
   }, [location.search]);
 
+  useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+
+    const onSuccess = () => completeExternalLogin();
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if ((event.data as { type?: string } | null)?.type === "tmwe-auth-success") onSuccess();
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "tmwe-auth-success" && event.newValue) onSuccess();
+    };
+
+    window.addEventListener("message", onMessage);
+    window.addEventListener("storage", onStorage);
+
+    try {
+      channel = new BroadcastChannel("tmwe-auth");
+      channel.onmessage = (event) => {
+        if ((event.data as { type?: string } | null)?.type === "tmwe-auth-success") onSuccess();
+      };
+    } catch {
+      channel = null;
+    }
+
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("storage", onStorage);
+      channel?.close();
+    };
+  }, [completeExternalLogin]);
+
   const handleTmweLogin = useCallback(async () => {
     setTmweError(null);
     setTmweSubmitting(true);
+
+    let isEmbedded = false;
+    try {
+      isEmbedded = window.self !== window.top;
+    } catch {
+      isEmbedded = true;
+    }
+
+    if (isEmbedded) {
+      const popup = window.open("/v2/tmwe-login-popup", "tmwe-login");
+      if (!popup) {
+        setTmweError("Il browser ha bloccato la nuova scheda di login. Consenti i popup e riprova.");
+        setTmweSubmitting(false);
+        return;
+      }
+      popup.focus();
+      return;
+    }
 
     try {
       const url = await tmweLoginStart();
