@@ -135,7 +135,7 @@ export function LoginPage(): React.ReactElement {
       ) : (
         <a
           href={tmweLoginUrl}
-          target={isEmbedded ? "_blank" : "_self"}
+          target={isEmbedded ? "_top" : "_self"}
           rel="noopener noreferrer"
           className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
