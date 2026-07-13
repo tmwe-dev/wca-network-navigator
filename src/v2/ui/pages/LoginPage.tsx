@@ -32,7 +32,8 @@ export function LoginPage(): React.ReactElement {
 
   const { isAuthenticated, isLoading: authLoading } = useAuthV2();
 
-  const [tmweSubmitting, setTmweSubmitting] = useState(false);
+  const [tmweLoginUrl, setTmweLoginUrl] = useState<string | null>(null);
+  const [tmwePreparing, setTmwePreparing] = useState(false);
   const [tmweError, setTmweError] = useState<string | null>(null);
   const [isEmbedded] = useState(() => {
     try {
@@ -41,6 +42,26 @@ export function LoginPage(): React.ReactElement {
       return true;
     }
   });
+
+  const prepareTmweLogin = useCallback(async () => {
+    setTmwePreparing(true);
+    setTmweError(null);
+    try {
+      const url = await tmweLoginStart();
+      setTmweLoginUrl(url);
+    } catch (err) {
+      setTmweLoginUrl(null);
+      setTmweError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setTmwePreparing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void prepareTmweLogin();
+    const refresh = window.setInterval(() => void prepareTmweLogin(), 4 * 60 * 1000);
+    return () => window.clearInterval(refresh);
+  }, [prepareTmweLogin]);
 
   // Surface TMWE callback errors via ?tmwe=error&reason=...
   useEffect(() => {
@@ -84,29 +105,13 @@ export function LoginPage(): React.ReactElement {
     };
   }, [from]);
 
-  const handleTmweLogin = useCallback(async () => {
-    setTmweError(null);
-
-    if (isEmbedded) {
-      const popup = window.open("/v2/tmwe-login-popup", "tmwe-login", "noopener,noreferrer");
-      if (!popup) setTmweError("Popup bloccato dal browser. Consenti i popup e riprova.");
-      return;
-    }
-
-    setTmweSubmitting(true);
-    try {
-      const url = await tmweLoginStart();
-      window.location.assign(url);
-    } catch (err) {
-      setTmweError(err instanceof Error ? err.message : String(err));
-      setTmweSubmitting(false);
-    }
-  }, [isEmbedded]);
-
   // Hook order stable: redirect after all hooks.
   if (isAuthenticated && !authLoading) {
     return <Navigate to={from} replace />;
   }
+
+  const tmweDisabled = authLoading || tmwePreparing || !tmweLoginUrl;
+  const tmweLabel = tmwePreparing || !tmweLoginUrl ? "Preparazione login…" : "Entra con TMWE";
 
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-sm space-y-4">
@@ -117,15 +122,27 @@ export function LoginPage(): React.ReactElement {
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={handleTmweLogin}
-        disabled={tmweSubmitting || authLoading}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-      >
-        {tmweSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plane className="w-4 h-4" />}
-        {tmweSubmitting ? "Preparazione login…" : "Entra con TMWE"}
-      </button>
+      {tmweDisabled ? (
+        <button
+          type="button"
+          onClick={prepareTmweLogin}
+          disabled={authLoading || tmwePreparing}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+        >
+          <Loader2 className="w-4 h-4 animate-spin" />
+          {tmweLabel}
+        </button>
+      ) : (
+        <a
+          href={tmweLoginUrl}
+          target={isEmbedded ? "_blank" : "_self"}
+          rel="noopener noreferrer"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plane className="w-4 h-4" />
+          {tmweLabel}
+        </a>
+      )}
 
       {tmweError && (
         <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
