@@ -121,7 +121,7 @@ export function LoginPage(): React.ReactElement {
         type="button"
         onClick={handleTmweLogin}
         disabled={tmweSubmitting || authLoading}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 aria-disabled:opacity-50 aria-disabled:pointer-events-none transition-colors"
+        className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
       >
         {tmweSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plane className="w-4 h-4" />}
         {tmweSubmitting ? "Preparazione login…" : "Entra con TMWE"}
