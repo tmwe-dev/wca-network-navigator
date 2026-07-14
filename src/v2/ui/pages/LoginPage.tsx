@@ -58,10 +58,11 @@ export function LoginPage(): React.ReactElement {
   }, []);
 
   useEffect(() => {
+    if (isEmbedded) return;
     void prepareTmweLogin();
     const refresh = window.setInterval(() => void prepareTmweLogin(), 4 * 60 * 1000);
     return () => window.clearInterval(refresh);
-  }, [prepareTmweLogin]);
+  }, [isEmbedded, prepareTmweLogin]);
 
   // Surface TMWE callback errors via ?tmwe=error&reason=...
   useEffect(() => {
@@ -110,8 +111,9 @@ export function LoginPage(): React.ReactElement {
     return <Navigate to={from} replace />;
   }
 
-  const tmweDisabled = authLoading || tmwePreparing || !tmweLoginUrl;
-  const tmweLabel = tmwePreparing || !tmweLoginUrl ? "Preparazione login…" : "Entra con TMWE";
+  const tmweHref = isEmbedded ? "/v2/tmwe-login-popup" : tmweLoginUrl;
+  const tmweDisabled = authLoading || tmwePreparing || !tmweHref;
+  const tmweLabel = tmwePreparing || (!isEmbedded && !tmweLoginUrl) ? "Preparazione login…" : "Entra con TMWE";
 
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-sm space-y-4">
@@ -125,7 +127,7 @@ export function LoginPage(): React.ReactElement {
       {tmweDisabled ? (
         <button
           type="button"
-          onClick={prepareTmweLogin}
+          onClick={isEmbedded ? undefined : prepareTmweLogin}
           disabled={authLoading || tmwePreparing}
           className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
         >
@@ -134,8 +136,8 @@ export function LoginPage(): React.ReactElement {
         </button>
       ) : (
         <a
-          href={tmweLoginUrl}
-          target={isEmbedded ? "_top" : "_self"}
+          href={tmweHref}
+          target={isEmbedded ? "_blank" : "_self"}
           rel="noopener noreferrer"
           className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
