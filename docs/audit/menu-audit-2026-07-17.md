@@ -203,8 +203,15 @@ P1 chiusi:
 - Cervello ora ha 1 sola voce: "Agenti".
 - Comunica passa da 7 a 6 voci (rimossa "Funnemail Inbox").
 
-Residuo P2/P3 aperto: `rpc/cron_job_status` 400, banner blacklist ubiquo,
-densità bottoni in `explore/network` e `email-intelligence`, CSP via header.
+P2 chiusi:
+- `cron_job_status()` ottimizzata: singola scansione delle esecuzioni
+  cron delle ultime 24h (CTE `DISTINCT ON (jobid)`) al posto del LATERAL
+  per riga. Elimina i timeout 500/400 nella top bar.
+- `BlacklistStaleBanner` confinato alle sole rotte pertinenti
+  (`/v2/explore/*`, `/v2/cestinone`, `/v2/settings`).
+
+Residuo P2/P3 aperto: densità bottoni in `explore/network` e
+`email-intelligence`, CSP `frame-ancestors` via header HTTP.
 
 Screenshot completi salvati in `/tmp/browser/audit/*.png`; JSON grezzo in
 `/tmp/browser/audit/all.json`.
