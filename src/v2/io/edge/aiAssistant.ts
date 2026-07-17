@@ -29,7 +29,7 @@ export async function decideToolFromPrompt(
     {
       mode: "tool-decision",
       messages: [
-        ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+        ...history.slice(-16).map((m) => ({ role: m.role, content: m.content })),
         { role: "user", content: prompt },
       ],
       context: {
@@ -88,7 +88,7 @@ export async function planExecution(
           description: t.description,
           requiresApproval: t.requiresApproval,
         })),
-        history: history.slice(-10),
+        history: history.slice(-16),
       },
       scope: "command",
     },
