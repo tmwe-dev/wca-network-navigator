@@ -42,7 +42,9 @@ export function useEmailDownloadV2() {
   });
 
   const startSync = useMutation({
-    mutationFn: () => invokeEdge("sync-emails", { context: "emailDownloadV2" }),
+    // NOTE (2026-07-17 audit): la vecchia edge `sync-emails` non esiste.
+    // Il worker corretto è `email-sync-worker` (usato anche dal cron).
+    mutationFn: () => invokeEdge("email-sync-worker", { context: "emailDownloadV2" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.v2.emailDownload() }),
   });
 
