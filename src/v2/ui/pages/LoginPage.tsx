@@ -119,8 +119,18 @@ export function LoginPage(): React.ReactElement {
     if (!tmweHref) return;
     const w = 520;
     const h = 680;
-    const y = window.top?.outerHeight ? Math.max(0, (window.top.outerHeight - h) / 2 + (window.top.screenY ?? 0)) : 100;
-    const x = window.top?.outerWidth ? Math.max(0, (window.top.outerWidth - w) / 2 + (window.top.screenX ?? 0)) : 100;
+    let x = 100;
+    let y = 100;
+    try {
+      const sw = window.screen?.availWidth ?? window.screen?.width ?? 0;
+      const sh = window.screen?.availHeight ?? window.screen?.height ?? 0;
+      if (sw && sh) {
+        x = Math.max(0, (sw - w) / 2);
+        y = Math.max(0, (sh - h) / 2);
+      }
+    } catch {
+      // cross-origin — usa i default
+    }
     const features = `popup=yes,width=${w},height=${h},left=${x},top=${y},noopener=no,noreferrer=no`;
     const popup = window.open(tmweHref, "tmwe-login", features);
     if (!popup) {
