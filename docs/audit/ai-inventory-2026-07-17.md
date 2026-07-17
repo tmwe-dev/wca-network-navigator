@@ -154,3 +154,80 @@ Per ogni riga eseguo, nell'ordine delle aree qui sopra:
 6. **Runtime health**: `supabase--edge_function_logs` — nessun errore recente.
 
 Report progressivo in questo file, aggiornando la colonna Status.
+
+---
+
+# Esito verifica autonoma — 2026-07-17
+
+## Sintesi
+
+- **33/39 touchpoint ✅**: edge presente, scope registrato in `ai_scope_registry`, firma `invokeAi` conforme al Charter (R1+R2).
+- **6/39 touchpoint ❌ ROTTI a runtime**: chiamano edge function **inesistenti** (404 garantito).
+- **2 scope prompt-context mancanti**: `home`, `mission-builder` non hanno righe in `operative_prompts` (fallback vuoto — non blocca ma degrada qualità).
+- **3 KB category mancanti**: `ai_memory`, `content-intelligence`, `classification` (per `kb_entries`) — riferite in inventory ma con 0 record.
+- **Runtime AI**: `ai_invocation_audit` ultimo record 2026-06-23 (24 giorni fa); nessun log edge recente → nessun traffico produzione recente.
+- **Health-check live**:
+  - `ai-assistant` → 200 con fallback pulito `AI_RATE_LIMITED` ✅ (degrada correttamente).
+  - `super-mario` → **502 `ai_gateway_429 insufficient_quota`** ❌ (OpenAI BYOK esaurito, non degrada).
+
+## ❌ Edge function inesistenti (fix richiesto)
+
+| Chiamante (src) | Edge invocata | Effetto | Azione |
+|---|---|---|---|
+| `src/v2/services/bulkOps/entries/verify.ts:14` | `verify-whatsapp-number` | 404 su bulk `verify.wa` | Creare o rinominare in edge esistente |
+| `src/v2/services/bulkOps/entries/verify.ts:25` | `verify-linkedin-profile` | 404 su bulk `verify.li` | id. |
+| `src/v2/services/bulkOps/entries/verify.ts:36` | `verify-email-address` | 404 su bulk `verify.email` | id. |
+| `src/v2/services/bulkOps/entries/verify.ts:47` | `find-import-duplicates` | 404 su bulk `verify.dedup` | id. |
+| `src/v2/services/bulkOps/entries/update.ts:87` | `extension-dispatch-enqueue` | 404 su dispatch bulk | Usare `dispatch-integrity-check` o creare edge |
+| `src/v2/hooks/useEmailDownloadV2.ts:45` | `sync-emails` | 404 su Download → Sincronizza | Puntare a `email-cron-sync` o `email-sync-worker` |
+
+## ⚠️ Contesti prompt mancanti (degrado silenzioso)
+
+| Scope | Context atteso | Presenza in `operative_prompts` |
+|---|---|---|
+| `home` (ai-assistant) | `home` o `general` | 0 (usa fallback `general`: 11 righe) |
+| `mission-builder` (unified-assistant) | `mission-builder` | 0 (usa fallback `general`) |
+
+Contesti verificati OK: `command` (27), `classification` (29), `funnemail_classifier` (13), `content-intelligence` (12), `whatsapp` (8), `linkedin` (6), `general` (11).
+
+## ⚠️ KB category mancanti
+
+| Category richiamata | Righe in `kb_entries` |
+|---|---|
+| `ai_memory` | 0 |
+| `content-intelligence` | 0 (usata da Sherlock) |
+| `classification` | 0 (usata da Funnemail) |
+
+Presenti: `command_tools`(6), `system_doctrine`(18), `sales_doctrine`(14), `agent_doctrine`(29), `procedures`(12), `email_management`(12), `frasi_modello`(6), `tone-and-format`(7), `dati_partner`(2).
+
+## Status per area
+
+| Area | Touchpoint | Status |
+|---|---|---|
+| 1. Home | 2 | ⚠️ prompt `home` mancante (fallback ok) |
+| 2. Command | 10 | ⚠️ `super-mario` fallisce 502 (BYOK OpenAI quota esaurita) |
+| 3. CRM | 1 | ✅ |
+| 4. Contatti/BCA | 3 | ✅ |
+| 5. Pipeline | 1 | ✅ |
+| 6. Missions | 1 | ⚠️ prompt `mission-builder` mancante |
+| 7. Outreach | 2 | ✅ |
+| 8. Funnemail | 2 | ⚠️ KB `classification` vuota |
+| 9. Email Intelligence | 5 | ✅ |
+| 10. Email folders/sync | 2 | ❌ `sync-emails` non esiste |
+| 11. Agent Chat Hub | 2 | ✅ |
+| 12. Optimus | 1 | ✅ |
+| 13. Sherlock | 2 | ⚠️ KB `content-intelligence` vuota |
+| 14. Bulk Ops | 6 | ❌ 5/6 edge mancanti (`verify-*`, `find-import-duplicates`, `extension-dispatch-enqueue`) |
+| 15. Diagnostics | 1 | ✅ |
+| 16. Download Advanced | 1 | ✅ |
+| 17. Settings | 2 | ✅ |
+
+## Azioni prioritarie (ordine di impatto utente)
+
+1. **[BLOCKER runtime]** Ricaricare quota BYOK OpenAI o forzare `super-mario` a degradare come `ai-assistant` (200 + `AI_RATE_LIMITED`).
+2. **[BUG utente]** Riparare `useEmailDownloadV2` → `email-sync-worker` (rompe pulsante "Sincronizza email").
+3. **[BUG utente]** Riparare 4 chiamate `verify-*` + `find-import-duplicates` in `bulkOps/entries/verify.ts` (rompe azioni bulk verifica).
+4. **[BUG utente]** Riparare `extension-dispatch-enqueue` in `bulkOps/entries/update.ts:87`.
+5. **[Qualità AI]** Seed KB categories `content-intelligence`, `classification`, `ai_memory` + `operative_prompts` context `home`, `mission-builder`.
+
+Le prime 4 sono errori 404 deterministici; la #5 degrada la qualità (grounding povero) ma non rompe.
