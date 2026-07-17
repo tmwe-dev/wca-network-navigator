@@ -65,7 +65,9 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
     // error in err(...). We throw inside `fn` to signal failures so the
     // outer Result is correctly typed as Result<TRes, AppError>.
     const result = await withCircuitBreaker<TRes>(
-      `edge:${functionName}`,
+      // Isola il circuito per modalità: un fallimento in mode "commento AI"
+      // non deve aprire il circuito per "plan-execution" o "tool-decision".
+      `edge:${functionName}:${typeof (payload as Record<string, unknown>).mode === "string" ? (payload as Record<string, unknown>).mode as string : "default"}`,
       async () => {
         const { data, error } = await supabase.functions.invoke(functionName, {
           body: payload,
