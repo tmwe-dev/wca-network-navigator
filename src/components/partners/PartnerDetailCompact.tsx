@@ -391,14 +391,14 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
           <div className="flex flex-wrap gap-1.5">
-            {services.map((s: Record<string, unknown>, i: number) => {
-              const Icon = getServiceIcon(s.service_category);
+            {services.map((s, i: number) => {
+              const Icon = getServiceIcon(s.service_category as string);
               return (
                 <Tooltip key={i}>
                   <TooltipTrigger>
-                    <Icon className={cn("w-5 h-5", getServiceIconColor(s.service_category))} />
+                    <Icon className={cn("w-5 h-5", getServiceIconColor(s.service_category as string))} />
                   </TooltipTrigger>
-                  <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                    <TooltipContent>{formatServiceCategory(s.service_category as string)}</TooltipContent>
                 </Tooltip>
               );
             })}
