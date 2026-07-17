@@ -44,8 +44,6 @@ export function PreviewTab({ item }: { item: CestinoItem }): React.ReactElement 
       {item.bodyHtml ? (
         <div
           className="text-sm prose prose-sm dark:prose-invert max-w-none rounded-md border bg-background p-4"
-          // eslint-disable-next-line react/no-danger
-          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.bodyHtml) }}
         />
       ) : item.bodyText ? (
