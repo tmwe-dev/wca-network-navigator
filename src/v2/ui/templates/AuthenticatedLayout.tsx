@@ -348,7 +348,12 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
-                        <BlacklistStaleBanner />
+                        {/* Banner blacklist: mostrato SOLO su rotte di acquisizione/network dove è pertinente. */}
+                        {(location.pathname.startsWith("/v2/explore") ||
+                          location.pathname.startsWith("/v2/cestinone") ||
+                          location.pathname.startsWith("/v2/settings")) && (
+                          <BlacklistStaleBanner />
+                        )}
                         <BackgroundServices>
                           {({ outreachQueue, globalSync }) => (
                             <LayoutHeader
