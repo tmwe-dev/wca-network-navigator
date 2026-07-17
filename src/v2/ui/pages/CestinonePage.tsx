@@ -28,7 +28,7 @@ export function CestinonePage(): React.ReactElement {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <PageTitleHeader icon={Trash2} title="Cestinone" subtitle="conferma, modifica o rinvia" />
+      <PageTitleHeader icon={Trash2} title="Autorizza" subtitle="Cestinone — conferma, modifica o rinvia" />
       <FilterToolbar>
         <ChipGroup
           value={s.status}
