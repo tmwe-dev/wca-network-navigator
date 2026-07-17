@@ -28,6 +28,7 @@ import { traceCollector } from "@/v2/observability/traceCollector";
 import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
 import { GlobalSherlockLauncher } from "@/components/global/GlobalSherlockLauncher";
 const SimpleHomePage = lazyRetry(() => import("@/v2/ui/pages/SimpleHomePage"));
+const OAuthConsent = lazyRetry(() => import("@/pages/OAuthConsent"));
 
 // Init observability layer (idempotent, safe before any render)
 traceCollector.init();
