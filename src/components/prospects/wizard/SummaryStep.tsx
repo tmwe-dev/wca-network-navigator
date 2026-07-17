@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { ChevronLeft, Building2, MapPin, Search, Rocket } from "lucide-react";
 import type { ProspectFilters } from "../ProspectAdvancedFilters";
 import { FATTURATO_PRESETS, DIPENDENTI_PRESETS } from "./useImportWizard";
@@ -76,12 +77,12 @@ export function SummaryStep({ isDark, isExtAvailable, atecoCodes, regions, provi
             <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Profilo aziendale</p>
             {hasFilters ? (
               <div className="flex flex-wrap gap-1.5 mt-1">
-                {fatturatoPreset !== null && (
+                {fatturatoPreset != null && (
                   <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">
                     💰 {FATTURATO_PRESETS[fatturatoPreset].label} ({FATTURATO_PRESETS[fatturatoPreset].desc})
                   </span>
                 )}
-                {dipendentiPreset !== null && (
+                {dipendentiPreset != null && (
                   <span className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">
                     👥 {DIPENDENTI_PRESETS[dipendentiPreset].label} ({DIPENDENTI_PRESETS[dipendentiPreset].desc})
                   </span>

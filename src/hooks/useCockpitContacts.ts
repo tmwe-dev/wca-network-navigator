@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByIds } from "@/data/partners";
@@ -311,7 +312,7 @@ export function useCockpitContacts() {
         let icLinkedin = (icEd.linkedin_profile_url as string) || (icEd.linkedin_url as string) || ((icEd.social_links as Record<string, string> | undefined)?.linkedin) || "";
         if (!icLinkedin && contactProfiles && typeof contactProfiles === "object") {
           const profiles = Object.values(contactProfiles);
-          const found = profiles.find((cp) => typeof cp === "object" && cp !== null && "linkedin_url" in cp);
+          const found = profiles.find((cp) => typeof cp === "object" && cp != null && "linkedin_url" in cp);
           if (found) icLinkedin = found.linkedin_url as string;
         }
         const icPartnerId = item.partner_id;

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Contact Domain Rules — STEP 7
  */

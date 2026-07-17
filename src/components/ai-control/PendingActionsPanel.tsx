@@ -121,7 +121,7 @@ export function PendingActionsPanel() {
       const action = actions.find(a => a.id === params.id);
 
       // LOVABLE-93: if draft was edited, update action_payload before approval
-      let updatePayload: Record<string, unknown> = { status: "approved", executed_at: new Date().toISOString() };
+      const updatePayload: Record<string, unknown> = { status: "approved", executed_at: new Date().toISOString() };
       if (params.draftSubject !== undefined || params.draftBody !== undefined) {
         updatePayload.action_payload = mergeJsonObject(action?.action_payload, {
           ...(params.draftSubject !== undefined && { draft_subject: params.draftSubject }),

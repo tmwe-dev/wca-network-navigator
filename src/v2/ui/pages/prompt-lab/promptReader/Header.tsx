@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, BookText, Inbox, RefreshCw, Download, Loader2, Package, Wrench } from "lucide-react";
@@ -48,7 +49,7 @@ export function Header({ selectedId, loadingId, downloading, onReload, onDownloa
         <Button
           size="sm" variant="outline" className="h-7 gap-1.5"
           onClick={onDownloadAgent}
-          disabled={!selectedId || downloading !== null}
+          disabled={!selectedId || downloading != null}
           title="Scarica prompt + KB di questo agente (Markdown)"
         >
           {downloading === "agent" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
@@ -57,7 +58,7 @@ export function Header({ selectedId, loadingId, downloading, onReload, onDownloa
         <Button
           size="sm" variant="outline" className="h-7 gap-1.5"
           onClick={onDownloadAll}
-          disabled={downloading !== null}
+          disabled={downloading != null}
           title="Scarica prompt + KB di tutti gli agenti"
         >
           {downloading === "all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Package className="h-3.5 w-3.5" />}
@@ -66,7 +67,7 @@ export function Header({ selectedId, loadingId, downloading, onReload, onDownloa
         <Button
           size="sm" variant="default" className="h-7 gap-1.5"
           onClick={onDownloadTools}
-          disabled={downloading !== null}
+          disabled={downloading != null}
           title="Documento delle funzioni e degli strumenti chiamati dagli agenti"
         >
           {downloading === "tools" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />}

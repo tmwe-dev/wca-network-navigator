@@ -5,6 +5,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const typeIcon: Record<string, any> = {
   phone_call: Phone,
   meeting: Users,

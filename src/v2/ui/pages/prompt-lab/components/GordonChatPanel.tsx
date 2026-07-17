@@ -51,7 +51,7 @@ function cleanReplyForSpeech(content: string) {
 
   return withoutTechnicalBlocks
     .replace(/_\(([^)]*)\)_/g, "$1")
-    .replace(/[#*`~\[\]>|]/g, "")
+    .replace(/[#*`~[\]>|]/g, "")
     .replace(/\n{2,}/g, ". ")
     .replace(/\n/g, " ")
     .trim();

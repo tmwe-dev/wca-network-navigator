@@ -72,7 +72,7 @@ export function useAiVoice(messages: Msg[], isLoading: boolean, surface?: string
     lastSpokenIdxRef.current = lastIdx;
     const { text } = parseStructuredMessage(last.content);
     if (!text || text.startsWith("⚠️")) return;
-    const cleanText = text.replace(/[#*_`~\[\]()>|]/g, "").replace(/\n{2,}/g, ". ").replace(/\n/g, " ").trim();
+    const cleanText = text.replace(/[#*_`~[\]()>|]/g, "").replace(/\n{2,}/g, ". ").replace(/\n/g, " ").trim();
     if (cleanText.length < 5) return;
     playTTS(cleanText);
   }, [messages, isLoading, voiceEnabled, playTTS]);

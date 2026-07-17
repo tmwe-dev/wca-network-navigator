@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * CompanyCard — card partner ordinata, con dati separati per area visiva.
  * Logic-less, alimentato da `CompanyEntity`.

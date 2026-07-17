@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Prompt Assembler (client side)
  *
@@ -98,6 +99,6 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
 function resolveVariables(template: string, vars: Record<string, string | number | undefined | null>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
     const v = vars[key];
-    return v === undefined || v === null ? "" : String(v);
+    return v === undefined || v == null ? "" : String(v);
   });
 }

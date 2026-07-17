@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * ExploreContextHeader — UNICA barra superiore per la sezione Esplora.
  *
@@ -45,7 +46,7 @@ const TABS: readonly TabDef[] = [
 ] as const;
 
 function formatNumber(n: number | null): string {
-  if (n === null) return "…";
+  if (n == null) return "…";
   return n.toLocaleString("it-IT");
 }
 

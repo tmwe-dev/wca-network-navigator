@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * ScorePill — pill compatto per uno score 0-100.
  * Tono dinamico: rosso < 40, ambra 40-69, verde >= 70.

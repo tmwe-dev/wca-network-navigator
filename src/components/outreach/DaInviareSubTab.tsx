@@ -135,6 +135,7 @@ export function DaInviareSubTab() {
     return list;
   }, [items, channelFilter, sourceFilter]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const handleCancel = async (item: UnifiedItem) => {

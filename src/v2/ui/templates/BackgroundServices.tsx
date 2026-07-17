@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * BackgroundServices — Hosts non-critical background hooks that should NOT
  * block first paint. Mounted via requestIdleCallback after the layout is

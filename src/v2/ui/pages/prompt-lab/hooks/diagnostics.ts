@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * diagnostics — parser e tipi per la diagnostica strutturata del Lab Agent.
  *
@@ -186,7 +187,7 @@ export function parseArchitectDiagnostics(text: string): ArchitectDiagnosticV2[]
   if (json) {
     const items = Array.isArray(json) ? json : [json];
     const parsed = items
-      .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+      .filter((item): item is Record<string, unknown> => typeof item === "object" && item != null)
       .map((item) => coerceV2(item, trimmed));
     if (parsed.length > 0) return parsed;
   }
@@ -220,8 +221,8 @@ export function parseArchitectDiagnostics(text: string): ArchitectDiagnosticV2[]
 const SEV_RE = /^SEVERITY:\s*(low|medium|high|critical)\s*$/im;
 const WHY_RE = /^WHY:\s*(.+)$/im;
 const DEST_RE = /^DESTINATION:\s*(.+)$/im;
-const PROP_RE = /^PROPOSAL:\s*([\s\S]+?)(?=^\s*(?:TEST:|BLOCK:|SEVERITY:)|\Z)/im;
-const TEST_RE = /^TEST:\s*([\s\S]+?)(?=^\s*(?:BLOCK:|SEVERITY:)|\Z)/im;
+const PROP_RE = /^PROPOSAL:\s*([\s\S]+?)(?=^\s*(?:TEST:|BLOCK:|SEVERITY:)|Z)/im;
+const TEST_RE = /^TEST:\s*([\s\S]+?)(?=^\s*(?:BLOCK:|SEVERITY:)|Z)/im;
 const BLOCK_RE = /^BLOCK:\s*([^\s]+)\s*$/im;
 
 function parseLegacySegments(text: string): ArchitectDiagnostic[] {

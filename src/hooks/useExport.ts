@@ -156,7 +156,7 @@ export function useExportCSV() {
     mutationFn: async (options: ExportOptions) => {
       let data: Record<string, unknown>[] = [];
       let defaultColumns: string[] = [];
-      let filename = `export-${options.entity}`;
+      const filename = `export-${options.entity}`;
 
       switch (options.entity) {
         case "contacts":
@@ -199,7 +199,7 @@ export function useExportExcel() {
     mutationFn: async (options: ExportOptions) => {
       let data: Record<string, unknown>[] = [];
       let defaultColumns: string[] = [];
-      let filename = `export-${options.entity}`;
+      const filename = `export-${options.entity}`;
 
       switch (options.entity) {
         case "contacts":

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * aiBridge.ts — Conversational AI layer for the Command Page.
  *
@@ -218,7 +219,7 @@ Rispondi SOLO con questo JSON valido, niente altro testo:
     // ai-assistant returns { reply: "..." } or { message: "..." } depending on mode.
     // If the commentary hop is rate-limited, never surface that as the business
     // answer: the DB/tool result is already valid, so degrade to a local recap.
-    const dataObj = typeof data === "object" && data !== null ? (data as Record<string, unknown>) : null;
+    const dataObj = typeof data === "object" && data != null ? (data as Record<string, unknown>) : null;
     if (
       dataObj?.ok === false ||
       dataObj?.code === "AI_RATE_LIMITED" ||

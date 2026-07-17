@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * FunnemailBulkBar — barra azioni che appare in fondo alla lista quando
  * l'utente ha selezionato 1+ email tramite checkbox.
@@ -78,6 +79,7 @@ export function FunnemailBulkBar({
 
   const requireConfirm = (action: "archive" | "delete") => {
     if (count > CONFIRM_THRESHOLD) setConfirm(action);
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     else action === "archive" ? onArchive() : onDelete();
   };
 
@@ -185,7 +187,7 @@ export function FunnemailBulkBar({
         </div>
       </div>
 
-      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+      <AlertDialog open={confirm != null} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-sm">

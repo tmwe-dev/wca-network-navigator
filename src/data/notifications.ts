@@ -26,6 +26,7 @@ export interface Notification {
   action_url?: string;
   entity_type?: EntityType;
   entity_id?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>;
   created_at: string;
 }
@@ -46,6 +47,7 @@ export interface CreateNotificationInput {
   action_url?: string;
   entity_type?: EntityType;
   entity_id?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>;
 }
 

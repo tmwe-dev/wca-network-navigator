@@ -59,16 +59,13 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 export function MailReader({ mail, folders, onOverrideFolder, onReclassify, reclassifying }: Props): React.ReactElement {
-  if (!mail) {
-    return (
-      <section className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        Seleziona una mail per leggerla
-      </section>
-    );
-  }
-
-  const body = React.useMemo(() => cleanBody(mail.body_html, mail.body_text), [mail.body_html, mail.body_text]);
-  const decision = mail.decision;
+  // Hooks first (rules-of-hooks): tutti gli hook devono essere invocati in ordine
+  // stabile, quindi l'early return per `!mail` è spostato DOPO gli hook.
+  const body = React.useMemo(
+    () => cleanBody(mail?.body_html ?? null, mail?.body_text ?? null),
+    [mail?.body_html, mail?.body_text],
+  );
+  const decision = mail?.decision;
   const currentFolder = decision?.override_folder_slug ?? decision?.folder_slug ?? "to_sort";
 
   // Scout intel per il dominio mittente (lazy)
@@ -78,21 +75,31 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
   React.useEffect(() => {
     let cancelled = false;
     setIntel(null);
+    if (!mail) return;
     const addr = mail.from_address?.toLowerCase() ?? "";
     const m = addr.match(/@([a-z0-9.-]+\.[a-z]{2,})$/);
     if (!m) return;
     getSenderIntelByDomain(m[1]).then((x) => { if (!cancelled) setIntel(x); }).catch(() => {});
     return () => { cancelled = true; };
-  }, [mail.from_address, mail.message_id]);
+  }, [mail]);
 
   React.useEffect(() => {
     let cancelled = false;
     setCi(null);
+    if (!mail) return;
     fetchContentIntelligence(mail.message_id)
       .then((row) => { if (!cancelled) setCi(row); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [mail.message_id]);
+  }, [mail]);
+
+  if (!mail) {
+    return (
+      <section className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+        Seleziona una mail per leggerla
+      </section>
+    );
+  }
 
   return (
     <section className="flex-1 flex flex-col h-full min-w-0">

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * HTML Sanitizer — anti-XSS per signature email, body inbound,
  * e qualsiasi HTML che venga renderizzato in `dangerouslySetInnerHTML`
@@ -73,7 +74,7 @@ function sanitizeStyle(style: string): string {
       if (/expression\s*\(/i.test(value)) return null;
       return `${prop}: ${value}`;
     })
-    .filter((d): d is string => d !== null)
+    .filter((d): d is string => d != null)
     .join("; ");
 }
 
@@ -111,7 +112,7 @@ export function sanitizeHtml(html: string): string {
       const cleanAttrs: string[] = [];
       const attrRegex = /([a-zA-Z][a-zA-Z0-9-]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/g;
       let m: RegExpExecArray | null;
-      while ((m = attrRegex.exec(attrs)) !== null) {
+      while ((m = attrRegex.exec(attrs)) != null) {
         const name = m[1].toLowerCase();
         const rawValue = m[3] ?? m[4] ?? m[5] ?? "";
         if (name.startsWith("on")) continue; // strip onclick/onload/etc

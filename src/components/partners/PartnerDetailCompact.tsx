@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState, useCallback } from "react";
 import type { PartnerViewModel } from "@/types/partner-views";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
@@ -137,6 +138,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   }, [partner, navigate]);
 
   // ── WhatsApp: send via extension bridge ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSendWhatsApp = useCallback(async (contact: Record<string, any>) => {
     const phone = contact.mobile || contact.direct_phone;
     if (!phone) return;
@@ -144,7 +146,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
     try {
       // SSOT v3.9.56: niente bridge call diretta. Apriamo Inbox V2 con il
       // contatto pre-aperto; l'invio reale segue la pipeline approval+review.
-      const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
+      const cleanPhone = phone.replace(/[\s\-().]/g, '').replace(/^\+/, '');
       navigate("/v2/inbox", {
         state: {
           openWhatsAppPhone: cleanPhone,
@@ -291,7 +293,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                 </span>
               </div>
             )}
-            {enr.deep_search_score !== null && enr.deep_search_score !== undefined && (
+            {enr.deep_search_score != null && enr.deep_search_score !== undefined && (
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-[9px]">
                   Score: {Math.round(Number(enr.deep_search_score))}%
@@ -389,14 +391,14 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
           <div className="flex flex-wrap gap-1.5">
-            {services.map((s: Record<string, any>, i: number) => {
-              const Icon = getServiceIcon(s.service_category);
+            {services.map((s, i: number) => {
+              const Icon = getServiceIcon(s.service_category as string);
               return (
                 <Tooltip key={i}>
                   <TooltipTrigger>
-                    <Icon className={cn("w-5 h-5", getServiceIconColor(s.service_category))} />
+                    <Icon className={cn("w-5 h-5", getServiceIconColor(s.service_category as string))} />
                   </TooltipTrigger>
-                  <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                    <TooltipContent>{formatServiceCategory(s.service_category as string)}</TooltipContent>
                 </Tooltip>
               );
             })}

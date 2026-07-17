@@ -133,7 +133,7 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
     const line = lines[i].trim();
 
     // Detect thread URL from markdown links
-    const threadLinkMatch = line.match(/\[.*?\]\((https:\/\/www\.linkedin\.com\/messaging\/thread\/[^\)]+)\)/);
+    const threadLinkMatch = line.match(/\[.*?\]\((https:\/\/www\.linkedin\.com\/messaging\/thread\/[^)]+)\)/);
     if (threadLinkMatch) {
       currentUrl = threadLinkMatch[1];
     }
@@ -187,7 +187,7 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
     }
 
     // Detect thread URLs in href format
-    const hrefMatch = line.match(/https:\/\/www\.linkedin\.com\/messaging\/thread\/[^\s\)\"]+/);
+    const hrefMatch = line.match(/https:\/\/www\.linkedin\.com\/messaging\/thread\/[^\s)"]+/);
     if (hrefMatch && !currentUrl) {
       currentUrl = hrefMatch[0];
     }

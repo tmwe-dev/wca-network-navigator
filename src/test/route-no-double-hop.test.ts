@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Phase 7 hardening — Smoke test routing canonical.
  *
@@ -23,7 +24,7 @@ function extractRedirectMap(src: string): Map<string, string> {
   // Match: <Route path="X" element={<Navigate to="/v2/Y" replace />} />
   const re = /<Route\s+path="([^"]+)"\s+element=\{\s*<Navigate\s+to="([^"]+)"\s+replace\s*\/?>\s*\}\s*\/?>/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(src)) !== null) {
+  while ((m = re.exec(src)) != null) {
     const source = m[1].startsWith("/") ? m[1] : `/v2/${m[1]}`;
     map.set(source, m[2]);
   }

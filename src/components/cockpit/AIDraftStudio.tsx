@@ -476,6 +476,7 @@ function VariablesTab({ draft, goal, baseProposal }: { draft: DraftState; goal: 
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ActionButtons({ draft, sending, waBridge, liBridge, _pcBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy, _onDraftChange }: Record<string, any>) {
   if (draft.channel === "email" && draft.contactEmail) {
     return (

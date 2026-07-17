@@ -19,7 +19,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant
 export type Msg = { role: "user" | "assistant"; content: string; widgets?: WidgetConfig[] };
 
 function extractVoiceSummary(text: string): string {
-  const clean = text.replace(/[#*_`~\[\]()>|]/g, "").replace(/\n+/g, " ").replace(/\[WIDGET:[^\]]+\]/g, "").trim();
+  const clean = text.replace(/[#*_`~[\]()>|]/g, "").replace(/\n+/g, " ").replace(/\[WIDGET:[^\]]+\]/g, "").trim();
   const sentences = clean.match(/[^.!?]+[.!?]+/g);
   if (!sentences) return clean.slice(0, 200);
   return sentences.slice(0, 2).join(" ").trim();

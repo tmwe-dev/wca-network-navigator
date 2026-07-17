@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -159,6 +160,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
               <ScrollArea className={`h-40 border rounded-lg ${th.panelSlate}`}>
                 <div className={th.divider}>
                   {partners?.map(p => (
+                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                     <div key={p.id} onClick={() => setSelected(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer ${th.hover}`}>
                       <Checkbox checked={selected.has(p.id)} className="pointer-events-none" />
                       <div className="min-w-0 flex-1">
@@ -235,7 +237,7 @@ function NetworkSection({ isDark }: { isDark: boolean }) {
                   </div>
                 </div>
                 {config.is_member && (
-                  <Button size="sm" variant="outline" onClick={() => handleTest(config)} disabled={testing !== null} className={`h-7 text-xs ${th.btnTest}`}>
+                  <Button size="sm" variant="outline" onClick={() => handleTest(config)} disabled={testing != null} className={`h-7 text-xs ${th.btnTest}`}>
                     {testing === config.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FlaskConical className="w-3 h-3" />}
                     <span className="ml-1">{tested ? "Ri-testa" : "Test"}</span>
                   </Button>

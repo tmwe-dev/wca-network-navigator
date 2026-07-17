@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, MessageSquare, Zap, Volume2 } from "lucide-react";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
@@ -32,7 +33,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         </div>
         {parsed.operations.length > 0 && <LiveOperationCards operations={parsed.operations} />}
         {parsed.partners.length > 0 && <AiResultsPanel partners={parsed.partners} />}
-        <button onClick={() => handleReplay(content, idx)} disabled={state.playingIdx !== null}
+        <button onClick={() => handleReplay(content, idx)} disabled={state.playingIdx != null}
           className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors" aria-label="Riascolta messaggio">
           {state.playingIdx === idx ? <Loader2 className="w-3 h-3 animate-spin" /> : <Volume2 className="w-3 h-3" />}
           <span>{state.playingIdx === idx ? "Riproduzione..." : "Ascolta"}</span>

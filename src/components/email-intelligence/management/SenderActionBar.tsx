@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SenderActionBar — Barra azioni contestuale visibile quando ≥1 sender è selezionato.
  *
@@ -101,11 +102,11 @@ export function SenderActionBar({
           Azioni per <span className="font-semibold">{contextLabel}</span>:
         </span>
 
-        <Button size="sm" variant="outline" onClick={onOpenRules} disabled={busy !== null}>
+        <Button size="sm" variant="outline" onClick={onOpenRules} disabled={busy != null}>
           <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Regole
         </Button>
 
-        <Button size="sm" variant="outline" onClick={handleMarkRead} disabled={busy !== null}>
+        <Button size="sm" variant="outline" onClick={handleMarkRead} disabled={busy != null}>
           {busy === "mark_read" ? (
             <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
           ) : (
@@ -116,7 +117,7 @@ export function SenderActionBar({
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button size="sm" variant="outline" disabled={busy !== null}>
+            <Button size="sm" variant="outline" disabled={busy != null}>
               <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Elimina
             </Button>
           </AlertDialogTrigger>
@@ -141,11 +142,11 @@ export function SenderActionBar({
           </AlertDialogContent>
         </AlertDialog>
 
-        <Button size="sm" variant="outline" onClick={onOpenExport} disabled={busy !== null}>
+        <Button size="sm" variant="outline" onClick={onOpenExport} disabled={busy != null}>
           <Download className="h-3.5 w-3.5 mr-1.5" /> Esporta
         </Button>
 
-        <Button size="sm" variant="outline" onClick={handleBlock} disabled={busy !== null}>
+        <Button size="sm" variant="outline" onClick={handleBlock} disabled={busy != null}>
           {busy === "block" ? (
             <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
           ) : (

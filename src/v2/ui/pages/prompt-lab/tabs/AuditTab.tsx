@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * AuditTab — Prompt Lab audit screen.
  *
@@ -48,7 +49,7 @@ function SourceBadge({ source }: { source: Source }) {
 }
 
 function fmt(value: unknown): string {
-  if (value === null || value === undefined) return "—";
+  if (value == null || value === undefined) return "—";
   if (typeof value === "string") return value || "—";
   if (Array.isArray(value)) return value.length === 0 ? "[]" : JSON.stringify(value);
   return JSON.stringify(value);

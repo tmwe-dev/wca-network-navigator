@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SenderCard — Card sender VERTICALE leggibile (v4, 2026-04-27).
  *
@@ -310,7 +311,7 @@ function SenderCardImpl({
                             onAcceptAiSuggestion(sender, sender.aiSuggestion!.group_name),
                           );
                         }}
-                        disabled={busy !== null}
+                        disabled={busy != null}
                         draggable={false}
                       >
                         {busy === "ai-accept" ? (

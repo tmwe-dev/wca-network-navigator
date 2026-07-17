@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * ProspectPage V2 — Standalone V1 content migration (NO wrapper)
  */

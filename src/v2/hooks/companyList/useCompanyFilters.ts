@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * useCompanyFilters — predicati pure-function applicati lato client a una
  * lista CompanyEntity. Tutti i filtri sono opzionali: quando vuoti/false

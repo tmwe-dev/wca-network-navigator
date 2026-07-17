@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * localResultFormatter — Template-based response builder for SIMPLE results.
  *
@@ -299,7 +300,7 @@ export function tryLocalComment(
           (r["subject"] as string | undefined);
         return v ? `• ${v}` : null;
       })
-      .filter((x): x is string => x !== null);
+      .filter((x): x is string => x != null);
     const actions = suggestedActionsFor(table, filters);
     const proposal = buildProposalSentence(actions);
     const message = `Trovati **${count}** ${word}${filtersDesc ? " " + filtersDesc : ""}:\n${sampleNames.join("\n")}${proposal ? `\n\n${proposal}` : ""}`;

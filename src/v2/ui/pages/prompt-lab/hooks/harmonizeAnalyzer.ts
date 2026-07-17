@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * harmonizeAnalyzer — invoca il modello con il prompt HARMONIZER strutturato
  * e valida l'output JSON con Zod.
@@ -303,7 +304,7 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
       skipped++;
       log.warn(`[harmonizeAnalyzer] proposal #${i} skipped`, {
         firstIssue: r.error.issues[0],
-        proposalKeys: typeof rawProposals[i] === "object" && rawProposals[i] !== null
+        proposalKeys: typeof rawProposals[i] === "object" && rawProposals[i] != null
           ? Object.keys(rawProposals[i] as object)
           : typeof rawProposals[i],
       });

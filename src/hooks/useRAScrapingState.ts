@@ -41,6 +41,7 @@ export function useRAScrapingState() {
 
   const toggleSet = (set: Set<string>, value: string): Set<string> => {
     const next = new Set(set);
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     next.has(value) ? next.delete(value) : next.add(value);
     return next;
   };

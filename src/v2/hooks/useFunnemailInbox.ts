@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * useFunnemailInbox — stato e query del client Funnemail.
  *
@@ -168,7 +169,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
 
   React.useEffect(() => {
     if (filteredMails.length === 0) {
-      if (selectedMessageId !== null) setSelectedMessageId(null);
+      if (selectedMessageId != null) setSelectedMessageId(null);
       return;
     }
     const selectionStillExists = selectedMessageId ? filteredMails.some((m) => m.id === selectedMessageId) : false;

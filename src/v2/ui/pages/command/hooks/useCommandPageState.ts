@@ -34,6 +34,7 @@ interface ApprovalState {
 
 export function useCommandPageState() {
   const nav = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
@@ -41,6 +42,7 @@ export function useCommandPageState() {
   const [lang, setLang] = useState<"it" | "en">("it");
   const [canvas, setCanvas] = useState<CanvasType>(null);
   const [flowPhase, setFlowPhase] = useState<FlowPhase>("idle");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [activeScenario, setActiveScenario] = useState<any | null>(null);
   const [activeScenarioKey, setActiveScenarioKey] = useState<string | null>(null);
   const [showTools, setShowTools] = useState(false);
@@ -59,6 +61,7 @@ export function useCommandPageState() {
   const ts = () =>
     new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const addMessage = useCallback((msg: Omit<any, "id">) => {
     setMessages((prev) => [
       ...prev,

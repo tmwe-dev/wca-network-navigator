@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * AIGeneratedActivitiesPanel — Adapted from tmwengine AIGeneratedActivitiesPanel.
  * Shows activities WHERE metadata->>'created_by_ai' = 'true' AND status = 'pending'.

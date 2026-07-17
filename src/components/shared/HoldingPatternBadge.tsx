@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * HoldingPatternBadge — Visual indicator of interaction/holding status.
  * Shows colored dot based on recency of last interaction.
@@ -22,7 +23,7 @@ function getDaysSince(dateStr: string | null | undefined): number | null {
 type StatusKey = "in_circuit" | "active" | "warming" | "cooling" | "stale";
 
 function getStatus(days: number | null): { color: string; pulse: boolean; labelKey: StatusKey } {
-  if (days === null) return { color: "bg-muted-foreground/40", pulse: false, labelKey: "in_circuit" };
+  if (days == null) return { color: "bg-muted-foreground/40", pulse: false, labelKey: "in_circuit" };
   if (days < 7) return { color: "bg-emerald-500", pulse: true, labelKey: "active" };
   if (days < 30) return { color: "bg-yellow-500", pulse: false, labelKey: "warming" };
   if (days < 90) return { color: "bg-orange-500", pulse: false, labelKey: "cooling" };

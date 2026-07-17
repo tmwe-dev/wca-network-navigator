@@ -68,7 +68,6 @@ export default function EmailPreviewDialog({
             ) : (
               <div
                 className="prose prose-sm max-w-none text-foreground [&_p]:my-2 [&_a]:text-primary"
-                // eslint-disable-next-line react/no-danger
                 dangerouslySetInnerHTML={{ __html: safeHtml }}
               />
             )}

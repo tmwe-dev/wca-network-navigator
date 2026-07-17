@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * DAL — channel_messages
  */
@@ -282,7 +283,7 @@ export async function getUnifiedInboxMessages(
     partner_id: r.partner_id,
     source_type: r.source_type,
     source_id: r.source_id,
-    is_read: r.read_at !== null,
+    is_read: r.read_at != null,
     partner_name: null,
     partner_lead_status: null,
     partner_country: null,
@@ -306,7 +307,7 @@ export async function getUnifiedInboxStats(channel?: string): Promise<{ unread: 
   if (error) throw error;
   const messages = (data ?? []) as Array<{ id: string; read_at: string | null }>;
   return {
-    unread: messages.filter((m) => m.read_at === null).length,
+    unread: messages.filter((m) => m.read_at == null).length,
     total: messages.length,
   };
 }

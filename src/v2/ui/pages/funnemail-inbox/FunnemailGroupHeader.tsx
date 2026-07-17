@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * FunnemailGroupHeader — header collassabile di un gruppo nella lista mail
  * con menu Azioni di gruppo (segna lette / assegna gruppo / archivia / elimina).
@@ -63,6 +64,7 @@ export function FunnemailGroupHeader({
     if (count > CONFIRM_THRESHOLD) {
       setConfirm(action);
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       action === "archive" ? onArchiveAll() : onDeleteAll();
     }
   };
@@ -138,7 +140,7 @@ export function FunnemailGroupHeader({
         </DropdownMenu>
       </div>
 
-      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+      <AlertDialog open={confirm != null} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-sm">

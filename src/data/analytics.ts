@@ -84,7 +84,7 @@ export async function getEmailMetrics(
     let totalReceived = 0;
     let responded = 0;
     let totalWithResponse = 0;
-    let totalResponseTime = 0;
+    const totalResponseTime = 0;
 
     // Count sent and received
     if (channels) {

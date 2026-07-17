@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * PromptTestsTab — Suite di test di regressione per i prompt operativi.
  *
@@ -532,12 +533,12 @@ function RunCard({ run }: { run: PromptTestRun }) {
         )}
         {run.model_used && <Badge variant="outline">{run.model_used}</Badge>}
         <Badge variant="outline">{run.duration_ms}ms</Badge>
-        {(run.tokens_input ?? run.tokens_output) !== null && (
+        {(run.tokens_input ?? run.tokens_output) != null && (
           <Badge variant="outline">
             tok {run.tokens_input ?? "?"}→{run.tokens_output ?? "?"}
           </Badge>
         )}
-        {kbCount !== null && (
+        {kbCount != null && (
           <Badge variant="outline" className="gap-1">
             <BookOpen className="h-3 w-3" /> KB {kbCount}
           </Badge>

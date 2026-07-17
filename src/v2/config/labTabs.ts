@@ -62,7 +62,7 @@ export const LAB_GROUPS: readonly LabGroupConfig[] = [
   { id: "design",        label: "Design",        icon: Palette },
 ] as const;
 
-/* eslint-disable react-refresh/only-export-components */
+ 
 export const LAB_TABS: readonly LabTabConfig[] = [
   // ─── TESTS ───────────────────────────────────────────────
   { id: "scenari",      label: "Scenari AI",    group: "tests", icon: FlaskConical, legacyPath: "/v2/ai-test-hub",
@@ -124,7 +124,7 @@ export const LAB_TABS: readonly LabTabConfig[] = [
   { id: "design", label: "Design System", group: "design", icon: Palette, legacyPath: "/v2/design-system-preview",
     Component: lazy(() => import("@/v2/ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage }))) },
 ] as const;
-/* eslint-enable react-refresh/only-export-components */
+ 
 
 export function getLabTabsByGroup(group: LabTabGroup): readonly LabTabConfig[] {
   return LAB_TABS.filter((t) => t.group === group);

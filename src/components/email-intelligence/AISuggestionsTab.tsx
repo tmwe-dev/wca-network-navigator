@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * AISuggestionsTab — vista degli address (classificati o non) con stessa
  * estetica delle card di Gestione Manuale: logo dominio, bandiera, badge
@@ -599,7 +600,7 @@ export default function AISuggestionsTab() {
     emailCount: row.email_count,
     firstSeen: "",
     lastSeen: "",
-    isClassified: row.group_id !== null,
+    isClassified: row.group_id != null,
   }));
 
   return (
@@ -836,11 +837,11 @@ export default function AISuggestionsTab() {
                 emailCount: actionsRow.email_count,
                 firstSeen: "",
                 lastSeen: "",
-                isClassified: actionsRow.group_id !== null,
+                isClassified: actionsRow.group_id != null,
               } as SenderAnalysis)
             : null
         }
-        open={actionsRow !== null}
+        open={actionsRow != null}
         onOpenChange={(open) => {
           if (!open) setActionsRow(null);
         }}

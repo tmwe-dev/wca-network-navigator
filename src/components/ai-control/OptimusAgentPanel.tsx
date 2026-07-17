@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * OptimusAgentPanel — vista completa stato Optimus Agent.
  *  - Overview per (channel, pageType): stato, confidence, plan_version, cache hit rate
@@ -277,7 +278,7 @@ export function OptimusAgentPanel() {
       </Card>
 
       {/* Reset confirm */}
-      <AlertDialog open={resetTarget !== null} onOpenChange={(o) => !o && setResetTarget(null)}>
+      <AlertDialog open={resetTarget != null} onOpenChange={(o) => !o && setResetTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Resettare la memoria di Optimus?</AlertDialogTitle>

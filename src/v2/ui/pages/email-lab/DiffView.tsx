@@ -14,7 +14,7 @@ type Op = { type: "eq" | "add" | "del"; text: string };
 
 function tokenize(s: string): string[] {
   // Split mantenendo separatori (spazi, newline, punteggiatura) come token a sé.
-  return s.split(/(\s+|[.,;:!?()\[\]{}"'`])/).filter((t) => t.length > 0);
+  return s.split(/(\s+|[.,;:!?()[\]{}"'`])/).filter((t) => t.length > 0);
 }
 
 function diffTokens(a: string[], b: string[]): Op[] {

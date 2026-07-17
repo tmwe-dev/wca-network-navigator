@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Structured logger — Vol. I §3.3
  *
@@ -58,18 +59,22 @@ const consoleSink: LogSink = (record) => {
   switch (record.level) {
     case "error":
        
+      // eslint-disable-next-line no-console
       console.error(prefix, record.message, payload ?? "");
       break;
     case "warn":
        
+      // eslint-disable-next-line no-console
       console.warn(prefix, record.message, payload ?? "");
       break;
     case "info":
        
+      // eslint-disable-next-line no-console
       console.info(prefix, record.message, payload ?? "");
       break;
     case "debug":
        
+      // eslint-disable-next-line no-console
       console.debug(prefix, record.message, payload ?? "");
       break;
   }
@@ -103,7 +108,7 @@ function getUserIdSafe(): string | undefined {
     const parsed: unknown = JSON.parse(raw);
     if (
       typeof parsed === "object" &&
-      parsed !== null &&
+      parsed != null &&
       "user" in parsed &&
       typeof (parsed as { user?: { id?: unknown } }).user?.id === "string"
     ) {

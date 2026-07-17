@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { createContext, useContext, useState, useCallback, useRef } from "react";
 import { getPartnersByIds } from "@/data/partners";
 import { getContactsByIds } from "@/data/contacts";
@@ -196,7 +197,7 @@ export function useDeepSearchRunner(): DeepSearchState {
             : localSearch.searchPartner(id);
           
           const rawResult = await withTimeout(searchPromise, STEP_TIMEOUT_MS);
-          if (rawResult === null) {
+          if (rawResult == null) {
             error = `Timeout after ${STEP_TIMEOUT_MS / 1000}s`;
           } else {
             data = rawResult as LocalSearchResult;
@@ -245,6 +246,7 @@ export function useDeepSearchRunner(): DeepSearchState {
       const msg = abortRef.current
         ? `Deep Search interrotta: ${processed} ${label} processati`
         : `Deep Search completata: ${processed} ${label}`;
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       abortRef.current
         ? toast.info(msg, { id: "deep-search-global" })
         : toast.success(msg, { id: "deep-search-global" });

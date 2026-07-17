@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * AI function calls — extract and decide.
  */
@@ -15,7 +16,7 @@ export function truncateMarkdownSmart(markdown: string, targetFields: string[]):
   if (!markdown || markdown.length <= MAX_MARKDOWN_CHARS) return markdown;
 
   const keywords = (targetFields || [])
-    .flatMap((f) => f.toLowerCase().split(/[\s_\-]+/))
+    .flatMap((f) => f.toLowerCase().split(/[\s_-]+/))
     .filter((w) => w.length > 3);
 
   const paragraphs = markdown.split(/\n{2,}/);
@@ -48,7 +49,7 @@ export function compactFindings(findings: Record<string, unknown>): string {
   const lines: string[] = [];
   for (const [k, v] of Object.entries(findings)) {
     if (k.startsWith("_")) continue; // skip metadata interni (_summary, _confidence)
-    if (v === null || v === undefined || v === "") continue;
+    if (v == null || v === undefined || v === "") continue;
     const str = typeof v === "string" ? v : JSON.stringify(v);
     lines.push(`${k}: ${str.slice(0, 150)}`);
   }
@@ -112,7 +113,7 @@ notizie recenti). Ignora cookie banner, navigazione, footer.`,
   const findings: Record<string, unknown> = {};
 
   for (const [k, v] of Object.entries(fields)) {
-    if (v !== null && v !== undefined && v !== "") findings[k] = v;
+    if (v != null && v !== undefined && v !== "") findings[k] = v;
   }
 
   const otherRaw = d.other_findings;
@@ -121,7 +122,7 @@ notizie recenti). Ignora cookie banner, navigazione, footer.`,
       if (!item || typeof item !== "object") continue;
       const k = (item as { key?: unknown }).key;
       const v = (item as { value?: unknown }).value;
-      if (typeof k === "string" && k && v !== null && v !== undefined && v !== "") {
+      if (typeof k === "string" && k && v != null && v !== undefined && v !== "") {
         const safeKey = findings[k] === undefined ? k : `${k}_extra`;
         findings[safeKey] = v;
       }

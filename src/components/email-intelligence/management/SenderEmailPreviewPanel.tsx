@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SenderEmailPreviewPanel — pannello inline 35% sinistra dell'area inferiore.
  *
@@ -378,7 +379,7 @@ function FullPageEmailDialog({
   const reset = () => setZoom(1);
 
   return (
-    <Dialog open={email !== null} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={email != null} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] max-h-[94vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-5 py-3 border-b flex-shrink-0">
           <div className="flex items-center gap-2 pr-8">

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { useInView } from "@/hooks/useInView";
@@ -150,6 +151,7 @@ export function PartnerListPanel({
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
@@ -416,7 +418,7 @@ export function PartnerListPanel({
               onClick={() => setActiveCountryTab(null)}
               className={cn(
                 "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
-                activeCountryTab === null
+                activeCountryTab == null
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted"
               )}

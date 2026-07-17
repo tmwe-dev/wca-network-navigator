@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Tool: parse-business-card — Run OCR/AI extraction on a business-card image URL.
  * Write tool → requires approval (consuma crediti AI).
@@ -67,7 +68,7 @@ export const parseBusinessCardTool: Tool = {
 
     const extracted = res.data ?? res.contact ?? {};
     const lines = Object.entries(extracted)
-      .filter(([, v]) => v !== null && v !== "")
+      .filter(([, v]) => v != null && v !== "")
       .map(([k, v]) => `${k}: ${String(v)}`)
       .join("\n");
 

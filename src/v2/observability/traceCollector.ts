@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * traceCollector — singleton bus + ring buffer + DB flusher.
  *
@@ -31,7 +32,7 @@ function uuid(): string {
 }
 
 function summarize(payload: unknown): Record<string, unknown> {
-  if (payload === null || payload === undefined) return {};
+  if (payload == null || payload === undefined) return {};
   let json: string;
   try {
     json = JSON.stringify(payload);

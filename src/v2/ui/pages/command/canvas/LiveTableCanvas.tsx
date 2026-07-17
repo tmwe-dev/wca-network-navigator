@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { motion } from "framer-motion";
 import { Download, X } from "lucide-react";
 import type { ToolResultColumn } from "../tools/types";

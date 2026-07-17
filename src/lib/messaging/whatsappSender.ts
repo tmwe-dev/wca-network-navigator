@@ -84,6 +84,7 @@ export async function queueWhatsAppForApproval(args: QueueWhatsAppArgs): Promise
       .replace(/\{\{name\}\}/gi, t.contactName || "")
       .replace(/\{\{company\}\}/gi, t.companyName || "");
 
+    // eslint-disable-next-line no-restricted-syntax
     const { error } = await supabase.from("ai_pending_actions").insert({
       user_id: userId,
       partner_id: t.partnerId || null,

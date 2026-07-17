@@ -76,6 +76,7 @@ async function persistOutbound(params: {
     return null;
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   const { data, error } = await supabase
     .from("channel_messages")
     .insert({

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { describe, it, expect } from "vitest";
 
 /**
@@ -15,7 +16,7 @@ import { describe, it, expect } from "vitest";
 describe("Email Sync Resume Logic [B06]", () => {
   function computeStartUid(syncState: { last_uid: number; stored_uidvalidity: number | null }, serverUidValidity: number): number {
     // If UIDVALIDITY changed, reset
-    if (syncState.stored_uidvalidity !== null && syncState.stored_uidvalidity !== serverUidValidity) {
+    if (syncState.stored_uidvalidity != null && syncState.stored_uidvalidity !== serverUidValidity) {
       return 0;
     }
     return syncState.last_uid;

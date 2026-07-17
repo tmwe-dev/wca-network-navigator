@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * BlacklistStaleBanner — Banner globale (solo desktop, top di pagina) che
  * avvisa quando la blacklist non viene aggiornata da oltre 30 giorni.
@@ -21,8 +22,8 @@ export function BlacklistStaleBanner(): React.ReactElement | null {
   // (evita rumore su workspace vuoti / nuovi). Se invece esistono già voci ma
   // nessun log, lo mostriamo come "mai loggato".
   const hasEntries = (stats?.total ?? 0) > 0;
-  const isOverdue = days !== null && days >= REFRESH_DAYS;
-  const isMissing = days === null && hasEntries;
+  const isOverdue = days != null && days >= REFRESH_DAYS;
+  const isMissing = days == null && hasEntries;
 
   if (!isOverdue && !isMissing) return null;
 

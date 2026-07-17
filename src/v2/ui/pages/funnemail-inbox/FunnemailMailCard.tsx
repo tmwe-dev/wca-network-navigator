@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * FunnemailMailCard — riga lista email del client Funnemail.
  *

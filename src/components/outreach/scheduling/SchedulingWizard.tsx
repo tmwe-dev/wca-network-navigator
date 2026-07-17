@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SchedulingWizard — Multi-step wizard to launch a cadence sequence
  */
@@ -53,7 +54,7 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
 
   const canNext = () => {
     if (step === 0) return true;
-    if (step === 1) return selectedTemplate !== null;
+    if (step === 1) return selectedTemplate != null;
     if (step === 2) return true;
     return true;
   };

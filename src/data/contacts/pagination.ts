@@ -3,6 +3,7 @@ import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import type { ContactPaginatedFilters, ContactPaginatedSort } from "./types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContactQuery = any;
 
 export async function findContactsPaginated(

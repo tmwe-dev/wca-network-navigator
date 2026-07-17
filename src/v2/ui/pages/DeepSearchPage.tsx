@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * DeepSearchPage V2 — Sherlock Investigator standalone.
  * Form input (companyName/website/city) + selettore livello (Scout/Detective/Sherlock)
@@ -59,7 +60,7 @@ export function DeepSearchPage(): React.ReactElement {
   });
 
   React.useEffect(() => {
-    if (sherlock.stepResults.length > 0 && selectedOrder === null) {
+    if (sherlock.stepResults.length > 0 && selectedOrder == null) {
       setSelectedOrder(sherlock.stepResults[sherlock.stepResults.length - 1].order);
     }
   }, [sherlock.stepResults, selectedOrder]);

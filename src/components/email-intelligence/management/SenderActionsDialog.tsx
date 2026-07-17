@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SenderActionsDialog — Popup grande, giocosa, con TUTTE le azioni e regole
  * applicabili ad un singolo sender.
@@ -304,7 +305,7 @@ export function SenderActionsDialog({
               hint="Tutte le mail di questo mittente saranno marcate come lette"
               onClick={() => applyRule("mark_read", undefined, "Mark-as-read attivo")}
               busy={busy === "mark_read"}
-              disabled={busy !== null}
+              disabled={busy != null}
               tone="info"
             />
             <BigActionButton
@@ -313,7 +314,7 @@ export function SenderActionsDialog({
               hint="Sposta in cartella Archive del server"
               onClick={() => applyRule("archive", undefined, "Archiviazione attiva")}
               busy={busy === "archive"}
-              disabled={busy !== null}
+              disabled={busy != null}
               tone="default"
             />
             <BigActionButton
@@ -321,7 +322,7 @@ export function SenderActionsDialog({
               label="Sposta in cartella…"
               hint="Scegli la cartella IMAP di destinazione"
               onClick={() => setShowFolders(true)}
-              disabled={busy !== null}
+              disabled={busy != null}
               tone="default"
             />
             <BigActionButton
@@ -330,7 +331,7 @@ export function SenderActionsDialog({
               hint="Sposta in Junk e segna come spam (no auto-elimina)"
               onClick={() => applyRule("spam", undefined, "Regola spam attiva")}
               busy={busy === "spam"}
-              disabled={busy !== null}
+              disabled={busy != null}
               tone="warn"
             />
             <BigActionButton
@@ -339,7 +340,7 @@ export function SenderActionsDialog({
               hint="Scarica l'elenco delle mail di questo mittente"
               onClick={handleExport}
               busy={busy === "export"}
-              disabled={busy !== null}
+              disabled={busy != null}
               tone="default"
             />
             <BigActionButton
@@ -380,7 +381,7 @@ export function SenderActionsDialog({
                   key={name}
                   type="button"
                   className="w-full text-left px-3 py-2 hover:bg-muted text-sm flex items-center justify-between disabled:opacity-50"
-                  disabled={busy !== null}
+                  disabled={busy != null}
                   onClick={() => applyRule("move_to_folder", name, `Sposta in "${name}"`)}
                 >
                   <span className="font-medium text-foreground">{name}</span>
@@ -410,7 +411,7 @@ export function SenderActionsDialog({
                   role="combobox"
                   aria-expanded={pickerOpen}
                   className="w-full justify-between font-normal h-auto py-2"
-                  disabled={busy !== null || templatesLoading}
+                  disabled={busy != null || templatesLoading}
                 >
                   <span className="flex items-center gap-2 min-w-0 text-left">
                     <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -509,7 +510,7 @@ export function SenderActionsDialog({
                   setSelectedTemplateId(null);
                 }
               }}
-              disabled={busy !== null}
+              disabled={busy != null}
             />
             <p className="text-xs text-muted-foreground">
               Scegli un template per partire veloce, oppure scrivi liberamente. Le modifiche al
@@ -520,11 +521,11 @@ export function SenderActionsDialog({
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={close} disabled={busy !== null}>Chiudi</Button>
+          <Button variant="ghost" onClick={close} disabled={busy != null}>Chiudi</Button>
           {!showFolders && (
             <Button
               onClick={savePrompt}
-              disabled={busy !== null || !prompt.trim()}
+              disabled={busy != null || !prompt.trim()}
             >
               {busy === "prompt" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salva prompt regola

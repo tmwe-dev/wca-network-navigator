@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,7 @@ export default function AiInteractionLogPage() {
     }
   };
 
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { void load();   }, []);
 
   const stats = useMemo(() => {
     const byType = new Map<string, number>();

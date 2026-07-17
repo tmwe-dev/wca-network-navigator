@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Data Access Layer — Partners
  * Single source of truth for all partners table queries.
@@ -283,7 +284,7 @@ export async function persistSherlockFindings(
   };
   // Conserva tutti i findings non già mappati su colonne
   for (const [k, v] of Object.entries(consolidated)) {
-    if (v === null || v === undefined || v === "") continue;
+    if (v == null || v === undefined || v === "") continue;
     if (k.startsWith("_")) continue;
     sherlockBucket[k] = v;
     if (!touched.includes(k)) touched.push(k);

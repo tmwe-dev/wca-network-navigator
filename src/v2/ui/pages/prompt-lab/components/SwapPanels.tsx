@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SwapPanels — 2 pannelli affiancati con:
  *  - drag&drop sulla handle (⠿) per scambiarne l'ordine
@@ -61,7 +62,7 @@ export function SwapPanels({ panels, order, onReorder, expandedId = null, classN
   function renderPanel(id: string, position: "left" | "right") {
     const p = byId(id);
     const isExpanded = expandedId === id;
-    const isHidden = expandedId !== null && !isExpanded;
+    const isHidden = expandedId != null && !isExpanded;
     return (
       <section
         key={id}

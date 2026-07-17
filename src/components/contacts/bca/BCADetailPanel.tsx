@@ -190,6 +190,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
       )}
 
       {card.notes && (() => {
+        // eslint-disable-next-line no-control-regex
         const isGarbled = /[;|]{3,}|[\x00-\x1f]/.test(card.notes);
         return (
           <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/30">

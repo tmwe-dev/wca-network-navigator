@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * GoldenLayout — Reference split-panel layout for V2 pages (40/60).
  * Wraps ResizablePanelGroup with predictable sizes, header, and responsive
@@ -43,7 +44,7 @@ export function GoldenLayout({
   className,
   storageId,
 }: GoldenLayoutProps): React.ReactElement {
-  const hasDetail = detail !== null && detail !== undefined && detail !== false;
+  const hasDetail = detail != null && detail !== undefined && detail !== false;
   const persistId = storageId ?? `${testId ?? "golden-layout"}:list-vs-detail`;
 
   return (

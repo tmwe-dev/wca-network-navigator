@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ function looksLikeCsv(buffer: ArrayBuffer, fileName: string): boolean {
   if (head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) return true;
   // Primi 200 byte: se trova virgole/tab/newline e nessun null byte → CSV
   const sample = new TextDecoder("utf-8", { fatal: false }).decode(buffer.slice(0, 200));
+  // eslint-disable-next-line no-control-regex
   return /[,;\t]/.test(sample) && /\r|\n/.test(sample) && !/\u0000/.test(sample);
 }
 
@@ -173,9 +175,9 @@ export default function BlacklistManager() {
   const daysSinceUpdate = stats?.lastUpdated
     ? Math.floor((Date.now() - new Date(stats.lastUpdated).getTime()) / 86400000)
     : null;
-  const daysToNextUpdate = daysSinceUpdate === null ? null : Math.max(0, BLACKLIST_REFRESH_DAYS - daysSinceUpdate);
-  const isOverdue = daysSinceUpdate !== null && daysSinceUpdate >= BLACKLIST_REFRESH_DAYS;
-  const isExpiringSoon = daysSinceUpdate !== null && !isOverdue && daysToNextUpdate !== null && daysToNextUpdate <= 5;
+  const daysToNextUpdate = daysSinceUpdate == null ? null : Math.max(0, BLACKLIST_REFRESH_DAYS - daysSinceUpdate);
+  const isOverdue = daysSinceUpdate != null && daysSinceUpdate >= BLACKLIST_REFRESH_DAYS;
+  const isExpiringSoon = daysSinceUpdate != null && !isOverdue && daysToNextUpdate != null && daysToNextUpdate <= 5;
 
   return (
     <div className="space-y-6">
@@ -210,10 +212,10 @@ export default function BlacklistManager() {
             </div>
           <div>
               <p className="text-2xl font-bold">
-                {statsLoading ? "..." : daysSinceUpdate !== null ? `${daysSinceUpdate}g fa` : "Mai"}
+                {statsLoading ? "..." : daysSinceUpdate != null ? `${daysSinceUpdate}g fa` : "Mai"}
               </p>
               <p className="text-xs text-muted-foreground">Ultimo aggiornamento</p>
-              {daysSinceUpdate === null && (
+              {daysSinceUpdate == null && (
                 <Badge variant="destructive" className="mt-1 text-[10px]">⚠️ Mai importata</Badge>
               )}
               {isOverdue && (
@@ -222,7 +224,7 @@ export default function BlacklistManager() {
               {isExpiringSoon && (
                 <Badge variant="warning" className="mt-1 text-[10px]">In scadenza tra {daysToNextUpdate}g</Badge>
               )}
-              {!isOverdue && !isExpiringSoon && daysToNextUpdate !== null && (
+              {!isOverdue && !isExpiringSoon && daysToNextUpdate != null && (
                 <p className="text-[10px] text-muted-foreground mt-1">Prossimo aggiornamento tra {daysToNextUpdate}g</p>
               )}
             </div>

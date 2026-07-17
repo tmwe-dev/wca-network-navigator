@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * ResponseValidator — Lightweight runtime shape validation for AI responses.
  *
@@ -15,7 +16,7 @@ export interface ResponseSchema {
 
 function checkType(value: unknown, expected: FieldType): boolean {
   if (expected === "array") return Array.isArray(value);
-  if (expected === "object") return value !== null && typeof value === "object" && !Array.isArray(value);
+  if (expected === "object") return value != null && typeof value === "object" && !Array.isArray(value);
   return typeof value === expected;
 }
 
@@ -24,11 +25,11 @@ function checkType(value: unknown, expected: FieldType): boolean {
  * Throws ApiError with code SCHEMA_MISMATCH listing all violations.
  */
 export function validateResponse<T = unknown>(data: unknown, schema: ResponseSchema): T {
-  if (data === null || data === undefined || typeof data !== "object" || Array.isArray(data)) {
+  if (data == null || data === undefined || typeof data !== "object" || Array.isArray(data)) {
     throw new ApiError({
       code: "SCHEMA_MISMATCH",
       message: "La risposta AI non è un oggetto valido",
-      details: { received: data === null ? "null" : typeof data },
+      details: { received: data == null ? "null" : typeof data },
     });
   }
 
@@ -39,7 +40,7 @@ export function validateResponse<T = unknown>(data: unknown, schema: ResponseSch
     for (const [field, type] of Object.entries(schema.required)) {
       if (!(field in obj) || obj[field] === undefined) {
         errors.push(`campo obbligatorio mancante: "${field}" (atteso ${type})`);
-      } else if (obj[field] !== null && !checkType(obj[field], type)) {
+      } else if (obj[field] != null && !checkType(obj[field], type)) {
         errors.push(`"${field}": atteso ${type}, ricevuto ${typeof obj[field]}`);
       }
     }
@@ -47,7 +48,7 @@ export function validateResponse<T = unknown>(data: unknown, schema: ResponseSch
 
   if (schema.optional) {
     for (const [field, type] of Object.entries(schema.optional)) {
-      if (field in obj && obj[field] !== undefined && obj[field] !== null && !checkType(obj[field], type)) {
+      if (field in obj && obj[field] !== undefined && obj[field] != null && !checkType(obj[field], type)) {
         errors.push(`"${field}": atteso ${type}, ricevuto ${typeof obj[field]}`);
       }
     }

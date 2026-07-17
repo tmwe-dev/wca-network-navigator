@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * @deprecated Table 'teams' does not exist in current schema (types.ts).
  * The table exists in Supabase migrations (20260422180200_lovable102_rbac.sql) but
@@ -45,6 +46,7 @@ export interface RolePermission {
 }
 
 type UserRoleRow = Database["public"]["Tables"]["user_roles"]["Row"];
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface UserRole extends UserRoleRow {}
 
 export interface Team {
@@ -119,7 +121,7 @@ export async function fetchRoleWithPermissions(roleId: string): Promise<RoleWith
 
   const perms = ((permissions ?? []) as RolePermissionRow[])
     .map((rp) => rp.permissions ?? null)
-    .filter((p): p is Permission => p !== null);
+    .filter((p): p is Permission => p != null);
 
   return { ...role, permissions: perms };
 }
@@ -199,7 +201,7 @@ export async function fetchRolePermissions(roleId: string): Promise<Permission[]
 
   return ((data ?? []) as RolePermissionRow[])
     .map((rp) => rp.permissions ?? null)
-    .filter((p): p is Permission => p !== null);
+    .filter((p): p is Permission => p != null);
 }
 
 /**
@@ -238,7 +240,7 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
 
   return ((data ?? []) as UserRoleJoinRow[])
     .map((ur) => ur.roles ?? null)
-    .filter((r): r is Role => r !== null);
+    .filter((r): r is Role => r != null);
 }
 
 /**

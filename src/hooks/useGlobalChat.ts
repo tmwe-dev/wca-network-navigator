@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useReducer, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -52,7 +53,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 }
 
 async function playTTS(text: string, voiceId: string, surface = "global_chat"): Promise<void> {
-  const cleanText = text.replace(/[#*_~`>\[\]()!|]/g, "").replace(/\n{2,}/g, ". ").trim();
+  const cleanText = text.replace(/[#*_~`>[\]()!|]/g, "").replace(/\n{2,}/g, ". ").trim();
   if (!cleanText || cleanText.length < 5) return;
   const truncated = cleanText.length > 500 ? cleanText.slice(0, 500) + "..." : cleanText;
 
@@ -121,7 +122,7 @@ export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
   }, [messages, onJobCreated]);
 
   const handleReplay = useCallback(async (content: string, idx: number) => {
-    if (state.playingIdx !== null) return;
+    if (state.playingIdx != null) return;
     dispatch({ type: "SET_PLAYING", value: idx });
     try {
       await playTTS(content, defaultVoiceId);

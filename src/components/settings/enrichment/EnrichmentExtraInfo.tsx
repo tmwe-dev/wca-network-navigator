@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * EnrichmentExtraInfo — LOVABLE-75
  * Icona info read-only che mostra in popover lo stato Deep Search e Sherlock
@@ -39,7 +40,7 @@ export function EnrichmentExtraInfo({ partnerId }: Props): React.ReactElement | 
           <p className="text-foreground">
             🔍 <span className="font-semibold">Deep Search:</span>{" "}
             {snapshot.deep.fields.join(", ")}
-            {snapshot.deep.age_days !== null && (
+            {snapshot.deep.age_days != null && (
               <span className="text-muted-foreground"> ({snapshot.deep.age_days} gg fa)</span>
             )}
           </p>
@@ -48,7 +49,7 @@ export function EnrichmentExtraInfo({ partnerId }: Props): React.ReactElement | 
           <p className="text-foreground">
             🕵️ <span className="font-semibold">Sherlock</span>
             {snapshot.sherlock.level && ` Lv${snapshot.sherlock.level}`}
-            {snapshot.sherlock.age_days !== null && (
+            {snapshot.sherlock.age_days != null && (
               <span className="text-muted-foreground"> ({snapshot.sherlock.age_days} gg fa)</span>
             )}
           </p>

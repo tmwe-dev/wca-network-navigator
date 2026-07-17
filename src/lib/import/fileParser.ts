@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Robust file parser — adapted from clever-contact-loader
  * Supports CSV, TXT, XLSX, XLS with auto-detection

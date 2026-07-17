@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Test message store dedup/merge.
  * Vol. II §10.1 (idempotenza).
@@ -92,7 +93,7 @@ describe("prependMessage", () => {
 });
 
 describe("countUnread", () => {
-  it("counts only messages with read_at === null", () => {
+  it("counts only messages with read_at == null", () => {
     const msgs = [
       mk({ id: "1", read_at: null }),
       mk({ id: "2", read_at: "2026-01-01T00:00:00Z" }),

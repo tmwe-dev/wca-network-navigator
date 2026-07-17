@@ -61,6 +61,7 @@ export async function callExtension<T = ExtensionResponse>(
   const requestId = `wca_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
   return new Promise((resolve) => {
+    // eslint-disable-next-line prefer-const
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const handler = (event: MessageEvent) => {

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * BusinessCardsViewV2 — BCA business cards list with match status
  */

@@ -63,7 +63,7 @@ export function useDirectContactActions() {
       const key = opts.contactId || opts.phone;
       setWaSending(key);
       try {
-        const cleanPhone = opts.phone.replace(/[\s\-\(\)\.]/g, "").replace(/^\+/, "");
+        const cleanPhone = opts.phone.replace(/[\s\-().]/g, "").replace(/^\+/, "");
         // Apriamo la chat WhatsApp DENTRO l'app (Inbox V2 → tab WhatsApp), non su wa.me.
         // Il messaggio verrà scritto nel composer interno e tracciato come inviato.
         navigate("/v2/inbox", {

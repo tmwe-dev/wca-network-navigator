@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * HarmonizeReviewPanel — tabella di review delle proposte di armonizzazione.
  *

@@ -37,6 +37,7 @@ function useAgentTasks() {
   return useQuery({
     queryKey: ["v2", "agent-tasks-pending"],
     queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: tasks, error } = await (supabase as unknown as { from: (t: string) => any })
         .from("agent_tasks")
         .select("*")
@@ -47,6 +48,7 @@ function useAgentTasks() {
 
       // Fetch agent names
       const agentIds = [...new Set((tasks || []).map((t: AgentTask) => t.agent_id))];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: agents } = await (supabase as unknown as { from: (t: string) => any })
         .from("agents")
         .select("id, name, avatar_emoji, role")

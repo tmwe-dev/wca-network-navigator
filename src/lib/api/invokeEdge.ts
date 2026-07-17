@@ -54,7 +54,7 @@ export async function invokeEdge<T = unknown>(
     // Retry su 503 BOOT_ERROR (cold-start transitorio durante batch paralleli):
     // 2 tentativi extra con backoff 400ms / 1200ms.
     let attempt = 0;
-    // eslint-disable-next-line no-constant-condition
+     
     while (true) {
       result = await supabase.functions.invoke(functionName, {
         body: body as Record<string, unknown> | undefined,

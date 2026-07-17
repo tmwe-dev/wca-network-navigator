@@ -19,6 +19,7 @@ global.fetch = mockFetch;
 // Clear localStorage cookie cache
 beforeEach(() => {
   vi.clearAllMocks();
+  // eslint-disable-next-line no-empty
   try { localStorage.removeItem("wca_session_cookie"); } catch {}
   resetCheckpoint();
 });

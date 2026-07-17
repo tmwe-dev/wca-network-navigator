@@ -432,6 +432,7 @@ export function useDeepSearchLocal() {
     if (cfg("scrapeWebsite", true) && websiteUrl) {
       const scraped = await scrapeUrl(websiteUrl);
       if (scraped) {
+        // eslint-disable-next-line no-constant-condition
         try { const domain = new URL(websiteUrl).hostname; if (`https://www.google.com/s2/favicons?domain=${domain}&sz=128`) logoFound = true; } catch { /* best-effort */ }
         if (scraped.markdown && scraped.markdown.length > 100) {
           const qa = await aiCall(`Rate this company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`);

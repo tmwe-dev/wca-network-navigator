@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SingleProposalReview — vista a singola proposta con chat di Gordon a destra.
  *

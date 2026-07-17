@@ -17,10 +17,12 @@ import { lazy, ComponentType } from "react";
 // A prop-generic alternative (`<P>`) breaks call sites that pass union
 // factories (es. fallback `{ default: () => null }`) perché TS collassa P a `never`.
 // Questi `any` sono boundary irriducibili — sanctionati e documentati.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function lazify<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>, retries = 2) {
   return lazy(() => retryImport(factory, retries));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function retryImport<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
   retriesLeft: number,
