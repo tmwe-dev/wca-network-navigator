@@ -1,14 +1,13 @@
 /**
  * AnalyticsDashboard — Main dashboard layout with KPIs and charts
  */
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Send,
   BarChart3,
   Users,
   TrendingUp,
   Zap,
-  Activity,
 } from "lucide-react";
 import { KPICard } from "./KPICard";
 import { EmailChart } from "./EmailChart";
@@ -49,7 +48,7 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
   const { data: outreachMetrics, isLoading: outreachLoading } = useOutreachMetrics(dateRange);
   const { data: aiUsageMetrics, isLoading: aiLoading } = useAIUsageMetrics(dateRange);
   const { data: pipelineMetrics, isLoading: pipelineLoading } = usePipelineMetrics();
-  const { data: comparison, isLoading: comparisonLoading } = useMetricsComparison(
+  const { data: comparison, isLoading: _comparisonLoading } = useMetricsComparison(
     dateRange,
     previousDateRange
   );

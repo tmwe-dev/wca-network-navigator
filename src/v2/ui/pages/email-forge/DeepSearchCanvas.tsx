@@ -174,7 +174,7 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
 
       if (!res.ok && !controller.signal.aborted) {
         // Errore non da abort: interrompiamo la pipeline e marchiamo i rimanenti come saltati
-        setPages((prev) => prev.map((p, idx) => {
+        setPages((prev) => prev.map((p, _idx) => {
           const myIdx = idByIdx.indexOf(p.id);
           if (myIdx > i && p.status === "pending") {
             return { ...p, status: "error", error: "Saltato (errore precedente)" };

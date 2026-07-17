@@ -3,7 +3,7 @@
  * Assign and manage roles for users
  */
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoles, useAssignUserRole, useRemoveUserRole, type Role } from "@/hooks/useRBAC";
 import { Button } from "@/components/ui/button";

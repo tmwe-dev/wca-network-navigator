@@ -51,9 +51,9 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
     return contact.replace(/[\u{1F600}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '').trim() || contact.trim();
   }, []);
 
-  const createBridgeSender = useCallback((recipient: string) => {
-    return async (_recipient: string, body: string) => {
-      let r = await sendWhatsApp(_recipient, body);
+  const createBridgeSender = useCallback((_recipient: string) => {
+    return async (recipient: string, body: string) => {
+      let r = await sendWhatsApp(recipient, body);
       if (!r.success) {
         const phone = extractPhoneFromThread(thread);
         if (phone) {

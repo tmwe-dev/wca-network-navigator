@@ -59,7 +59,7 @@ export function SwapPanels({ panels, order, onReorder, expandedId = null, classN
     setHoverId(null);
   }
 
-  function renderPanel(id: string, position: "left" | "right") {
+  function renderPanel(id: string, _position: "left" | "right") {
     const p = byId(id);
     const isExpanded = expandedId === id;
     const isHidden = expandedId != null && !isExpanded;

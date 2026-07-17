@@ -12,7 +12,7 @@ const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
 const mockLimitOrder = vi.fn().mockReturnValue({ data: [MOCK_REMINDERS[0]], error: null });
 const mockLimit = vi.fn().mockReturnValue(mockLimitOrder());
 const mockEqOrder = vi.fn().mockReturnValue({ limit: mockLimit });
-const mockEqSelect = vi.fn().mockReturnValue({ order: mockEqOrder });
+const _mockEqSelect = vi.fn().mockReturnValue({ order: mockEqOrder });
 const mockUpdateEq = vi.fn().mockReturnValue({ error: null });
 const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq });
 
@@ -25,7 +25,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import { useReminders, usePendingReminders, useCompleteReminder } from "./useReminders";
+import { useReminders, useCompleteReminder } from "./useReminders";
 
 beforeEach(() => vi.clearAllMocks());
 

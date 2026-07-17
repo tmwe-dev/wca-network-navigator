@@ -10,7 +10,7 @@ import { untypedFrom } from '@/lib/supabaseUntyped';
 // Vedi nota in BulkEmailActions.tsx (DEBT-EMAIL-INTEL-COLUMNS).
 const supabase = { from: untypedFrom };
 import { toast } from 'sonner';
-import { Trash2, Archive, Folder, Check, X } from 'lucide-react';
+import { Trash2, Archive, Folder, Check } from 'lucide-react';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 
 import { createLogger } from "@/lib/log";

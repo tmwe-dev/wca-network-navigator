@@ -21,7 +21,6 @@ import type {
   ArchitectDiagnosticV2,
   DiagnosticDestination,
   DiagnosticSeverity,
-  ProblemClass,
 } from "../hooks/diagnostics";
 import type { Block } from "../types";
 

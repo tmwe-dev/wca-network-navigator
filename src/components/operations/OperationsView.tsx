@@ -172,7 +172,7 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
     deepSearch.stop();
   }, [deepSearch]);
 
-  const handleGenerateAliases = useCallback(async (codes: string[], type: "company" | "contact") => {
+  const handleGenerateAliases = useCallback(async (codes: string[], _type: "company" | "contact") => {
     if (aliasGenerating) return;
     setAliasGenerating(true);
     const toastId = toast.loading("Generazione alias in corso...");
@@ -225,7 +225,7 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
                   deepSearchRunning={deepSearch.running}
                   aliasGenerating={aliasGenerating}
                   directoryOnly={directoryOnly}
-                  onDirectoryOnlyChange={(v: boolean) => {}}
+                  onDirectoryOnlyChange={(_v: boolean) => {}}
                   onSelectPartner={setSelectedPartnerId}
                   selectedPartnerId={selectedPartnerId}
                 />

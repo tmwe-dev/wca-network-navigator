@@ -222,9 +222,9 @@ describe("Collaudo C6 — scheduleNextStep Context", () => {
 
   // Current behavior: metadata has only partner_id
   function simulateCurrentNextStep(
-    currentChannel: string,
-    currentStep: number,
-    sequenceLength: number
+    _currentChannel: string,
+    _currentStep: number,
+    _sequenceLength: number
   ): Record<string, any> {
     return {
       partner_id: "uuid-123",

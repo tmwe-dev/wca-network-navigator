@@ -55,8 +55,6 @@ import { PromptLabHealthBanner } from "./prompt-lab/PromptLabHealthBanner";
 import {
   FlaskConical,
   Brain,
-  MessageSquare,
-  Target,
   FileText,
   BookOpen,
   User,

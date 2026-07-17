@@ -12,12 +12,6 @@ import {
   getPipelineMetrics,
   getActivityTimeline,
   getMetricsComparison,
-  type EmailMetricsData,
-  type PartnerMetricsData,
-  type OutreachMetricsData,
-  type AIUsageMetricsData,
-  type PipelineMetricsData,
-  type ActivityTimelineItem,
 } from "@/data/analytics";
 
 /**

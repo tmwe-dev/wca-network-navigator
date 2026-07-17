@@ -260,7 +260,7 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
  * Recupera segnalazioni precedentemente generate (per storico/badge count).
  * Usa una query sugli audit log con action = 'prompt_lab_signal'.
  */
-export async function getRecentSignalCount(userId: string): Promise<number> {
+export async function getRecentSignalCount(_userId: string): Promise<number> {
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     // Count errori + rejected nelle ultime 7 giorni come proxy per segnalazioni attive

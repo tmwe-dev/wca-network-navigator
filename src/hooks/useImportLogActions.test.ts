@@ -43,7 +43,7 @@ describe("FIELD_ALIASES", () => {
     );
   });
   it("each field has at least 2 aliases", () => {
-    for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
+    for (const [_field, aliases] of Object.entries(FIELD_ALIASES)) {
       expect(aliases.length).toBeGreaterThanOrEqual(2);
     }
   });

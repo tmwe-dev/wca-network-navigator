@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { createLogger, logConfig, type LogRecord, type LogSink } from "@/lib/log";
 
 beforeEach(() => {

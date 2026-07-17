@@ -11,15 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function RoleManagementPanel() {
   const { data: roles = [], isLoading: rolesLoading } = useRoles();
-  const { data: permissions = [], isLoading: permLoading } = usePermissions();
+  const { data: permissions = [], isLoading: _permLoading } = usePermissions();
   const createRoleMut = useCreateRole();
-  const updateRoleMut = useUpdateRole();
+  const _updateRoleMut = useUpdateRole();
   const deleteRoleMut = useDeleteRole();
   const assignPermMut = useAssignPermission();
   const removePermMut = useRemovePermission();

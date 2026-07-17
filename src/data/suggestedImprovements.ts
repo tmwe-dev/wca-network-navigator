@@ -12,7 +12,6 @@
  * - kb_rule: richiede approvazione admin, diventa voce KB
  * - prompt_adjustment: richiede approvazione admin, modifica un prompt esistente
  */
-import { supabase } from "@/integrations/supabase/client";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("suggestedImprovements");
@@ -71,8 +70,8 @@ export interface CreateSuggestionInput {
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function createSuggestion(
-  userId: string,
-  input: CreateSuggestionInput,
+  _userId: string,
+  _input: CreateSuggestionInput,
 ): Promise<SuggestedImprovement> {
   log.warn(TABLE_WARNING);
   throw new Error('createSuggestion: Table "suggested_improvements" not available in schema');
@@ -84,7 +83,7 @@ export async function createSuggestion(
  * Suggerimenti dell'utente corrente (qualsiasi stato).
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
-export async function listMySuggestions(userId: string): Promise<SuggestedImprovement[]> {
+export async function listMySuggestions(_userId: string): Promise<SuggestedImprovement[]> {
   log.warn(TABLE_WARNING);
   return [];
 }
@@ -111,7 +110,7 @@ export async function listApprovedForArchitect(): Promise<SuggestedImprovement[]
  * Preferenze utente approvate (per iniettare in learned_patterns).
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
-export async function listUserPreferences(userId: string): Promise<SuggestedImprovement[]> {
+export async function listUserPreferences(_userId: string): Promise<SuggestedImprovement[]> {
   log.warn(TABLE_WARNING);
   return [];
 }
@@ -123,9 +122,9 @@ export async function listUserPreferences(userId: string): Promise<SuggestedImpr
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function approveSuggestion(
-  id: string,
-  adminId: string,
-  note?: string,
+  _id: string,
+  _adminId: string,
+  _note?: string,
 ): Promise<void> {
   log.warn(TABLE_WARNING);
   throw new Error('approveSuggestion: Table "suggested_improvements" not available in schema');
@@ -136,9 +135,9 @@ export async function approveSuggestion(
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function rejectSuggestion(
-  id: string,
-  adminId: string,
-  note?: string,
+  _id: string,
+  _adminId: string,
+  _note?: string,
 ): Promise<void> {
   log.warn(TABLE_WARNING);
   throw new Error('rejectSuggestion: Table "suggested_improvements" not available in schema');
@@ -149,10 +148,10 @@ export async function rejectSuggestion(
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function editAndApprove(
-  id: string,
-  adminId: string,
-  newContent: string,
-  note?: string,
+  _id: string,
+  _adminId: string,
+  _newContent: string,
+  _note?: string,
 ): Promise<void> {
   log.warn(TABLE_WARNING);
   throw new Error('editAndApprove: Table "suggested_improvements" not available in schema');
@@ -167,7 +166,7 @@ export async function editAndApprove(
  */
 export async function markSuggestionsApplied(
   ids: string[],
-  runId: string,
+  _runId: string,
 ): Promise<void> {
   if (ids.length === 0) return;
   log.warn(TABLE_WARNING);
@@ -183,7 +182,7 @@ export async function markSuggestionsApplied(
  * Chiamato dal frontend quando costruisce il payload per generate-email/improve-email.
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
-export async function buildLearnedPatterns(userId: string): Promise<string> {
+export async function buildLearnedPatterns(_userId: string): Promise<string> {
   log.warn(TABLE_WARNING);
   return "";
 }

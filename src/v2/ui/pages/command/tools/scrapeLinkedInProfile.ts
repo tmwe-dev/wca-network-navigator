@@ -1,4 +1,3 @@
-import { createBusinessCard } from "@/v2/io/supabase/mutations/business-cards";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult } from "./types";
 

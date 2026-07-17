@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger,
 } from "@/components/ui/select";
 import {
   Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight, PanelLeftClose, PanelLeftOpen, Layers,
@@ -334,7 +334,7 @@ export default function AISuggestionsTab() {
     g.setFilter("emailIntelVolume", safe <= 1 ? "all" : String(safe));
   }, [g]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("uncategorized");
-  const [suggestedGroupFilter, setSuggestedGroupFilter] = useState<string>("all");
+  const [suggestedGroupFilter, _setSuggestedGroupFilter] = useState<string>("all");
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [previewEmail, setPreviewEmail] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
@@ -539,7 +539,7 @@ export default function AISuggestionsTab() {
     return entries;
   }, [groupBySuggestion, sortedRows]);
 
-  const suggestedGroupOptions = useMemo<SuggestedGroupFilter[]>(() => {
+  const _suggestedGroupOptions = useMemo<SuggestedGroupFilter[]>(() => {
     const counts = new Map<string, number>();
     rows.forEach((row) => {
       const key = row.ai_suggested_group ?? "none";

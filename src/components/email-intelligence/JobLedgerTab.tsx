@@ -13,7 +13,7 @@ import {
   type EmailProcessingJobRow,
   type EmailProcessingStage,
 } from "@/data/emailProcessingJobs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";

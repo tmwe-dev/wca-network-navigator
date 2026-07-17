@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FlaskConical, TrendingUp, AlertTriangle } from "lucide-react";
-import { fetchEvalBatchRuns, type EvalBatchRun } from "@/data/funnemailEval";
+import { fetchEvalBatchRuns } from "@/data/funnemailEval";
 import { queryKeys } from "@/lib/queryKeys";
 
 function AccuracyBar({ value }: { value: number }) {

@@ -2,11 +2,10 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  Linkedin, RefreshCw, Loader2, Search, Wifi, WifiOff,
-  Send, X, PanelLeftClose, PanelLeftOpen, Download, Square,
+  Linkedin, Loader2, Search,
+  Send, X, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";

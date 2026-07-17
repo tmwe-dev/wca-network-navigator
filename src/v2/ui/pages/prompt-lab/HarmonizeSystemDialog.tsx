@@ -70,7 +70,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const [ingestionGoal, setIngestionGoal] = useState(
     persistedUi.ingestionGoal ?? "Ingerisci la libreria TMWE in 7 chunk con sessione persistente.",
   );
-  const lastIngestionFileName = persistedUi.ingestionFileName;
+  const _lastIngestionFileName = persistedUi.ingestionFileName;
 
   // ── Agentic V2 (entity-by-entity) ──
   const agentic = useAgenticHarmonizer(userId);

@@ -2,7 +2,7 @@
  * DOM tools — client-side browser actions for the agent loop.
  * Same-origin execution, no chrome.debugger needed.
  */
-import type { AgentTool, AgentToolResult } from "./index";
+import type { AgentTool } from "./index";
 
 const FORBIDDEN_SELECTORS = [
   /logout/i,

@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { asEnrichment } from "@/lib/partnerUtils";
-import type { PartnerWithRelations } from "@/data/partners";
 
 interface PartnerLike extends Record<string, unknown> {
   raw_profile_html?: string | null;

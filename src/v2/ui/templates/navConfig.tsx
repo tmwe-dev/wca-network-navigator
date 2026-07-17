@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, MessageCircle, Linkedin, Target, FlaskConical, Bot, MessagesSquare,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, MessageCircle, Linkedin, Target, FlaskConical, Bot, MessagesSquare,
 } from "lucide-react";
 import { LEAN_MODE, LEAN_NAV_PATHS } from "@/lib/featureFlags";
 

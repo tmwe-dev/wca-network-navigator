@@ -7,7 +7,6 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "./use-toast";
 import * as calendarData from "@/data/calendar";
 import type {
-  CalendarEvent,
   EventType,
   RecurrenceType,
   EventStatus,

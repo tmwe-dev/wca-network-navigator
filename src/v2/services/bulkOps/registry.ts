@@ -9,10 +9,9 @@ import { enrichBaseEntry } from "./entries/enrichBase";
 import { deepSearchEntry } from "./entries/deepSearch";
 import { downloadEntry } from "./entries/download";
 import { inboundEnrichEntry } from "./entries/inboundEnrich";
-import { verifyWaEntry, verifyLiEntry, verifyEmailEntry, verifyDedupEntry } from "./entries/verify";
 import {
   updateOriginEntry, updateLeadStatusEntry, updateEmailRulesEntry,
-  updateBackfillEntry, updateAnalyzeAiEntry, updateDispatchEntry,
+  updateBackfillEntry, updateAnalyzeAiEntry,
 } from "./entries/update";
 
 const REGISTRY: Record<BulkScope, BulkEntry> = {
@@ -20,16 +19,11 @@ const REGISTRY: Record<BulkScope, BulkEntry> = {
   "deepsearch.sherlock": deepSearchEntry as BulkEntry,
   "download.partner": downloadEntry as BulkEntry,
   "enrich.inbound": inboundEnrichEntry as BulkEntry,
-  "verify.wa": verifyWaEntry as BulkEntry,
-  "verify.li": verifyLiEntry as BulkEntry,
-  "verify.email": verifyEmailEntry as BulkEntry,
-  "verify.dedup": verifyDedupEntry as BulkEntry,
   "update.origin": updateOriginEntry as BulkEntry,
   "update.leadStatus": updateLeadStatusEntry as BulkEntry,
   "update.emailRules": updateEmailRulesEntry as BulkEntry,
   "update.backfill": updateBackfillEntry as BulkEntry,
   "update.analyzeAi": updateAnalyzeAiEntry as BulkEntry,
-  "update.dispatch": updateDispatchEntry as BulkEntry,
 };
 
 export function getEntry(scope: BulkScope): BulkEntry {

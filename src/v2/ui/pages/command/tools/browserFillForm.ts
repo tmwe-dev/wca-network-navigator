@@ -83,7 +83,7 @@ export const browserFillFormTool: Tool = {
     const sessionToken = session?.access_token;
 
     // Build the full URL
-    const appUrl = import.meta.env.VITE_SUPABASE_URL?.replace("/rest/v1", "") ?? "";
+    const _appUrl = import.meta.env.VITE_SUPABASE_URL?.replace("/rest/v1", "") ?? "";
     const fullUrl = formUrl.startsWith("http") ? formUrl : `${window.location.origin}${formUrl}`;
 
     // Execute browser actions: navigate + fill (no submit)

@@ -36,7 +36,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import { getProfileSummary, updateProfileOnboarding, checkProfileConnection } from "@/data/profiles";
+import { getProfileSummary, updateProfileOnboarding } from "@/data/profiles";
 
 describe("DAL — profiles", () => {
   beforeEach(() => vi.clearAllMocks());

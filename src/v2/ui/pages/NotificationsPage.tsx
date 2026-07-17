@@ -12,11 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, useDismissNotification, useMarkAsRead } from "@/hooks/useNotifications";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
-import { Trash2, Mail, TrendingUp, Bot, AlertTriangle, MessageSquare, Clock, Bell } from "lucide-react";
+import { Mail, TrendingUp, Bot, AlertTriangle, MessageSquare, Clock, Bell } from "lucide-react";
 import type { NotificationType, NotificationPriority, Notification } from "@/data/notifications";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 
@@ -53,7 +52,7 @@ export default function NotificationsPage(): React.ReactElement {
     dismissNotification.mutate(id);
   };
 
-  const notificationTypeIcons: Record<string, React.ReactNode> = {
+  const _notificationTypeIcons: Record<string, React.ReactNode> = {
     email_received: <Mail className="h-4 w-4" />,
     deal_stage_change: <TrendingUp className="h-4 w-4" />,
     ai_completed: <Bot className="h-4 w-4" />,
@@ -62,7 +61,7 @@ export default function NotificationsPage(): React.ReactElement {
     reminder: <Clock className="h-4 w-4" />,
   };
 
-  const notificationTypeLabels: Record<string, string> = {
+  const _notificationTypeLabels: Record<string, string> = {
     email_received: "Email ricevuta",
     deal_stage_change: "Cambio fase trattativa",
     ai_completed: "AI completata",

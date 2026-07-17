@@ -24,7 +24,7 @@ import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import type { FunnemailDecisionRow, FunnemailPartnerSnapshot, SenderIntelRow } from "@/data/funnemailInbox";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { extractSenderName, stripReplyPrefixes } from "./utils";
-import { AiSuggestionChip, type AiSuggestion } from "./AiSuggestionChip";
+import { type AiSuggestion } from "./AiSuggestionChip";
 import type { FunnemailClaimWithOperator } from "@/data/funnemailClaims";
 import {
   FUNNEMAIL_JOB_STATUSES,

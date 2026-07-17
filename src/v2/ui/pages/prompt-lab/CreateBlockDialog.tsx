@@ -142,7 +142,7 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
     }
   }, [blockType, title, content, category, handleClose, onCreated]);
 
-  const selectedTypeDef = BLOCK_TYPES.find((t) => t.value === blockType);
+  const _selectedTypeDef = BLOCK_TYPES.find((t) => t.value === blockType);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

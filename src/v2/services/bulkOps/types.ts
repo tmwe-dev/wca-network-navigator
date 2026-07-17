@@ -11,18 +11,12 @@ export type BulkScope =
   | "download.partner"
   // Blocco 4 — Inbound enrichment (Funnemail)
   | "enrich.inbound"
-  // Blocco 5 — Verifiche bulk
-  | "verify.wa"
-  | "verify.li"
-  | "verify.email"
-  | "verify.dedup"
-  // Blocco 6 — Update bulk
+  // Blocco 5 — Update bulk
   | "update.origin"
   | "update.leadStatus"
   | "update.emailRules"
   | "update.backfill"
-  | "update.analyzeAi"
-  | "update.dispatch";
+  | "update.analyzeAi";
 
 export interface BulkRunOptions {
   readonly sourceView?: string;

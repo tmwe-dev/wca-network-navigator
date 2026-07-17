@@ -14,7 +14,7 @@ import {
   safeParseJobStart,
 } from "./wcaAppApi.schemas";
 
-const log = createLogger("wcaAppApi");
+const _log = createLogger("wcaAppApi");
 
 const BASE = "https://wca-app.vercel.app/api";
 

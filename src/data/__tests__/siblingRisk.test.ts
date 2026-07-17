@@ -54,7 +54,7 @@ describe("DAL — siblingRisk", () => {
   });
   it("invokes exported functions defensively", async () => {
     const mod: any = await import("@/data/siblingRisk");
-    for (const [key, val] of Object.entries(mod)) {
+    for (const [_key, val] of Object.entries(mod)) {
       if (typeof val !== "function") continue;
       try {
         const result = (val as any)("x", "y", "z", {}, [], null);

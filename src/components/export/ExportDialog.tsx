@@ -2,7 +2,7 @@
  * ExportDialog — Dialog for exporting contacts, partners, deals, and emails
  * Includes format selection, entity selection, filters, and column selection
  */
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { EntityType, ExportFilters, ExportFormat, useExportCSV, useExportExcel } from "@/hooks/useExport";
 import {
   Dialog,

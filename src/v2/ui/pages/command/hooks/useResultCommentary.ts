@@ -2,11 +2,10 @@
  * useResultCommentary — Generate AI commentary on tool execution results
  */
 import { useCallback } from "react";
-import { toast } from "sonner";
-import type { Message, CanvasType } from "../constants";
+import type { Message } from "../constants";
 import type { ToolResult } from "../tools/types";
 import { TOOLS } from "../tools/registry";
-import { getAiComment, serializeResultForAI, type SuggestedAction } from "../aiBridge";
+import { getAiComment, serializeResultForAI } from "../aiBridge";
 import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 import { tryLocalComment, tryLocalCommentMulti } from "../lib/localResultFormatter";
 import { formatTraceLine, type TraceBuilder } from "../lib/toolTrace";

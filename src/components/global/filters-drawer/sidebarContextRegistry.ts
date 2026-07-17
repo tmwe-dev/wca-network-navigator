@@ -20,7 +20,6 @@ import {
   Users,
   Sparkles,
   Megaphone,
-  Beaker,
   Bot,
   FlaskConical,
   Brain,

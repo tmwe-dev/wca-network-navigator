@@ -3,7 +3,6 @@
  * Generates AI suggestions and actionable improvements for prompts
  */
 
-import type { Block } from "../types";
 
 /** Generates improvement suggestions based on prompt analysis. */
 export function generateImprovementSuggestions(
@@ -37,7 +36,7 @@ export function generateImprovementSuggestions(
 
 /** Suggests structural improvements for a prompt. */
 export function suggestStructure(content: string): string {
-  const lines = content.split("\n");
+  const _lines = content.split("\n");
   if (!content.includes("#")) {
     return content
       .split("\n")

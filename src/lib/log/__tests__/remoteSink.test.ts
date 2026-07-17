@@ -30,7 +30,7 @@ describe("installRemoteSink", () => {
   });
 
   it("is idempotent — second call returns same state", () => {
-    const first = installRemoteSink({ endpoint: "https://logs.example.com" });
+    const _first = installRemoteSink({ endpoint: "https://logs.example.com" });
     const second = installRemoteSink({ endpoint: "https://other.com" });
     expect(second.endpoint).toBe("https://logs.example.com");
   });

@@ -14,7 +14,7 @@ import { useServerSyncJob } from "@/hooks/useServerSyncJob";
 import { useDownloadedEmailsFeed } from "@/hooks/useDownloadedEmailsFeed";
 import { cn } from "@/lib/utils";
 
-function formatElapsed(seconds: number): string {
+function _formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return m > 0 ? `${m}m ${s}s` : `${s}s`;

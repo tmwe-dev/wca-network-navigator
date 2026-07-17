@@ -23,7 +23,7 @@ export interface OperativePromptFull {
   is_active: boolean | null;
 }
 
-export async function findOperativePromptsFull(userId: string): Promise<OperativePromptFull[]> {
+export async function findOperativePromptsFull(_userId: string): Promise<OperativePromptFull[]> {
   const { data, error } = await supabase
     .from("operative_prompts")
     .select("id, user_id, name, context, objective, procedure, criteria, examples, tags, priority, is_active")

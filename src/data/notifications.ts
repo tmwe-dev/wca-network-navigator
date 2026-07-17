@@ -3,7 +3,6 @@
  * Single source of truth for all notifications table queries.
  */
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("data/notifications");

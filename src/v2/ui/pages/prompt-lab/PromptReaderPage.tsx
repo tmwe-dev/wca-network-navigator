@@ -13,7 +13,6 @@
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, BookText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
-import { cn } from "@/lib/utils";
 import PromptCopilotPanel from "./PromptCopilotPanel";
 import { SwapPanels } from "./components/SwapPanels";
 import { Header } from "./promptReader/Header";

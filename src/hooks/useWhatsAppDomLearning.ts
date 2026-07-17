@@ -42,7 +42,7 @@ export function useWhatsAppDomLearning() {
         lastLearnRef.current = parsed.learnedAt || 0;
         return parsed;
       }
-    } catch (err) { /* Failed to load schema */ }
+    } catch (_err) { /* Failed to load schema */ }
     return null;
   }, []);
 

@@ -13,7 +13,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, Check, BookmarkPlus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";

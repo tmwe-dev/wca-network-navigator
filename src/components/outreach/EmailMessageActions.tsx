@@ -28,8 +28,8 @@ const RULE_ACTIONS = [
 
 export function EmailMessageActions({ message }: { message: ChannelMessage }) {
   const [ruleOpen, setRuleOpen] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
-  const [moveTarget, setMoveTarget] = useState("");
+  const [_moveOpen, _setMoveOpen] = useState(false);
+  const [_moveTarget, _setMoveTarget] = useState("");
   const bulk = useBulkEmailAction();
   const markRead = useMarkAsRead();
   const { data: folders = [] } = useImapFolders();

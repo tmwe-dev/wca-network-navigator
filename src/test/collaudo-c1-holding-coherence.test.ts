@@ -151,7 +151,7 @@ describe("Collaudo C5 — useTrackActivity State Protection", () => {
 
   // Simulate the CURRENT logic of useTrackActivity
   // Line 49: await updatePartner(params.partnerId, { lead_status: "contacted", last_interaction_at: now })
-  function simulateCurrentTrackActivity(currentStatus: string): string {
+  function simulateCurrentTrackActivity(_currentStatus: string): string {
     // CURRENT code: unconditionally sets to "contacted" — no guard
     return "contacted";
   }

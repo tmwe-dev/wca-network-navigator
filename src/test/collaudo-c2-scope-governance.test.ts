@@ -53,7 +53,7 @@ describe("Collaudo C8 — Scope Routing", () => {
   });
 
   it("C8.2 — V2 hooks use scopes that are in VALID_SCOPES", () => {
-    for (const [hook, scope] of Object.entries(V2_HOOK_SCOPES)) {
+    for (const [_hook, scope] of Object.entries(V2_HOOK_SCOPES)) {
       expect(VALID_SCOPES).toContain(scope);
     }
   });

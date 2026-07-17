@@ -5,7 +5,6 @@
 import React from "react";
 import { Clock, ChevronRight } from "lucide-react";
 import { useUpcomingEvents } from "@/hooks/useCalendar";
-import { CalendarEventCard } from "./CalendarEventCard";
 import type { CalendarEvent } from "@/data/calendar";
 
 interface UpcomingEventsWidgetProps {

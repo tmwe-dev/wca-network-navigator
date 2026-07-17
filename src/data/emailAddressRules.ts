@@ -22,7 +22,7 @@ export interface EmailAddressRule {
   is_blocked: boolean | null;
 }
 
-export async function findEmailAddressRules(userId: string): Promise<EmailAddressRule[]> {
+export async function findEmailAddressRules(_userId: string): Promise<EmailAddressRule[]> {
   const { data, error } = await supabase
     .from("email_address_rules")
     .select("id, user_id, email_address, display_name, category, group_name, custom_prompt, notes, is_active, priority, auto_action, auto_action_params, applied_count, last_applied_at")

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Square, Trash2, X, Loader2 } from "lucide-react";
-import { Dialog, DialogTitle } from "@/components/ui/dialog";
+import { Flame, Square, Trash2, X } from "lucide-react";
+import { DialogTitle } from "@/components/ui/dialog";
 
 interface ForgeRecipient {
   partnerId?: string | null;

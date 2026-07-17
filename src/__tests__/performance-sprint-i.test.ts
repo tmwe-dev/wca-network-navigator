@@ -4,7 +4,6 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { Suspense as _Suspense } from "react";
 
 import { STALE_TIMES } from "@/lib/queryConfig";
 import { lazify } from "@/lib/lazify";

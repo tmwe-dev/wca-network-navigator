@@ -8,7 +8,6 @@
  */
 
 import { type Block, type BlockSource, PROMPT_LAB_TABS } from "../types";
-import { SYSTEM_MISSION } from "./useGlobalPromptImprover";
 import { resolveBlockAgent, ORPHAN_AGENT_LABEL } from "./agentMapping";
 
 /**

@@ -3,7 +3,6 @@
  * Pure functions that analyze prompt content, structure, and quality metrics
  */
 
-import type { Block } from "../types";
 
 /** Analyzes prompt structure and completeness. */
 export function analyzePromptStructure(content: string): {
@@ -13,7 +12,7 @@ export function analyzePromptStructure(content: string): {
   wordCount: number;
   sectionCount: number;
 } {
-  const lines = content.split("\n");
+  const _lines = content.split("\n");
   const hasHeadings = /^#+\s/m.test(content);
   const hasExamples = /example|sample|e\.g\.|e\.g|instance/i.test(content);
   const hasCriteria = /criteria|condition|requirement|must|should/i.test(

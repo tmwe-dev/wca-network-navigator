@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { MicOff, Mic, Info } from "lucide-react";
 import { cn } from "@/lib/utils";

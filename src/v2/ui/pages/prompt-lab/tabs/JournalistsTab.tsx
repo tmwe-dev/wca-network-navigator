@@ -2,7 +2,7 @@
  * JournalistsTab — Configurazione "Caporedattore Finale" (LOVABLE-80 v2).
  * 4 giornalisti AI + toggle Optimus + modalità + rigore. Persiste in app_settings.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

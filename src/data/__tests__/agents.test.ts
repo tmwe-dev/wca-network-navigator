@@ -22,9 +22,7 @@ import {
   findActiveAgents,
   getAgentById,
   createAgent,
-  updateAgent,
   deleteAgent,
-  countActiveAgents,
   invalidateAgents,
 } from "@/data/agents";
 

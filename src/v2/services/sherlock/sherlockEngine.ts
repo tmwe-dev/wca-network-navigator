@@ -15,7 +15,6 @@
  * AbortSignal propagato a tutto.
  */
 import { fs as extFs } from "@/v2/io/extensions/bridge";
-import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import {
   updatePartnerWebsiteIfMissing,

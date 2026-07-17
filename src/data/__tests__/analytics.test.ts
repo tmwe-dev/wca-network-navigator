@@ -11,7 +11,7 @@ let mockPartnersResult: { data: any; error: any };
 let mockDealsResult: { data: any; error: any };
 let mockLogsResult: { data: any; error: any };
 
-const chainBuilder = (result: () => { data: any; error: any }) => {
+const _chainBuilder = (result: () => { data: any; error: any }) => {
   const b: Record<string, any> = {};
   b.select = vi.fn().mockReturnValue(b);
   b.eq = vi.fn().mockReturnValue(b);

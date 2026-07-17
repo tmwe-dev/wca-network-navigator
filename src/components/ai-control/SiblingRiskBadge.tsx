@@ -11,7 +11,6 @@ import { useState } from "react";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { checkSiblingRisk, type SiblingRiskRow } from "@/hooks/useSiblingRisk";
 
