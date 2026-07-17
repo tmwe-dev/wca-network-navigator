@@ -248,3 +248,9 @@ Le prime 4 sono errori 404 deterministici; la #5 degrada la qualità (grounding 
 - Prompt contexts vuoti: `home`, `mission-builder` — usano fallback `general`, qualità degrada ma non rompe.
 - KB categorie vuote: `ai_memory`, `content-intelligence`, `classification`.
 - BYOK OpenAI quota esaurita a monte del gateway: azione utente (ricarica saldo o rimuovi `OPENAI_API_KEY` per usare `LOVABLE_API_KEY`).
+
+## Seed KB + prompt mancanti (2026-07-17)
+
+- KB globali (`user_id NULL`): 2 entries × 3 categorie → `content-intelligence`, `classification`, `ai_memory` (verificato: 2/2/2).
+- Operative prompts: 1 prompt × 2 contexts (`home`, `mission-builder`) × 3 utenti attivi (verificato: 3/3).
+- Resta solo azione utente: ricarica quota BYOK OpenAI oppure rimuovi `OPENAI_API_KEY` per fallback su `LOVABLE_API_KEY`.
