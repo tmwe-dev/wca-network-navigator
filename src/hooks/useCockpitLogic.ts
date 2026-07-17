@@ -28,7 +28,7 @@ import { queryKeys } from "@/lib/queryKeys";
  * This replaces direct LinkedIn scraping to avoid TOS violations.
  * Returns enrichment_data to store in DB, NOT extracted profile data.
  */
-async function lookupLinkedInProfileUrl(
+async function _lookupLinkedInProfileUrl(
   linkedinLookup: ReturnType<typeof useLinkedInLookup>,
   contactName: string,
   company: string | null | undefined,

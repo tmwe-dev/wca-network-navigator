@@ -4,11 +4,9 @@ import {
   getYearsMember,
   formatPartnerType,
   formatServiceCategory,
-  getServiceColor,
   getServiceIconName,
   getServiceIconColor,
   resolveCountryCode,
-  getPartnerTypeIconName,
   getPriorityColor,
 } from "@/lib/countries";
 

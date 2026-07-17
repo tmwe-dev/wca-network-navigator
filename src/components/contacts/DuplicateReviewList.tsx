@@ -8,9 +8,8 @@ import { ContactMergeDialog } from "./ContactMergeDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, Trash2, Merge as Merge2 } from "lucide-react";
+import { Loader2, AlertTriangle, Merge as Merge2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export function DuplicateReviewList() {
   const { data: duplicates, isLoading, refetch } = useFindDuplicates();

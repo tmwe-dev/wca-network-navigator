@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, Square, Settings2, Activity, Timer, Zap, ArrowRight, List, Mail, Phone, XCircle } from "lucide-react";
+import { Play, Pause, Square, Settings2, Activity, Timer } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { usePauseResumeJob, useUpdateJobSpeed, type DownloadJob } from "@/hooks/useDownloadJobs";
 import { JobDataViewer } from "./JobDataViewer";

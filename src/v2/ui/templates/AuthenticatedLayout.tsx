@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
-import { X, Menu, Command, Sparkles, SlidersHorizontal, Target } from "lucide-react";
+import { X, Menu, Command, Sparkles, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,7 +20,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { BlacklistStaleBanner } from "@/components/shared/BlacklistStaleBanner";
 import { LiveRegion } from "@/components/shared/LiveRegion";
-import { useLiveAnnounce } from "@/hooks/useLiveAnnounce";
 import { useAiBridgeListener } from "@/hooks/useAiBridgeListener";
 import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
 
@@ -71,7 +70,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [_sidebarOpen, setSidebarOpen] = useState(false);
 
   useAiBridgeListener();
 

@@ -19,7 +19,7 @@ export function MessageClaimBanner({ messageId }: Props): React.ReactElement | n
   const { isAdmin } = useAuthV2();
   const claim = ctl.claimsByMessageId.get(messageId) ?? null;
   const claimedByMe = !!claim && claim.claimed_by === ctl.myUserId;
-  const claimedByOther = !!claim && !claimedByMe;
+  const _claimedByOther = !!claim && !claimedByMe;
   const pending = ctl.pendingMessageId === messageId;
 
   const minutes = claim

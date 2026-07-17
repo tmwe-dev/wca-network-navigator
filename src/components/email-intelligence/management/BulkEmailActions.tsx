@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { untypedFrom } from '@/lib/supabaseUntyped';
 import { toast } from 'sonner';
-import { Trash2, Archive, Folder, Check } from 'lucide-react';
+import { Trash2, Archive, Check } from 'lucide-react';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("BulkEmailActions");

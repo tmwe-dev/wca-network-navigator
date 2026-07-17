@@ -22,7 +22,7 @@ import {
   analyzeBlockArchitect as analyzeBlockArchitectImpl,
   type ImproveBlockGlobalParams,
 } from "./useLabAgent/improvers";
-import type { ImproveOptions, LabChatMessage, BriefingPayload } from "./useLabAgent/types";
+import type { ImproveOptions, LabChatMessage } from "./useLabAgent/types";
 
 export type { LabChatMessage, BriefingPayload, ImproveOptions, ParsedImproveResult } from "./useLabAgent/types";
 export { parseImproveResponse } from "./useLabAgent/parseImprove";

@@ -120,7 +120,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
 
   it("C4.6 — correct: executes the tool handler and returns real data", () => {
     const handlers = {
-      search_kb: (args: any) => ({
+      search_kb: (_args: any) => ({
         matches: [{ title: "Servizi FCL", content: "..." }],
         method: "embedding",
       }),

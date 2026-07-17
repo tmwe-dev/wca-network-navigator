@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useContext } from "react";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
-import { ThemeCtx, t } from "@/components/download/theme";
+import { ThemeCtx } from "@/components/download/theme";
 import { Terminal } from "lucide-react";
 import {
   Dialog,

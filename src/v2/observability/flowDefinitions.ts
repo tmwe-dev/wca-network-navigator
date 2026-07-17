@@ -21,7 +21,7 @@ export interface FlowDefinition {
   steps: FlowStep[];
 }
 
-const eq = (s?: string) => (e: TraceEvent) => e.source === s || e.scope === s;
+const _eq = (s?: string) => (e: TraceEvent) => e.source === s || e.scope === s;
 const sourceContains = (sub: string) => (e: TraceEvent) =>
   (e.source ?? "").toLowerCase().includes(sub.toLowerCase());
 

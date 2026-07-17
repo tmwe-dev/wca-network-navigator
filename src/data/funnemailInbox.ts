@@ -188,7 +188,7 @@ function extractEmail(raw: string | null | undefined): string | null {
   return addr || null;
 }
 
-function slugifyGroup(value: string): string {
+function _slugifyGroup(value: string): string {
   return value
     .trim()
     .toLowerCase()

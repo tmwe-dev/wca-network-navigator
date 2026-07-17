@@ -4,14 +4,12 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import type { Message, FlowPhase } from "../constants";
-import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import type { ToolResult } from "../tools/types";
 import type { PlanExecutionState } from "../planRunner";
 import type { CanvasType } from "../constants";
 import {
   executePlan,
   executeApprovedStep,
-  MAX_PLAN_STEPS,
 } from "../planRunner";
 import type { TraceBuilder } from "../lib/toolTrace";
 
@@ -96,7 +94,7 @@ export function usePlanExecution(deps: PlanExecutionDeps) {
       planStateVal: PlanExecutionState,
       userPrompt: string,
       onCompletion: (final: PlanExecutionState) => Promise<void>,
-      trace?: TraceBuilder,
+      _trace?: TraceBuilder,
     ) => {
       if (planStateVal.status !== "awaiting-approval") return;
       setFlowPhase("executing");

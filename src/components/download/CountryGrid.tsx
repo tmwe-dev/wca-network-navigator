@@ -9,12 +9,10 @@ import {
   Search, CheckCircle, X, CheckSquare, Mail, Phone, RefreshCw, Loader2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
-import { toast } from "sonner";
 
 export type FilterKey = "all" | "no_profile" | "no_email" | "no_phone" | "no_deep";
 
@@ -36,8 +34,8 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
   const th = t(isDark);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("partners");
-  const [syncing, setSyncing] = useState(false);
-  const queryClient = useQueryClient();
+  const [syncing, _setSyncing] = useState(false);
+  const _queryClient = useQueryClient();
 
   const handleSync = useCallback(() => {
     window.dispatchEvent(new CustomEvent("sync-wca-trigger"));

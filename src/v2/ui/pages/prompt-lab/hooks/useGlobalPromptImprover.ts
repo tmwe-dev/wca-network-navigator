@@ -23,7 +23,6 @@ import {
   findActiveRun,
   cancelRun,
   type GlobalRun,
-  type GlobalRunProposal,
 } from "@/data/promptLabGlobalRuns";
 import type { ParsedFile } from "../utils/fileParser";
 import { collectAllBlocks, loadFullDoctrine } from "./useBlockCollector";
@@ -192,7 +191,7 @@ export function useGlobalPromptImprover(
       dbSaveCount: startFrom,
     });
 
-    const systemMap = run.system_map;
+    const _systemMap = run.system_map;
     const doctrineFull = run.doctrine_full;
     const systemMission = await loadSystemMission(userId);
 

@@ -52,7 +52,7 @@ export function PromptTemplateSelector({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [showCustomEdit, setShowCustomEdit] = useState(false);
   const [editText, setEditText] = useState(customPrompt || "");
-  const [isPersonalizing, setIsPersonalizing] = useState(false);
+  const [_isPersonalizing, setIsPersonalizing] = useState(false);
 
   useEffect(() => {
     loadTemplates();

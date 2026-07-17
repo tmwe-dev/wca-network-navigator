@@ -2,7 +2,6 @@
 /**
  * Bootstrap steps — home page fetch and Google search.
  */
-import { supabase } from "@/integrations/supabase/client";
 import {
   updatePartnerWebsiteIfMissing,
   updatePartnerLinkedinIfMissing,

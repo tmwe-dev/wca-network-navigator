@@ -7,7 +7,7 @@ import { Loader2, Send, Search, ExternalLink, Linkedin, CheckCircle2 } from "luc
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useLogAction } from "@/hooks/useLogAction";
-import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
+import { normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
 import { insertPartnerSocialLink, findSocialLinksByPartnerIds } from "@/data/partnerRelations";

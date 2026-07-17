@@ -11,7 +11,6 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import * as Icons from "lucide-react";
 import {
   FileText, BookOpen, Wrench, Network, AlertTriangle, Zap,
   ExternalLink, ShieldAlert, Variable, ArrowRight, Blocks,

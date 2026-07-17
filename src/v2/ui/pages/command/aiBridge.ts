@@ -12,7 +12,6 @@
  * This is the difference between a "tool-router" (regex → result template)
  * and a true conversational agent (router → execution → reasoning → reply).
  */
-import { supabase } from "@/integrations/supabase/client";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import type { ToolResult } from "./tools/types";
 

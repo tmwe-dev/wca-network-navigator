@@ -37,7 +37,7 @@ const TOOL_ICONS: Record<string, string> = {
 export default function AgentTimeline({ state, onStop, onApprove, onReject, autonomousMode, onToggleAutonomous }: Props) {
   if (!state.running && state.transcript.length === 0) return null;
 
-  const waitingApproval = state.running && state.transcript.some(
+  const _waitingApproval = state.running && state.transcript.some(
     (s) => !s.result.success && s.result.error === "Azione annullata dall'utente"
   );
 

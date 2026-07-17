@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Edit2, Loader2, Users } from "lucide-react";
+import { Plus, Trash2, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -22,7 +22,7 @@ import { it } from "date-fns/locale";
 export default function TeamManagementPanel() {
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
   const createTeamMut = useCreateTeam();
-  const updateTeamMut = useUpdateTeam();
+  const _updateTeamMut = useUpdateTeam();
   const deleteTeamMut = useDeleteTeam();
   const addMemberMut = useAddTeamMember();
   const removeMemberMut = useRemoveTeamMember();

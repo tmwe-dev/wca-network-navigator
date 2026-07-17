@@ -7,7 +7,7 @@
  *   2. loop entità: match → retrieve → reason+retry → commit
  *   3. selfReview finale (warnings)
  */
-import { parseEntities, type EntityToParse } from "./entityParser";
+import { parseEntities } from "./entityParser";
 import { buildCompactIndex, indexToBootstrapEntities, type CompactIndex } from "./compactIndex";
 import { findCandidates } from "./entityMatcher";
 import { createRetrieverCache, retrieveContents } from "./entityRetriever";

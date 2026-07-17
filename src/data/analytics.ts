@@ -66,7 +66,7 @@ export async function getEmailMetrics(
   dateRange: { from: Date; to: Date }
 ): Promise<EmailMetricsData> {
   try {
-    const { data: activities } = await supabase
+    const { data: _activities } = await supabase
       .from("activities")
       .select("activity_type, created_at, details")
       .eq("user_id", userId)
@@ -132,7 +132,7 @@ export async function getEmailMetrics(
  * Get partner metrics
  * P3.7: v_kpi_dashboard non esiste — calcolo diretto da `partners`.
  */
-export async function getPartnerMetrics(userId: string): Promise<PartnerMetricsData> {
+export async function getPartnerMetrics(_userId: string): Promise<PartnerMetricsData> {
   try {
     const { data: partners, error } = await supabase
       .from("partners")

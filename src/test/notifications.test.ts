@@ -33,7 +33,6 @@ import {
   getPushSubscriptions,
   deletePushSubscription,
   type Notification,
-  type NotificationFilters as _NotificationFilters,
 } from "@/data/notifications";
 
 // ─── Fixtures ──────────────────────────────────────────

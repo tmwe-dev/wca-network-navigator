@@ -109,7 +109,7 @@ export function useLinkedInFlow() {
     toast.success(`LinkedIn Flow completato: ${successes} OK, ${errors} errori`);
   };
 
-  const processLoop = useCallback(async (jobId: string, delaySec: number) => {
+  const processLoop = useCallback(async (jobId: string, _delaySec: number) => {
     const items = await findPendingFlowItems(jobId);
     if (items.length === 0) { await finalizeJob(jobId); return; }
 

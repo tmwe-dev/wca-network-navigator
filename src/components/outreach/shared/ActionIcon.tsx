@@ -5,7 +5,7 @@
  */
 import {
   Mail, MessageCircle, Linkedin, Phone, Users, RotateCcw,
-  Bot, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, FileText, Sparkles,
+  Bot, Calendar as CalendarIcon, ArrowDownLeft, FileText, Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -5,15 +5,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Archive, ShieldBan, EyeOff, Mail, FolderInput, X, Sparkles, ChevronDown,
+  Archive, ShieldBan, EyeOff, Mail, FolderInput, X, Sparkles,
 } from "lucide-react";
 import { useBulkEmailAction, useCreateRuleFromSender, useImapFolders } from "@/hooks/useEmailFolderActions";
 import { useMarkAsRead } from "@/hooks/useEmailActions";

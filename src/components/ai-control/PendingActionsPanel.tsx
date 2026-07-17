@@ -155,7 +155,7 @@ export function PendingActionsPanel() {
             }
             await supabase.from("agents").update({ system_prompt: updatedPrompt }).eq("id", agent.id);
           }
-        } catch (e) { /* prompt refinement apply failed */ }
+        } catch (_e) { /* prompt refinement apply failed */ }
       }
       // v3.9.56+ pipeline: send_* canalizzati nei bridge browser via
       // useApproveAndDispatch (LI/WA via estensione, email via send-edge).
@@ -176,7 +176,7 @@ export function PendingActionsPanel() {
             body: { pending_action_id: params.id },
           });
           if (execError) log.error("Execution failed:", { error: execError });
-        } catch (e) { /* pending-action-executor invocation failed */ }
+        } catch (_e) { /* pending-action-executor invocation failed */ }
       }
     },
     onSuccess: () => { toast.success("Azione approvata — esecuzione avviata"); setDraftEditId(null); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },

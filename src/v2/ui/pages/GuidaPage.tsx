@@ -24,12 +24,10 @@ import shotConfig from "@/assets/guida/screenshots/settings.png";
 import shotAgentsHub from "@/assets/guida/screenshots/agents-hub.png";
 import shotCapabilities from "@/assets/guida/screenshots/agent-capabilities.png";
 import shotAiPrompt from "@/assets/guida/screenshots/cfg-ai-prompt.png";
-import shotProvider from "@/assets/guida/screenshots/cfg-provider-ai.png";
 import shotVoce from "@/assets/guida/screenshots/cfg-voce-ai.png";
 import shotKb from "@/assets/guida/screenshots/kb-tab.png";
 import shotProcessi from "@/assets/guida/screenshots/cfg-processi.png";
 import shotAutopilot from "@/assets/guida/screenshots/autopilot.png";
-import shotTasks from "@/assets/guida/screenshots/agent-tasks.png";
 import {
   Command, Target, Search, Rocket, Calendar, Trash2,
   MessagesSquare, Inbox, Mail, Brain, Sparkles, Contact,

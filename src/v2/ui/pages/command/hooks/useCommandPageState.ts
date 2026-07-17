@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ToolResult } from "../tools/types";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
@@ -33,7 +33,7 @@ interface ApprovalState {
 }
 
 export function useCommandPageState() {
-  const nav = useNavigate();
+  const _nav = useNavigate();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");

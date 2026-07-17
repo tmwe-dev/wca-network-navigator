@@ -5,7 +5,7 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Mail, Phone, Building2, Globe, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Search, Mail, Phone, Building2, CheckCircle2, Clock } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { queryKeys } from "@/lib/queryKeys";

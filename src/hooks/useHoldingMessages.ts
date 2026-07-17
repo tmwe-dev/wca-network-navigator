@@ -5,7 +5,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getPartnersByLeadStatus, getPartnersByLeadStatusFromView } from "@/data/partners";
+import { getPartnersByLeadStatusFromView } from "@/data/partners";
 import { getUnifiedInboxStats } from "@/data/channelMessages";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { queryKeys } from "@/lib/queryKeys";

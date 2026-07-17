@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import {
@@ -14,7 +13,6 @@ import { checkOracleCoherence } from "@/lib/oracleCoherence";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import BriefAccordion, { EMPTY_BRIEF, briefToText, type EmailBrief } from "./BriefAccordion";
 import { useDeepSearchTrigger } from "@/hooks/email-composer/useDeepSearchTrigger";
-import { useUnifiedEnrichmentSnapshot } from "@/hooks/useUnifiedEnrichmentSnapshot";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { ImageGalleryTab } from "./ImageGalleryTab";

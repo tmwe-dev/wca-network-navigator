@@ -3,14 +3,13 @@ import { listScopes } from "@/v2/services/bulkOps";
 import { getEntry } from "@/v2/services/bulkOps/registry";
 
 describe("bulkOps — registry", () => {
-  it("registra esattamente i 14 scope previsti", () => {
+  it("registra esattamente i 9 scope previsti", () => {
     const scopes = listScopes();
-    expect(scopes.length).toBe(14);
+    expect(scopes.length).toBe(9);
     const expected = [
       "enrich.base", "deepsearch.sherlock", "download.partner", "enrich.inbound",
-      "verify.wa", "verify.li", "verify.email", "verify.dedup",
       "update.origin", "update.leadStatus", "update.emailRules",
-      "update.backfill", "update.analyzeAi", "update.dispatch",
+      "update.backfill", "update.analyzeAi",
     ];
     expected.forEach((s) => expect(scopes).toContain(s));
   });

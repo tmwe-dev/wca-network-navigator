@@ -3,7 +3,7 @@
  * Guards content based on user permissions
  */
 import { useHasPermission } from "@/hooks/useRBAC";
-import { AlertCircle, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface PermissionGateProps {

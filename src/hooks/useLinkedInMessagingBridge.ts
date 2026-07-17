@@ -119,7 +119,7 @@ async function checkFireScrape(): Promise<boolean> {
 }
 
 // ── Parse LinkedIn inbox markdown into threads ──
-function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
+function _parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
   const threads: NonNullable<BridgeResponse["threads"]> = [];
   if (!markdown) return threads;
 
@@ -206,7 +206,7 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
 }
 
 // ── Parse LinkedIn thread markdown into messages ──
-function parseThreadMarkdown(markdown: string, contactName: string): NonNullable<BridgeResponse["messages"]> {
+function _parseThreadMarkdown(markdown: string, contactName: string): NonNullable<BridgeResponse["messages"]> {
   const messages: NonNullable<BridgeResponse["messages"]> = [];
   if (!markdown) return messages;
 

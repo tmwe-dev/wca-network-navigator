@@ -12,7 +12,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import {
   Terminal, ListTodo, Eye, Pause, Play, Square,
-  Download, Globe, Users, CheckCircle2,
+  Download, Users, CheckCircle2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

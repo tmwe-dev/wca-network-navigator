@@ -4,7 +4,7 @@
  */
 
 import { Button } from "@/components/ui/button";
-import { Loader2, Square, Play, RotateCcw, CheckCircle2, AlertTriangle, Pause } from "lucide-react";
+import { Loader2, Square, Play, CheckCircle2, AlertTriangle, Pause } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import type { SuspendedJob } from "@/lib/localDirectory";
 import { cn } from "@/lib/utils";

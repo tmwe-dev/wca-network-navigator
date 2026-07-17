@@ -2,7 +2,6 @@
  * ObservabilityPage — /v2/observability
  * Token spend, avg steps per mission, top tools, errors, cron jobs.
  */
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";

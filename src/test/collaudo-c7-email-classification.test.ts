@@ -14,7 +14,6 @@
 import { describe, it, expect } from "vitest";
 import {
   parseClassificationResponse,
-  type ClassificationResult as _ClassificationResult,
 } from "@/lib/emailClassification";
 
 // ══════════════════════════════════════════════════════════

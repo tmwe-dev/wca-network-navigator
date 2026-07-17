@@ -1,4 +1,3 @@
-import { invokeEdge } from "@/lib/api/invokeEdge";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import type { BulkEntry } from "../types";
 import { assertCalledFromRunner } from "./_internal";
@@ -74,19 +73,5 @@ export const updateAnalyzeAiEntry: BulkEntry<AnalyzeAiItem, { ok: boolean }> = {
       context: { source: "bulkOps.analyzeAi", mode: "bulk" },
     });
     return { ok: true };
-  },
-};
-
-export interface DispatchItem { readonly contactId: string; readonly channel: "wa" | "li"; readonly messageId: string; }
-export const updateDispatchEntry: BulkEntry<DispatchItem, { ok: boolean; skipped: true; reason: string }> = {
-  scope: "update.dispatch",
-  itemId: (i) => `${i.channel}:${i.contactId}`,
-  continueOnError: true,
-  handler: async (_item) => {
-    assertCalledFromRunner("update.dispatch");
-    // NOTE (2026-07-17 audit): `extension-dispatch-enqueue` edge non deployata.
-    // Il dispatch reale WA/LI passa da send-whatsapp / send-linkedin (contract diverso:
-    // richiedono recipient + message_text). Nessun caller UI usa "update.dispatch" oggi.
-    return { ok: true, skipped: true, reason: "extension-dispatch-enqueue edge not deployed" };
   },
 };

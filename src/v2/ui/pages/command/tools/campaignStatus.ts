@@ -1,7 +1,7 @@
 import { fetchCampaignJobs } from "@/v2/io/supabase/queries/campaigns";
 import type { Tool, ToolResult } from "./types";
 
-function jobStatusToNodeType(status: string): "trigger" | "action" | "condition" | "end" {
+function _jobStatusToNodeType(status: string): "trigger" | "action" | "condition" | "end" {
   switch (status) {
     case "completed": return "end";
     case "in_progress": return "action";

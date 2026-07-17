@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface CapturedPage {
   id: string;

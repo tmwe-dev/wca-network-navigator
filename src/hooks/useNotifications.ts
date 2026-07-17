@@ -12,7 +12,6 @@ import {
   markAllAsRead,
   dismissNotification,
   createNotification,
-  type Notification,
   type NotificationFilters,
   type CreateNotificationInput,
 } from "@/data/notifications";

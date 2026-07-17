@@ -71,7 +71,7 @@ export function useWhatsAppExtensionBridge() {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase.auth.getSession();
       authToken = data.session?.access_token || "";
-    } catch (err) { /* Failed to get auth session */ }
+    } catch (_err) { /* Failed to get auth session */ }
 
     const requestId = `wa_setConfig_${crypto.randomUUID()}`;
     const result = await new Promise<WaExtensionResponse>((resolve) => {

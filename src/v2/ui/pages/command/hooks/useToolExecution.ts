@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { resolveTool, TOOLS } from "../tools/registry";
+import { resolveTool } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
 import type { CommandPageState } from "./useCommandPageState";
 import { tryLocalComment } from "../lib/localResultFormatter";

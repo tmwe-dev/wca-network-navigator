@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Mail, Phone, Globe, User, Sparkles } from "lucide-react";
+import { Mail, Phone, Globe, User, Sparkles } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";

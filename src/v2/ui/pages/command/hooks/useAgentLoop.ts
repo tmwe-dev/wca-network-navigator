@@ -42,7 +42,7 @@ export function useAgentLoop(): UseAgentLoopReturn {
 
     runAgentLoop(goal, {
       onStep: (s) => setState({ ...s }),
-      onApproval: async (toolName, args) => {
+      onApproval: async (_toolName, _args) => {
         if (autonomousMode) return true;
         // Wait for user to approve/reject
         return new Promise<boolean>((resolve) => {

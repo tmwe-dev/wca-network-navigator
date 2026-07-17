@@ -6,7 +6,6 @@ import { tFrom } from "@/lib/typedSupabase";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
-import { toast } from "sonner";
 
 
 import { createLogger } from "@/lib/log";
@@ -212,7 +211,7 @@ export function useMergeContacts() {
       if (deleteRes.error) throw deleteRes.error;
 
       const keepContact = keepRes.data;
-      const deleteContact = deleteRes.data;
+      const _deleteContact = deleteRes.data;
 
       // Build merged record
       const merged = { ...keepContact };

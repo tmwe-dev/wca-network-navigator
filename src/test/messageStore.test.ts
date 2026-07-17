@@ -1,4 +1,4 @@
-/* eslint-disable eqeqeq */
+ 
 /**
  * Test message store dedup/merge.
  * Vol. II §10.1 (idempotenza).

@@ -23,7 +23,7 @@ const handlersSource = fs
   .filter((f) => f.endsWith("Handler.ts") || f === "platformToolHandlers.ts")
   .map((f) => fs.readFileSync(path.join(HANDLERS_DIR, f), "utf-8"))
   .join("\n");
-const source = `${defsSource}\n${handlersSource}`;
+const _source = `${defsSource}\n${handlersSource}`;
 
 function extractToolNames(): string[] {
   const matches = [...defsSource.matchAll(/name:\s*"([^"]+)"/g)];
