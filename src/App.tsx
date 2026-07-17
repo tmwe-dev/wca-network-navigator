@@ -144,6 +144,9 @@ const App = () => (
                   <Route path="/onboarding" element={<LegacyRedirect to="/v2/onboarding" />} />
                   <Route path="/reset-password" element={<LegacyRedirect to="/v2/reset-password" />} />
 
+                  {/* OAuth consent route per client MCP esterni */}
+                  <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
                   {/* V1 deprecated — redirect every legacy route to V2 */}
                   <Route path="/v1/*" element={<V1DeprecationRedirect />} />
 
