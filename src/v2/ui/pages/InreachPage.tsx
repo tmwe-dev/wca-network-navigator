@@ -8,7 +8,7 @@ import { Inbox } from "lucide-react";
 export function InreachPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <PageTitleHeader icon={Inbox} title="Inbox" subtitle="Email ricevute" />
+      <PageTitleHeader icon={Inbox} title="Leggi" subtitle="Inbox — email ricevute" />
       <div className="flex-1 min-h-0 overflow-hidden">
         <InArrivoTab />
       </div>
