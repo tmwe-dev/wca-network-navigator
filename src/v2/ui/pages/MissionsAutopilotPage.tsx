@@ -132,7 +132,7 @@ export function MissionsPage() {
     <PageShell
       title={
         <span className="inline-flex items-center gap-2">
-          <Rocket className="h-6 w-6 text-primary" /> Agent Missions
+          <Rocket className="h-6 w-6 text-primary" /> Missioni Autopilot
         </span>
       }
       description="Missioni autonome con KPI e budget vincolato"
