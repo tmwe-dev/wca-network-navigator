@@ -77,7 +77,7 @@ export function CockpitPage() {
     : null;
 
   return (
-    <StandardPageFrame testId="page-cockpit" title="Cockpit" contentOverflow="contain">
+    <StandardPageFrame testId="page-cockpit" contentOverflow="contain">
       <div className="flex flex-col h-full overflow-hidden">
       <TopCommandBar
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}

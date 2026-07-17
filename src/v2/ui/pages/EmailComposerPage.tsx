@@ -55,7 +55,7 @@ export function EmailComposerPage() {
   return (
     <PageErrorBoundary>
     <div className="flex flex-col h-full overflow-hidden">
-      <PageTitleHeader icon={Mail} title="Email" subtitle="Componi messaggio" />
+      <PageTitleHeader icon={Mail} title="Scrivi" subtitle="Email — componi messaggio" />
       <div className="flex-1 min-h-0">
         <PersistentResizablePanelGroup direction="horizontal" storageId="email-composer:editor-vs-oracle">
           <ResizablePanel defaultSize={68} minSize={45}>

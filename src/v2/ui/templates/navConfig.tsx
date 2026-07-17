@@ -47,11 +47,9 @@ export const FULL_NAV_ITEMS: readonly NavItemDef[] = [
   { labelKey: "nav.agenda",             path: "/v2/agenda",             icon: <CalendarDays className="h-4 w-4" />, pinned: true, pinOrder: 6 },
   { labelKey: "nav.lab",                path: "/v2/lab",                icon: <FlaskConical className="h-4 w-4" />, pinned: true, pinOrder: 6.5 },
   { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 7 },
-  { labelKey: "nav.funnemail_inbox",    path: "/v2/funnemail-inbox",    icon: <Sparkles className="h-4 w-4" />, pinned: true, pinOrder: 7.5, badge: "NEW" },
   { labelKey: "nav.rubrica_whatsapp",   path: "/v2/rubrica/whatsapp",   icon: <MessageCircle className="h-4 w-4" />, pinned: true, pinOrder: 7.7, badge: "NEW" },
   { labelKey: "nav.rubrica_linkedin",   path: "/v2/rubrica/linkedin",   icon: <Linkedin className="h-4 w-4" />, pinned: true, pinOrder: 7.8, badge: "NEW" },
   { labelKey: "nav.agenti",             path: "/v2/intelligence/agents", icon: <Bot className="h-4 w-4" />,     pinned: true, pinOrder: 7.9 },
-  { labelKey: "nav.intelligence",       path: "/v2/intelligence",       icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 8 },
   { labelKey: "nav.config",             path: "/v2/settings",           icon: <Settings className="h-4 w-4" />, pinned: true, pinOrder: 9 },
 ] as const;
 
@@ -119,12 +117,11 @@ export const MACRO_AREAS: readonly MacroAreaDef[] = [
       "/v2/inbox",
       "/v2/email",
       "/v2/email-intelligence",
-      "/v2/funnemail-inbox",
       "/v2/rubrica/whatsapp",
       "/v2/rubrica/linkedin",
     ],
   },
-  { key: "cervello", label: "Cervello", paths: ["/v2/intelligence/agents", "/v2/intelligence"] },
+  { key: "cervello", label: "Cervello", paths: ["/v2/intelligence/agents"] },
   { key: "lab",      label: "Lab",      paths: ["/v2/lab"] },
   { key: "config",   label: "Config",   paths: ["/v2/settings"] },
 ] as const;

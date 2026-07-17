@@ -28,7 +28,7 @@ export function OutreachPage() {
 
   return (
     <div data-testid="page-outreach" className="flex flex-col h-full overflow-hidden">
-      <PageTitleHeader icon={Rocket} title="Cockpit" subtitle="Pipeline outbound" />
+      <PageTitleHeader icon={Rocket} title="Spedisci" subtitle="Cockpit — pipeline outbound" />
       <OutreachStatsHeader />
       <div className="flex-1 min-h-0 overflow-hidden">
         <Suspense fallback={<TabFallback />}>
