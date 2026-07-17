@@ -391,8 +391,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
           <div className="flex flex-wrap gap-1.5">
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            {services.map((s: Record<string, any>, i: number) => {
+            {services.map((s: Record<string, unknown>, i: number) => {
               const Icon = getServiceIcon(s.service_category);
               return (
                 <Tooltip key={i}>

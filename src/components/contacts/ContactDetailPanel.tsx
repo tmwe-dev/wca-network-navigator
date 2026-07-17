@@ -222,8 +222,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
         </Section>
       )}
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      <ContactEnrichmentCard enrichmentData={(c.enrichment_data as Record<string, any> | undefined) ?? null} deepSearchAt={c.deep_search_at} />
+      <ContactEnrichmentCard enrichmentData={(c.enrichment_data as Record<string, unknown> | undefined) ?? null} deepSearchAt={c.deep_search_at} />
 
       <Collapsible open={state.detailsOpen} onOpenChange={(v) => dispatch({ type: "TOGGLE_DETAILS", value: v })}>
         <CollapsibleTrigger asChild>
