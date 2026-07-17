@@ -36,6 +36,8 @@ import { MissionProvider } from "@/contexts/MissionContext";
 
 import { useWcaSession } from "@/hooks/useWcaSession";
 import { BackgroundServices } from "./BackgroundServices";
+import { FULL_NAV_ITEMS } from "./navConfig";
+import { useTranslation } from "react-i18next";
 
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutHeader } from "./LayoutHeader";
@@ -74,12 +76,25 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   useAiBridgeListener();
 
 
+  const { t } = useTranslation();
   useEffect(() => {
-    const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
-    const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
+    // Prefer the nav label matching the deepest path prefix (e.g. /v2/agents/autopilot → nav.missioni).
+    const match = FULL_NAV_ITEMS
+      .filter((i) => location.pathname === i.path || location.pathname.startsWith(i.path + "/"))
+      .sort((a, b) => b.path.length - a.path.length)[0];
+    let title: string;
+    if (match) {
+      const translated = t(match.labelKey);
+      title = translated && translated !== match.labelKey
+        ? translated
+        : match.labelKey.split(".").pop() ?? "WCA";
+    } else {
+      const last = location.pathname.replace("/v2", "").split("/").filter(Boolean).pop() ?? "dashboard";
+      title = last.charAt(0).toUpperCase() + last.slice(1).replace(/-/g, " ");
+    }
     document.title = `${title} — WCA Partners`;
     setSidebarOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, t]);
 
   // Session readiness sourced from centralized AuthProvider
   const { status: authStatus } = useAuth();
