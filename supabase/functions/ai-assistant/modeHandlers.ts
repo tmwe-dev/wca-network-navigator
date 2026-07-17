@@ -168,7 +168,7 @@ ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
 
   const planMessages: Record<string, unknown>[] = [
     { role: "system", content: planSystemPrompt },
-    ...history.slice(-10).map((m: Record<string, unknown>) => ({
+    ...history.slice(-16).map((m: Record<string, unknown>) => ({
       role: m.role,
       content: m.content,
     })),
