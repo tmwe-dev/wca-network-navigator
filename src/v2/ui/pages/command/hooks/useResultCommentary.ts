@@ -98,13 +98,21 @@ export function useResultCommentary(deps: CommentaryDeps) {
       // Fallback: full AI commentary
       const t0 = Date.now();
       const resultSummary = serializeResultForAI(result);
-      const comment = await getAiComment({
-        userPrompt,
-        toolId,
-        toolLabel,
-        resultSummary,
-        history: buildHistory(),
-      });
+      const comment = await Promise.race([
+        getAiComment({
+          userPrompt,
+          toolId,
+          toolLabel,
+          resultSummary,
+          history: buildHistory(),
+        }),
+        new Promise<{ message: string; suggestedActions?: never; spokenSummary?: never }>((resolve) =>
+          setTimeout(
+            () => resolve({ message: "_(Il motore AI non ha risposto in tempo, mostro il risultato grezzo.)_" }),
+            25_000,
+          ),
+        ),
+      ]);
       trace?.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
 
       const finalTrace = trace?.finish();
