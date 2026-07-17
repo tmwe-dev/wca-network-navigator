@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import viteCompression from "vite-plugin-compression";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -28,6 +29,7 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    mcpPlugin(),
     VitePWA({
       registerType: "autoUpdate",
       devOptions: {
