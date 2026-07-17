@@ -157,15 +157,6 @@ export function LoginPage(): React.ReactElement {
           <Loader2 className="w-4 h-4 animate-spin" />
           {tmweLabel}
         </button>
-      ) : isEmbedded ? (
-        <button
-          type="button"
-          onClick={openTmwePopup}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plane className="w-4 h-4" />
-          {tmweLabel}
-        </button>
       ) : (
         <a
           href={tmweHref}
