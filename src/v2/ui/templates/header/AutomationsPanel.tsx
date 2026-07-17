@@ -92,25 +92,31 @@ type TabKey = "cron" | "channels";
 
 export function AutomationsPanel(): React.ReactElement {
   const [tab, setTab] = React.useState<TabKey>("cron");
+  // Gate ALL polling on popover open: la top-bar prima martellava
+  // `cron_job_status()` ogni 30 s a utente, generando >9k call/settimana
+  // (query media 1.3 s) — l'audit 2026-07-17 l'ha marcata come emorragia I/O.
+  const [open, setOpen] = React.useState(false);
 
   const { data: jobs = [], isLoading: loadingJobs } = useQuery<CronJobStatus[]>({
     queryKey: queryKeys.cronJobs.list,
     queryFn: listCronJobStatus,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    enabled: open,
+    refetchInterval: open ? 120_000 : false,
+    staleTime: 60_000,
   });
   const { data: runs = [], isLoading: loadingRuns } = useQuery<CronRunRow[]>({
     queryKey: queryKeys.cronJobs.runs(30),
     queryFn: () => listCronRecentRuns(30),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    enabled: open,
+    refetchInterval: open ? 120_000 : false,
+    staleTime: 60_000,
   });
   const { data: activity = [], isLoading: loadingAct } = useQuery<ChannelActivityRow[]>({
     queryKey: queryKeys.cronJobs.channelActivity(30),
     queryFn: () => listRecentChannelActivity(30),
-    refetchInterval: 20_000,
-    staleTime: 10_000,
-    enabled: tab === "channels",
+    refetchInterval: open && tab === "channels" ? 60_000 : false,
+    staleTime: 30_000,
+    enabled: open && tab === "channels",
   });
 
   const totalActive = jobs.filter((j) => j.active).length;
@@ -123,7 +129,7 @@ export function AutomationsPanel(): React.ReactElement {
   const dot = failed24h > 0 ? "bg-amber-500" : totalActive > 0 ? "bg-emerald-500" : "bg-muted";
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" aria-label="Automazioni" title="Automazioni">
           <Cog className="h-3.5 w-3.5 text-muted-foreground" />

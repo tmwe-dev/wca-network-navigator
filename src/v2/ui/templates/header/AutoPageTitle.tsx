@@ -99,14 +99,14 @@ export function AutoPageTitle(): React.ReactElement | null {
   const Icon = pickIcon(pathname);
 
   return (
-    <div
+    <h1
       data-auto-page-title
-      className="inline-flex items-center gap-1.5 rounded-md bg-primary-foreground/95 px-2 py-1 border border-primary/30 shadow-sm min-w-0"
+      className="inline-flex items-center gap-1.5 rounded-md bg-primary-foreground/95 px-2 py-1 border border-primary/30 shadow-sm min-w-0 m-0 text-sm font-semibold"
     >
       <Icon className="h-4 w-4 text-primary shrink-0" />
       <span className="text-sm font-semibold text-primary truncate">
         {last.label}
       </span>
-    </div>
+    </h1>
   );
 }
