@@ -183,5 +183,28 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 2. Consolidamento menu (P1 punti 6–7) con proposta di riduzione da 17 a ~12 voci.
 3. Adozione `StandardPageFrame` sulle pagine mancanti (P2 punto 10).
 
+---
+
+## Stato interventi 2026-07-17 (batch 2)
+
+P0 chiusi (verificati Playwright):
+- `/v2/cestinone` → H1 "Autorizza" (sub "Cestinone — conferma, modifica o rinvia").
+- `/v2/email` → H1 "Scrivi" (sub "Email — componi messaggio").
+- `/v2/inbox` → H1 "Leggi" (sub "Inbox — email ricevute").
+- `/v2/cockpit` → H1 unico "Spedisci"; rimosso doppio titolo `StandardPageFrame`.
+- `/v2/intelligence/agents` → H1 "Agenti" (già ok, confermato).
+- `PageTitleHeader` ora emette `<h1>` semantico.
+- `AuthenticatedLayout` document.title usa etichette nav i18n.
+
+P1 chiusi:
+- Voci menu allineate a H1 pagina (Vendi/Leggi/Scrivi/Autorizza/Spedisci).
+- Menu ridotto: rimosse voci duplicate `funnemail_inbox` e `intelligence`
+  (le rotte restano attive per bookmark/redirect).
+- Cervello ora ha 1 sola voce: "Agenti".
+- Comunica passa da 7 a 6 voci (rimossa "Funnemail Inbox").
+
+Residuo P2/P3 aperto: `rpc/cron_job_status` 400, banner blacklist ubiquo,
+densità bottoni in `explore/network` e `email-intelligence`, CSP via header.
+
 Screenshot completi salvati in `/tmp/browser/audit/*.png`; JSON grezzo in
 `/tmp/browser/audit/all.json`.
