@@ -1,59 +1,64 @@
-## Contesto salvato
+## Obiettivo
 
-Config login TMWE (sandbox.findair.net + ritorno nel pannello destro, no popup, no nuova tab) è ora fissata in `mem://auth/tmwe-login-config-2026-07-17`. Non verrà più regredita.
+Audit completo e trasversale del progetto con voto numerico (scala 1–100.000) su tre assi:
 
-## Obiettivo dell'audit
+1. **Funzionalità** — le voci di menu fanno ciò che promettono, i flussi end-to-end (login → esplora → outreach → email intel → cockpit) reggono, edge functions rispondono.
+2. **Pulizia codice** — layering UI/hook/DAL, duplicazioni, morti (import/route/component), aderenza a SSOT (StandardPageFrame, bulkOps, aiCallShim), debito ESLint/TS.
+3. **Leggerezza infrastruttura** — DB (indici, RLS, funzioni pesanti, cron), edge functions (numero, dimensione, freddo), bundle FE, query key/network, cache.
 
-Verificare, per ogni voce del menu principale V2, che la pagina:
-1. Carichi senza errori runtime (console + network).
-2. Rispetti il guscio SSOT (`StandardPageFrame` / rail sx filtri / rail dx workflow secondo `pageContract.ts`).
-3. Esponga funzioni coerenti con il nome della voce (niente doppioni, niente pagine "vuote").
-4. Non contenga bottoni orfani, tab morti, o CTA che portano a rotte inesistenti.
-5. Sia allineata al tema (light/dark) e responsive.
+## Metodo
 
-## Perimetro (SSOT: `FULL_NAV_ITEMS` in `navConfig.tsx`)
+Per ogni asse produco:
+- **Misure oggettive** (numeri raccolti da tool, non stime a occhio).
+- **Findings classificati** (blocker / bug / debito / cosmetico).
+- **Voto parziale 1–100.000** con motivazione trasparente della formula.
+- **Voto complessivo** = media pesata (40% funzionalità, 35% pulizia, 25% infra).
 
-17 voci raggruppate in 7 macro-aree:
+### Asse 1 — Funzionalità (Playwright + edge log)
 
-```text
-COMANDO      Command · Missioni
-ESPLORA      Vendi (explore/network)
-PIPELINE     Autorizza (cestinone) · Cockpit · Agenda
-COMUNICA     Comms · Leggi (inbox) · Scrivi (email) · Funnemail · Funnemail Inbox · Rubrica WhatsApp · Rubrica LinkedIn
-CERVELLO     Agenti · Intelligence
-LAB          Lab
-CONFIG       Config (settings)
-```
+- Loop headless su tutte le 15 voci del menu con sessione TMWE reale.
+- Per pagina: HTTP 200, no errori console `error`, no 4xx/5xx in network (esclusi 401 attesi), presenza H1, almeno 1 azione principale cliccabile senza crash.
+- Sonde edge critiche: `manage-email-folders`, `classify-email`, `send-email`, `wca-search`, `ai-gateway-shim` — chiamata di health e verifica 2xx.
+- Metriche: `pagine_verdi / 15`, `edge_verdi / N`.
 
-## Metodo per ciascuna voce (batch da 3-4 per turno)
+### Asse 2 — Pulizia codice
 
-Per pagina produco una scheda audit con:
+- `tsgo` (typecheck) + conteggio errori/warning.
+- ESLint completo: conteggio per regola, focus su `no-direct-ai-invoke`, `no-direct-bulk-op`, `no-console`.
+- Debito baseline: `any`, `@ts-ignore`, `TODO`, `FIXME`.
+- Codice morto: import inutilizzati, file in `archive/` referenziati, route senza voce menu, componenti mai importati (via ripgrep).
+- Duplicazioni note (audit precedente): funnemail/inbox, agenti/intelligence, sherlock/deep-search.
+- SSOT: quante pagine usano `StandardPageFrame` vs header custom.
 
-- **Rotta + file sorgente**
-- **Stato caricamento** (Playwright + console/network log)
-- **Aderenza guscio** (header unico? rail corretti? tabs pill?)
-- **Funzioni presenti vs attese** (mappa button → azione → esito)
-- **Difetti** classificati: `blocker` / `bug` / `ux` / `debito`
-- **Fix minimo proposto** (solo presentazione salvo bug critici)
+### Asse 3 — Leggerezza infrastruttura
 
-Output finale: un unico documento `docs/audit/menu-audit-2026-07-17.md` con:
-- indice per macro-area
-- semaforo per pagina (verde/giallo/rosso)
-- backlog fix prioritizzato
+- **DB**: `supabase--slow_queries`, `supabase--db_health`, `supabase--linter`; conteggio tabelle, indici mancanti su FK, funzioni SECURITY DEFINER, trigger.
+- **Edge functions**: numero totale, dimensione media, cold start (log ultimi 7g), errori.
+- **AI Gateway**: `list_ai_gateway_requests` ultimi 7g — call/giorno, token medi, costo, error rate.
+- **Bundle FE**: `dist/` size, chunk più grandi (`vite build --report` output analizzato via file).
+- **Query centralization**: quante useQuery usano `queryKeys.ts` vs stringhe libere.
 
-## Piano di esecuzione (autonomo, un batch per turno)
+### Formula del voto (trasparente)
 
-1. **Batch 1 — Comando**: Command, Missioni.
-2. **Batch 2 — Esplora + Pipeline**: Vendi, Autorizza, Cockpit, Agenda.
-3. **Batch 3 — Comunica (parte 1)**: Comms, Leggi, Scrivi.
-4. **Batch 4 — Comunica (parte 2)**: Funnemail, Funnemail Inbox, Rubrica WhatsApp, Rubrica LinkedIn.
-5. **Batch 5 — Cervello + Lab + Config**: Agenti, Intelligence, Lab, Config.
-6. **Consolidamento**: documento finale + backlog fix ordinato.
+Ogni asse parte da 100.000 e viene decurtato:
 
-## Regole operative durante l'audit
+- **Funzionalità**: −5.000 per pagina rossa, −1.500 per gialla, −8.000 per edge critica down.
+- **Pulizia**: −200 per errore TS, −100 per warning ESLint, −50 per `any`, −500 per duplicazione strutturale, −2.000 per SSOT violato su >10 pagine.
+- **Infra**: −300 per slow query >500ms, −500 per edge con error rate >5%, −1 punto per KB di bundle oltre 800 KB gzip, −1.000 per tabella pubblica senza RLS.
 
-- Nessuna modifica di logica: solo osservazione + micro-fix di presentazione se banali (import morti, testo troncato, tab rotto).
-- Ogni bug su nodo critico (submit, invio email/WA/LI, auth, RLS) va registrato ma NON toccato in questo audit — apre issue nel backlog.
-- Uso Playwright headless su `http://localhost:8080` con sessione TMWE già iniettata.
+Voto complessivo = `0.40 × F + 0.35 × P + 0.25 × I`, arrotondato all'intero.
 
-Confermi che parto direttamente dal Batch 1 (Comando)?
+## Deliverable
+
+Un unico documento `docs/audit/full-audit-2026-07-17.md` con:
+
+- Sezioni per asse con tabelle di misura.
+- Elenco findings per severità.
+- Voto parziale + voto complessivo con spiegazione decurtazioni.
+- Top 10 azioni di rientro ordinate per impatto/effort.
+
+Nessuna modifica di codice in questo audit: solo osservazione + documento. Fix in run successive su tua conferma.
+
+## Costi/tempo stimati
+
+3–4 turni: (1) misure DB/edge/AI gateway + typecheck/eslint, (2) Playwright su tutte le pagine, (3) analisi bundle + codice morto, (4) scrittura documento con voti.
