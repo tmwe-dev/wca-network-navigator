@@ -8,12 +8,12 @@
 const KEY = "super_mario_enabled";
 
 export function isSuperMarioEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(KEY) === "true";
-  } catch {
-    return false;
-  }
+  // HARD-DISABLED: il canale di approvazione "singolo tool" usato da Super Mario
+  // (setPendingApproval → canvas "live-approval") non ha una UI di conferma
+  // collegata in CommandPage. Con il flag attivo la conversazione si bloccava
+  // silenziosamente senza modo di procedere. Riattivare solo quando esiste il
+  // bottone di approvazione dedicato in CommandOutput.
+  return false;
 }
 
 export function setSuperMarioEnabled(on: boolean): void {
