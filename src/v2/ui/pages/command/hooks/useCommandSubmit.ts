@@ -317,7 +317,15 @@ export function useCommandSubmit(state: CommandStateApi) {
       }, 600);
 
       try {
-        const planRes = await planExecution(text, TOOL_METADATA, buildHistory());
+        const planRes = await Promise.race([
+          planExecution(text, TOOL_METADATA, buildHistory()),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout: il motore AI non risponde entro 30s")), 30_000),
+          ),
+        ]).catch((e: unknown) => ({
+          _tag: "Err" as const,
+          error: { message: e instanceof Error ? e.message : String(e) } as { message: string },
+        }));
         clearInterval(chainInterval);
         setMessages((prev) => prev.filter((m) => !m.thinking));
         setToolPhase("active");
