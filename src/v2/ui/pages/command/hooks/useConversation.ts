@@ -25,6 +25,9 @@ export function useConversation() {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const titleSetRef = useRef(false);
+  // Lock: se una createConversation è già in volo, riusa la promise invece
+  // di crearne una seconda (evita frammentazione della memoria multi-turno).
+  const creatingRef = useRef<Promise<string | null> | null>(null);
 
   // Load conversation list on mount
   useEffect(() => {
@@ -38,16 +41,25 @@ export function useConversation() {
     async (firstUserPrompt?: string): Promise<string | null> => {
       if (conversationId) return conversationId;
       if (!userId) return null;
+      if (creatingRef.current) return creatingRef.current;
       const title = firstUserPrompt
         ? firstUserPrompt.slice(0, 60)
         : "Nuova conversazione";
-      const res = await createConversation(userId!, title);
-      if (!isOk(res)) return null;
-      const newConv = res.value;
-      setConversationId(newConv.id);
-      setConversations((prev) => [newConv, ...prev]);
-      titleSetRef.current = false;
-      return newConv.id;
+      const p = (async () => {
+        const res = await createConversation(userId!, title);
+        if (!isOk(res)) return null;
+        const newConv = res.value;
+        setConversationId(newConv.id);
+        setConversations((prev) => [newConv, ...prev]);
+        titleSetRef.current = false;
+        return newConv.id;
+      })();
+      creatingRef.current = p;
+      try {
+        return await p;
+      } finally {
+        creatingRef.current = null;
+      }
     },
     [conversationId, userId],
   );
