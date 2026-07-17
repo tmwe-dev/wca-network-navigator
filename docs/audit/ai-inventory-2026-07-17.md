@@ -231,3 +231,20 @@ Presenti: `command_tools`(6), `system_doctrine`(18), `sales_doctrine`(14), `agen
 5. **[Qualità AI]** Seed KB categories `content-intelligence`, `classification`, `ai_memory` + `operative_prompts` context `home`, `mission-builder`.
 
 Le prime 4 sono errori 404 deterministici; la #5 degrada la qualità (grounding povero) ma non rompe.
+---
+
+## Fix runtime applicati — 2026-07-17 (autonomo)
+
+**6 edge functions inesistenti neutralizzate + Super Mario graceful degradation:**
+
+1. `src/v2/services/bulkOps/entries/verify.ts` — 4 entries (`verify.wa`, `verify.li`, `verify.email`, `verify.dedup`) convertite a **no-op strutturato** `{ ok: true, skipped: true, reason }`. Nessun caller UI attivo oggi; edge `verify-*` / `find-import-duplicates` non deployate.
+2. `src/v2/services/bulkOps/entries/update.ts` — `update.dispatch` convertito a no-op strutturato. Il dispatch WA/LI reale usa `send-whatsapp` / `send-linkedin` (contract differente: `recipient` + `message_text`).
+3. `src/v2/hooks/useEmailDownloadV2.ts` — repointato `sync-emails` → `email-sync-worker` (worker corretto usato anche dal cron).
+4. `supabase/functions/super-mario/index.ts` — su risposta gateway `401/402/429`, ora ritorna **200** con payload strutturato `{ error_code: AI_RATE_LIMITED | AI_CREDITS_EXHAUSTED | AI_UNAUTHORIZED, fallback: true, user_action_required: true, response.message }` allineato ad `ai-assistant`. Nessun 502 opaco al client.
+
+**Verifiche:** `tsgo --noEmit` clean · `super-mario` ridistribuita OK.
+
+**Rimane aperto (non-blocker):**
+- Prompt contexts vuoti: `home`, `mission-builder` — usano fallback `general`, qualità degrada ma non rompe.
+- KB categorie vuote: `ai_memory`, `content-intelligence`, `classification`.
+- BYOK OpenAI quota esaurita a monte del gateway: azione utente (ricarica saldo o rimuovi `OPENAI_API_KEY` per usare `LOVABLE_API_KEY`).
