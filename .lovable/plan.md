@@ -1,70 +1,59 @@
-# Riscrittura Guida Sistema (/v2/guida)
+## Contesto salvato
 
-## Obiettivo
-Trasformare la Parte 2 (tutorial) in una guida operativa **a capitoli sequenziali** che segue esattamente il menu reale a 7 macro-aree (Comando, Esplora, Pipeline, Comunica, Cervello, Lab, Config). Ogni capitolo spiega cosa fa la sezione, come si usano le operazioni e fornisce una **checklist di test** per verificare che tutto funzioni. Capitoli dedicati a gestione agenti, configurazione intelligenza e automazioni.
+Config login TMWE (sandbox.findair.net + ritorno nel pannello destro, no popup, no nuova tab) è ora fissata in `mem://auth/tmwe-login-config-2026-07-17`. Non verrà più regredita.
 
-## Cosa NON cambia
-- Parte 1 (istituzionale: Vision, Ciclo Autonomo, Sicurezza, Outreach, Performance ecc.) resta com'è.
-- Infrastruttura grafica: `GuidaLayout`, nav dots, scroll-snap, progress bar — invariati.
-- Nessuna modifica a logica, routing, edge function. Lavoro 100% su contenuti UI della guida.
+## Obiettivo dell'audit
 
-## Nuovo componente: `TutorialChapter`
-Estensione di `TutorialSection` (nuovo file `src/components/guida/TutorialChapter.tsx`) che aggiunge a quanto già presente:
-- **Numero capitolo** + nome macro-area (es. "CAP. 03 · COMUNICA").
-- Blocco **"Operazioni possibili"** (lista azioni concrete).
-- Blocco **"Test di verifica"** — checklist passo-passo con esito atteso (es. "Apri X → clicca Y → deve comparire Z").
-- Path della pagina mostrato come breadcrumb cliccabile (solo visivo).
-Riusa `SectionWrapper`, `ScreenshotFrame`, token semantici (niente colori hardcoded).
+Verificare, per ogni voce del menu principale V2, che la pagina:
+1. Carichi senza errori runtime (console + network).
+2. Rispetti il guscio SSOT (`StandardPageFrame` / rail sx filtri / rail dx workflow secondo `pageContract.ts`).
+3. Esponga funzioni coerenti con il nome della voce (niente doppioni, niente pagine "vuote").
+4. Non contenga bottoni orfani, tab morti, o CTA che portano a rotte inesistenti.
+5. Sia allineata al tema (light/dark) e responsive.
 
-## Struttura dei capitoli (sequenza = ordine menu reale)
+## Perimetro (SSOT: `FULL_NAV_ITEMS` in `navConfig.tsx`)
+
+17 voci raggruppate in 7 macro-aree:
 
 ```text
-PARTE 2 — TUTORIAL OPERATIVO
-
-CAP. 0  Come usare questa guida / legenda test
-CAP. 1  COMANDO
-        1a Command (AI-native, linguaggio naturale, tool+fonti, voce)
-        1b Missioni Autopilot (KPI, budget, approvazioni)
-CAP. 2  ESPLORA
-        2a Network / Esplora partner (filtri, deep search, batch)
-CAP. 3  PIPELINE
-        3a Cockpit (Kanban lead, stage, azioni)
-        3b Agenda (reminder, follow-up)
-        3c Cestinone (soft-delete, ripristino)
-CAP. 4  COMUNICA
-        4a Comms (WhatsApp + LinkedIn stealth sync)
-        4b Inbox (lettura, classificazione)
-        4c Email (composer, invio, editorial review)
-        4d Email Intelligence (classificazione risposte, escalation)
-        4e Funnemail (claim/sorting)
-        4f Rubriche WhatsApp / LinkedIn
-CAP. 5  CERVELLO
-        5a Gestione Agenti (creazione, persona, capabilities, tool)
-        5b Intelligence (configurazione IA: provider, voce, memoria, KB)
-CAP. 6  LAB
-        6a Prompt Lab, test prompt, observability, design system
-CAP. 7  CONFIG
-        7a Settings (tab reali: Generale, Connessioni, Estensioni, Voce AI,
-           Provider AI, Token AI, Memoria AI, Operatori, Ruoli…)
-CAP. 8  AUTOMAZIONI (trasversale)
-        Ciclo autonomo end-to-end: lead → outreach → follow-up →
-        classificazione, holding pattern, cron sync, guardrail di costo
+COMANDO      Command · Missioni
+ESPLORA      Vendi (explore/network)
+PIPELINE     Autorizza (cestinone) · Cockpit · Agenda
+COMUNICA     Comms · Leggi (inbox) · Scrivi (email) · Funnemail · Funnemail Inbox · Rubrica WhatsApp · Rubrica LinkedIn
+CERVELLO     Agenti · Intelligence
+LAB          Lab
+CONFIG       Config (settings)
 ```
 
-## Contenuto per ogni capitolo
-1. **Cosa fa** — descrizione funzionale chiara.
-2. **Operazioni possibili** — elenco azioni concrete eseguibili.
-3. **Come si fa** — passi principali del flusso.
-4. **Test di verifica** — checklist con azione → risultato atteso, per confermare il corretto funzionamento.
-5. **Mockup** visivo coerente coi token del tema.
+## Metodo per ciascuna voce (batch da 3-4 per turno)
 
-I contenuti verranno derivati dalle pagine reali (navConfig, registry, componenti delle pagine) per essere accurati e non inventati.
+Per pagina produco una scheda audit con:
 
-## File toccati
-- `src/components/guida/TutorialChapter.tsx` — NUOVO componente capitolo con blocchi operazioni + test.
-- `src/v2/ui/pages/GuidaPage.tsx` — sostituzione della Parte 2: nuova `sectionLabels` e nuovi capitoli sequenziali; Parte 1 e Chiusura invariate.
-- (eventuale) `src/components/guida/TestChecklist.tsx` — sotto-componente riusabile per le checklist di test.
+- **Rotta + file sorgente**
+- **Stato caricamento** (Playwright + console/network log)
+- **Aderenza guscio** (header unico? rail corretti? tabs pill?)
+- **Funzioni presenti vs attese** (mappa button → azione → esito)
+- **Difetti** classificati: `blocker` / `bug` / `ux` / `debito`
+- **Fix minimo proposto** (solo presentazione salvo bug critici)
 
-## Verifica finale
-- `tsgo` typecheck verde.
-- Smoke: `/v2/guida` carica senza crash, nav dots = numero capitoli, scroll e snap funzionanti (Playwright screenshot di alcuni capitoli).
+Output finale: un unico documento `docs/audit/menu-audit-2026-07-17.md` con:
+- indice per macro-area
+- semaforo per pagina (verde/giallo/rosso)
+- backlog fix prioritizzato
+
+## Piano di esecuzione (autonomo, un batch per turno)
+
+1. **Batch 1 — Comando**: Command, Missioni.
+2. **Batch 2 — Esplora + Pipeline**: Vendi, Autorizza, Cockpit, Agenda.
+3. **Batch 3 — Comunica (parte 1)**: Comms, Leggi, Scrivi.
+4. **Batch 4 — Comunica (parte 2)**: Funnemail, Funnemail Inbox, Rubrica WhatsApp, Rubrica LinkedIn.
+5. **Batch 5 — Cervello + Lab + Config**: Agenti, Intelligence, Lab, Config.
+6. **Consolidamento**: documento finale + backlog fix ordinato.
+
+## Regole operative durante l'audit
+
+- Nessuna modifica di logica: solo osservazione + micro-fix di presentazione se banali (import morti, testo troncato, tab rotto).
+- Ogni bug su nodo critico (submit, invio email/WA/LI, auth, RLS) va registrato ma NON toccato in questo audit — apre issue nel backlog.
+- Uso Playwright headless su `http://localhost:8080` con sessione TMWE già iniettata.
+
+Confermi che parto direttamente dal Batch 1 (Comando)?
