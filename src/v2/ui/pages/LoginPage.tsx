@@ -115,29 +115,6 @@ export function LoginPage(): React.ReactElement {
   const tmweDisabled = authLoading || tmwePreparing || !tmweHref;
   const tmweLabel = tmwePreparing || (!isEmbedded && !tmweLoginUrl) ? "Preparazione login…" : "Entra con TMWE";
 
-  const openTmwePopup = useCallback(() => {
-    if (!tmweHref) return;
-    const w = 520;
-    const h = 680;
-    let x = 100;
-    let y = 100;
-    try {
-      const sw = window.screen?.availWidth ?? window.screen?.width ?? 0;
-      const sh = window.screen?.availHeight ?? window.screen?.height ?? 0;
-      if (sw && sh) {
-        x = Math.max(0, (sw - w) / 2);
-        y = Math.max(0, (sh - h) / 2);
-      }
-    } catch {
-      // cross-origin — usa i default
-    }
-    const features = `popup=yes,width=${w},height=${h},left=${x},top=${y},noopener=no,noreferrer=no`;
-    const popup = window.open(tmweHref, "tmwe-login", features);
-    if (!popup) {
-      setTmweError("Popup bloccata dal browser. Consenti i popup per questo sito e riprova.");
-    }
-  }, [tmweHref]);
-
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-sm space-y-4">
       <div className="text-center space-y-1">
