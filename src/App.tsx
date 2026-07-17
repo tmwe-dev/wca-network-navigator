@@ -28,6 +28,7 @@ import { traceCollector } from "@/v2/observability/traceCollector";
 import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
 import { GlobalSherlockLauncher } from "@/components/global/GlobalSherlockLauncher";
 const SimpleHomePage = lazyRetry(() => import("@/v2/ui/pages/SimpleHomePage"));
+const OAuthConsent = lazyRetry(() => import("@/pages/OAuthConsent"));
 
 // Init observability layer (idempotent, safe before any render)
 traceCollector.init();
@@ -142,6 +143,9 @@ const App = () => (
                   <Route path="/auth" element={<LegacyRedirect to="/v2/login" />} />
                   <Route path="/onboarding" element={<LegacyRedirect to="/v2/onboarding" />} />
                   <Route path="/reset-password" element={<LegacyRedirect to="/v2/reset-password" />} />
+
+                  {/* OAuth consent route per client MCP esterni */}
+                  <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
                   {/* V1 deprecated — redirect every legacy route to V2 */}
                   <Route path="/v1/*" element={<V1DeprecationRedirect />} />
