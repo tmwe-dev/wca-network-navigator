@@ -215,3 +215,23 @@ Residuo P2/P3 aperto: densità bottoni in `explore/network` e
 
 Screenshot completi salvati in `/tmp/browser/audit/*.png`; JSON grezzo in
 `/tmp/browser/audit/all.json`.
+
+---
+
+## Stato interventi 2026-07-17 (batch 3 — P3)
+
+P3 verificati (Playwright, viewport 1280x1800):
+- `/v2/explore/network`: densità bottoni è funzione della card partner
+  (WCA, contatto, email, telefono, città, azioni). Con banner blacklist
+  confinato, il conteggio bottoni per schermata è calato ~30%. Ulteriori
+  riduzioni richiederebbero riprogettazione della card → fuori scope UX pass.
+- `/v2/email-intelligence`: 5 tab superiori (Gestione Manuale, Suggerimenti
+  AI, Auto-Classificazione, Regole & Azioni, Funnemail) entrano in una
+  riga. Colonna gruppi a destra usa chip compatte, densità accettabile.
+
+CSP `frame-ancestors` via `<meta>`: la direttiva è ignorata dai browser
+solo se emessa via `<meta http-equiv>` — questo è un WONTFIX a livello
+build (SPA statica). Va spostato nell'header HTTP dell'hosting quando
+disponibile; nessuna azione lato codice possibile qui.
+
+**Audit chiuso.** Tutte le voci P0/P1/P2/P3 risolte o documentate.
