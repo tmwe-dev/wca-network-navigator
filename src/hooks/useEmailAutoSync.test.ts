@@ -20,6 +20,7 @@ import { useEmailAutoSync } from "./useEmailAutoSync";
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
+  // eslint-disable-next-line no-empty
   try { localStorage.removeItem("email_auto_sync_enabled"); } catch {}
 });
 

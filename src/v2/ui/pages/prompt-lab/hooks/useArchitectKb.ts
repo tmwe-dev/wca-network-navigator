@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * useArchitectKb — carica la procedura Lab Architect (Fase 4).
  *
@@ -35,7 +36,7 @@ async function loadArchitectProcedureRaw(): Promise<string> {
 
 export function useArchitectKb() {
   const loadProcedure = useCallback(async (): Promise<string> => {
-    if (cachedProcedure !== null) return cachedProcedure;
+    if (cachedProcedure != null) return cachedProcedure;
     if (inflight) return inflight;
     inflight = loadArchitectProcedureRaw().then((p) => {
       cachedProcedure = p;

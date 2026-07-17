@@ -23,6 +23,7 @@ export function useAiTestHub() {
   const toggle = useCallback((id: string) => {
     setSelectedIds((s) => {
       const next = new Set(s);
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });

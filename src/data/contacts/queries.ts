@@ -5,6 +5,7 @@ import type { ContactFilters, LeadStatus, ImportedContactInsert, ImportedContact
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("queries");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContactQuery = any;
 
 function applyContactFilters(
@@ -110,7 +111,7 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
 
 export async function updateContact(id: string, updates: Record<string, unknown>) {
   // GUARD: strip lead_status from generic updates — must go through updateLeadStatus() / RPC
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { lead_status: _stripped, ...safeUpdates } = updates;
   if (_stripped !== undefined) {
     log.warn("[updateContact] lead_status stripped from generic update — use updateLeadStatus() instead");

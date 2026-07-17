@@ -200,8 +200,8 @@ Contesto: outreach commerciale logistica WCA.`,
         if (!parsed.body && !parsed.subject) setBody(raw);
       } catch {
         // Fallback: estrai con regex Oggetto/Corpo da markdown
-        const subjMatch = raw.match(/(?:\*\*)?Oggetto(?:\*\*)?\s*[:\-]\s*(.+)/i);
-        const bodyMatch = raw.match(/(?:\*\*)?(?:Testo|Corpo|Body)(?:\*\*)?\s*[:\-]?\s*\n+([\s\S]+?)(?:\n---|\n###|$)/i);
+        const subjMatch = raw.match(/(?:\*\*)?Oggetto(?:\*\*)?\s*[:-]\s*(.+)/i);
+        const bodyMatch = raw.match(/(?:\*\*)?(?:Testo|Corpo|Body)(?:\*\*)?\s*[:-]?\s*\n+([\s\S]+?)(?:\n---|\n###|$)/i);
         if (subjMatch?.[1]) setSubject(subjMatch[1].trim().replace(/\*+/g, ""));
         if (bodyMatch?.[1]) {
           setBody(normalizeComposerHtml(bodyMatch[1].trim().replace(/\*\*/g, "")));

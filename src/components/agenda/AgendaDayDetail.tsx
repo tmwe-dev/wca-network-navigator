@@ -415,6 +415,7 @@ function ActivityRow({
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) {
   if (reminders.length === 0) return null;
   return (

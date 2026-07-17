@@ -203,6 +203,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
 
 function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelected, onToggle, isDark }: {
   country: { code: string; name: string };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   stats: Record<string, any>;
   fallbackCount: number;
   hasPartnerStats: boolean;

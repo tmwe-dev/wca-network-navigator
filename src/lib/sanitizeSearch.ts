@@ -4,5 +4,5 @@
  */
 export function sanitizeSearchTerm(input: string): string {
   // Remove PostgREST operator characters: parentheses, commas, dots, backslashes
-  return input.replace(/[(),.\\\*%_]/g, "");
+  return input.replace(/[(),.\\*%_]/g, "");
 }

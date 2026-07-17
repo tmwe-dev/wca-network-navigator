@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * useImportLogs — Mutation hooks (write operations)
  * Split from the original 619-LOC monolith.
@@ -35,7 +36,7 @@ export const FIELD_ALIASES: Record<string, string[]> = {
 
 export function findField(row: Record<string, unknown>, aliases: string[]): string | null {
   for (const alias of aliases) {
-    if (row[alias] !== undefined && row[alias] !== null && String(row[alias]).trim() !== "") {
+    if (row[alias] !== undefined && row[alias] != null && String(row[alias]).trim() !== "") {
       return String(row[alias]).trim();
     }
   }

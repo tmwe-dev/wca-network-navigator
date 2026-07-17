@@ -234,6 +234,7 @@ function PreviewTab({ item }: { item: CestinoItem }): React.ReactElement {
       <div
         className="text-xs prose prose-sm dark:prose-invert max-w-none border rounded-md p-3 bg-background max-h-[280px] overflow-y-auto"
         // eslint-disable-next-line react/no-danger
+        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.bodyHtml) }}
       />
     );

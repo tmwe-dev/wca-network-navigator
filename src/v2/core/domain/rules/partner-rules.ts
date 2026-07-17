@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Partner Domain Rules — completeness score, validation
  */

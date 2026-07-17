@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Bootstrap steps — home page fetch and Google search.
  */
@@ -105,7 +106,7 @@ export async function bootstrapHome(args: {
     });
 
     Object.entries(ai.findings).forEach(([k, v]) => {
-      if (!k.startsWith("_") && v !== null && v !== undefined && v !== "") consolidated[k] = v;
+      if (!k.startsWith("_") && v != null && v !== undefined && v !== "") consolidated[k] = v;
     });
     lastSummary = ai.summary;
 

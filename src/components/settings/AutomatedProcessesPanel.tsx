@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Power, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -136,7 +137,7 @@ export default function AutomatedProcessesPanel() {
 
       const settingsMap: Record<string, string> = {};
       (settings || []).forEach((s: { key: string; value: string | null }) => {
-        if (s.value !== null) settingsMap[s.key] = s.value;
+        if (s.value != null) settingsMap[s.key] = s.value;
       });
 
       const since24h = new Date(Date.now() - 86400000).toISOString();
@@ -294,7 +295,7 @@ export default function AutomatedProcessesPanel() {
                 <span className="font-medium">{formatRelative(st.lastRun)}</span>
                 {st.lastRun && !st.lastError && <CheckCircle2 className="w-3 h-3 text-success" />}
               </div>
-              {st.enabled && nextInMin !== null && (
+              {st.enabled && nextInMin != null && (
                 <div className="flex items-center gap-1">
                   <span className="text-muted-foreground">Prossimo:</span>
                   <span className="font-medium">

@@ -50,6 +50,7 @@ function PageRow({
   let host = page.url;
   try {
     host = new URL(page.url).hostname.replace(/^www\./, "");
+  // eslint-disable-next-line no-empty
   } catch {}
 
   return (

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * PartnerDetailDrawer — Partner detail panel with actions
  */

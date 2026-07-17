@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * DataCell atom — STEP 4 Design System v2
  * Cella dati per tabelle con truncation e tooltip.

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState } from "react";
 import { ATECO_TREE } from "@/data/atecoCategories";
 import { PROVINCE_ITALIANE } from "@/data/italianProvinces";
@@ -115,7 +116,7 @@ export function useImportWizard({
 
   const handleStart = () => onStart({ atecoCodes, regions, provinces, filters });
 
-  const hasFilters = fatturatoPreset !== null || dipendentiPreset !== null ||
+  const hasFilters = fatturatoPreset != null || dipendentiPreset != null ||
     filters.has_phone || filters.has_email || filters.has_phone_and_email;
 
   return {

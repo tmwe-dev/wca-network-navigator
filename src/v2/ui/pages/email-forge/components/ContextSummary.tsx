@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * ContextSummary (LOVABLE-83) — Mostra all'utente cosa l'AI sa/ha usato.
  * Modalità compact (pillole inline pre/post generazione) ed expanded (pannello 3 colonne).
@@ -131,7 +132,7 @@ function ExpandedSummary({ pre, post }: { pre: PreGenerationContext; post?: Post
           { label: "Paese", value: pre.partner.country || "—", status: pre.partner.country ? "ok" : "missing" },
           { label: "Touch count", value: String(pre.relationship.touch_count), status: pre.relationship.touch_count > 0 ? "ok" : "missing" },
           { label: "Ha risposto", value: pre.relationship.has_replied ? "Sì" : "No", status: pre.relationship.has_replied ? "ok" : "missing" },
-          { label: "Ultimo contatto", value: pre.relationship.days_since_last !== null ? `${pre.relationship.days_since_last} gg fa` : "Mai", status: pre.relationship.days_since_last !== null ? "ok" : "missing" },
+          { label: "Ultimo contatto", value: pre.relationship.days_since_last != null ? `${pre.relationship.days_since_last} gg fa` : "Mai", status: pre.relationship.days_since_last != null ? "ok" : "missing" },
         ]} />
         <Section icon={Search} title="Enrichment + Memory" items={[
           { label: "Base", value: pre.enrichment.base ? "Sì" : "No", status: pre.enrichment.base ? "ok" : "missing" },

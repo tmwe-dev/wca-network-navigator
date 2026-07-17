@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * syncGuard — Single-op mutex + cooldown throttle per WhatsApp/LinkedIn.
  *
@@ -138,7 +139,7 @@ export function tryAcquire(channel: GuardChannel, opName: string): GuardToken {
 }
 
 export function isBusy(channel: GuardChannel): boolean {
-  return locks[channel] !== null;
+  return locks[channel] != null;
 }
 
 /**

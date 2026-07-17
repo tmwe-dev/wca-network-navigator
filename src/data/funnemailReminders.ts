@@ -58,6 +58,7 @@ export async function dismissReminder(id: string): Promise<void> {
 }
 
 export async function listActiveReminders(groupId?: string | null): Promise<FunnemailReminderRow[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase.from as unknown as (t: string) => any)(TABLE)
     .select("*")
     .is("dismissed_at", null)

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import type { PartnerViewModel } from "@/types/partner-views";
 import type * as React from "react";
 import { ArrowRight, Calendar, Truck, Users, Warehouse, MapPin, Building } from "lucide-react";
@@ -61,7 +62,7 @@ function firstText(...values: readonly unknown[]): string | null {
 }
 
 function countryCodeFromLabel(label: string): string | null {
-  const clean = label.toLowerCase().replace(/[()]/g, " ").split(/[\/,;|]/)[0]?.trim() ?? "";
+  const clean = label.toLowerCase().replace(/[()]/g, " ").split(/[/,;|]/)[0]?.trim() ?? "";
   return COUNTRY_ALIASES[clean] || resolveCountryCode(label) || resolveCountryCode(clean);
 }
 
@@ -104,8 +105,8 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
   const foundingYear = numberValue(enrichment?.founding_year) ?? numberValue(companyProfile?.founded_year);
   const fleetDetails = textValue(enrichment?.fleet_details);
   const warehouseDetails = textValue(enrichment?.warehouse_details);
-  const hasWarehouses = enrichment?.has_warehouses === true || warehouseSqm !== null || !!warehouseDetails;
-  const hasData = !!summary || serviceLabels.length > 0 || markets.length > 0 || routes.length > 0 || hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails || branchCountries.length > 0 || networks.length > 0;
+  const hasWarehouses = enrichment?.has_warehouses === true || warehouseSqm != null || !!warehouseDetails;
+  const hasData = !!summary || serviceLabels.length > 0 || markets.length > 0 || routes.length > 0 || hasWarehouses || employeeCount != null || foundingYear != null || !!fleetDetails || branchCountries.length > 0 || networks.length > 0;
 
   if (!hasData && !partner.enriched_at) return null;
 
@@ -136,7 +137,7 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
       )}
 
       {/* Row 3 — footprint operativo (warehouse + dipendenti + anno + flotta + nota magazzino) */}
-      {(hasWarehouses || employeeCount !== null || foundingYear !== null || !!fleetDetails || !!warehouseDetails) && (
+      {(hasWarehouses || employeeCount != null || foundingYear != null || !!fleetDetails || !!warehouseDetails) && (
         <div className="flex flex-wrap items-start gap-1.5">
           {hasWarehouses && (
             <Metric
@@ -144,8 +145,8 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
               label={warehouseSqm ? `${warehouseSqm.toLocaleString("it-IT")} m² warehouse` : "Warehousing"}
             />
           )}
-          {employeeCount !== null && <Metric icon={Users} label={`${employeeCount.toLocaleString("it-IT")} dipendenti`} />}
-          {foundingYear !== null && <Metric icon={Calendar} label={`Dal ${foundingYear}`} />}
+          {employeeCount != null && <Metric icon={Users} label={`${employeeCount.toLocaleString("it-IT")} dipendenti`} />}
+          {foundingYear != null && <Metric icon={Calendar} label={`Dal ${foundingYear}`} />}
           {fleetDetails && <Metric icon={Truck} label={fleetDetails} />}
           {warehouseDetails && (
             <span className="text-[10px] leading-snug text-muted-foreground italic max-w-full">

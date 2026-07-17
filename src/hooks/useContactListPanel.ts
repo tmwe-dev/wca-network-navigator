@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useReducer, useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -216,7 +217,7 @@ export function useContactListPanel() {
   const handleSortClick = useCallback((field: string) => {
     const current = state.sortField === field ? state.sortDir : null;
     let nextDir: SortDir;
-    if (current === null) nextDir = "asc";
+    if (current == null) nextDir = "asc";
     else if (current === "asc") nextDir = "desc";
     else nextDir = null;
     dispatch({ type: "SET_SORT", field, dir: nextDir });

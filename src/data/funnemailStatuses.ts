@@ -78,6 +78,7 @@ type AnyFrom = (t: string) => {
 const fromAny = supabase.from as unknown as AnyFrom;
 
 export async function listStatusesForGroup(groupId?: string | null): Promise<FunnemailStatusRow[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase.from as unknown as (t: string) => any)(TABLE)
     .select("message_id, group_id, status, status_reason, changed_by, changed_at, user_id")
     .is("deleted_at", null);
@@ -113,6 +114,7 @@ export async function setMessageStatus(args: {
 }
 
 export async function listStatusHistory(messageId: string): Promise<FunnemailStatusHistoryRow[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from as unknown as (t: string) => any)(HISTORY_TABLE)
     .select("*")
     .eq("message_id", messageId)
@@ -122,6 +124,7 @@ export async function listStatusHistory(messageId: string): Promise<FunnemailSta
 }
 
 export async function listSortingQueue(): Promise<FunnemailStatusRow[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from as unknown as (t: string) => any)(
     "funnemail_sorting_queue",
   )
@@ -132,6 +135,7 @@ export async function listSortingQueue(): Promise<FunnemailStatusRow[]> {
 }
 
 export async function countSortingQueue(): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { count, error } = await (supabase.from as unknown as (t: string) => any)(
     "funnemail_sorting_queue",
   )

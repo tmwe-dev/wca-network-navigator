@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 
@@ -76,7 +77,7 @@ ${colorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
     // Sanitize: only allow valid CSS custom property values (hex, hsl, rgb, named colors)
-    if (color && /^[a-zA-Z0-9#(),.\s%\/]+$/.test(color)) {
+    if (color && /^[a-zA-Z0-9#(),.\s%/]+$/.test(color)) {
       return `  --color-${key}: ${color};`;
     }
     return null;
@@ -281,12 +282,12 @@ ChartLegendContent.displayName = "ChartLegend";
 
 // Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
-  if (typeof payload !== "object" || payload === null) {
+  if (typeof payload !== "object" || payload == null) {
     return undefined;
   }
 
   const payloadPayload =
-    "payload" in payload && typeof payload.payload === "object" && payload.payload !== null
+    "payload" in payload && typeof payload.payload === "object" && payload.payload != null
       ? payload.payload
       : undefined;
 

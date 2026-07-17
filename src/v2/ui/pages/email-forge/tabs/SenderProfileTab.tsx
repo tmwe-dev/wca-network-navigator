@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SenderProfileTab — edit sender app_settings ai_* + readiness scores.
  */

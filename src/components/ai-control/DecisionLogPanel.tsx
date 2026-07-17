@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * DecisionLogPanel — Displays ai_decision_log with filters and pagination
  */

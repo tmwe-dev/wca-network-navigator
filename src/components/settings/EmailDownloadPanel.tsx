@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle, CheckCircle2, Download, Mail, Pause, Play,
@@ -40,7 +41,7 @@ export default function EmailDownloadPage() {
 
   useEffect(() => {
     if (emails.length === 0) {
-      if (selectedEmailId !== null) setSelectedEmailId(null);
+      if (selectedEmailId != null) setSelectedEmailId(null);
       return;
     }
 

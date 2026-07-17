@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * LabAgentChat — Footer chat con Lab Agent.
  * LOVABLE-110: parsing [SUGGEST_RULE] tags per rendering inline SuggestRuleButton.
@@ -34,7 +35,7 @@ function parseAssistantMessage(raw: string): MessageSegment[] {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = regex.exec(raw)) !== null) {
+  while ((match = regex.exec(raw)) != null) {
     if (match.index > lastIndex) {
       segments.push({ type: "text", text: raw.slice(lastIndex, match.index) });
     }

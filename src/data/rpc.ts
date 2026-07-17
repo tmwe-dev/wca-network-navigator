@@ -86,6 +86,7 @@ export async function rpcRecordUserLogin(email: string): Promise<void> {
  */
 export async function rpcCall(fn: string, params?: Record<string, unknown>) {
   // Diagnostics tool: dynamic function name requires cast
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   const { data, error } = await (supabase.rpc as Function)(fn, params);
   if (error) throw error;
   return data;
@@ -96,6 +97,7 @@ export async function rpcCall(fn: string, params?: Record<string, unknown>) {
  */
 export async function countTableRows(table: string) {
   // Diagnostics: dynamic table name requires untyped access
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   const { count, error } = await (supabase.from as Function)(table).select("*", { count: "exact", head: true });
   if (error) throw error;
   return count ?? 0;
@@ -105,6 +107,7 @@ export async function countTableRows(table: string) {
  * Generic view count with filter for diagnostics.
  */
 export async function countViewRows(view: string, filter?: { column: string; value: unknown }) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   let q = (supabase.from as Function)(view).select("*", { count: "exact", head: true });
   if (filter) q = q.eq(filter.column, filter.value);
   const { count, error } = await q;

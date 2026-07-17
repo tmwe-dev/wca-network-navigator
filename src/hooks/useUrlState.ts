@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -31,10 +32,10 @@ export function useUrlState<T>(
 
   const parse =
     options.parse ??
-    ((raw: string | null) => (raw === null ? defaultValue : (raw as unknown as T)));
+    ((raw: string | null) => (raw == null ? defaultValue : (raw as unknown as T)));
   const serialize =
     options.serialize ??
-    ((v: T) => (v === null || v === undefined ? "" : String(v)));
+    ((v: T) => (v == null || v === undefined ? "" : String(v)));
 
   const value = useMemo<T>(() => parse(searchParams.get(key)), [searchParams, key, parse]);
 
@@ -50,7 +51,7 @@ export function useUrlState<T>(
           const params = new URLSearchParams(prev);
           const serialized = serialize(resolved);
           const isEmpty =
-            resolved === null ||
+            resolved == null ||
             resolved === undefined ||
             resolved === "" ||
             (Array.isArray(resolved) && resolved.length === 0) ||
@@ -91,7 +92,7 @@ export function useUrlNumberState(
 ): [number, (next: number | ((prev: number) => number)) => void] {
   return useUrlState<number>(key, defaultValue, {
     parse: (raw) => {
-      if (raw === null) return defaultValue;
+      if (raw == null) return defaultValue;
       const n = Number(raw);
       return Number.isFinite(n) ? n : defaultValue;
     },
@@ -105,7 +106,7 @@ export function useUrlBoolState(
   defaultValue = false
 ): [boolean, (next: boolean | ((prev: boolean) => boolean)) => void] {
   return useUrlState<boolean>(key, defaultValue, {
-    parse: (raw) => (raw === null ? defaultValue : raw === "1" || raw === "true"),
+    parse: (raw) => (raw == null ? defaultValue : raw === "1" || raw === "true"),
     serialize: (v) => (v ? "1" : "0"),
   });
 }

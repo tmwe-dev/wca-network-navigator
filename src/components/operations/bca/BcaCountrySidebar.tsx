@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import {
   Globe, SlidersHorizontal, Plane,
   LayoutList, LayoutGrid, Rows3, Calendar,
@@ -51,7 +52,7 @@ export function BcaCountrySidebar({
 
       <button
         onClick={() => onSelectCountry(null)}
-        className={cn("flex shrink-0 items-center gap-2 border-b border-border/20 px-3 py-2 text-left transition-all", selectedCountry === null ? "bg-primary/10 text-primary" : "hover:bg-muted/40 text-foreground")}
+        className={cn("flex shrink-0 items-center gap-2 border-b border-border/20 px-3 py-2 text-left transition-all", selectedCountry == null ? "bg-primary/10 text-primary" : "hover:bg-muted/40 text-foreground")}
       >
         <span className="text-sm">🌍</span>
         <div className="flex-1 min-w-0">

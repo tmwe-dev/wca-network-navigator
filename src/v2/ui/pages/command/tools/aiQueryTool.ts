@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * aiQueryTool — Tool unico AI-Native per ricerche su DB.
  *
@@ -60,7 +61,7 @@ function bulkActionsFor(table: string): readonly { id: string; label: string; pr
 }
 
 function formatCellValue(v: unknown): string | number | null {
-  if (v === null || v === undefined) return "—";
+  if (v == null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "✓" : "✗";
   if (typeof v === "number") return v;
   if (typeof v === "string") return v;

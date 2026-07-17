@@ -24,7 +24,7 @@ export async function updateProspectLeadStatus(id: string, status: string) {
 
 export async function updateProspect(id: string, updates: Record<string, unknown>) {
   // GUARD: strip lead_status — must go through updateProspectLeadStatus() / RPC
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { lead_status: _stripped, ...safeUpdates } = updates;
   if (_stripped !== undefined) {
     log.warn("[updateProspect] lead_status stripped from generic update — use updateProspectLeadStatus() instead");

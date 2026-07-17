@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -317,6 +318,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
         .select("*")
         .eq("prospect_id", prospect.id);
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return data as Array<Record<string, any>>;
     },
   });

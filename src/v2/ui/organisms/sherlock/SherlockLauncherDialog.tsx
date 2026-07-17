@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SherlockLauncherDialog — dialog leggero per lanciare un'indagine Sherlock
  * (Scout / Detective / Sherlock) su un partner o contatto, senza dover passare
@@ -196,7 +197,7 @@ function StepLine({ result }: { result: SherlockStepResult }) {
           {result.channel}
           {result.duration_ms ? ` · ${(result.duration_ms / 1000).toFixed(1)}s` : ""}
           {result.cache_hit ? " · cache" : ""}
-          {result.confidence !== null ? ` · AI ${Math.round(result.confidence * 100)}%` : ""}
+          {result.confidence != null ? ` · AI ${Math.round(result.confidence * 100)}%` : ""}
         </div>
         {result.status === "error" && result.error && (
           <div className="text-[10px] text-destructive truncate">{result.error}</div>

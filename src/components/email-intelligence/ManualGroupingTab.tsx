@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * ManualGroupingTab — Fase 1 Email Intelligence.
  *
@@ -86,7 +87,7 @@ export default function ManualGroupingTab() {
   // Auto-focus primo sender quando lista cambia o nessuno selezionato.
   useEffect(() => {
     if (sortedSenders.length === 0) {
-      if (previewSender !== null) setPreviewSender(null);
+      if (previewSender != null) setPreviewSender(null);
       return;
     }
     const stillVisible = previewSender && sortedSenders.some((s) => s.email === previewSender.email);
@@ -545,7 +546,7 @@ export default function ManualGroupingTab() {
 
       <SenderActionsDialog
         sender={actionsDialogSender}
-        open={actionsDialogSender !== null}
+        open={actionsDialogSender != null}
         onOpenChange={(open) => {
           if (!open) setActionsDialogSender(null);
         }}

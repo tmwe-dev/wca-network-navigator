@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockFrom = vi.fn();
@@ -26,7 +27,7 @@ describe("App Settings Minimum Viability", () => {
 
     const { error } = await supabase.from("app_settings").select("key").limit(1);
     // RLS may block -- that's OK, table should exist
-    expect(error === null || error?.code === "PGRST301").toBe(true);
+    expect(error == null || error?.code === "PGRST301").toBe(true);
   });
 
   it("agent settings values are valid numbers if present", async () => {

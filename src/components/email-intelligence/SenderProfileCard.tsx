@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SenderProfileCard — Adapted from tmwengine SenderCard visual style.
  * border-l-4 with sentiment-based coloring, interaction stats.

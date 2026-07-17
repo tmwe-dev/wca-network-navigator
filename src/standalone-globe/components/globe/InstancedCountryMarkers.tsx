@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useRef, useMemo, useEffect } from "react";
 import { useFrame, useThree, ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
@@ -79,7 +80,7 @@ export function InstancedCountryMarkers({ countries, selectedCountry, onSelect }
       const hasPartners = country.count > 0;
       const isSelected = selectedCountry === country.code;
       const isHovered = hoveredRef.current === i;
-      const hasSelection = selectedCountry !== null;
+      const hasSelection = selectedCountry != null;
       
       // Calculate scale based on state - hide ALL markers when a country is selected
       let innerScale: number;

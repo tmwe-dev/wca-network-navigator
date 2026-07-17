@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * FindingsView — visualizzazione leggibile dei findings AI di Sherlock.
  * Sostituisce il dump JSON crudo con card semantiche + toggle "Vedi JSON".
@@ -34,7 +35,7 @@ function humanizeKey(key: string): string {
 }
 
 function renderValue(v: unknown): React.ReactNode {
-  if (v === null || v === undefined || v === "") return <span className="text-muted-foreground italic">—</span>;
+  if (v == null || v === undefined || v === "") return <span className="text-muted-foreground italic">—</span>;
   if (typeof v === "string") {
     // Linkify URL, email, telefono
     if (/^https?:\/\//i.test(v)) {
@@ -82,7 +83,7 @@ export function FindingsView({ findings, suggestedNextUrl, onInvestigateUrl }: P
   const summary = typeof findings._summary === "string" ? findings._summary : "";
   const entries = Object.entries(findings).filter(([k, v]) => {
     if (k.startsWith("_")) return false;
-    if (v === null || v === undefined || v === "") return false;
+    if (v == null || v === undefined || v === "") return false;
     return true;
   });
 

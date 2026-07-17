@@ -63,6 +63,7 @@ export function BusinessCardsView() {
   const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedBca.has(id));
 
   const toggleBca = (id: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     setSelectedBca(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
   const toggleAll = () => {

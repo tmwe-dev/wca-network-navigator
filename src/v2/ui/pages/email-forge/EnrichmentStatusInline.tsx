@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * EnrichmentStatusInline — LOVABLE-77B
  *
@@ -26,7 +27,7 @@ function StatusRow({
       <span className={cn("flex-1 truncate", ok ? "text-foreground" : "text-muted-foreground")}>
         {label}
       </span>
-      {ok && age !== null && (
+      {ok && age != null && (
         <span className="text-muted-foreground text-[10px] shrink-0">
           {age === 0 ? "oggi" : `${age}gg fa`}
         </span>

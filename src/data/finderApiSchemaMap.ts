@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * DAL — finder_api_schema_map
  * Mappa campi/ruoli per ogni operazione TMWE consentita.
@@ -83,7 +84,7 @@ export async function ingestSampleIntoSchemaMap(
   let skipped = 0;
   for (const [field, value] of Object.entries(sample)) {
     if (known.has(field)) { skipped++; continue; }
-    const example = value === null || value === undefined ? "" : String(value).slice(0, 80);
+    const example = value == null || value === undefined ? "" : String(value).slice(0, 80);
     await upsertFinderApiSchemaField({
       op,
       field,

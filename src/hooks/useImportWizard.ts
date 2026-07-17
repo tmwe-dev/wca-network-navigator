@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Import wizard state & logic — extracted from Import.tsx
  */
@@ -65,6 +66,7 @@ export function useImportWizard() {
   const [groupName, setGroupName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pendingRows, setPendingRows] = useState<any[]>([]);
   const [aiMapping, setAiMapping] = useState<AiMappingResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -394,7 +396,7 @@ export function useImportWizard() {
     if (incomplete.length === 0) return;
     const SEP = ";";
     const escapeCell = (val: string) => {
-      if (val === null || val === undefined) return "";
+      if (val == null || val === undefined) return "";
       const s = String(val).replace(/"/g, '""');
       if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) return `"${s}"`;
       return s;

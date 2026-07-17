@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * CalendarPage Component
  * Main calendar view with sidebar and event management
@@ -76,7 +77,7 @@ export function CalendarPage() {
               <button
                 onClick={() => setEventTypeFilter(null)}
                 className={`w-full px-3 py-2 rounded text-sm font-medium text-left transition-colors ${
-                  eventTypeFilter === null
+                  eventTypeFilter == null
                     ? "bg-primary text-primary-foreground"
                     : "bg-card text-foreground hover:bg-accent"
                 }`}

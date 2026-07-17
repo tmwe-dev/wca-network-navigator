@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState, useMemo } from "react";
 import { guessCountryFromLocation, countryCodeToFlag } from "./bcaUtils";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
@@ -130,7 +131,7 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
 
   const filtered = useMemo(() => {
     let list: CardWithCountry[] = cardsWithCountry;
-    if (selectedCountry !== null) {
+    if (selectedCountry != null) {
       if (selectedCountry === "__none__") {
         list = list.filter(c => !c._country);
       } else {

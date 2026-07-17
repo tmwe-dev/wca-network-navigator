@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Renderer template URL Sherlock — sostituisce {var} con vars[var] (URL-encoded).
  * Variabili mancanti restano come {var} → lo step viene saltato.
@@ -12,7 +13,7 @@ export function renderUrlTemplate(
   const missing: string[] = [];
   const url = template.replace(VAR_RE, (_m, key: string) => {
     const raw = vars[key];
-    if (raw === undefined || raw === null || raw === "") {
+    if (raw === undefined || raw == null || raw === "") {
       missing.push(key);
       return `{${key}}`;
     }

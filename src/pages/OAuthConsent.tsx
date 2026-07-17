@@ -7,8 +7,11 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 type OAuthNamespace = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getAuthorizationDetails: (id: string) => Promise<{ data: any; error: { message: string } | null }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   approveAuthorization: (id: string) => Promise<{ data: any; error: { message: string } | null }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   denyAuthorization: (id: string) => Promise<{ data: any; error: { message: string } | null }>;
 };
 
@@ -20,6 +23,7 @@ export default function OAuthConsent() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const authorizationId = params.get("authorization_id") ?? "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [details, setDetails] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

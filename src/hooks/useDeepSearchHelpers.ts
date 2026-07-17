@@ -10,7 +10,7 @@ const log = createLogger("useDeepSearchHelpers");
 const AI_MODEL = "google/gemini-2.5-flash-lite";
 
 export function toWhatsAppNumber(phone: string): string {
-  return phone.replace(/[\s\-\(\)\.]/g, "").replace(/^\+/, "");
+  return phone.replace(/[\s\-().]/g, "").replace(/^\+/, "");
 }
 
 /**
@@ -34,7 +34,7 @@ export function cleanCompanyName(raw: string): string {
   if (!raw) return raw;
   let s = raw.trim();
   // suffissi legali in coda
-  const legal = /\s*[,.\-]?\s*\b(s\.?\s?r\.?\s?l\.?(?:\s?s)?|s\.?\s?p\.?\s?a\.?|s\.?\s?n\.?\s?c\.?|s\.?\s?a\.?\s?s\.?|ltd\.?|limited|llc\.?|inc\.?|corp\.?|corporation|gmbh|ag|kg|ohg|bv|nv|sa|sl|oy|ab|as|aps|pvt\.?|pty\.?|co\.?|company|holding|group|grp|international|int\.?l)\b\.?$/i;
+  const legal = /\s*[,.-]?\s*\b(s\.?\s?r\.?\s?l\.?(?:\s?s)?|s\.?\s?p\.?\s?a\.?|s\.?\s?n\.?\s?c\.?|s\.?\s?a\.?\s?s\.?|ltd\.?|limited|llc\.?|inc\.?|corp\.?|corporation|gmbh|ag|kg|ohg|bv|nv|sa|sl|oy|ab|as|aps|pvt\.?|pty\.?|co\.?|company|holding|group|grp|international|int\.?l)\b\.?$/i;
   // applica fino a 3 volte (es. "X Ltd. Co.")
   for (let i = 0; i < 3; i++) {
     const next = s.replace(legal, "").trim();

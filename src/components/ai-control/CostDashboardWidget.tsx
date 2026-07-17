@@ -84,7 +84,7 @@ export function CostDashboardWidget() {
       if (!userId) return [];
 
       const now = new Date();
-      let startDate = new Date();
+      const startDate = new Date();
 
       switch (timeRange) {
         case 'day':

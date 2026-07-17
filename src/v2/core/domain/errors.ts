@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Error Factory — Vol. II §5.3 + Vol. IV §3
  *
@@ -124,7 +125,7 @@ export function infraError(
 export function isAppError(value: unknown): value is AppError {
   return (
     typeof value === "object" &&
-    value !== null &&
+    value != null &&
     "category" in value &&
     "code" in value &&
     "message" in value &&

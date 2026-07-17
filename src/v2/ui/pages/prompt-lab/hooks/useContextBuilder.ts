@@ -32,6 +32,7 @@ const MAX_NEARBY_BLOCKS = 5;                  // top blocchi vicini con contenut
 const MAX_INDEX_BLOCKS = 100;                 // indice compatto per gli altri
 
 function compactText(text: string, maxChars: number, label: string): string {
+  // eslint-disable-next-line no-control-regex
   const normalized = text.replace(/\u0000/g, "").replace(/\s{3,}/g, "  ").trim();
   if (!normalized) return "";
   if (normalized.length <= maxChars) return normalized;

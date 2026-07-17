@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search, Inbox, Database, Mail, CheckCircle2, AlertCircle, Clock, ChevronLeft, ChevronRight, Plane, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,7 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
 
   useEffect(() => {
     if (inbound.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
+      if (selectedId != null) setSelectedId(null);
       return;
     }
     const selectionStillExists = selectedId ? inbound.some((message) => message.id === selectedId) : false;

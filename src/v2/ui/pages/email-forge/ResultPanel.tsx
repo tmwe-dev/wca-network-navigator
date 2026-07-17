@@ -105,6 +105,7 @@ export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
             <TabsContent value="preview" className="mt-2">
               <div
                 className="prose prose-sm max-w-none border border-border/60 rounded p-3 bg-card text-foreground text-sm"
+                // eslint-disable-next-line react/no-danger
                 /* eslint-disable-next-line react/no-danger */
                 dangerouslySetInnerHTML={{ __html: result.body || "<em>(vuoto)</em>" }}
               />

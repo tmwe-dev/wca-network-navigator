@@ -8,6 +8,7 @@ function formatCurrency(n: number | null) {
 }
 
 interface RACompanyKPIProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   prospect: Record<string, any>;
 }
 

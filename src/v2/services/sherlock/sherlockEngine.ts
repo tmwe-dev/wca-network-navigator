@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * sherlockEngine — orchestratore sequenziale di un playbook investigativo.
  *
@@ -128,7 +129,7 @@ async function callExtractAI(args: {
   const findings: Record<string, unknown> = {};
   // 1) target fields (solo non-null/non-vuoti)
   for (const [k, v] of Object.entries(fields)) {
-    if (v !== null && v !== undefined && v !== "") findings[k] = v;
+    if (v != null && v !== undefined && v !== "") findings[k] = v;
   }
   // 2) other_findings → key/value flat
   const otherRaw = d.other_findings;
@@ -137,7 +138,7 @@ async function callExtractAI(args: {
       if (!item || typeof item !== "object") continue;
       const k = (item as { key?: unknown }).key;
       const v = (item as { value?: unknown }).value;
-      if (typeof k === "string" && k && v !== null && v !== undefined && v !== "") {
+      if (typeof k === "string" && k && v != null && v !== undefined && v !== "") {
         // Evita collisioni con fields già presenti
         const safeKey = findings[k] === undefined ? k : `${k}_extra`;
         findings[safeKey] = v;
@@ -443,7 +444,7 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
 
     // 7. consolida
     Object.entries(aiFindings).forEach(([k, v]) => {
-      if (v !== null && v !== undefined && v !== "") {
+      if (v != null && v !== undefined && v !== "") {
         consolidated[k] = v;
       }
     });

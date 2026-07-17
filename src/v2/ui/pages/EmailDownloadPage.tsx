@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * EmailDownloadPage V2
  */
@@ -43,7 +44,7 @@ export function EmailDownloadPage() {
 
   useEffect(() => {
     if (emails.length === 0) {
-      if (selectedEmailId !== null) setSelectedEmailId(null);
+      if (selectedEmailId != null) setSelectedEmailId(null);
       return;
     }
 

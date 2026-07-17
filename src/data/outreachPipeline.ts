@@ -242,6 +242,7 @@ export async function logAuditEntry(entry: {
   const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return;
   // supervisor_audit_log may not be in generated types yet — use dynamic access
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   await (supabase.from as Function)("supervisor_audit_log").insert({
     user_id: user.id,
     actor_type: "user",

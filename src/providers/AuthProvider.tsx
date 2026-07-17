@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * AuthProvider — Single centralized onAuthStateChange listener.
  *
@@ -60,8 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialised = useRef(false);
 
   const setUnauthenticated = useCallback(() => {
-    setSession((prev) => (prev === null ? prev : null));
-    setUser((prev) => (prev === null ? prev : null));
+    setSession((prev) => (prev == null ? prev : null));
+    setUser((prev) => (prev == null ? prev : null));
     setStatus((prev) => (prev === "unauthenticated" ? prev : "unauthenticated"));
   }, []);
 

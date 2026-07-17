@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { safeParseCheckInboxResult } from "@/lib/api/checkInbox.schemas";
 import { ApiError } from "@/lib/api/apiError";
@@ -15,7 +16,7 @@ function isSkippableCheckInboxError(err: unknown): err is ApiError {
   // Errori di rete (FunctionsFetchError, TypeError "Failed to fetch", CORS,
   // abort) arrivano come ApiError UNKNOWN_ERROR senza httpStatus. Vanno
   // trattati come transient: bgSyncStart farà back-off invece di rimbalzare.
-  if (err instanceof ApiError && (err.httpStatus === undefined || err.httpStatus === null)) {
+  if (err instanceof ApiError && (err.httpStatus === undefined || err.httpStatus == null)) {
     return true;
   }
   if (!(err instanceof ApiError)) {

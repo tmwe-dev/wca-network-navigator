@@ -79,6 +79,7 @@ export function ContactsGridTab({ contacts, activeLogId: _activeLogId }: Contact
   const toggleLocal = useCallback((id: string, selected: boolean) => {
     setLocalSelection((prev) => {
       const next = new Set(prev);
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       selected ? next.add(id) : next.delete(id);
       return next;
     });

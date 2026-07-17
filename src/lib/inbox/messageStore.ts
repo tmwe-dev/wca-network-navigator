@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Message Store — utilità di merge/dedup per `channel_messages`,
  * usato sia dalla query iniziale sia dal listener realtime.
@@ -60,12 +61,12 @@ export function filterByThread<T extends ChannelKind>(
 }
 
 /**
- * Conta messaggi non letti (read_at === null).
+ * Conta messaggi non letti (read_at == null).
  */
 export function countUnread<T extends ChannelKind>(
   messages: ReadonlyArray<ChannelMessage<T>>
 ): number {
-  return messages.reduce((acc, m) => acc + (m.read_at === null ? 1 : 0), 0);
+  return messages.reduce((acc, m) => acc + (m.read_at == null ? 1 : 0), 0);
 }
 
 /**

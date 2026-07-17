@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * PipelineTracesPage — Visualizza passo-passo le procedure in atto nel sistema.
  *

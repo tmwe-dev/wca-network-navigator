@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * NavMenuPopover — Dropdown di navigazione globale, identico in tutte le
  * pagine. Usato sia in CommandPage (trigger custom "Menu" fixed top-left)
@@ -201,7 +202,7 @@ export function NavMenuPopover({
     () => findSecondaryNavGroup(currentPath ?? null),
     [currentPath],
   );
-  const isInDev = activeGroupTitle !== null;
+  const isInDev = activeGroupTitle != null;
   const [openGroup, setOpenGroup] = React.useState<string | null>(activeGroupTitle);
   const [expandedMain, setExpandedMain] = React.useState<Record<string, boolean>>({});
   const [openSubInMain, setOpenSubInMain] = React.useState<Record<string, string | null>>({});

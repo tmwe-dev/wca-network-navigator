@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("emailContentNormalization");
@@ -37,7 +38,7 @@ function escapeHtml(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 

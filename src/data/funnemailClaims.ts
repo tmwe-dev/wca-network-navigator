@@ -25,6 +25,7 @@ const TABLE = "funnemail_message_claims" as const;
 export async function listActiveFunnemailClaims(
   groupId?: string | null,
 ): Promise<FunnemailClaimWithOperator[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase.from as unknown as (t: string) => any)(TABLE)
     .select("message_id, group_id, claimed_by, claimed_at, released_at, user_id")
     .is("released_at", null);
@@ -66,6 +67,7 @@ export async function claimFunnemailMessage(args: {
   if (!uid) throw new Error("not_authenticated");
 
   // Verifica claim esistente attivo
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existing } = await (supabase.from as unknown as (t: string) => any)(TABLE)
     .select("message_id, group_id, claimed_by, claimed_at, released_at, user_id")
     .eq("message_id", args.messageId)
@@ -77,6 +79,7 @@ export async function claimFunnemailMessage(args: {
     return { ok: false, conflict: current };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from as unknown as (t: string) => any)(TABLE)
     .upsert(
       {
@@ -95,6 +98,7 @@ export async function claimFunnemailMessage(args: {
 
 /** Rilascia il claim (soft, per audit). Solo proprietario o admin via RLS. */
 export async function releaseFunnemailMessage(messageId: string): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from as unknown as (t: string) => any)(TABLE)
     .update({ released_at: new Date().toISOString() })
     .eq("message_id", messageId)

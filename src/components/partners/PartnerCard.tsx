@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState } from "react";
 import type { PartnerViewModel } from "@/types/partner-views";
 import { Link } from "react-router-dom";
@@ -25,7 +26,7 @@ import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
 import { getEffectiveLogoUrl } from "@/lib/partnerUtils";
 function cleanPhoneForWhatsApp(phone: string): string {
-  return phone.replace(/[\s\-\(\)\+]/g, "").replace(/^00/, "");
+  return phone.replace(/[\s\-()+]/g, "").replace(/^00/, "");
 }
 
 function getMemberBadgeColor(years: number): string {

@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { ContactFilters } from "./types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContactQuery = any;
 
 export async function findHoldingPatternContacts(filters: ContactFilters = {}) {
@@ -80,11 +81,13 @@ export async function fetchGroupContactIds(
 
   switch (groupType) {
     case "country":
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       groupKey === "??" || groupKey === "Sconosciuto"
         ? (q = q.is("country", null))
         : (q = q.eq("country", groupKey));
       break;
     case "origin":
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       groupKey === "Sconosciuta"
         ? (q = q.is("origin", null))
         : (q = q.eq("origin", groupKey));

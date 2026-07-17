@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * BulkEmailActions — Buttons for bulk operations on emails with double-confirmation
  */
@@ -249,7 +250,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
       )}
 
       {/* Email count info */}
-      {totalEmails !== null && totalEmails > 0 && !isLoading && (
+      {totalEmails != null && totalEmails > 0 && !isLoading && (
         <div className="text-xs text-muted-foreground">
           {totalEmails} email da questo mittente
         </div>

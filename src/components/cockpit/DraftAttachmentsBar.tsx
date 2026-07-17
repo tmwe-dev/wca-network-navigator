@@ -76,7 +76,7 @@ export function DraftAttachmentsBar({ draft, onDraftChange }: Props) {
       if (!user) throw new Error("Sessione scaduta");
       const uploaded: DraftAttachment[] = [];
       for (const file of accepted) {
-        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const safe = file.name.replace(/[^\w.-]+/g, "_");
         const path = `${user.id}/${crypto.randomUUID()}-${safe}`;
         const { error } = await supabase.storage.from("cockpit-attachments").upload(path, file, {
           contentType: file.type || "application/octet-stream",

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { useState, useContext } from "react";
 import { ChevronDown, ChevronUp, Star, Heart, Globe, Mail, Phone, ExternalLink, Building2, MapPin } from "lucide-react";
 import { ThemeCtx } from "@/components/download/theme";

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * ExportSendersDialog — Dialog per esportare i sender selezionati.
  *

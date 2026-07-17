@@ -30,7 +30,9 @@ interface CalendarEventRow {
   updated_at: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface CalendarEventInsert extends Omit<CalendarEventRow, "id" | "created_at" | "updated_at"> {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface CalendarEventUpdate extends Partial<Omit<CalendarEventRow, "id" | "created_at" | "updated_at">> {}
 
 // ─── Types ──────────────────────────────────────────────

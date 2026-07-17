@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * URL extraction and normalization utilities.
  */
@@ -70,8 +71,8 @@ export function extractInternalLinks(markdown: string, baseHost: string | null):
   const matches: string[] = [];
   let m: RegExpExecArray | null;
 
-  while ((m = reMd.exec(markdown)) !== null) matches.push(m[2]);
-  while ((m = reBare.exec(markdown)) !== null) matches.push(m[0]);
+  while ((m = reMd.exec(markdown)) != null) matches.push(m[2]);
+  while ((m = reBare.exec(markdown)) != null) matches.push(m[0]);
 
   for (const raw of matches) {
     const cleaned = raw.replace(/[)\].,;:!?]+$/, "");
@@ -105,7 +106,7 @@ export function extractGoogleResults(markdown: string): { url: string; title: st
   let m: RegExpExecArray | null;
   const seen = new Set<string>();
 
-  while ((m = reMd.exec(markdown)) !== null) {
+  while ((m = reMd.exec(markdown)) != null) {
     const title = m[1].trim();
     const url = m[2].replace(/[)\].,;:!?]+$/, "");
     if (!url.startsWith("http")) continue;

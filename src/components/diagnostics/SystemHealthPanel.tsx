@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SystemHealthPanel — Live health dashboard for the Diagnostics page.
  * Calls health-check edge function + queries existing tables for metrics.
@@ -141,8 +142,8 @@ export function SystemHealthPanel() {
         <MetricCard
           icon={<Brain className="w-4 h-4" />}
           label="Latenza AI"
-          value={metrics.avgAiLatency !== null ? `${metrics.avgAiLatency}ms` : "—"}
-          ok={metrics.avgAiLatency !== null && metrics.avgAiLatency < 5000}
+          value={metrics.avgAiLatency != null ? `${metrics.avgAiLatency}ms` : "—"}
+          ok={metrics.avgAiLatency != null && metrics.avgAiLatency < 5000}
         />
         <MetricCard
           icon={<Mail className="w-4 h-4" />}

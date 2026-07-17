@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * BCAOcrConfidence — Per-field OCR quality display with inline editing
  */

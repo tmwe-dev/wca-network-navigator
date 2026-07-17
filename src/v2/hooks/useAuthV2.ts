@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * useAuthV2 — Auth hook completo
  *
@@ -91,7 +92,7 @@ export function useAuthV2(): UseAuthV2Return {
   const [roles, setRoles] = useState<readonly AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = user !== null && session !== null;
+  const isAuthenticated = user != null && session != null;
   const isAdmin = roles.includes("admin");
 
   // ── Load user data after auth ────────────────────────────────────

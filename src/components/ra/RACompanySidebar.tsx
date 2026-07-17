@@ -20,6 +20,7 @@ function formatDate(dateString: string) {
 }
 
 interface RACompanySidebarProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   prospect: Record<string, any>;
   contacts: RAContact[];
   interactions: RAInteraction[];

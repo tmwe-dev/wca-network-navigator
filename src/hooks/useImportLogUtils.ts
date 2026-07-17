@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * useImportLogs — Pure utility functions (no hooks/state)
  * Split from the original 619-LOC monolith.
@@ -7,7 +8,7 @@ import type { ImportError } from "./useImportLogQueries";
 export function exportErrorsToCSV(errors: ImportError[]) {
   const SEP = ";";
   const escapeCell = (val: unknown) => {
-    if (val === null || val === undefined) return "";
+    if (val == null || val === undefined) return "";
     const s = String(val).replace(/"/g, '""');
     if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
       return `"${s}"`;

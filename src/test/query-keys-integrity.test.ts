@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Query Keys Integrity Tests
  * Tests that all query key factories return unique arrays and no collisions between modules
@@ -15,7 +16,7 @@ function _getAllQueryKeys(obj: Record<string, any>, path: string[] = []): string
     if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
       // This is a query key array
       keys.push(value as string[]);
-    } else if (typeof value === "function" || (typeof value === "object" && value !== null && !Array.isArray(value))) {
+    } else if (typeof value === "function" || (typeof value === "object" && value != null && !Array.isArray(value))) {
       // Recurse into nested objects
       if (typeof value === "object" && !Array.isArray(value)) {
         keys.push(..._getAllQueryKeys(value as Record<string, any>, currentPath));

@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * SherlockCanvas — Canvas investigativo a 3 livelli (Scout / Detective / Sherlock).
  * Riusa il pattern di rendering markdown di DeepSearchCanvas + aggiunge:
@@ -69,7 +70,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
 
   const [selectedOrder, setSelectedOrder] = React.useState<number | null>(null);
   React.useEffect(() => {
-    if (sherlock.stepResults.length > 0 && selectedOrder === null) {
+    if (sherlock.stepResults.length > 0 && selectedOrder == null) {
       setSelectedOrder(sherlock.stepResults[sherlock.stepResults.length - 1].order);
     }
   }, [sherlock.stepResults, selectedOrder]);
@@ -200,7 +201,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                       <div className="text-xs font-semibold truncate text-foreground">{selected.label}</div>
                       <div className="text-xs text-foreground font-mono truncate">{selected.url ?? "—"}</div>
                     </div>
-                    {selected.confidence !== null && (
+                    {selected.confidence != null && (
                       <Badge variant="outline" className="text-[9px]">
                         AI {Math.round(selected.confidence * 100)}%
                       </Badge>
@@ -263,7 +264,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                       )}
 
                       {/* Oracle Escalation CTA */}
-                      {selected && selected.confidence !== null && selected.confidence < 0.8 && sherlock.running === null && (
+                      {selected && selected.confidence != null && selected.confidence < 0.8 && sherlock.running == null && (
                         <div className="rounded-md border border-warning/30 bg-warning/10 p-4 space-y-2">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[10px] gap-1 border-warning/40 text-warning dark:text-warning">
@@ -337,7 +338,7 @@ function StepRow({ result, active, onClick }: { result: SherlockStepResult; acti
         <div className="text-[11px] text-foreground truncate">
           {result.channel} · {result.duration_ms ? `${(result.duration_ms / 1000).toFixed(1)}s` : "—"}
           {result.cache_hit && " · cache"}
-          {result.confidence !== null && ` · AI ${Math.round(result.confidence * 100)}%`}
+          {result.confidence != null && ` · AI ${Math.round(result.confidence * 100)}%`}
         </div>
         {result.status === "error" && result.error && (
           <div className="text-[9px] text-destructive truncate mt-0.5">{result.error}</div>

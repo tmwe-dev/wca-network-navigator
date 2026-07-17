@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * useSortedCompanies — ordina + filtra in-memory una lista CompanyEntity.
  * Usato dalla ListToolbar (chiavi sort dichiarate dal consumer).

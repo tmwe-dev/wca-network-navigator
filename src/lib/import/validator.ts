@@ -38,7 +38,7 @@ export function normalizePhone(phone: string): string {
     .map((part) => part.trim())
     .find(Boolean) || phone;
 
-  let cleaned = primaryCandidate.replace(/[\s\-.\(\)]/g, "");
+  let cleaned = primaryCandidate.replace(/[\s\-.()]/g, "");
   // Convert 00xx to +xx
   if (cleaned.startsWith("00")) cleaned = "+" + cleaned.slice(2);
   // Italian mobile (3xx) → +39
@@ -49,7 +49,7 @@ export function normalizePhone(phone: string): string {
 }
 
 export function extractEmail(value: string): string {
-  const match = value.match(/[\w.\-+]+@[\w.\-]+\.\w{2,}/);
+  const match = value.match(/[\w.\-+]+@[\w.-]+\.\w{2,}/);
   return match ? match[0].toLowerCase() : value.toLowerCase();
 }
 
@@ -113,7 +113,7 @@ export function parseCountry(value: string): string {
 // ── Validation ──────────────────────────────────────────────────
 
 function validateEmail(email: string): boolean {
-  return /^[\w.\-+]+@[\w.\-]+\.\w{2,}$/.test(email);
+  return /^[\w.\-+]+@[\w.-]+\.\w{2,}$/.test(email);
 }
 
 /**

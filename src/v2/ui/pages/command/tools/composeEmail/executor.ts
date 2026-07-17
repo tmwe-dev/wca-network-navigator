@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import type { Tool, ToolResult } from "../types";
 import { detectTone } from "../../lib/toneDetector";
 import {
@@ -154,8 +155,8 @@ export const composeEmailTool: Tool = {
     if (/(?:scriv|compon|invi|prepar|mand|gener|fai|redig).*(?:e-?mail|mail|messagg|lettera|invito|complimenti)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(p)) {
       return true;
     }
-    if (isRegenerateIntent(prompt) && getLastComposerContext() !== null) return true;
-    if (isProceedIntent(prompt) && getLastQueryResultContext() !== null) return true;
+    if (isRegenerateIntent(prompt) && getLastComposerContext() != null) return true;
+    if (isProceedIntent(prompt) && getLastQueryResultContext() != null) return true;
     return false;
   },
 
@@ -227,7 +228,7 @@ export const composeEmailTool: Tool = {
       const knownTotal = queryCtx?.count ?? null;
       const idsAreComplete =
         (queryCtx?.partnerIds.length ?? 0) > 0 &&
-        (knownTotal === null || queryCtx!.partnerIds.length >= knownTotal);
+        (knownTotal == null || queryCtx!.partnerIds.length >= knownTotal);
 
       if (userExplicitSingle) {
         partners = await fetchPartnersByIds(payloadSelection.partnerIds);

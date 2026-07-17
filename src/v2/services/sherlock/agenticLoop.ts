@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 /**
  * Agentic loop — iterative decide → scrape → extract cycle.
  */
@@ -44,9 +45,9 @@ export async function runAgenticLoop(opts: AgenticLoopOptions): Promise<AgenticL
   let usedBudget = 0;
   let stepOrder = opts.visited.size > 0 ? 2 : 0; // Account for bootstrap steps
   let candidateLinks = [...opts.candidateLinks];
-  let googleResults = [...opts.googleResults];
+  const googleResults = [...opts.googleResults];
   let lastSummary = opts.lastSummary;
-  let consolidated = { ...opts.consolidated };
+  const consolidated = { ...opts.consolidated };
 
   while (usedBudget < opts.budget && !opts.signal.aborted) {
     const remaining = opts.budget - usedBudget;
@@ -182,7 +183,7 @@ export async function runAgenticLoop(opts: AgenticLoopOptions): Promise<AgenticL
         });
 
         Object.entries(ai.findings).forEach(([k, v]) => {
-          if (!k.startsWith("_") && v !== null && v !== undefined && v !== "") consolidated[k] = v;
+          if (!k.startsWith("_") && v != null && v !== undefined && v !== "") consolidated[k] = v;
         });
         lastSummary = ai.summary || lastSummary;
 

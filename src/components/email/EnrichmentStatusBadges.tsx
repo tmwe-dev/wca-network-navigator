@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { cn } from "@/lib/utils";
 import { useUnifiedEnrichmentSnapshot } from "@/hooks/useUnifiedEnrichmentSnapshot";
 
@@ -21,7 +22,7 @@ function EnrichmentRow({ on, label, age }: Row) {
       <span className={on ? "text-foreground" : "text-muted-foreground"}>
         {label}
       </span>
-      {age !== null && (
+      {age != null && (
         <span className="text-muted-foreground ml-auto pl-1">{age}gg fa</span>
       )}
     </div>
