@@ -2,12 +2,13 @@
  * useCommandState — centralized state for CommandPage.
  * No mock scenarios anymore; tracks the live tool currently running for the activation bar.
  */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useReducer } from "react";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import type { ToolResult } from "../tools/types";
 import type { PlanExecutionState } from "../planRunner";
-import type { Message, CanvasType, FlowPhase, ToolPhase } from "../constants";
+import type { Message, CanvasType, ToolPhase, FlowPhase } from "../constants";
 import type { QueryContext } from "../lib/queryContext";
+import { phaseReducer, INITIAL_PHASE } from "./phaseFsm";
 
 export function useCommandState() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -16,12 +17,24 @@ export function useCommandState() {
   const [inputFocused, setInputFocused] = useState(false);
   const [lang, setLang] = useState<"it" | "en">("it");
   const [canvas, setCanvas] = useState<CanvasType>(null);
-  const [flowPhase, setFlowPhase] = useState<FlowPhase>("idle");
-  /** Active tool id (for ToolActivationBar + governance), e.g. "partner-search" */
-  const [activeToolKey, setActiveToolKey] = useState<string | null>(null);
-  const [showTools, setShowTools] = useState(false);
-  const [toolPhase, setToolPhase] = useState<ToolPhase>("active");
-  const [chainHighlight, setChainHighlight] = useState<number | undefined>(undefined);
+  // FSM-backed phase quintet — invarianti in phaseFsm.ts.
+  const [phase, phaseDispatch] = useReducer(phaseReducer, INITIAL_PHASE);
+  const { flowPhase, showTools, toolPhase, chainHighlight, activeToolKey } = phase;
+  const setFlowPhase = useCallback((v: FlowPhase) => phaseDispatch({ type: "SET_FLOW", value: v }), []);
+  const setShowTools = useCallback((v: boolean) => phaseDispatch({ type: "SET_SHOW_TOOLS", value: v }), []);
+  const setToolPhase = useCallback((v: ToolPhase) => phaseDispatch({ type: "SET_TOOL_PHASE", value: v }), []);
+  const setChainHighlight = useCallback(
+    (v: number | undefined | ((prev: number | undefined) => number | undefined)) =>
+      phaseDispatch({
+        type: "SET_CHAIN",
+        value: typeof v === "function" ? (v as (p: number | undefined) => number | undefined)(chainHighlightRef.current) : v,
+      }),
+    [],
+  );
+  const setActiveToolKey = useCallback((v: string | null) => phaseDispatch({ type: "SET_ACTIVE_TOOL", value: v }), []);
+  // Ref sincronizzato per supportare updater funzionali su setChainHighlight
+  const chainHighlightRef = useRef<number | undefined>(undefined);
+  chainHighlightRef.current = chainHighlight;
   const [execProgress, setExecProgress] = useState(0);
   const [execSteps, setExecSteps] = useState<ExecutionStep[]>([]);
   const [liveResult, setLiveResult] = useState<ToolResult | null>(null);
@@ -58,14 +71,11 @@ export function useCommandState() {
 
   const resetForNewMessage = useCallback(() => {
     setCanvas(null);
-    setFlowPhase("idle");
-    setShowTools(false);
     setVoiceSpeaking(false);
-    setChainHighlight(undefined);
     setLiveResult(null);
     setPlanState(null);
-    setActiveToolKey(null);
     setSelectedIds(new Set());
+    phaseDispatch({ type: "RESET" });
   }, []);
 
   return {
