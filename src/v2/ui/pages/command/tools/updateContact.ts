@@ -13,10 +13,21 @@ import { mergePayload, resolveContactRef, isUuid } from "./_helpers/writePayload
 function fallbackFromPrompt(prompt: string): Record<string, unknown> {
   const idMatch = prompt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
   const emailMatch = prompt.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  const updates: Record<string, unknown> = {};
+  const status = prompt.match(/\b(lead[_\s-]?status|stato)\s+(a|=|:)?\s*(nuovo|contattato|qualificato|attivo|perso|non_interessato|new|contacted|qualified|active|lost)/i);
+  if (status) updates.lead_status = status[3].toLowerCase();
+  const phone = prompt.match(/\btelefono\s+(a|=|:)?\s*([+\d\s().-]{6,})/i);
+  if (phone) updates.phone = phone[2].trim();
+  const position = prompt.match(/\b(ruolo|posizione|position)\s+(a|=|:)?\s*"([^"]+)"/i);
+  if (position) updates.position = position[3];
+  const city = prompt.match(/\bcitt[aà]\s+(a|=|:)?\s*"([^"]+)"/i);
+  if (city) updates.city = city[2];
+  const country = prompt.match(/\b(paese|nazione|country)\s+(a|=|:)?\s*"([^"]+)"/i);
+  if (country) updates.country = country[3];
   return {
     contact_id: idMatch?.[0] ?? "",
     contact_ref: emailMatch?.[0] ?? "",
-    updates: {},
+    updates,
   };
 }
 
