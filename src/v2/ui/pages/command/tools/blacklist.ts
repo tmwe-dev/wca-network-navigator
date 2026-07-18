@@ -84,10 +84,10 @@ export const blacklistRemoveTool: Tool = {
       };
     }
     if (!ref) throw new Error("Riferimento mancante");
-    const q = supabase.from("blacklist_entries").delete();
+    const base = supabase.from("blacklist_entries").delete({ count: "exact" });
     const { error, count } = isUuid(ref)
-      ? await q.eq("matched_partner_id", ref).select("*", { count: "exact", head: true })
-      : await q.ilike("company_name", `%${ref}%`).select("*", { count: "exact", head: true });
+      ? await base.eq("matched_partner_id", ref)
+      : await base.ilike("company_name", `%${ref}%`);
     if (error) throw new Error(error.message);
     return {
       kind: "result",
