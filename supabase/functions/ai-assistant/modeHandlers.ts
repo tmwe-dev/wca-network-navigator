@@ -26,6 +26,43 @@ export interface AiProvider {
 }
 
 /**
+ * fetchAiCompletion — POST OpenAI-compatible chat/completions con failover
+ * automatico su Lovable AI Gateway quando la chiave BYOK ritorna 429/402.
+ * Restituisce sempre la Response del primo tentativo riuscito, oppure l'ultimo
+ * errore se anche il failover fallisce.
+ */
+async function fetchAiCompletion(
+  provider: AiProvider,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const first = await fetch(provider.url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${provider.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ...body, model: provider.model }),
+  });
+  if (first.ok) return first;
+  const shouldFailover =
+    provider.isUserKey && (first.status === 429 || first.status === 402);
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!shouldFailover || !LOVABLE_API_KEY) return first;
+  console.warn(
+    `[AI] BYOK ${first.status} on ${provider.model} → failover Lovable Gateway`,
+  );
+  const fb = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ...body, model: "google/gemini-3-flash-preview" }),
+  });
+  return fb;
+}
+
+/**
  * Tool-decision mode: AI picks the best tool from a list, returns JSON {toolId, toolParams, reasoning}
  */
 export async function handleToolDecisionMode(
@@ -59,22 +96,14 @@ Tool disponibili:
 ${toolDescriptions}
 ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
 
-  const decisionResponse = await fetch(provider.url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${provider.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: provider.model,
-      messages: [
-        { role: "system", content: decisionSystemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.1,
-      max_tokens: 200,
-      response_format: { type: "json_object" },
-    }),
+  const decisionResponse = await fetchAiCompletion(provider, {
+    messages: [
+      { role: "system", content: decisionSystemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.1,
+    max_tokens: 200,
+    response_format: { type: "json_object" },
   });
 
   if (!decisionResponse.ok) {
@@ -175,19 +204,11 @@ ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
     { role: "user", content: userPrompt },
   ];
 
-  const planResponse = await fetch(provider.url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${provider.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: provider.model,
-      messages: planMessages,
-      temperature: 0.1,
-      max_tokens: 1000,
-      response_format: { type: "json_object" },
-    }),
+  const planResponse = await fetchAiCompletion(provider, {
+    messages: planMessages,
+    temperature: 0.1,
+    max_tokens: 1000,
+    response_format: { type: "json_object" },
   });
 
   if (!planResponse.ok) {
