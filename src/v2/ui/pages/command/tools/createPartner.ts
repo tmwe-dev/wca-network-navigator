@@ -1,11 +1,13 @@
 /**
- * Tool: create-partner — Create a new WCA partner (requires approval)
+ * Tool: create-partner — Create a new WCA partner (requires approval).
+ * Payload dal planner first; regex fallback per input umano diretto.
  */
 import { createPartner } from "@/v2/io/supabase/mutations/partners";
 import { isOk } from "@/v2/core/domain/result";
 import type { Tool, ToolResult, ToolContext } from "./types";
+import { mergePayload } from "./_helpers/writePayload";
 
-function extractPayload(prompt: string): Record<string, unknown> {
+function fallbackFromPrompt(prompt: string): Record<string, unknown> {
   const nameMatch = prompt.match(/(?:partner|azienda)\s+["']?([A-Z][\w\s]+)/i);
   return {
     company_name: nameMatch?.[1]?.trim() ?? "",
@@ -22,8 +24,9 @@ export const createPartnerTool: Tool = {
   match: (p) => /(crea|aggiungi)\s+partner/i.test(p),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
+    const payload = mergePayload(context?.payload, fallbackFromPrompt(prompt));
+
     if (!context?.confirmed) {
-      const payload = extractPayload(prompt);
       return {
         kind: "approval",
         title: "Creare nuovo partner?",
@@ -39,12 +42,11 @@ export const createPartnerTool: Tool = {
       };
     }
 
-    const p = context.payload ?? {};
     const result = await createPartner({
-      company_name: String(p.company_name ?? ""),
-      country_name: String(p.country_name ?? ""),
-      country_code: String(p.country_code ?? ""),
-      city: String(p.city ?? ""),
+      company_name: String(payload.company_name ?? ""),
+      country_name: String(payload.country_name ?? ""),
+      country_code: String(payload.country_code ?? ""),
+      city: String(payload.city ?? ""),
     });
 
     if (!isOk(result)) throw new Error(result.error.message);
