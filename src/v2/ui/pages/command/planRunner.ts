@@ -12,6 +12,7 @@ import { TOOLS } from "./tools/registry";
 import { TOOL_METADATA } from "./tools/registry";
 import type { ToolResult } from "./tools/types";
 import type { PlanStep } from "@/v2/io/edge/aiAssistant";
+import { withTimeout } from "./lib/withTimeout";
 
 export const MAX_PLAN_STEPS = 8;
 const STEP_TIMEOUT_MS = 60_000;
@@ -100,8 +101,6 @@ function topoSort(steps: PlanStep[]): PlanStep[] {
   for (const s of steps) visit(s.stepNumber);
   return sorted;
 }
-
-import { withTimeout } from "./lib/withTimeout";
 
 export function buildInitialStepStates(steps: PlanStep[]): PlanStepState[] {
   return steps.map((step) => ({
