@@ -314,8 +314,23 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
         // Non-OK response handling
         const errText = await resp.text().catch(() => "");
         const status = resp.status;
+        // Parse Retry-After header (OpenAI includes it on 429).
+        // Accept both seconds ("30") and HTTP-date; default to none.
+        let retryAfterMs: number | null = null;
+        const retryAfterRaw = resp.headers.get("retry-after");
+        if (retryAfterRaw) {
+          const asNum = Number(retryAfterRaw);
+          if (Number.isFinite(asNum) && asNum >= 0) {
+            retryAfterMs = Math.min(asNum * 1000, 15000);
+          } else {
+            const asDate = Date.parse(retryAfterRaw);
+            if (!Number.isNaN(asDate)) {
+              retryAfterMs = Math.min(Math.max(asDate - Date.now(), 0), 15000);
+            }
+          }
+        }
         logLine("warn", "ai_gateway.non_ok", {
-          ctx, provider, model, attempt, status,
+          ctx, provider, model, attempt, status, retryAfterMs,
           snippet: errText.substring(0, 200),
         });
 
@@ -337,7 +352,12 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
         }
 
         if (attempt < maxRetries) {
-          await sleep(backoffMs(attempt));
+          // Su 429 rispetta Retry-After (se assente usa backoff aggressivo:
+          // 2s, 5s, 10s) per non consumare quota inutilmente.
+          const waitMs = status === 429
+            ? (retryAfterMs ?? Math.min(2000 * Math.pow(2, attempt), 10000))
+            : backoffMs(attempt);
+          await sleep(waitMs);
         }
       } catch (err) {
         clearTimeout(timer);
