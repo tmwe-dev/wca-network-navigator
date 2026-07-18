@@ -20,6 +20,9 @@ export function useCommandState() {
   // FSM-backed phase quintet — invarianti in phaseFsm.ts.
   const [phase, phaseDispatch] = useReducer(phaseReducer, INITIAL_PHASE);
   const { flowPhase, showTools, toolPhase, chainHighlight, activeToolKey } = phase;
+  // Ref sincronizzato — supporta updater funzionali su setChainHighlight
+  const chainHighlightRef = useRef<number | undefined>(undefined);
+  chainHighlightRef.current = chainHighlight;
   const setFlowPhase = useCallback((v: FlowPhase) => phaseDispatch({ type: "SET_FLOW", value: v }), []);
   const setShowTools = useCallback((v: boolean) => phaseDispatch({ type: "SET_SHOW_TOOLS", value: v }), []);
   const setToolPhase = useCallback((v: ToolPhase) => phaseDispatch({ type: "SET_TOOL_PHASE", value: v }), []);
@@ -32,9 +35,6 @@ export function useCommandState() {
     [],
   );
   const setActiveToolKey = useCallback((v: string | null) => phaseDispatch({ type: "SET_ACTIVE_TOOL", value: v }), []);
-  // Ref sincronizzato per supportare updater funzionali su setChainHighlight
-  const chainHighlightRef = useRef<number | undefined>(undefined);
-  chainHighlightRef.current = chainHighlight;
   const [execProgress, setExecProgress] = useState(0);
   const [execSteps, setExecSteps] = useState<ExecutionStep[]>([]);
   const [liveResult, setLiveResult] = useState<ToolResult | null>(null);
