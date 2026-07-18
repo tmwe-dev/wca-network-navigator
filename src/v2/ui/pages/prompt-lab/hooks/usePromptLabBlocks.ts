@@ -26,7 +26,7 @@ export function usePromptLabBlocks(initialLoader: () => Promise<Block[]>, deps: 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, deps);
 
   const updateContent = useCallback((id: string, content: string) => {

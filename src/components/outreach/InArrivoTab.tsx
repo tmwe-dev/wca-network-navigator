@@ -66,7 +66,7 @@ export function InArrivoTab() {
     // Pulisci lo state per evitare ri-trigger su back/forward.
     navigate(location.pathname, { replace: true, state: null });
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [location.state]);
 
   useEffect(() => {

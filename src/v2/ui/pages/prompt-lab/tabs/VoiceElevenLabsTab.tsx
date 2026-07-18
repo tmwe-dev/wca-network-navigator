@@ -49,7 +49,7 @@ export function VoiceElevenLabsTab() {
         toast.error(`Errore caricamento agenti: ${e instanceof Error ? e.message : String(e)}`);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [userId]);
 
   const currentAgent = useMemo(() => agents.find((a) => a.id === agentId) ?? null, [agents, agentId]);

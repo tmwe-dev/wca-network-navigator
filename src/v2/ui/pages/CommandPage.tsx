@@ -141,7 +141,7 @@ const CommandPage = () => {
       .trim()
       .slice(0, 200);
     voiceOut.speak(clean);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [state.messages.length]);
 
   // Rehydrate visible chat ONLY when the user explicitly loads a conversation
@@ -196,7 +196,7 @@ const CommandPage = () => {
       else if (kind === "composer") state.setCanvas("live-composer");
       else if (kind === "report") state.setCanvas("live-report");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [conv.conversationId, conv.messages.length, conv.loading]);
 
   const handleSend = (text?: string) => {

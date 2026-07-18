@@ -64,7 +64,7 @@ export function NetworkPage(): React.ReactElement {
       next.delete("partnerId");
       setSearchParams(next, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useMissionDrawerEvents({

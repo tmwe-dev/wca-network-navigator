@@ -149,7 +149,7 @@ export default function GlobalVoiceFAB() {
         if (!abortRef.current) startListening();
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [resolvedVoiceId, voiceLang],
   );
 
@@ -181,7 +181,7 @@ export default function GlobalVoiceFAB() {
         if (!abortRef.current) startListening();
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [speak],
   );
 

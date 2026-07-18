@@ -11,6 +11,6 @@ export function useTrackPage(pageName: string, props?: Record<string, unknown>) 
   useEffect(() => {
     trackPage(pageName, props);
     trackNavigation(pageName);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pageName]);
 }
