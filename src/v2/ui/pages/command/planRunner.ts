@@ -101,14 +101,7 @@ function topoSort(steps: PlanStep[]): PlanStep[] {
   return sorted;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout ${ms}ms per ${label}`)), ms),
-    ),
-  ]);
-}
+import { withTimeout } from "./lib/withTimeout";
 
 export function buildInitialStepStates(steps: PlanStep[]): PlanStepState[] {
   return steps.map((step) => ({
