@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import { TOOLS, TOOL_METADATA } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
-import { planExecution, type PlanStep } from "@/v2/io/edge/aiAssistant";
+import { planExecution } from "@/v2/io/edge/aiAssistant";
 import { type PlanExecutionState } from "../planRunner";
 import { normalizePrompt } from "../lib/lexicalNormalizer";
 import { classifyIntent } from "../lib/intentClassifier";
