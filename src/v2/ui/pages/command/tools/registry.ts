@@ -61,6 +61,10 @@ import { manageEmailFoldersTool } from "./manageEmailFolders";
 import { harmonizeProposalChatTool } from "./harmonizeProposalChat";
 import { replayDomainEventsTool } from "./replayDomainEvents";
 import { scheduleActivityTool } from "./scheduleActivity";
+import { closeActivityTool } from "./closeActivity";
+import { rescheduleActivityTool } from "./rescheduleActivity";
+import { linkContactPartnerTool } from "./linkContactPartner";
+import { markMessageTool } from "./markMessage";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -112,6 +116,10 @@ const TOOLS: readonly Tool[] = [
   replayDomainEventsTool,
   createAgentTool,
   scheduleActivityTool,
+  closeActivityTool,
+  rescheduleActivityTool,
+  linkContactPartnerTool,
+  markMessageTool,
   createKbEntryTool,
   calculateLeadScoresTool,
   deduplicateContactsTool,
@@ -207,6 +215,10 @@ const WRITE_TOOL_IDS = new Set<string>([
   "harmonize-proposal-chat",
   "replay-domain-events",
   "schedule-activity",
+  "close-activity",
+  "reschedule-activity",
+  "link-contact-partner",
+  "mark-message",
   "scrape-partner-website",
   "scrape-prospect-website",
   "scrape-company-website",
