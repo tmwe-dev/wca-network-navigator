@@ -65,6 +65,12 @@ import { closeActivityTool } from "./closeActivity";
 import { rescheduleActivityTool } from "./rescheduleActivity";
 import { linkContactPartnerTool } from "./linkContactPartner";
 import { markMessageTool } from "./markMessage";
+import { blacklistAddTool, blacklistRemoveTool } from "./blacklist";
+import { toggleAgentTool, updateAgentPersonaTool } from "./agentAdmin";
+import { updateKbEntryTool, deleteKbEntryTool } from "./kbAdmin";
+import { cancelOutreachItemTool } from "./cancelOutreach";
+import { restoreContactTool } from "./restoreContact";
+import { runPromptTestTool } from "./runPromptTest";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -120,6 +126,15 @@ const TOOLS: readonly Tool[] = [
   rescheduleActivityTool,
   linkContactPartnerTool,
   markMessageTool,
+  blacklistAddTool,
+  blacklistRemoveTool,
+  toggleAgentTool,
+  updateAgentPersonaTool,
+  updateKbEntryTool,
+  deleteKbEntryTool,
+  cancelOutreachItemTool,
+  restoreContactTool,
+  runPromptTestTool,
   createKbEntryTool,
   calculateLeadScoresTool,
   deduplicateContactsTool,
@@ -219,6 +234,15 @@ const WRITE_TOOL_IDS = new Set<string>([
   "reschedule-activity",
   "link-contact-partner",
   "mark-message",
+  "blacklist-add",
+  "blacklist-remove",
+  "toggle-agent",
+  "update-agent-persona",
+  "update-kb-entry",
+  "delete-kb-entry",
+  "cancel-outreach-item",
+  "restore-contact",
+  "run-prompt-test",
   "scrape-partner-website",
   "scrape-prospect-website",
   "scrape-company-website",
