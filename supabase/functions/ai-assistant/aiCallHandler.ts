@@ -260,10 +260,38 @@ export async function callAiWithFallback(
 
     // Rate limit or out of credits
     if (errStatus === 429 || errStatus === 402) {
+      // FAILOVER: la chiave utente (BYOK) è satura o senza crediti.
+      // Invece di bloccare il sistema, proviamo con Lovable AI Gateway
+      // usando lo stesso protocollo OpenAI-compatible.
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (provider.isUserKey && LOVABLE_API_KEY) {
+        console.warn(
+          `[AI] user-key ${errStatus} on ${tryModel}, failing over to Lovable AI Gateway`,
+        );
+        const fallbackProvider: AiProvider = {
+          url: "https://ai.gateway.lovable.dev/v1/chat/completions",
+          apiKey: LOVABLE_API_KEY,
+          model: "google/gemini-3-flash-preview",
+          isUserKey: false,
+        };
+        const fbResult = await makeAiCall(fallbackProvider, {
+          model: fallbackProvider.model,
+          messages,
+          tools: activeTools,
+          temperature: scopeTemperature,
+          max_tokens: scopeMaxTokens,
+        });
+        if (fbResult.ok && fbResult.data) {
+          return { ok: true, data: fbResult.data };
+        }
+        console.error(
+          `[AI] Lovable failover also failed: ${fbResult.status} ${fbResult.errorText}`,
+        );
+      }
       const errorMsg =
         errStatus === 429
-          ? "Troppe richieste, riprova tra poco."
-          : "Crediti AI esauriti.";
+          ? "Troppe richieste sul provider AI. Riprova tra poco o aggiungi crediti alla chiave BYOK."
+          : "Crediti AI esauriti sul provider configurato.";
       return {
         ok: false,
         error: errorMsg,

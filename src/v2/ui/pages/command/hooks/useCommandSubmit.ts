@@ -47,8 +47,6 @@ import { useQueryContext } from "./useQueryContext";
 import { usePlanExecution } from "./usePlanExecution";
 import { usePlanCompletion } from "./usePlanCompletion";
 import { useApprovalHandler } from "./useApprovalHandler";
-import { useSuperMarioFlow } from "./useSuperMarioFlow";
-import { isSuperMarioEnabled } from "@/v2/ai/superMarioFlag";
 
 interface CommandStateApi {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -135,11 +133,6 @@ export function useCommandSubmit(state: CommandStateApi) {
     addMessage: _addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
   });
 
-  // Super Mario alternative flow (feature-flagged via localStorage).
-  const { runSuperMario } = useSuperMarioFlow({
-    addMessage: _addMessage, ts, setFlowPhase, setShowTools, setLiveResult, setCanvas,
-    setPendingApproval, messages, persistedMessages,
-  });
 
   // Wrapper for plan completion that updates query context
   const renderPlanWithContext = useCallback(
@@ -282,24 +275,10 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Build conversational hint from previous query context (if fresh)
       const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
 
-      // PRIORITÀ: se l'utente ha già una selezione partner attiva e chiede
-      // esplicitamente di comporre (es. "genera email di collaborazione"),
-      // salta Super Mario e il planner — apri direttamente il batch composer.
+      // PRIORITÀ: se l'utente ha selezione partner attiva e chiede
+      // esplicitamente di comporre email → apri direttamente il batch composer,
+      // saltando il planner (fast-lane esplicita e osservabile).
       if (await runDirectComposer(text, hint)) return;
-
-      // SUPER MARIO PATH (feature-flagged): bypass planner, regex e useResultCommentary.
-      // Su errore o tool non disponibile, ricade sul percorso classico.
-      if (isSuperMarioEnabled()) {
-        const sm = await runSuperMario(rawText);
-        if (sm.ok) return;
-        _addMessage({
-          role: "assistant",
-          content: `Super Mario non risponde (${sm.reason ?? "errore"}). Uso il percorso classico.`,
-          agentName: "Sistema",
-          timestamp: ts(),
-          meta: "fallback",
-        });
-      }
 
       // FLUSSO UNICO: ogni richiesta passa dal planner (planExecution → planRunner),
       // così memoria/KB/prompt operativi vengono sempre caricati. Nessuna scorciatoia.
