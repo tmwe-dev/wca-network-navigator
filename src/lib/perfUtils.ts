@@ -114,6 +114,6 @@ export function useMemoSelector<TInput, TExtracted, TResult>(
   extractor: (input: TInput) => TExtracted,
   transform: (extracted: TExtracted) => TResult
 ): (input: TInput) => TResult {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   return useMemo(() => createMemoSelector(extractor, transform), []);
 }

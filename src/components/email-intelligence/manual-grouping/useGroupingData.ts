@@ -427,7 +427,7 @@ export function useGroupingData() {
   useEffect(() => {
     loadData();
     // Re-load quando cambia mailbox o quando l'allowlist diventa pronta.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [mailboxKey, allowlist]);
 
   return {

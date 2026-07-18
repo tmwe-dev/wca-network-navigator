@@ -112,13 +112,13 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const handleUnifiedEmail = useCallback(() => {
     if (!primaryContact) return;
     handleSendEmail({ id: primaryContact.id, email: primaryContact.email ?? undefined, name: primaryContact.name });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [primaryContact]);
 
   const handleUnifiedWhatsApp = useCallback(() => {
     if (!primaryContact) return;
     handleSendWhatsApp(primaryContact as unknown as Record<string, unknown>);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [primaryContact]);
 
   // ── Email: navigate to composer with contact pre-filled ──

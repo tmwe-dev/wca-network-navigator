@@ -299,7 +299,7 @@ export function useActionPanelLogic({
     if (countryCodes.length > 0 && !loadingCache && !loadingDb && !hasCache && !isScanning && !scanComplete) {
       handleStartScan();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [loadingCache, loadingDb, hasCache, countryCodes.length]);
 
   return {

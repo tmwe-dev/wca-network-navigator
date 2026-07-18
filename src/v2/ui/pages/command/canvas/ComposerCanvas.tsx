@@ -85,7 +85,7 @@ export default function ComposerCanvas({
         name: recipientName ?? (initialTo.split("@")[0] ?? initialTo),
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [initialSubject, initialBody, initialTo, isBatch]);
 
   // ── Sync nuova lista di drafts (es. dopo "rigenera tutte") ──
@@ -117,7 +117,7 @@ export default function ComposerCanvas({
         partnerId: d.partnerId,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [currentIndex, batchDrafts, isBatch]);
 
   const handleAddRecipient = useCallback(() => {

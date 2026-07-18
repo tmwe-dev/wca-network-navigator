@@ -71,7 +71,7 @@ export function ContactsPage() {
     if (!urlContactId && selectedContact) {
       setSelectedContact(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [urlContactId]);
 
   const handleContactUpdated = useCallback((updated: Record<string, unknown>) => {

@@ -64,7 +64,7 @@ const FinderApiPage = () => {
     if (lastAssistantContent && !voiceOut.muted) {
       voiceOut.speak(lastAssistantContent);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [lastAssistantContent]);
 
   return (

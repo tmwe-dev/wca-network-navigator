@@ -90,7 +90,7 @@ export function usePromptReaderState() {
 
   useEffect(() => {
     if (selected) void load(selected.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [selectedId]);
 
   useEffect(() => {

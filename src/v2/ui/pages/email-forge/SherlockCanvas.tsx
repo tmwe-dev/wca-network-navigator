@@ -79,7 +79,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
     if (!open) {
       sherlock.stop();
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]);  
 
   const selected = sherlock.stepResults.find((r) => r.order === selectedOrder) ?? null;
 

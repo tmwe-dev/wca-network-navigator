@@ -52,7 +52,7 @@ export function useEmailAutoSync(options: Options = {}) {
     }, INTERVAL_MS);
 
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active]);  
 
   return {
     enabled,

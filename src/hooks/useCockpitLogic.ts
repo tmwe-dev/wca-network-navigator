@@ -102,7 +102,7 @@ export function useCockpitLogic() {
         selection.addBatch(matchingIds);
       }
     });
-  }, [isLoading, contacts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoading, contacts]);  
 
   const cfg = useComposeAiConfig();
   const lab = useForgeLab();

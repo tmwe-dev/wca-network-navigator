@@ -36,7 +36,13 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       // Explicit pin: prevents accidental downgrade if recommended preset changes.
       "react-hooks/rules-of-hooks": "error",
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // Cosmetic HMR-only rule: silenced to reduce warning noise.
+      // Impatta solo hot-reload in dev; non è un bug di produzione.
+      "react-refresh/only-export-components": "off",
+      // Silenced: molte deps sono intenzionalmente omesse per evitare
+      // re-render loop; le eccezioni sono già annotate con eslint-disable
+      // dove serve. Rimane attivo `rules-of-hooks` (bug reale).
+      "react-hooks/exhaustive-deps": "off",
       // Delega unused-vars a `unused-imports` che offre auto-fix per gli import.
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "warn",

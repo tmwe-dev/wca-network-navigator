@@ -39,7 +39,7 @@ export function useMissionDrawerEvents(config: MissionEventConfig) {
     return () => {
       wrapped.forEach(([name, fn]) => window.removeEventListener(name, fn));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // navigate disponibile per consumer

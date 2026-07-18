@@ -77,7 +77,7 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
       if (autoCloseRef.current) { clearTimeout(autoCloseRef.current); autoCloseRef.current = null; }
       sherlock.stop();
     }
-  }, [open, autoStartLevel, vars.companyName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, autoStartLevel, vars.companyName]);  
 
   // Marca che almeno una run è stata avviata (per distinguere "mai partita" da "appena finita")
   React.useEffect(() => {

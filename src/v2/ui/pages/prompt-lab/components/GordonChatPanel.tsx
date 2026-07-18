@@ -104,7 +104,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       audioRef.current.pause();
       audioRef.current = null;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [proposal.id]);
 
   useEffect(() => {
@@ -217,7 +217,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       cleanText = "Ho preparato una nuova versione del testo. Dimmi se la applico o cosa vuoi cambiare.";
     }
     void playTTS(cleanText);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [messages, loading, autoVoice, resolvedVoiceId]);
 
   const toggleAutoVoice = () => {
