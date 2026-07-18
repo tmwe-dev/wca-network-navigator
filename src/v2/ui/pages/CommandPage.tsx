@@ -2,14 +2,15 @@
  * CommandPage — UNIFIED conversational orchestrator (single logic path).
  *
  * Flow: useCommandState (state) + useCommandSubmit (sendMessage).
- * - planExecution → planRunner → per-step approval (multi-step)
- * - Fast-lane direct ai-query for simple reads
- * - useResultCommentary speaks `spokenSummary` (conversational TTS), not raw results
- * - Composer uses Prompt Lab via generate-email pipeline (composeEmail tool)
+ *   classifyIntent → smalltalk | compose-email | plan
+ *   plan → planExecution → planRunner → per-step approval (multi-step)
+ *   plan.steps=[] + shouldForceAiQuery → 1-step ai-query fallback (stesso runner)
+ *   useResultCommentary speaks `spokenSummary` (conversational TTS), not raw results
+ *   Composer uses Prompt Lab via generate-email pipeline (composeEmail tool)
  *
- * Legacy paths (resolveTool / useToolExecution / useScenarioFlow / useApprovalFlow /
- * useCommandPageState) are intentionally NOT used here. Doctrine: one logic per task,
- * everywhere.
+ * Legacy hooks non usati (useAgentLoop / useApprovalFlow / useScenarioFlow /
+ * useToolExecution / useCommandPageState / useCommandBriefing / useSuperMarioFlow)
+ * archiviati in `command/_legacy/`. Doctrine: one logic per task, everywhere.
  */
 import { useEffect, useRef, useState } from "react";
 import { toast as sonnerToast } from "sonner";
@@ -33,9 +34,9 @@ import { CommandPageBackground } from "./command/components/CommandPageBackgroun
 import CommandThread from "./command/components/CommandThread";
 import { Command as CommandIcon, PanelLeft, PanelLeftClose } from "lucide-react";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
-// NB: BriefingPanel, useCommandBriefing e useRecentCommandPrompts intenzionalmente
-// non importati: lo stato vuoto della Command resta zen (solo titolo + orb + input).
-// I componenti restano sul filesystem per un futuro "next best action" ragionato.
+// NB: lo stato vuoto della Command resta zen (solo titolo + orb + input).
+// BriefingPanel e useCommandBriefing sono in `command/_legacy/` per un
+// futuro "next best action" ragionato.
 
 const CommandPage = () => {
   const state = useCommandState();
