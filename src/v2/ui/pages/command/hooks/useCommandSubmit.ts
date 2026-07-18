@@ -309,7 +309,7 @@ export function useCommandSubmit(state: CommandStateApi) {
 
       try {
         const planRes = await withTimeout(
-          planExecution(text, TOOL_METADATA, buildHistory()),
+          planExecution(hint ? `${text}${hint}` : text, TOOL_METADATA, buildHistory()),
           30_000,
           "planner",
         ).catch((e: unknown) => ({
