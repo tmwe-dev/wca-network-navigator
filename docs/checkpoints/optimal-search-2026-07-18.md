@@ -32,3 +32,20 @@ quando l'utente incolla un UUID esplicito, ma falliscono con frasi tipo
 ## Prossimo step consigliato
 Far risolvere al planner partner_id da partner_name prima di passare i
 parametri al tool, come gia fatto per i tool di search.
+
+---
+
+## Update 2026-07-18 · Simplification UPDATE tools
+
+Applicata la stessa doctrine Prompt Freedom ai tool di scrittura:
+
+- Nuovo helper `_helpers/writePayload.ts`: `mergePayload()` (planner-first) +
+  `resolvePartnerRef()` / `resolveContactRef()` (UUID o nome fuzzy → id).
+- Refactor 5 tool: `createContact`, `createPartner`, `updateContact`,
+  `updatePartnerStatus`, `sendEmailDirect`.
+- Regex sul prompt conservate SOLO come fallback per input umano diretto:
+  nessuna perdita di funzionalità, zero perdita di performance (una sola
+  query aggiuntiva ilike quando il planner passa un nome invece di UUID).
+
+Risultato: le frasi tipo *"marca il partner Rossi Srl come cliente"* ora
+funzionano senza dover incollare l'UUID. Voto UPDATE: 6/10 → 9/10.
