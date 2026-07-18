@@ -12,6 +12,7 @@ import { TOOLS } from "./tools/registry";
 import { TOOL_METADATA } from "./tools/registry";
 import type { ToolResult } from "./tools/types";
 import type { PlanStep } from "@/v2/io/edge/aiAssistant";
+import { withTimeout } from "./lib/withTimeout";
 
 export const MAX_PLAN_STEPS = 8;
 const STEP_TIMEOUT_MS = 60_000;
@@ -99,15 +100,6 @@ function topoSort(steps: PlanStep[]): PlanStep[] {
 
   for (const s of steps) visit(s.stepNumber);
   return sorted;
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout ${ms}ms per ${label}`)), ms),
-    ),
-  ]);
 }
 
 export function buildInitialStepStates(steps: PlanStep[]): PlanStepState[] {

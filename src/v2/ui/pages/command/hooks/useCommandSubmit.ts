@@ -24,20 +24,26 @@
  *   - intentClassifier: single-point intent dispatch (smalltalk/compose/plan)
  *   - planFallback: shouldForceAiQuery guard for empty plans
  */
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import { TOOLS, TOOL_METADATA } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
-import { planExecution, type PlanStep } from "@/v2/io/edge/aiAssistant";
-import {
-  buildInitialStepStates,
-  MAX_PLAN_STEPS,
-  type PlanExecutionState,
-} from "../planRunner";
+import { planExecution } from "@/v2/io/edge/aiAssistant";
+import { type PlanExecutionState } from "../planRunner";
 import { normalizePrompt } from "../lib/lexicalNormalizer";
 import { classifyIntent } from "../lib/intentClassifier";
 import { shouldForceAiQuery } from "../lib/planFallback";
+import { buildPlanState, buildAiQueryFallbackPlan } from "../lib/buildPlanState";
+import { buildPlanPreview, labelForToolId } from "../lib/planPreview";
+import { withTimeout } from "../lib/withTimeout";
+import {
+  enterIdle,
+  enterThinking,
+  enterExecuting,
+  startChainAnimation,
+  type PhaseApi,
+} from "../lib/phaseTransitions";
 import {
   contextHint as buildContextHint,
   isContextFresh,
@@ -140,6 +146,11 @@ export function useCommandSubmit(state: CommandStateApi) {
     addMessage: _addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
   });
 
+  // Bundle dei setter UI: un solo oggetto passato agli helper di transizione.
+  const phaseApi: PhaseApi = useMemo(
+    () => ({ setFlowPhase, setShowTools, setToolPhase, setChainHighlight }),
+    [setFlowPhase, setShowTools, setToolPhase, setChainHighlight],
+  );
 
   // Wrapper for plan completion that updates query context
   const renderPlanWithContext = useCallback(
@@ -199,10 +210,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       const tool = TOOLS.find((t) => t.id === "compose-email");
       if (!tool?.match(userPrompt)) return false;
       setActiveToolKey("compose-email");
-      setShowTools(true);
-      setToolPhase("active");
-      setChainHighlight(3);
-      setFlowPhase("executing");
+      enterExecuting(phaseApi);
       setExecSteps([{ label: tool.label, detail: "Preparazione bozze email", status: "pending" as const }]);
       const trace = startTrace(userPrompt);
       trace.setPhase("fast-lane");
@@ -241,30 +249,42 @@ export function useCommandSubmit(state: CommandStateApi) {
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
         toast.error(msg);
         _addMessage({ role: "assistant", content: `❌ Errore composer: ${msg}`, agentName: "Orchestratore", timestamp: ts() });
-        setFlowPhase("idle");
-        setShowTools(false);
+        enterIdle(phaseApi);
       }
       return true;
     },
-    [_addMessage, buildHistory, canvasForResult, commentOnResult, setActiveToolKey, setCanvas, setChainHighlight, setExecProgress, setExecSteps, setFlowPhase, setLiveResult, setShowTools, setToolPhase, ts],
+    [_addMessage, buildHistory, canvasForResult, commentOnResult, phaseApi, setActiveToolKey, setCanvas, setExecProgress, setExecSteps, setLiveResult, setShowTools, setFlowPhase, ts],
+  );
+
+  /**
+   * Esegue un piano sintetico a 1-step su un tool specifico.
+   * Usato dal fallback anti-allucinazione (steps=[] → ai-query).
+   */
+  const runSyntheticPlan = useCallback(
+    async (state: PlanExecutionState, userPrompt: string, hint: string, driver: string) => {
+      const trace = startTrace(userPrompt);
+      trace.setPhase("plan-execution");
+      trace.setDriver(driver);
+      setActiveToolKey(driver);
+      setExecSteps([{ label: labelForToolId(driver), detail: "Esecuzione", status: "pending" as const }]);
+      setPlanState(state);
+      enterExecuting(phaseApi);
+      await runPlanWrapped(state, userPrompt, hint, trace);
+    },
+    [phaseApi, runPlanWrapped, setActiveToolKey, setExecSteps, setPlanState],
   );
 
   /** Main entry: process a user prompt */
   const sendMessage = useCallback(
     async (rawText: string) => {
       if (!rawText.trim()) return;
-      // Show original (un-normalized) text in chat for UX honesty
       _addMessage({ role: "user", content: rawText, timestamp: ts() });
       resetForNewMessage();
 
-      // DISPATCH UNICO: classifica l'intento sul testo grezzo (pre-normalizzazione)
-      // per intercettare saluti prima che la normalizzazione lessicale li snaturi.
+      // DISPATCH UNICO sul testo grezzo (prima della normalizzazione lessicale).
       const intent = classifyIntent(rawText);
 
       if (intent.kind === "smalltalk") {
-        // Risposta conversazionale del Direttore in < 1s, niente DB.
-        // TTS gestito dall'effetto in CommandPage che parla i messaggi del
-        // Direttore: evitiamo doppio audio.
         _addMessage({
           role: "assistant",
           content: intent.match.reply,
@@ -272,53 +292,32 @@ export function useCommandSubmit(state: CommandStateApi) {
           timestamp: ts(),
           meta: `smalltalk · ${intent.match.kind}`,
         });
-        setFlowPhase("idle");
-        setShowTools(false);
+        enterIdle(phaseApi);
         return;
       }
 
-      // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
-
-      // Build conversational hint from previous query context (if fresh)
       const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
 
-      // Fast-lane compose-email: già classificata, apri direttamente il batch
-      // composer (osservabile via trace). Nessuna re-detection.
-      if (intent.kind === "compose-email") {
-        if (await runDirectComposer(text, hint)) return;
-        // Se il match ora fallisce sul testo normalizzato, cade sul planner sotto.
-      }
+      // Fast-lane compose-email (già classificata): salta il planner.
+      if (intent.kind === "compose-email" && (await runDirectComposer(text, hint))) return;
 
-      // FLUSSO UNICO: ogni richiesta passa dal planner (planExecution → planRunner),
-      // così memoria/KB/prompt operativi vengono sempre caricati. Nessuna scorciatoia.
-      setFlowPhase("thinking");
-      setShowTools(true);
-      setToolPhase("activating");
-      setChainHighlight(0);
-      addMessage({ role: "assistant", content: "", timestamp: "", thinking: true }); // not persisted (thinking placeholder)
-
-      const chainInterval = setInterval(() => {
-        setChainHighlight((prev: number | undefined) => {
-          if (prev === undefined || prev >= 2) return prev;
-          return prev + 1;
-        });
-      }, 600);
+      // Flusso planner: single entry, single exit.
+      enterThinking(phaseApi);
+      addMessage({ role: "assistant", content: "", timestamp: "", thinking: true });
+      const stopChain = startChainAnimation(setChainHighlight);
 
       try {
-        const planRes = await Promise.race([
+        const planRes = await withTimeout(
           planExecution(text, TOOL_METADATA, buildHistory()),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("timeout: il motore AI non risponde entro 30s")), 30_000),
-          ),
-        ]).catch((e: unknown) => ({
+          30_000,
+          "planner",
+        ).catch((e: unknown) => ({
           _tag: "Err" as const,
           error: { message: e instanceof Error ? e.message : String(e) } as { message: string },
         }));
-        clearInterval(chainInterval);
+        stopChain();
         setMessages((prev) => prev.filter((m) => !m.thinking));
-        setToolPhase("active");
-        setChainHighlight(3);
 
         if (planRes._tag === "Err") {
           _addMessage({
@@ -327,39 +326,16 @@ export function useCommandSubmit(state: CommandStateApi) {
             agentName: "Orchestratore",
             timestamp: ts(),
           });
-          setFlowPhase("idle");
-          setShowTools(false);
+          enterIdle(phaseApi);
           return;
         }
 
         const plan = planRes.value;
 
+        // ANTI-ALLUCINAZIONE: steps=[] ma prompt sembra ricerca → 1-step ai-query.
         if (plan.steps.length === 0) {
-          // ANTI-ALLUCINAZIONE: se il planner restituisce 0 step ma il prompt
-          // sembra una ricerca reale, forziamo 1 step su ai-query nello stesso
-          // planRunner. Nota: lo smalltalk è già gestito nel dispatch iniziale,
-          // quindi qui non serve ripetere il check.
           if (shouldForceAiQuery(text, looksLikeSimpleQuery)) {
-            const fbSteps: PlanStep[] = [
-              { stepNumber: 1, toolId: "ai-query", reasoning: "Ricerca diretta sul database", params: {} },
-            ];
-            setActiveToolKey("ai-query");
-            setExecSteps([{ label: "Ricerca AI", detail: "Query DB", status: "pending" as const }]);
-            const fbState: PlanExecutionState = {
-              steps: fbSteps,
-              stepStates: buildInitialStepStates(fbSteps),
-              summary: "Ricerca diretta sul database",
-              results: {},
-              currentStep: 0,
-              status: "running",
-            };
-            setPlanState(fbState);
-            setFlowPhase("executing");
-            setChainHighlight(5);
-            const fbTrace = startTrace(text);
-            fbTrace.setPhase("plan-execution");
-            fbTrace.setDriver("ai-query");
-            await runPlanWrapped(fbState, text, hint, fbTrace);
+            await runSyntheticPlan(buildAiQueryFallbackPlan(), text, hint, "ai-query");
             return;
           }
           _addMessage({
@@ -368,53 +344,42 @@ export function useCommandSubmit(state: CommandStateApi) {
             agentName: "Direttore",
             timestamp: ts(),
           });
-          setFlowPhase("idle");
-          setShowTools(false);
+          enterIdle(phaseApi);
           return;
         }
 
+        // Piano multi-step: setup UI + trace + esecuzione.
         setActiveToolKey(plan.steps[0].toolId);
-        const flowSteps: ExecutionStep[] = plan.steps.map((s) => ({
-          label: TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId,
-          detail: s.reasoning,
-          status: "pending" as const,
-        }));
-        setExecSteps(flowSteps);
+        setExecSteps(
+          plan.steps.map((s) => ({
+            label: labelForToolId(s.toolId),
+            detail: s.reasoning,
+            status: "pending" as const,
+          })) satisfies ExecutionStep[],
+        );
 
         if (plan.steps.length > 1) {
           _addMessage({
             role: "assistant",
-            content: `**Piano in ${plan.steps.length} step:** ${plan.summary}\n\n${plan.steps
-              .map((s) => `${s.stepNumber}. **${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}** — ${s.reasoning}`)
-              .join("\n")}`,
+            content: buildPlanPreview(plan.summary, plan.steps),
             agentName: "Orchestratore",
             timestamp: ts(),
             meta: `plan-execution · ${plan.steps.length} step`,
           });
         }
 
-        const cappedSteps = plan.steps.slice(0, MAX_PLAN_STEPS);
-        const newState: PlanExecutionState = {
-          steps: cappedSteps,
-          stepStates: buildInitialStepStates(cappedSteps),
-          summary: plan.summary,
-          results: {},
-          currentStep: 0,
-          status: "running",
-        };
+        const newState = buildPlanState(plan.steps, plan.summary);
         setPlanState(newState);
-        setFlowPhase("executing");
-        setChainHighlight(5);
+        enterExecuting(phaseApi);
 
-        // Audit trace per il path plan-execution
         const planTrace = startTrace(text);
         planTrace.setPhase("plan-execution");
         planTrace.setPlanSummary(plan.summary);
-        planTrace.setDriver(cappedSteps[cappedSteps.length - 1]?.toolId ?? "unknown");
+        planTrace.setDriver(newState.steps[newState.steps.length - 1]?.toolId ?? "unknown");
 
         await runPlanWrapped(newState, text, hint, planTrace);
       } catch (err: unknown) {
-        clearInterval(chainInterval);
+        stopChain();
         setMessages((prev) => prev.filter((m) => !m.thinking));
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
         _addMessage({
@@ -423,15 +388,13 @@ export function useCommandSubmit(state: CommandStateApi) {
           agentName: "Orchestratore",
           timestamp: ts(),
         });
-        setFlowPhase("idle");
-        setShowTools(false);
+        enterIdle(phaseApi);
       }
     },
     [
-      _addMessage, addMessage, buildHistory, resetForNewMessage, runPlanWrapped,
-      setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
-      setPlanState, setShowTools, setToolPhase, ts, queryContext, looksLikeSimpleQuery,
-      runDirectComposer,
+      _addMessage, addMessage, buildHistory, resetForNewMessage, runPlanWrapped, runSyntheticPlan,
+      setActiveToolKey, setChainHighlight, setExecSteps, setMessages, setPlanState, ts,
+      queryContext, looksLikeSimpleQuery, runDirectComposer, phaseApi,
     ],
   );
 
