@@ -53,15 +53,16 @@ export const markMessageTool: Tool = {
 
     if (!id || !isUuid(id)) throw new Error("message_id mancante o non valido");
 
-    const patch: Record<string, unknown> = {};
-    if (action === "read") patch.read_at = new Date().toISOString();
-    else if (action === "unread") patch.read_at = null;
-    else if (action === "category") {
+    let updatePromise;
+    if (action === "read") {
+      updatePromise = supabase.from("channel_messages").update({ read_at: new Date().toISOString() }).eq("id", id);
+    } else if (action === "unread") {
+      updatePromise = supabase.from("channel_messages").update({ read_at: null }).eq("id", id);
+    } else {
       if (!payload.category) throw new Error("Categoria mancante");
-      patch.category = payload.category;
+      updatePromise = supabase.from("channel_messages").update({ category: payload.category }).eq("id", id);
     }
-
-    const { error } = await supabase.from("channel_messages").update(patch).eq("id", id);
+    const { error } = await updatePromise;
     if (error) throw new Error(error.message);
 
     return {
