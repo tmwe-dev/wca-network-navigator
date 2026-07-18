@@ -6,12 +6,13 @@ import type { Tool, ToolResult, ToolContext } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
-interface Payload {
+type Payload = {
   activity_id?: string;
   activity_ref?: string;
   status?: "completed" | "cancelled";
   note?: string;
-}
+  [k: string]: unknown;
+};
 
 function fallbackFromPrompt(prompt: string): Payload {
   const idMatch = prompt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
@@ -70,13 +71,14 @@ export const closeActivityTool: Tool = {
     const resolved = await resolveActivity(ref);
     if (!resolved) throw new Error(`Attività "${ref}" non trovata`);
 
-    const patch: Record<string, unknown> = {
-      status,
-      completed_at: status === "completed" ? new Date().toISOString() : null,
-    };
-    if (payload.note) patch.description = payload.note;
-
-    const { error } = await supabase.from("activities").update(patch).eq("id", resolved.id);
+    const { error } = await supabase
+      .from("activities")
+      .update({
+        status,
+        completed_at: status === "completed" ? new Date().toISOString() : null,
+        ...(payload.note ? { description: payload.note } : {}),
+      })
+      .eq("id", resolved.id);
     if (error) throw new Error(error.message);
 
     return {
