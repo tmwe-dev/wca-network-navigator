@@ -1,12 +1,16 @@
 /**
  * useCommandSubmit — Conversational AI orchestrator for the Command Page.
  *
- * Flow for every user prompt:
- *   1. Push user message + thinking indicator
- *   2. Lexical normalization (typo fix: pane→partner, nyc→New York, ecc.)
- *   3. FLUSSO UNICO: planExecution → planRunner → per-step approval (write tools).
- *      Nessuna scorciatoia: ogni richiesta carica memoria/KB/prompt operativi.
- *   4. Conversational AI comment + suggested next actions on the final result
+ * Flow (single dispatch, master control unico):
+ *   1. Push user message
+ *   2. classifyIntent(rawText) → smalltalk | compose-email | plan
+ *        - smalltalk     → risposta Direttore (< 1s, niente DB)
+ *        - compose-email → runDirectComposer (fast-lane batch email osservabile)
+ *        - plan          → planExecution → planRunner (default)
+ *   3. Fallback anti-allucinazione: se plan.steps=[] e il prompt sembra
+ *      ricerca (shouldForceAiQuery), forziamo 1 step su ai-query nello
+ *      stesso planRunner.
+ *   4. Conversational AI comment + suggested next actions
  *   5. Persist last query "shape" in queryContext for follow-up handling
  *
  * Refactored into sub-modules:
@@ -17,6 +21,8 @@
  *   - usePlanExecution: Execute multi-step plans
  *   - usePlanCompletion: Render completed plans
  *   - useApprovalHandler: Handle user approvals
+ *   - intentClassifier: single-point intent dispatch (smalltalk/compose/plan)
+ *   - planFallback: shouldForceAiQuery guard for empty plans
  */
 import { useCallback } from "react";
 import { toast } from "sonner";
@@ -30,7 +36,8 @@ import {
   type PlanExecutionState,
 } from "../planRunner";
 import { normalizePrompt } from "../lib/lexicalNormalizer";
-import { detectSmalltalk } from "../lib/smalltalkDetector";
+import { classifyIntent } from "../lib/intentClassifier";
+import { shouldForceAiQuery } from "../lib/planFallback";
 import {
   contextHint as buildContextHint,
   isContextFresh,
@@ -250,22 +257,23 @@ export function useCommandSubmit(state: CommandStateApi) {
       _addMessage({ role: "user", content: rawText, timestamp: ts() });
       resetForNewMessage();
 
-      // SMALLTALK SHORT-CIRCUIT: saluti / "c'è qualcuno?" / "grazie" non devono
-      // mai colpire il planner né ai-query. Risposta conversazionale del
-      // Direttore in < 1s, anche TTS per coerenza con la voce realtime.
-      const small = detectSmalltalk(rawText);
-      if (small) {
+      // DISPATCH UNICO: classifica l'intento sul testo grezzo (pre-normalizzazione)
+      // per intercettare saluti prima che la normalizzazione lessicale li snaturi.
+      const intent = classifyIntent(rawText);
+
+      if (intent.kind === "smalltalk") {
+        // Risposta conversazionale del Direttore in < 1s, niente DB.
+        // TTS gestito dall'effetto in CommandPage che parla i messaggi del
+        // Direttore: evitiamo doppio audio.
         _addMessage({
           role: "assistant",
-          content: small.reply,
+          content: intent.match.reply,
           agentName: "Direttore",
           timestamp: ts(),
-          meta: `smalltalk · ${small.kind}`,
+          meta: `smalltalk · ${intent.match.kind}`,
         });
         setFlowPhase("idle");
         setShowTools(false);
-        // TTS gestito dall'effetto in CommandPage che parla i messaggi del
-        // Direttore: evitiamo doppio audio chiamando ttsSpeak qui.
         return;
       }
 
@@ -275,10 +283,12 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Build conversational hint from previous query context (if fresh)
       const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
 
-      // PRIORITÀ: se l'utente ha selezione partner attiva e chiede
-      // esplicitamente di comporre email → apri direttamente il batch composer,
-      // saltando il planner (fast-lane esplicita e osservabile).
-      if (await runDirectComposer(text, hint)) return;
+      // Fast-lane compose-email: già classificata, apri direttamente il batch
+      // composer (osservabile via trace). Nessuna re-detection.
+      if (intent.kind === "compose-email") {
+        if (await runDirectComposer(text, hint)) return;
+        // Se il match ora fallisce sul testo normalizzato, cade sul planner sotto.
+      }
 
       // FLUSSO UNICO: ogni richiesta passa dal planner (planExecution → planRunner),
       // così memoria/KB/prompt operativi vengono sempre caricati. Nessuna scorciatoia.
@@ -325,35 +335,11 @@ export function useCommandSubmit(state: CommandStateApi) {
         const plan = planRes.value;
 
         if (plan.steps.length === 0) {
-          // Cintura di sicurezza: se il prompt è in realtà smalltalk (es. il
-          // detector iniziale è stato bypassato dalla normalizzazione lessicale)
-          // rispondi come Direttore invece di mostrare "Nessun piano possibile".
-          const smallFallback = detectSmalltalk(rawText) ?? detectSmalltalk(text);
-          if (smallFallback) {
-            _addMessage({
-              role: "assistant",
-              content: smallFallback.reply,
-              agentName: "Direttore",
-              timestamp: ts(),
-              meta: `smalltalk · ${smallFallback.kind} · post-plan`,
-            });
-            setFlowPhase("idle");
-            setShowTools(false);
-            return;
-          }
-          // ANTI-ALLUCINAZIONE:
-          // Se il planner non ha generato step ma il prompt sembra una ricerca
-          // (verbo di lettura, sostantivo di dominio o nome proprio) NON stampiamo
-          // il summary del modello — che spesso inventa "nessun risultato trovato"
-          // senza interrogare il DB — e forziamo un piano a 1 step su ai-query,
-          // eseguito dallo STESSO planRunner (flusso unico, niente fast-lane).
-          const looksLikeSearch =
-            looksLikeSimpleQuery(text) ||
-            /\b(cerca|trova|mostra|elenca|lista|visualizza|dammi|quanti|quante|ultimi|recenti)\b/i.test(text) ||
-            /\b(partner|contatt|prospect|azienda|società|company|attivit|messagg|email|outreach)\b/i.test(text) ||
-            // Nome proprio nudo (es. "Radiant", "Acme Corp")
-            /^[A-ZÀ-Ý][\p{L}\p{N}\s'’.&/-]{1,60}$/u.test(text.trim());
-          if (looksLikeSearch) {
+          // ANTI-ALLUCINAZIONE: se il planner restituisce 0 step ma il prompt
+          // sembra una ricerca reale, forziamo 1 step su ai-query nello stesso
+          // planRunner. Nota: lo smalltalk è già gestito nel dispatch iniziale,
+          // quindi qui non serve ripetere il check.
+          if (shouldForceAiQuery(text, looksLikeSimpleQuery)) {
             const fbSteps: PlanStep[] = [
               { stepNumber: 1, toolId: "ai-query", reasoning: "Ricerca diretta sul database", params: {} },
             ];

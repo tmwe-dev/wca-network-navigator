@@ -17,6 +17,7 @@ export default tseslint.config(
       "public/**",
       "e2e/**",
       "scripts/**",
+      "src/v2/ui/pages/command/_legacy/**",
     ],
   },
   {
