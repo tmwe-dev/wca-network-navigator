@@ -1,52 +1,54 @@
 /**
- * Tool: send-email — Diretto (non composer). SSOT v3.9.56:
- * NON invia direttamente all'edge `send-email`; enqueue in `ai_pending_actions`
- * per approvazione manuale nel cockpit. Per email assistite usa compose-email.
+ * Tool: send-email-direct — Enqueue email diretta in ai_pending_actions
+ * per approvazione manuale (SSOT v3.9.56).
+ *
+ * Payload dal planner: { to, subject, body, partner_id?, contact_id? }.
+ * Regex sul prompt solo come fallback per input umano diretto.
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult, ToolContext } from "./types";
+import { mergePayload } from "./_helpers/writePayload";
 
-function extractTo(prompt: string): string | null {
-  const m = prompt.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
-  return m ? m[0] : null;
-}
-function extractSubject(prompt: string): string | null {
-  const m = prompt.match(/oggetto[:\s]+["“”']?([^"“”'\n]{3,140})["“”']?/i);
-  return m ? m[1].trim() : null;
-}
-function extractBody(prompt: string): string | null {
-  const m = prompt.match(/(?:testo|corpo|body|messaggio)[:\s]+["“”']?([\s\S]{5,2000})["“”']?$/i);
-  return m ? m[1].trim() : null;
+function fallbackFromPrompt(prompt: string): Record<string, unknown> {
+  const toMatch = prompt.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  const subjMatch = prompt.match(/oggetto[:\s]+["“”']?([^"“”'\n]{3,140})["“”']?/i);
+  const bodyMatch = prompt.match(/(?:testo|corpo|body|messaggio)[:\s]+["“”']?([\s\S]{5,2000})["“”']?$/i);
+  return {
+    to: toMatch?.[0] ?? "",
+    subject: subjMatch?.[1]?.trim() ?? "",
+    body: bodyMatch?.[1]?.trim() ?? "",
+  };
 }
 
 export const sendEmailDirectTool: Tool = {
   id: "send-email-direct",
   label: "Invia email (diretta)",
   description: "Invia un'email ESISTENTE (oggetto+testo già pronti) tramite l'infra SMTP. Per scrivere usa compose-email.",
-  match: (p) => /\b(invia|spedisci|manda)\s+(?:subito\s+)?(?:la\s+|questa\s+)?email\b(?!.*\bcompon)/i.test(p)
-    && /@/.test(p) && /oggetto|testo|corpo|body|messaggio/i.test(p),
+  match: (p) =>
+    /\b(invia|spedisci|manda)\s+(?:subito\s+)?(?:la\s+|questa\s+)?email\b(?!.*\bcompon)/i.test(p) &&
+    /@/.test(p) &&
+    /oggetto|testo|corpo|body|messaggio/i.test(p),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
+    const p = mergePayload(context?.payload, fallbackFromPrompt(prompt));
+
     if (!context?.confirmed) {
-      const to = extractTo(prompt);
-      const subject = extractSubject(prompt);
-      const body = extractBody(prompt);
+      const bodyStr = String(p.body ?? "");
       return {
         kind: "approval",
         title: "Inviare email diretta?",
         description: "L'email partirà subito. Nessuna riscrittura AI. Usa compose-email se vuoi assistenza.",
         details: [
-          { label: "A", value: to ?? "(da specificare)" },
-          { label: "Oggetto", value: subject ?? "(da specificare)" },
-          { label: "Anteprima", value: (body ?? "").slice(0, 200) + ((body ?? "").length > 200 ? "…" : "") },
+          { label: "A", value: String(p.to || "(da specificare)") },
+          { label: "Oggetto", value: String(p.subject || "(da specificare)") },
+          { label: "Anteprima", value: bodyStr.slice(0, 200) + (bodyStr.length > 200 ? "…" : "") },
         ],
         governance: { role: "COMMERCIALE", permission: "WRITE:EMAIL_SEND", policy: "POLICY v1.0 · SMTP-DIRECT" },
-        pendingPayload: { to, subject, body },
+        pendingPayload: p,
         toolId: "send-email-direct",
       };
     }
 
-    const p = context.payload ?? {};
     if (!p.to || !p.subject || !p.body) {
       return {
         kind: "result",
