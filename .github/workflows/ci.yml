@@ -25,6 +25,8 @@ jobs:
       - run: npm run audit:function-auth
       - run: npm run typecheck:public
       - run: npm run format:check
+      - name: README stats freshness
+        run: node scripts/gen-readme-stats.mjs --check
 
   test:
     runs-on: ubuntu-latest
