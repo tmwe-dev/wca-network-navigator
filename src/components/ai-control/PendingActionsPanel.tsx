@@ -13,9 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ShieldCheck, CheckCircle, XCircle, Mail, Reply, Archive,
-  ListTodo, Forward, Clock, ChevronDown, ChevronUp, Zap, Bot, User, Workflow,
-  Sparkles, ArrowRight, Edit3, RotateCcw,
+  ShieldCheck, XCircle,
+  ChevronDown, ChevronUp,
+  ArrowRight, Edit3, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -24,65 +24,11 @@ import { queryKeys } from "@/lib/queryKeys";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
-import { SiblingRiskBadge, useHasSiblingRisk } from "@/components/ai-control/SiblingRiskBadge";
-
+import { SiblingRiskBadge } from "@/components/ai-control/SiblingRiskBadge";
+import { ACTION_META, SOURCE_META, confidenceColor, ApproveGuardedButton } from "./pendingActionsPanel.constants";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("PendingActionsPanel");
-
-/**
- * Bottone Approva con Same-Company Sibling Guard.
- * Disabilita l'approvazione se esiste rischio sibling e non è stata
- * data conferma esplicita tramite il SiblingRiskBadge.
- */
-function ApproveGuardedButton({
-  partnerId, contactId, confirmed, label, className, onApprove, isSendAction,
-}: {
-  readonly partnerId: string | null;
-  readonly contactId: string | null;
-  readonly confirmed: boolean;
-  readonly label: string;
-  readonly className: string;
-  readonly onApprove: () => void;
-  readonly isSendAction: boolean;
-}) {
-  const hasRisk = useHasSiblingRisk(partnerId, contactId) && isSendAction;
-  const blocked = hasRisk && !confirmed;
-  return (
-    <Button
-      size="sm"
-      variant="ghost"
-      className={className}
-      disabled={blocked}
-      title={blocked ? "Spunta la conferma rischio sibling per approvare" : undefined}
-      onClick={onApprove}
-    >
-      <CheckCircle className="h-3.5 w-3.5" />{label}
-    </Button>
-  );
-}
-
-const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: string }> = {
-  send_email: { icon: Mail, color: "text-blue-400 bg-blue-400/10", label: "Invia Email" },
-  send_whatsapp: { icon: Mail, color: "text-green-400 bg-green-400/10", label: "WhatsApp" },
-  reply: { icon: Reply, color: "text-emerald-400 bg-emerald-400/10", label: "Rispondi" },
-  forward: { icon: Forward, color: "text-orange-400 bg-orange-400/10", label: "Inoltra" },
-  archive: { icon: Archive, color: "text-yellow-400 bg-yellow-400/10", label: "Archivia" },
-  create_task: { icon: ListTodo, color: "text-purple-400 bg-purple-400/10", label: "Crea Task" },
-  create_reminder: { icon: Clock, color: "text-cyan-400 bg-cyan-400/10", label: "Reminder" },
-  advance_gate: { icon: Workflow, color: "text-pink-400 bg-pink-400/10", label: "Avanza Gate" },
-  change_channel: { icon: Zap, color: "text-amber-400 bg-amber-400/10", label: "Cambia Canale" },
-  schedule_followup: { icon: Clock, color: "text-sky-400 bg-sky-400/10", label: "Follow-up" },
-  prompt_refinement: { icon: Sparkles, color: "text-violet-400 bg-violet-400/10", label: "Refinement Prompt" },
-};
-
-const SOURCE_META: Record<string, { icon: typeof Bot; label: string }> = {
-  ai_classifier: { icon: Bot, label: "Classificatore" },
-  cadence_engine: { icon: Clock, label: "Cadenza" },
-  workflow_gate: { icon: Workflow, label: "Workflow" },
-  ai_assistant: { icon: Zap, label: "Assistente" },
-  manual: { icon: User, label: "Manuale" },
-};
 
 export function PendingActionsPanel() {
   const qc = useQueryClient();
