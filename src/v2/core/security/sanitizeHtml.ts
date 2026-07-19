@@ -16,19 +16,17 @@
  */
 import DOMPurify from "dompurify";
 
-// Config email-safe + hardening extra:
-//  - ADD_ATTR target/rel → link "_blank" mantiene rel="noopener noreferrer"
-//  - FORBID_TAGS ridondante ma esplicito (script/style già bloccati di default)
-//  - FORBID_ATTR: on* handler già rimossi da DOMPurify, esplicito per audit
-//  - ALLOW_DATA_ATTR false → nessun data-* iniettato
-const CONFIG: DOMPurify.Config = {
+// Config email-safe + hardening extra.
+// `RETURN_TRUSTED_TYPE: false` garantisce che l'output sia sempre `string`.
+const CONFIG = {
   USE_PROFILES: { html: true },
   ADD_ATTR: ["target", "rel"],
   FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "form", "noscript", "svg", "math"],
   FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur", "onchange", "onsubmit"],
   ALLOW_DATA_ATTR: false,
   ALLOW_UNKNOWN_PROTOCOLS: false,
-};
+  RETURN_TRUSTED_TYPE: false,
+} as const;
 
 // Hook per forzare rel="noopener noreferrer" su tutti i link target="_blank"
 let hooksInstalled = false;
@@ -52,7 +50,7 @@ function ensureHooks() {
 export function sanitizeHtml(html: string | null | undefined): string {
   if (!html) return "";
   ensureHooks();
-  return DOMPurify.sanitize(html, CONFIG);
+  return DOMPurify.sanitize(html, CONFIG) as unknown as string;
 }
 
 /**
