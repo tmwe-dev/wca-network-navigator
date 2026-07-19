@@ -36,24 +36,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "sonner";
-import type { CompanyEntity, CompanyCardListCallbacks, CompanySource } from "./types";
+import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
 import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
 import { useBlacklistedPartnerIds, useBlacklistedCompanyNames } from "@/hooks/useBlacklist";
-
-const CARD_BORDER: Record<CompanySource, string> = {
-  wca: "border-primary/30 hover:border-primary/55",
-  crm: "border-chart-2/30 hover:border-chart-2/55",
-  bca: "border-success/30 hover:border-success/55",
-};
-
-const CARD_STRIPE: Record<CompanySource, string> = {
-  wca: "from-primary/85 to-primary/25",
-  crm: "from-chart-2/85 to-chart-2/25",
-  bca: "from-success/85 to-success/25",
-};
-
-const BADGE_BASE = "inline-flex h-5 items-center gap-1 rounded-md border px-1.5 text-[10px] font-semibold leading-none";
-const CHIP_BASE = "inline-flex h-6 min-w-0 items-center gap-1 rounded-md border px-2 text-[11px] font-medium leading-none";
+import { CARD_BORDER, CARD_STRIPE, BADGE_BASE, CHIP_BASE } from "./CompanyCard.constants";
+import { computeRecency, computeEnrichedLabel } from "./CompanyCard.helpers";
 
 export interface CompanyCardProps extends CompanyCardListCallbacks {
   company: CompanyEntity;
@@ -124,16 +111,7 @@ export function CompanyCard({
 
   const logoFromMeta = meta?.logoUrl ?? logoUrl ?? null;
   const isCustomer = leadStatus === "converted";
-  const enrichedLabel = React.useMemo(() => {
-    if (!enrichedAt) return null;
-    const t = new Date(enrichedAt).getTime();
-    if (Number.isNaN(t)) return null;
-    const days = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
-    if (days < 1) return "DS oggi";
-    if (days < 30) return `DS ${days}g fa`;
-    if (days < 365) return `DS ${Math.floor(days / 30)}mes fa`;
-    return `DS ${Math.floor(days / 365)}a fa`;
-  }, [enrichedAt]);
+  const enrichedLabel = React.useMemo(() => computeEnrichedLabel(enrichedAt), [enrichedAt]);
 
   const onMenuEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -180,17 +158,7 @@ export function CompanyCard({
     onOpenCompany?.(company);
   };
 
-  const recency = React.useMemo(() => {
-    if (!lastInteractionAt) return { label: "mai", tone: "muted" as const };
-    const t = new Date(lastInteractionAt).getTime();
-    if (Number.isNaN(t)) return { label: "mai", tone: "muted" as const };
-    const days = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
-    if (days < 1) return { label: "oggi", tone: "ok" as const };
-    if (days < 7) return { label: `${days}g fa`, tone: "ok" as const };
-    if (days < 30) return { label: `${days}g fa`, tone: "warn" as const };
-    if (days < 90) return { label: `${days}g fa`, tone: "warn" as const };
-    return { label: `${days}g fa`, tone: "alert" as const };
-  }, [lastInteractionAt]);
+  const recency = React.useMemo(() => computeRecency(lastInteractionAt), [lastInteractionAt]);
 
   const leadStatusBadge = (() => {
     if (!leadStatus || leadStatus === "new") return null;
