@@ -32,8 +32,24 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Run full E2E suite
-        # Non blocca: vogliamo il report anche se falliscono spec.
+      # Step 1 — CRITICAL: security & auth guards must pass, altrimenti il workflow fallisce.
+      - name: Run CRITICAL E2E (blocking)
+        run: >-
+          npx playwright test
+          e2e/auth-guard.spec.ts
+          e2e/home.smoke.spec.ts
+          e2e/csp-header-presence.spec.ts
+          e2e/prompt-injection-high-block.spec.ts
+          e2e/mailbox-access-guard.spec.ts
+          e2e/public-edge-auth-guards.spec.ts
+          e2e/cron-secret-validation.spec.ts
+          e2e/ai-invocation-charter.spec.ts
+          e2e/editorial-review-block.spec.ts
+          e2e/wca-risk-gate.spec.ts
+          --reporter=list
+
+      # Step 2 — FULL suite: reportistica completa, non blocca (per feature drift non critici).
+      - name: Run FULL E2E suite (report-only)
         continue-on-error: true
         run: npx playwright test --reporter=html,json
         env:
