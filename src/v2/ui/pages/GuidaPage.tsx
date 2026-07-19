@@ -1,5 +1,6 @@
 /**
- * GuidaPage V2
+ * GuidaPage V2 — orchestratore delle tre parti (istituzionale, tutorial, manuale).
+ * Contenuti estratti in componenti dedicati per rispettare il budget LOC.
  */
 import GuidaLayout from "@/components/guida/GuidaLayout";
 import CoverSection from "@/components/guida/CoverSection";
@@ -16,24 +17,8 @@ import SecuritySection from "@/components/guida/SecuritySection";
 import ResultsSection from "@/components/guida/ResultsSection";
 import RoadmapSection from "@/components/guida/RoadmapSection";
 import ClosingSection from "@/components/guida/ClosingSection";
-import SectionWrapper from "@/components/guida/SectionWrapper";
-import TutorialChapter from "@/components/guida/TutorialChapter";
-import ManualChapter from "@/components/guida/ManualChapter";
-// Foto reali delle pagine (catturate dal sistema in uso)
-import shotConfig from "@/assets/guida/screenshots/settings.png";
-import shotAgentsHub from "@/assets/guida/screenshots/agents-hub.png";
-import shotCapabilities from "@/assets/guida/screenshots/agent-capabilities.png";
-import shotAiPrompt from "@/assets/guida/screenshots/cfg-ai-prompt.png";
-import shotVoce from "@/assets/guida/screenshots/cfg-voce-ai.png";
-import shotKb from "@/assets/guida/screenshots/kb-tab.png";
-import shotProcessi from "@/assets/guida/screenshots/cfg-processi.png";
-import shotAutopilot from "@/assets/guida/screenshots/autopilot.png";
-import {
-  Command, Target, Search, Rocket, Calendar, Trash2,
-  MessagesSquare, Inbox, Mail, Brain, Sparkles, Contact,
-  Bot, Cpu, FlaskConical, Settings, Workflow, BookOpenCheck,
-  Library, Volume2, Power, SlidersHorizontal,
-} from "lucide-react";
+import { TutorialChapters } from "@/components/guida/parts/TutorialChapters";
+import { ManualChapters } from "@/components/guida/parts/ManualChapters";
 
 const sectionLabels = [
   // === Parte 1: istituzionale ===
@@ -71,7 +56,7 @@ const sectionLabels = [
 const Guida = () => {
   return (
     <GuidaLayout sectionLabels={sectionLabels}>
-      {/* === PARTE 1: ISTITUZIONALE (~15 sezioni) === */}
+      {/* === PARTE 1: ISTITUZIONALE === */}
       <CoverSection />
       <VisionSection />
       <PerformanceSection />
@@ -87,9 +72,18 @@ const Guida = () => {
       <RoadmapSection />
 
       {/* === PARTE 2: TUTORIAL OPERATIVO === */}
+      <TutorialChapters />
 
-      {/* CAP. 0 — Come usare la guida ai test */}
-      <SectionWrapper className="bg-[#0a0a0f]">
+      {/* === PARTE 3: MANUALE ILLUSTRATO === */}
+      <ManualChapters />
+
+      {/* === CHIUSURA === */}
+      <ClosingSection />
+    </GuidaLayout>
+  );
+};
+
+export default Guida;
         <div className="space-y-8 max-w-4xl">
           <div className="space-y-3">
             <span className="text-primary text-xs font-bold tracking-widest uppercase">Parte 2 · Tutorial operativo</span>
