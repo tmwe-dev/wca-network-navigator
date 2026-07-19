@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * EntityRow — template a 5 colonne fisse per le liste WCA / CRM / BCA.
  * Layout grid CSS uguale per ogni sorgente; i contenuti sono passati come

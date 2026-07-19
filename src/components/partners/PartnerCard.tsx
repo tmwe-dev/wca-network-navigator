@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useState } from "react";
 import type { PartnerViewModel } from "@/types/partner-views";
 import { Link } from "react-router-dom";

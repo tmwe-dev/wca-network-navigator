@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle, CheckCircle2, Download, Mail, Pause, Play,

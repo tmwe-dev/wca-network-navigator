@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { CreditCard, Sparkles, ChevronDown, ChevronUp, Mail, Linkedin, Phone, CalendarClock, Reply } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";

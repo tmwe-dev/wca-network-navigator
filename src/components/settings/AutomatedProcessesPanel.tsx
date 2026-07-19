@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Power, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";

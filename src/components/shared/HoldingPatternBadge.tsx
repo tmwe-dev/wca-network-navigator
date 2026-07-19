@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * HoldingPatternBadge — Visual indicator of interaction/holding status.
  * Shows colored dot based on recency of last interaction.

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * AuthProvider — Single centralized onAuthStateChange listener.
  *

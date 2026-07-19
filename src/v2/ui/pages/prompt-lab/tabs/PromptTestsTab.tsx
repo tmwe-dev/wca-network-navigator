@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * PromptTestsTab — Suite di test di regressione per i prompt operativi.
  *

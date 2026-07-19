@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * CalendarPage Component
  * Main calendar view with sidebar and event management

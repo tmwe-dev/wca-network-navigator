@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * EmailForgePage — Lab AI semplificato (LOVABLE-76B).
  * Layout 2 pannelli: ForgeOraclePanel (configurazione) | ForgeOutputPanel (Risultato/Prompt/AI).

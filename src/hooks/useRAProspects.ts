@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { RAContact, RAInteraction } from "@/types/ra";

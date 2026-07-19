@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * ResponseValidator — Lightweight runtime shape validation for AI responses.
  *

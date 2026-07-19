@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SenderEmailPreviewPanel — pannello inline 35% sinistra dell'area inferiore.
  *

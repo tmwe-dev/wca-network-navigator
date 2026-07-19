@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SenderProfilesView — Per-sender profile cards
  */

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * aiQueryTool — Tool unico AI-Native per ricerche su DB.
  *

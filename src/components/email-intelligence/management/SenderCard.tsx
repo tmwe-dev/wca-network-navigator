@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SenderCard — Card sender VERTICALE leggibile (v4, 2026-04-27).
  *

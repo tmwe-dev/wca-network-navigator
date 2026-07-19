@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * aiBridge.ts — Conversational AI layer for the Command Page.
  *

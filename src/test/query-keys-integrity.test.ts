@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Query Keys Integrity Tests
  * Tests that all query key factories return unique arrays and no collisions between modules

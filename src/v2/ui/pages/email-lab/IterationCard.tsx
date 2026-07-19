@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * IterationCard — singola card "versione" della bozza email nel laboratorio.
  * Mostra: subject, body (rendered o diff vs precedente), badge journalist,

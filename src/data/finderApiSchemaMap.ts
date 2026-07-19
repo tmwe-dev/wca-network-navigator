@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * DAL — finder_api_schema_map
  * Mappa campi/ruoli per ogni operazione TMWE consentita.

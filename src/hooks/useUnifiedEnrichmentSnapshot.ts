@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useUnifiedEnrichmentSnapshot — LOVABLE-77B
  *

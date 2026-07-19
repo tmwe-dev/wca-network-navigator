@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Data Access Layer — Partners
  * Single source of truth for all partners table queries.

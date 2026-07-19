@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { motion, AnimatePresence } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Wand2 } from "lucide-react";

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * ManualGroupingTab — Fase 1 Email Intelligence.
  *

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * AISuggestionsTab — vista degli address (classificati o non) con stessa
  * estetica delle card di Gestione Manuale: logo dominio, bandiera, badge

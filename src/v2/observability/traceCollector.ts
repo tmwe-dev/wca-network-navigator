@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * traceCollector — singleton bus + ring buffer + DB flusher.
  *

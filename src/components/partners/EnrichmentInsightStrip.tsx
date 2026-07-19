@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import type { PartnerViewModel } from "@/types/partner-views";
 import type * as React from "react";
 import { ArrowRight, Calendar, Truck, Users, Warehouse, MapPin, Building } from "lucide-react";

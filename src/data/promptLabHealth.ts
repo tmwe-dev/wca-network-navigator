@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * DAL — Prompt Lab Health KPIs.
  * Read-only aggregation. Nessuna scrittura, nessun side-effect.

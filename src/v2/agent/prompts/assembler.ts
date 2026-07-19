@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Prompt Assembler (client side)
  *

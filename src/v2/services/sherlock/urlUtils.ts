@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * URL extraction and normalization utilities.
  */

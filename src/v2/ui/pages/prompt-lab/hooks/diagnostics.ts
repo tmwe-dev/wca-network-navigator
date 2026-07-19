@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * diagnostics — parser e tipi per la diagnostica strutturata del Lab Agent.
  *

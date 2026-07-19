@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * LabAgentChat — Footer chat con Lab Agent.
  * LOVABLE-110: parsing [SUGGEST_RULE] tags per rendering inline SuggestRuleButton.

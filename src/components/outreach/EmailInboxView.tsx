@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search, Inbox, Database, Mail, CheckCircle2, AlertCircle, Clock, ChevronLeft, ChevronRight, Plane, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * localResultFormatter — Template-based response builder for SIMPLE results.
  *

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("emailContentNormalization");

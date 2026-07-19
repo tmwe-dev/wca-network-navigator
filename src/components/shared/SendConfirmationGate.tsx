@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SendConfirmationGate — Unified pre-send confirmation modal.
  * Appears before ANY outbound message from any part of the app.

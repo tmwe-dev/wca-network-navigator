@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Message Store — utilità di merge/dedup per `channel_messages`,
  * usato sia dalla query iniziale sia dal listener realtime.

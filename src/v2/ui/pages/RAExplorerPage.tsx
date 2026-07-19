@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * RAExplorerPage V2
  */

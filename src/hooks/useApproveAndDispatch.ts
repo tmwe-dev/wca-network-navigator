@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useApproveAndDispatch — dispatcher reale on-approve per send_email /
  * send_whatsapp / send_linkedin / linkedin_connect / send_proposal.

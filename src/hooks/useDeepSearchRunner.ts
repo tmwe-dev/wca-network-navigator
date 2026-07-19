@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { createContext, useContext, useState, useCallback, useRef } from "react";
 import { getPartnersByIds } from "@/data/partners";
 import { getContactsByIds } from "@/data/contacts";

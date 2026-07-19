@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * @deprecated Table 'teams' does not exist in current schema (types.ts).
  * The table exists in Supabase migrations (20260422180200_lovable102_rbac.sql) but

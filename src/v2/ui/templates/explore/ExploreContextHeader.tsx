@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * ExploreContextHeader — UNICA barra superiore per la sezione Esplora.
  *

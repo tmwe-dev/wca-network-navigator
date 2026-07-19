@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SenderActionBar — Barra azioni contestuale visibile quando ≥1 sender è selezionato.
  *

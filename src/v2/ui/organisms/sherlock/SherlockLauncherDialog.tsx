@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SherlockLauncherDialog — dialog leggero per lanciare un'indagine Sherlock
  * (Scout / Detective / Sherlock) su un partner o contatto, senza dover passare

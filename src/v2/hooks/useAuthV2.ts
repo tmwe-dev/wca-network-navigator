@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useAuthV2 — Auth hook completo
  *

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SchedulingWizard — Multi-step wizard to launch a cadence sequence
  */

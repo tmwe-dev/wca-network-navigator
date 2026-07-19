@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import type { Tool, ToolResult } from "../types";
 import { detectTone } from "../../lib/toneDetector";
 import {

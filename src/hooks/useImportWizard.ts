@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Import wizard state & logic — extracted from Import.tsx
  */

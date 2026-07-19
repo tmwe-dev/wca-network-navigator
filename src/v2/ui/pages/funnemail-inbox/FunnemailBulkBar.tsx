@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * FunnemailBulkBar — barra azioni che appare in fondo alla lista quando
  * l'utente ha selezionato 1+ email tramite checkbox.

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * EnrichmentStatusInline — LOVABLE-77B
  *

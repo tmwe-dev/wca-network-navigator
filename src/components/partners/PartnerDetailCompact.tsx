@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useState, useCallback } from "react";
 import type { PartnerViewModel } from "@/types/partner-views";
 import { useAppNavigate } from "@/hooks/useAppNavigate";

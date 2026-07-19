@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * EnrichmentExtraInfo — LOVABLE-75
  * Icona info read-only che mostra in popover lo stato Deep Search e Sherlock

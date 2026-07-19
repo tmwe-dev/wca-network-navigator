@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useReducer, useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
