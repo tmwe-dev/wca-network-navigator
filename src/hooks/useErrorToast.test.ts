@@ -7,7 +7,7 @@ vi.mock("@/hooks/use-toast", () => ({
   toast: (...args: any[]) => mockToast(...args),
 }));
 
-vi.mock("@/lib/errors", () => ({
+vi.mock("@/v2/core/domain/errors", () => ({
   extractErrorMessage: (e: any) => e instanceof Error ? e.message : String(e),
 }));
 

@@ -4,7 +4,7 @@
  */
 import { useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
-import { extractErrorMessage } from "@/lib/errors";
+import { extractErrorMessage } from "@/v2/core/domain/errors";
 
 export function useErrorToast() {
   const showError = useCallback((title: string, error?: unknown): void => {
