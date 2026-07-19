@@ -8,6 +8,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
@@ -20,6 +21,7 @@ import {
 import { ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
@@ -31,6 +33,11 @@ import { ClassificationInsightsPanel } from "./ClassificationInsightsPanel";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
 import { SuggestionCard, type AddressRow } from "./SuggestionCard";
+
+function getDomain(email: string): string {
+  const at = email.indexOf("@");
+  return at >= 0 ? email.slice(at + 1).toLowerCase() : email;
+}
 
 import { createLogger } from "@/lib/log";
 
