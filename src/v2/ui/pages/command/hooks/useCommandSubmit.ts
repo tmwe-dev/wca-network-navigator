@@ -302,6 +302,14 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Fast-lane compose-email (già classificata): salta il planner.
       if (intent.kind === "compose-email" && (await runDirectComposer(text, hint))) return;
 
+      // Fast-lane READ: le ricerche semplici non devono passare dal planner
+      // generale + planner query. Una sola chiamata AI riduce token, latenza e
+      // rischio 429, senza togliere libertà al Query Planner sul DB.
+      if (shouldForceAiQuery(text, looksLikeSimpleQuery)) {
+        await runSyntheticPlan(buildAiQueryFallbackPlan(), text, hint, "ai-query");
+        return;
+      }
+
       // Flusso planner: single entry, single exit.
       enterThinking(phaseApi);
       addMessage({ role: "assistant", content: "", timestamp: "", thinking: true });
