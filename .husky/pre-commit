@@ -1,2 +1,9 @@
 #!/usr/bin/env sh
+
+# Rigenera stats README se sono cambiati file rilevanti; blocca commit se stale.
+if git diff --cached --name-only | grep -qE '^(supabase/(functions|migrations)/|vitest\.config\.ts$)'; then
+  node scripts/gen-readme-stats.mjs
+  git add README.md
+fi
+
 npx lint-staged
