@@ -42,7 +42,8 @@ describe("DAL — activities", () => {
       delete: () => ({ in: mockIn, eq: mockEq }),
     });
     mockSelect.mockReturnValue({ eq: mockEq, order: mockOrder, is: mockIs });
-    mockEq.mockReturnValue({ order: mockOrder, eq: mockEq, select: mockSelect });
+    mockEq.mockReturnValue({ order: mockOrder, eq: mockEq, select: mockSelect, is: mockIs });
+    mockIs.mockReturnValue({ order: mockOrder, eq: mockEq, is: mockIs, limit: mockLimit });
     mockOrder.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue({ data: [], error: null });
     mockInsert.mockReturnValue({ select: mockSelect });
