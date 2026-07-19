@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractErrorMessage, fromUnknown, isAppError, createError } from "./errors";
+import { extractErrorMessage, fromUnknown, isAppError, domainError } from "./errors";
 
 describe("extractErrorMessage", () => {
   it("estrae message da Error", () => {
@@ -19,7 +19,7 @@ describe("extractErrorMessage", () => {
 
 describe("fromUnknown", () => {
   it("passa attraverso un AppError esistente", () => {
-    const app = createError("domain", "VALIDATION_ERROR", "invalid", "recover");
+    const app = domainError("VALIDATION_FAILED", "invalid");
     const result = fromUnknown(app);
     expect(result).toBe(app);
     expect(isAppError(result)).toBe(true);
@@ -31,7 +31,7 @@ describe("fromUnknown", () => {
     expect(wrapped.category).toBe("io");
   });
   it("wrappa una stringa con code di dominio", () => {
-    const wrapped = fromUnknown("upsi", "VALIDATION_ERROR");
+    const wrapped = fromUnknown("upsi", "VALIDATION_FAILED");
     expect(wrapped.category).toBe("domain");
     expect(wrapped.message).toBe("upsi");
   });
