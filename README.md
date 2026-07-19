@@ -7,11 +7,11 @@
 |---------|--------------|
 | Edge Functions | **150** |
 | Migrazioni SQL | **411** |
-| File test (`*.test.{ts,tsx}`) | **365** |
-| Coverage threshold — statements | **10%** |
+| File test (`*.test.{ts,tsx}`) | **366** |
+| Coverage threshold — statements | **11%** |
 | Coverage threshold — branches | **53%** |
 | Coverage threshold — functions | **30%** |
-| Coverage threshold — lines | **10%** |
+| Coverage threshold — lines | **11%** |
 
 _Ultimo aggiornamento: 2026-07-19_
 <!-- STATS:END -->
