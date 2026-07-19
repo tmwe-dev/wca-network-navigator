@@ -49,7 +49,6 @@ describe("DAL — activities", () => {
     mockInsert.mockReturnValue({ select: mockSelect });
     mockUpdate.mockReturnValue({ eq: mockEq });
     mockIn.mockResolvedValue({ error: null });
-    mockIs.mockResolvedValue({ count: 0, error: null });
     mockNot.mockReturnValue({ or: mockOr });
     mockOr.mockReturnValue({ order: mockOrder });
   });
