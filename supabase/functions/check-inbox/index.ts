@@ -20,7 +20,7 @@ import {
   updateSyncState,
 } from "./imapConnection.ts";
 import { processMessage, matchResponseActivity } from "./messageProcessor.ts";
-import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "./postProcessing.ts";
+import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "../_shared/inboxPostProcess.ts";
 // flagResync disabilitato (2026-06-15): import rimosso, nessun auto-mark read.
 // import { resyncUnreadFlags } from "./flagResync.ts";
 import { enqueueInboundEnrichment } from "./enqueueEnrichment.ts";

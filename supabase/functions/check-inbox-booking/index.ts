@@ -21,7 +21,7 @@ import {
   updateSyncState,
 } from "./imapConnection.ts";
 import { processMessage, matchResponseActivity } from "./messageProcessor.ts";
-import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "./postProcessing.ts";
+import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "../_shared/inboxPostProcess.ts";
 import { resyncUnreadFlags } from "./flagResync.ts";
 import { enqueueInboundEnrichment } from "./enqueueEnrichment.ts";
 
