@@ -23,34 +23,11 @@ import { TMWE_CHUNKS } from "./harmonizer/tmweChunks";
 import { useAgenticHarmonizer } from "./harmonizer-v2/useAgenticHarmonizer";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { loadUi, saveUi } from "./harmonizer/harmonizeDialogUiPersistence";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-// ── Persistenza UI (goal + ultimo file usato) ──
-// I file caricati non sono persistibili (sono Blob in memoria), ma persistiamo
-// il loro nome così che la UI possa ricordare all'utente cosa ricaricare.
-const UI_STORAGE_KEY = "harmonizerV2:dialog:ui";
-interface PersistedUi {
-  goal?: string;
-  agenticGoal?: string;
-  ingestionGoal?: string;
-  agenticFileName?: string;
-  ingestionFileName?: string;
-}
-function loadUi(): PersistedUi {
-  if (typeof window === "undefined") return {};
-  try { return JSON.parse(window.localStorage.getItem(UI_STORAGE_KEY) ?? "{}") as PersistedUi; }
-  catch { return {}; }
-}
-function saveUi(patch: Partial<PersistedUi>): void {
-  if (typeof window === "undefined") return;
-  try {
-    const next = { ...loadUi(), ...patch };
-    window.localStorage.setItem(UI_STORAGE_KEY, JSON.stringify(next));
-  } catch { /* noop */ }
 }
 
 export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
