@@ -152,22 +152,16 @@ export const aiQueryTool: Tool = {
     //    prompt + storia COMPLETA della conversazione + schema live dal DB e
     //    decide tabella, filtri, count/list, follow-up ellittici e smalltalk.
     //    Nessun parser deterministico, nessun binario hardcoded.
-    //    Un solo retry con backoff per assorbire un 429 transitorio.
-    const tryPlan = async () =>
-      planQuery({
-        prompt: naturalPrompt,
-        history: context?.history,
-        contextHint: context?.contextHint,
-      });
-    let planRes = await tryPlan();
+    //    Se OpenAI risponde 429 non ritentiamo subito: un retry ravvicinato
+    //    consuma solo altra finestra TPM/RPM e peggiora il blocco.
+    const planRes = await planQuery({
+      prompt: naturalPrompt,
+      history: context?.history,
+      contextHint: context?.contextHint,
+    });
     let plans: QueryPlan[] | null = isOk(planRes) ? planRes.value.plans : null;
     const isRateLimited = (p: QueryPlan[] | null) =>
-      !p || (p[0]?.table === "INVALID" && /troppe richieste|rate limit|riprova tra/i.test(p[0]?.rationale ?? ""));
-    if (isRateLimited(plans)) {
-      await new Promise((r) => setTimeout(r, 1200));
-      planRes = await tryPlan();
-      plans = isOk(planRes) ? planRes.value.plans : null;
-    }
+      !p || (p[0]?.table === "INVALID" && /openai|troppe richieste|rate limit|limite temporaneo|token al minuto|riprova tra/i.test(p[0]?.rationale ?? ""));
     if (isRateLimited(plans)) {
       return {
         kind: "result",
