@@ -6,13 +6,24 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
+interface OAuthClient {
+  name?: string;
+  client_name?: string;
+  redirect_uris?: string[];
+}
+interface OAuthAuthorizationDetails {
+  redirect_url?: string;
+  redirect_to?: string;
+  client?: OAuthClient;
+}
+type OAuthResult = {
+  data: OAuthAuthorizationDetails | null;
+  error: { message: string } | null;
+};
 type OAuthNamespace = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getAuthorizationDetails: (id: string) => Promise<{ data: any; error: { message: string } | null }>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  approveAuthorization: (id: string) => Promise<{ data: any; error: { message: string } | null }>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  denyAuthorization: (id: string) => Promise<{ data: any; error: { message: string } | null }>;
+  getAuthorizationDetails: (id: string) => Promise<OAuthResult>;
+  approveAuthorization: (id: string) => Promise<OAuthResult>;
+  denyAuthorization: (id: string) => Promise<OAuthResult>;
 };
 
 function oauthApi(): OAuthNamespace {
@@ -23,8 +34,7 @@ export default function OAuthConsent() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const authorizationId = params.get("authorization_id") ?? "";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [details, setDetails] = useState<any>(null);
+  const [details, setDetails] = useState<OAuthAuthorizationDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
