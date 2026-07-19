@@ -54,7 +54,8 @@ export default tseslint.config(
       "no-console": "error",
       "no-var": "error",
       "prefer-const": "error",
-      "eqeqeq": ["error", "always"],
+      // `!= null` è idioma legittimo per (null||undefined); vietiamo == e != su tutto il resto.
+      "eqeqeq": ["error", "always", { "null": "ignore" }],
     },
   },
   // ── Test files override: mocks & console-based assertions are legitimate ──
