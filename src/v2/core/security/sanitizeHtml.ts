@@ -21,8 +21,15 @@ import DOMPurify from "dompurify";
 const CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   USE_PROFILES: { html: true },
   ADD_ATTR: ["target", "rel"],
-  FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "form", "noscript", "svg", "math"],
-  FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur", "onchange", "onsubmit"],
+  FORBID_TAGS: [
+    "style", "script", "iframe", "object", "embed", "form", "noscript",
+    "svg", "math", "input", "button", "textarea", "select", "option",
+    "meta", "link", "base",
+  ],
+  FORBID_ATTR: [
+    "onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur",
+    "onchange", "onsubmit", "style", "formaction", "srcdoc",
+  ],
   ALLOW_DATA_ATTR: false,
   ALLOW_UNKNOWN_PROTOCOLS: false,
   RETURN_TRUSTED_TYPE: false,
