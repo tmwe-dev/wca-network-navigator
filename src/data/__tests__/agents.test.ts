@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockSelect = vi.fn();
 const mockEq = vi.fn();
 const mockOrder = vi.fn();
+const mockIs = vi.fn();
 const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
@@ -41,7 +42,8 @@ describe("DAL — agents", () => {
   describe("findAgents", () => {
     it("returns all agents ordered by created_at desc", async () => {
       const agents = [{ id: "a1", name: "Agent 1" }];
-      mockSelect.mockReturnValue({ order: mockOrder });
+      mockSelect.mockReturnValue({ is: mockIs });
+      mockIs.mockReturnValue({ order: mockOrder });
       mockOrder.mockResolvedValue({ data: agents, error: null });
       const result = await findAgents();
       expect(mockFrom).toHaveBeenCalledWith("agents");
@@ -50,13 +52,15 @@ describe("DAL — agents", () => {
     });
 
     it("throws on error", async () => {
-      mockSelect.mockReturnValue({ order: mockOrder });
+      mockSelect.mockReturnValue({ is: mockIs });
+      mockIs.mockReturnValue({ order: mockOrder });
       mockOrder.mockResolvedValue({ data: null, error: { message: "fail" } });
       await expect(findAgents()).rejects.toEqual({ message: "fail" });
     });
 
     it("returns empty array when data is null", async () => {
-      mockSelect.mockReturnValue({ order: mockOrder });
+      mockSelect.mockReturnValue({ is: mockIs });
+      mockIs.mockReturnValue({ order: mockOrder });
       mockOrder.mockResolvedValue({ data: null, error: null });
       const result = await findAgents();
       expect(result).toEqual([]);
@@ -66,7 +70,8 @@ describe("DAL — agents", () => {
   describe("findActiveAgents", () => {
     it("returns active agents with specified fields", async () => {
       const active = [{ name: "Bot", is_active: true }];
-      mockSelect.mockReturnValue({ eq: mockEq });
+      mockSelect.mockReturnValue({ is: mockIs });
+      mockIs.mockReturnValue({ eq: mockEq });
       mockEq.mockResolvedValue({ data: active, error: null });
       const result = await findActiveAgents();
       expect(mockEq).toHaveBeenCalledWith("is_active", true);
@@ -74,7 +79,8 @@ describe("DAL — agents", () => {
     });
 
     it("throws on error", async () => {
-      mockSelect.mockReturnValue({ eq: mockEq });
+      mockSelect.mockReturnValue({ is: mockIs });
+      mockIs.mockReturnValue({ eq: mockEq });
       mockEq.mockResolvedValue({ data: null, error: { message: "denied" } });
       await expect(findActiveAgents()).rejects.toEqual({ message: "denied" });
     });

@@ -42,13 +42,13 @@ describe("DAL — activities", () => {
       delete: () => ({ in: mockIn, eq: mockEq }),
     });
     mockSelect.mockReturnValue({ eq: mockEq, order: mockOrder, is: mockIs });
-    mockEq.mockReturnValue({ order: mockOrder, eq: mockEq, select: mockSelect });
+    mockEq.mockReturnValue({ order: mockOrder, eq: mockEq, select: mockSelect, is: mockIs });
+    mockIs.mockReturnValue({ order: mockOrder, eq: mockEq, is: mockIs, limit: mockLimit });
     mockOrder.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue({ data: [], error: null });
     mockInsert.mockReturnValue({ select: mockSelect });
     mockUpdate.mockReturnValue({ eq: mockEq });
     mockIn.mockResolvedValue({ error: null });
-    mockIs.mockResolvedValue({ count: 0, error: null });
     mockNot.mockReturnValue({ or: mockOr });
     mockOr.mockReturnValue({ order: mockOrder });
   });
@@ -153,13 +153,17 @@ describe("DAL — activities", () => {
 
   describe("countActivitiesWithNullPartner", () => {
     it("returns count", async () => {
-      mockIs.mockResolvedValue({ count: 5, error: null });
+      mockIs
+        .mockReturnValueOnce({ is: mockIs })
+        .mockResolvedValueOnce({ count: 5, error: null });
       const result = await countActivitiesWithNullPartner();
       expect(result).toBe(5);
     });
 
     it("throws on error", async () => {
-      mockIs.mockResolvedValue({ count: null, error: { message: "fail" } });
+      mockIs
+        .mockReturnValueOnce({ is: mockIs })
+        .mockResolvedValueOnce({ count: null, error: { message: "fail" } });
       await expect(countActivitiesWithNullPartner()).rejects.toEqual({ message: "fail" });
     });
   });

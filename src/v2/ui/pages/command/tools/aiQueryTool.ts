@@ -159,7 +159,7 @@ export const aiQueryTool: Tool = {
       history: context?.history,
       contextHint: context?.contextHint,
     });
-    let plans: QueryPlan[] | null = isOk(planRes) ? planRes.value.plans : null;
+    const plans: QueryPlan[] | null = isOk(planRes) ? planRes.value.plans : null;
     const isRateLimited = (p: QueryPlan[] | null) =>
       !p || (p[0]?.table === "INVALID" && /openai|troppe richieste|rate limit|limite temporaneo|token al minuto|riprova tra/i.test(p[0]?.rationale ?? ""));
     if (isRateLimited(plans)) {
