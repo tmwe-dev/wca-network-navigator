@@ -1,5 +1,22 @@
 # WCA Network Navigator
 
+<!-- STATS:START -->
+<!-- Generato automaticamente da scripts/gen-readme-stats.mjs — non editare a mano -->
+
+| Metrica | Valore reale |
+|---------|--------------|
+| Edge Functions | **150** |
+| Migrazioni SQL | **411** |
+| File test (`*.test.{ts,tsx}`) | **366** |
+| Coverage threshold — statements | **11%** |
+| Coverage threshold — branches | **53%** |
+| Coverage threshold — functions | **30%** |
+| Coverage threshold — lines | **11%** |
+
+_Ultimo aggiornamento: 2026-07-19_
+<!-- STATS:END -->
+
+
 CRM con intelligenza artificiale per il freight forwarding globale.
 
 ## Stack
@@ -51,8 +68,8 @@ src/
 └── v2/            — Componenti e pagine evolute (v2 UI)
 
 supabase/
-├── functions/     — 149 Edge Functions in Deno
-├── migrations/    — 385 migrazioni database SQL
+├── functions/     — Edge Functions in Deno (vedi tabella STATS in alto)
+├── migrations/    — Migrazioni database SQL (vedi tabella STATS in alto)
 └── config.toml    — Configurazione progetto
 
 docs/              — Documentazione tecnica
@@ -125,7 +142,7 @@ e2e/               — Test End-to-End (Playwright)
 
 - **Unit test**: Vitest con jsdom, 219+ file test
 - **E2E test**: Playwright con data-testid selectors
-- **Coverage**: Soglie minime in `vitest.config.ts` (statements 35%, branches 25%, functions 30%, lines 35%)
+- **Coverage**: Soglie minime aggiornate in tempo reale nella tabella STATS in alto. Baseline gestita in `vitest.config.ts`.
 - **CI/CD**: GitHub Actions con lint → type-check → test → build → e2e
 
 ## Sicurezza

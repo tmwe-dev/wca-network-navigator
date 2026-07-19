@@ -1,90 +1,94 @@
+# Piano — Bonifica sequenziale dei 7 punti dell'audit
 
-# Caccia al Tesoro — Audit Errori Sistemico
+Obiettivo: eliminare debito e duplicazioni realmente, non a suon di soppressioni. Ogni fase è indipendente e verificabile; nessun refactor opportunistico fuori scope.
 
-Obiettivo: individuare **almeno 200 problemi reali** (bug logici, riferimenti errati, variabili sbagliate, funzioni sovrapposte, istruzioni incompatibili, dead code pericoloso, drift tra moduli).
+## Punto 1 — Complessità: consolidamento v1→v2 per dominio
 
-## Metodo (5 passi, sequenziali, tracciati)
+Attaccare i **6 duplicati v1 ad alto consumer count** dai 21 mantenuti, uno per volta, migrando i consumer e cancellando il v1.
 
-### 1. Scan automatico "a rete larga" (baseline)
-Raccogliere segnali statici che spesso nascondono bug:
-- `tsgo` completo → errori TS nascosti
-- `eslint` completo → warning + errori (234 warning noti + regole custom `no-direct-ai-invoke`, `no-direct-bulk-op`, soft-delete)
-- `rg` mirati su antipattern:
-  - `.single()` senza `.maybeSingle()`
-  - `console.*` residui (vietati da CI)
-  - `any` espliciti sopra baseline
-  - `TODO|FIXME|HACK|XXX|@ts-ignore|@ts-expect-error`
-  - `useEffect` con dipendenze mancanti (react-hooks/exhaustive-deps)
-  - `.delete()` senza filtro soft-delete
-  - `supabase.functions.invoke("<ai-fn>")` fuori da `invokeAi`
-  - `process.env` in codice Deno / `Deno.env` in client
-  - chiavi query hardcoded (non da `queryKeys.ts`)
-  - `useState` senza tipo, `as any`, `as unknown as`
-- `supabase--linter` → RLS/GRANT/policy issues
-- `security--run_security_scan` → vulnerabilità
-- Test suite (`vitest`) → test rossi/skippati
+Ordine (ROI decrescente, rischio crescente):
+1. `src/lib/errors.ts` (2 consumer) → `@/v2/core/domain/errors`
+2. `src/lib/queryKeysParts/system.ts` (1 consumer) → in-line in `queryKeys.ts`
+3. `src/components/ui/EmptyState.tsx` (1 consumer) → `@/v2/ui/atoms/EmptyState`
+4. `src/components/shared/EmptyState.tsx` (3 consumer, API più ricca) → estensione atom v2
+5. `src/data/prospects.ts` (4 consumer) → `@/v2/io/supabase/queries/prospects`
+6. `src/data/blacklist.ts` (2 consumer) → wrap intorno al tool v2
 
-### 2. Diff logico cross-modulo (le "sovrapposizioni")
-Confronto tra moduli che fanno lo stesso lavoro in modo diverso:
-- **Motori scheduling**: `cadence` vs `outreach-scheduler` vs `smart-scheduler` vs `agent-autonomous-cycle` → dedup cross-engine
-- **Classify email**: `check-inbox/postProcessing` vs `funnemail-classify` vs `classify-email-response` → chi filtra cosa
-- **AI invoke**: `invokeAi` vs `aiCallShim` vs `aiGateway` vs chiamate dirette
-- **Prompt assembly**: `assembler.ts` vs prompt hardcoded in edge functions
-- **Resolve partner/contact**: `resolvePartnerRef` vs lookup ad-hoc in tool
-- **Soft-delete**: trigger DB vs filtri client `.is('deleted_at', null)` mancanti
-- **Auth guard**: JWT verify in code vs `verify_jwt = true` in config.toml
-- **Cost tracking**: `costTracker` vs `llmFetchInterceptor` vs conteggi manuali
-- **Intent classification**: `intentClassifier` centralizzato vs regex sparse
+Per ogni file: `rg` dei consumer → sostituzione import → `bun run build` → cancellazione file v1.
+NON tocco `partners.ts` (46 consumer, 684 LOC), `contacts.ts` (28), `activities.ts` (16), `agents.ts` (10), `tabs.tsx` (56), `PageErrorBoundary.tsx` (12): richiedono migrazione per-dominio separata, fuori scope di un singolo intervento sicuro.
 
-### 3. Deep read modulo per modulo (le zone rosse note)
-Lettura riga per riga dei nodi critici già segnalati come fragili:
-- `useCommandSubmit.ts` + FSM `phaseFsm.ts` + `intentClassifier.ts`
-- `supabase/functions/email-cron-sync/`, `check-inbox/`, `classify-emails-batch/`
-- `outreach-scheduler`, `agent-autonomous-cycle`, `agent-task-drainer`
-- `pending-action-executor` (handler mancanti noti)
-- `_shared/aiGateway.ts` + `aiCallHandler.ts` + fallback Gemini
-- `writePayload.ts` + tool WRITE (`close-activity`, `blacklist`, `link-contact-partner`, `kb-entry`)
-- `assembler.ts` + tutti i `core/*.ts` prompt
-- Hook cockpit + soft-delete twin
-- Auth flow TMWE (`LoginPage.tsx`, `tmwe-oauth-start`, `AuthProvider`, `AuthLifecycle`)
-- MCP server edge function
-- 42 file >500 LOC (monoliti candidati a bug nascosti)
+## Punto 2 — Coverage reale + E2E bloccante
 
-### 4. Verifica incongruenze DB / runtime
-- Tabelle citate in codice che non esistono in `types.ts`
-- Colonne referenziate con nomi sbagliati (es. `raw_payload.direction` vs top-level `direction`)
-- RLS che assume `user_id` su tabelle senza quella colonna
-- GRANT mancanti su tabelle public
-- Cron jobs con ordine invertito (memory-promoter vs memory_embed_backfill)
-- Edge functions dichiarate ma mai chiamate (dead code)
-- Tabelle `agent_personas`, `agent_routing_rules`, `prompt_test_cases` vuote malgrado layer attivo
-- Agenti con 0 tool o `can_send_email=false` mentre dovrebbero avere
+- E2E bloccante: **già fatto** (10 test critici in `.github/workflows/e2e-nightly.yml`).
+- Ratchet coverage: alzare `vitest.config.ts` gradualmente `10 → 15%` statements/lines, scrivendo **~15 nuovi test mirati** sui moduli critici già identificati:
+  - `src/v2/agent/runtime/intentClassifier.ts`
+  - `src/v2/ui/pages/command/hooks/useCommandSubmit.ts` (parti pure)
+  - `src/v2/agent/runtime/tools/*` (branch di validazione)
+  - `supabase/functions/_shared/inboxPostProcess.ts`
+  - `src/v2/core/domain/result.ts` / `errors.ts`
 
-### 5. Log runtime (le prove ultime)
-- `ai_gateway_logs` ultimi 7gg → errori 4xx/5xx, timeout, credit spike
-- `supabase edge_function_logs` sulle 20 funzioni più critiche → 500/504/IDLE_TIMEOUT (già visto `batch-enrichment-worker` in timeout 150s)
-- `ai_interaction_log` / `edge_metrics` → confermare telemetria on/off
+Threshold 15% è realistico in un giro; 30% richiede più iterazioni ed è tracciato come step successivo, non one-shot.
 
-## Deliverable
+## Punto 3 — Soppressioni ESLint (237 → target <150)
 
-Un unico report `docs/audit/treasure-hunt-2026-07-19.md` con:
-1. **Conteggio finale** (target ≥200, primo giro documentato)
-2. **Tabella per categoria**: TS errors | ESLint | Logica | Sovrapposizioni | RLS/GRANT | Dead code | DB drift | Runtime | Perf | Security
-3. Per ogni errore: `severity (P0/P1/P2/P3)`, `file:line`, `descrizione 1 riga`, `impatto`, `fix suggerito 1 riga`
-4. **Top 20 P0** in cima (da fixare subito)
-5. **Cluster/pattern ricorrenti** (es. "12 file usano `.single()` invece di `.maybeSingle()`")
+Attaccare le 3 regole più frequenti da `docs/audit/eslint-suppressions.md`. Tipicamente:
+- `@typescript-eslint/no-explicit-any` → tipare correttamente le firme di ritorno
+- `no-restricted-syntax` (bypass DAL) → moving i call site più semplici dentro `src/data/`
+- `react-hooks/exhaustive-deps` → aggiungere dep o memoizzare correttamente
 
-## Regole operative durante la caccia
-- Solo lettura (audit read-only). Nessuna modifica al codice in questa fase.
-- Batch parallelo di `rg`/read/query dove indipendenti.
-- Ogni errore deve essere **verificato** con `file:line` (no allucinazioni).
-- Se il conteggio primo giro < 200, secondo giro su categorie meno esplorate (perf, a11y, i18n, edge cases).
-- A fine audit propongo piano di fix ordinato per severità — nessun fix automatico.
+Target: **rimuovere ~90 soppressioni** senza rompere test o build. Le restanti (framework-driven, edge cases) vengono documentate con motivazione, non lasciate silenziose.
 
-## Cosa NON faccio in questa fase
-- Non modifico file
-- Non lancio migrazioni
-- Non riavvio dev server
-- Non "abbellisco" mentre trovo (nessun refactor opportunistico — PRINCIPIO MADRE)
+## Punto 4 — Edge Functions 150 → <100
 
-Confermi e vado? Al termine ricevi il report completo con conteggio.
+Consolidamento con SSOT, non cancellazioni cieche. Cluster in ordine:
+
+A. **Classificatori email** (5 funzioni → 1 orchestratore)
+   - `classify-emails-batch`, `classify-inbound-message`, `classify-inbound-content`, `funnemail-classify`, `funnemail-auto-route`
+   - Estraggo la logica comune in `_shared/emailClassifier.ts`, mantengo le entry HTTP come thin wrapper. Poi mando in deprecated le funzioni ridondanti reindirizzandole all'orchestratore.
+
+B. **Scheduler** (4 → 1)
+   - `outreach-scheduler`, `funnemail-reminders-tick`, `agent-task-drainer`, `process-inbound-enrichment` condividono pattern boot→drain→shutdown. Estraggo `_shared/schedulerRunner.ts` e uno solo entry `unified-scheduler` con `mode` parameter. Cron già configurati vengono migrati.
+
+C. **Toolhandler CRM** (`_shared/toolHandlersWrite.ts` ≡ `agent-execute/toolHandlers/crmTools.ts`)
+   - Un unico modulo condiviso, elimino la copia.
+
+D. **One-off/test funcs**: censimento e rimozione delle funzioni non chiamate da 30+ giorni (verifica via `edge_function_logs` + grep frontend).
+
+Stima realistica: **-40/-50 funzioni** → totale ~100/110. Se <100 non è raggiungibile senza degradare feature, mi fermo e lo dico.
+
+## Punto 5 — Repo pubblico
+
+**Azione tua, non mia.** Fuori dalla mia superficie di scrittura. Va fatto su GitHub → Settings → Danger Zone → Change visibility → Private. Lo lascio come TODO nel report finale.
+
+## Punto 6 — Sanitizzazione HTML (regex → librerie dedicate)
+
+- Client: installo `dompurify` + `@types/dompurify`; sostituisco tutte le `dangerouslySetInnerHTML` con contenuto non-fidato usando `DOMPurify.sanitize()` centralizzato in `src/v2/core/security/sanitizeHtml.ts`.
+- Edge (Deno): uso `npm:sanitize-html` in `supabase/functions/_shared/sanitizeHtml.ts` per email inbound rendering e KB entries.
+- Grep dei 3 punti attuali che usano regex HTML → sostituzione.
+- Nuovo test `src/v2/core/security/sanitizeHtml.test.ts` con vettori XSS classici (script tag, onerror, javascript:, data:text/html).
+
+## Punto 7 — Documentazione auto-generata
+
+- `scripts/gen-edge-catalog.mjs`: **già esiste**. Aggiungo hook pre-commit (`.husky/pre-commit`) che lo rilancia se cambiano file in `supabase/functions/`.
+- Nuovo `scripts/gen-readme-stats.mjs`: legge numeri reali (edge count, migrations count, LOC, coverage effettiva da `vitest.config.ts`) e riscrive un blocco `<!-- STATS:START -->…<!-- STATS:END -->` nel README. Elimina divergenza 149/148/150 e 35%/10%.
+- Aggiungo entrambi come step CI in `.github/workflows/ci.yml` (fail se README stale).
+
+---
+
+## Ordine di esecuzione e checkpoint
+
+Eseguo in sequenza 1 → 2 → 3 → 4 → 6 → 7 (salto il 5, azione tua). Ad ogni punto:
+1. Faccio le modifiche
+2. `bun run build` verde
+3. `bunx vitest run` verde
+4. Aggiorno `docs/audit/weaknesses-roadmap-2026-07-19.md` con lo stato reale
+
+Al termine: report finale con voto onesto ricalcolato, cosa è cambiato, cosa resta.
+
+## Rischi noti
+
+- **Punto 4 (edge consolidation)**: tocca nodi critici (cron, classificatori). Ogni merge include fallback e non elimina file finché la nuova versione non è verificata in log per un ciclo.
+- **Punto 3 (ESLint)**: alcune soppressioni sono legittime (tipi di libreria esterna). Non forzo la rimozione dove il fix richiederebbe refactor di terzi.
+- **Punto 6 (sanitize)**: `dompurify` funziona solo in browser; per SSR/edge servono jsdom o `sanitize-html`. Uso l'approccio corretto per contesto.
+
+Se un punto sfora o rompe test, mi fermo lì, ti riferisco lo stato e chiedo se cambiare rotta — non forzo per completare la lista.

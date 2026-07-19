@@ -165,3 +165,16 @@ export function fromUnknown(
 
   return createError(category, fallbackCode, message, "escalate", undefined, source);
 }
+
+/**
+ * extractErrorMessage — normalizza qualsiasi valore intercettato in un
+ * messaggio leggibile. Consolidato qui dal legacy `src/lib/errors.ts`.
+ */
+export function extractErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  if (e && typeof e === "object" && "message" in e && typeof (e as { message?: unknown }).message === "string") {
+    return (e as { message: string }).message;
+  }
+  return String(e);
+}
