@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Structured logger — Vol. I §3.3
  *
@@ -108,7 +107,7 @@ function getUserIdSafe(): string | undefined {
     const parsed: unknown = JSON.parse(raw);
     if (
       typeof parsed === "object" &&
-      parsed != null &&
+      parsed !== null &&
       "user" in parsed &&
       typeof (parsed as { user?: { id?: unknown } }).user?.id === "string"
     ) {
