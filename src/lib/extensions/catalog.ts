@@ -1,0 +1,553 @@
+/**
+ * Extension catalog types + DEFAULT_EXTENSION_CATALOG.
+ * Estratto da whatsappExtensionZip.ts per rispettare il budget LOC.
+ * SOLO dati e tipi, nessuna logica.
+ */
+
+export type ExtensionCatalogChannel = "partner-connect" | "whatsapp" | "linkedin" | "email" | "ra" | "wca";
+
+export interface ExtensionCatalogItem {
+  version: string;
+  filename: string;
+  path: string;
+  current: boolean;
+  note?: string;
+}
+
+export interface ExtensionCatalogSection {
+  title: string;
+  latestVersion: string;
+  items: ExtensionCatalogItem[];
+}
+
+export interface ExtensionCatalog {
+  "partner-connect"?: ExtensionCatalogSection;
+  whatsapp?: ExtensionCatalogSection;
+  linkedin?: ExtensionCatalogSection;
+  email?: ExtensionCatalogSection;
+  ra?: ExtensionCatalogSection;
+  wca?: ExtensionCatalogSection;
+}
+
+export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
+  whatsapp: {
+    title: "WhatsApp Direct Send",
+    latestVersion: "5.10.19",
+    items: [
+      {
+        version: "5.10.19",
+        filename: "whatsapp-extension-5.10.19.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.19.zip",
+        current: true,
+        note: "Persistent Worker Tab: pre-warm onInstalled/onStartup di una sola tab di servizio web.whatsapp.com in background. Read/send usano la worker tab già hot. Invalidazione su tabs.onRemoved + handler ensureWorkerTab esposto alla UI.",
+      },
+      {
+        version: "5.10.17",
+        filename: "whatsapp-extension-5.10.17.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.17.zip",
+        current: false,
+        note: "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato.",
+      },
+      {
+        version: "5.10.16",
+        filename: "whatsapp-extension-5.10.16.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.16.zip",
+        current: false,
+        note: "Verifica header chat dopo click search: blocca invio se non corrisponde al destinatario; match esatto preferito.",
+      },
+      {
+        version: "5.10.15",
+        filename: "whatsapp-extension-5.10.15.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.15.zip",
+        current: false,
+        note: "Hard guard destinatario: numero = sempre URL /send?phone=, mai riuso chat aperta",
+      },
+      {
+        version: "5.10.13",
+        filename: "whatsapp-extension-5.10.13.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.13.zip",
+        current: false,
+        note: "Fix duplicazione messaggio: trust execCommand insertText, niente fallback paste se l'insert è andato a buon fine",
+      },
+      {
+        version: "5.10.12",
+        filename: "whatsapp-extension-5.10.12.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.12.zip",
+        current: false,
+        note: "Fix finestre duplicate: niente automation window, riuso tab WhatsApp esistente, lock creazione tab",
+      },
+      {
+        version: "5.10.11",
+        filename: "whatsapp-extension-5.10.11.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.11.zip",
+        current: false,
+        note: "Fix invio: typing via execCommand (Lexical), poll send button, fallback Enter",
+      },
+      {
+        version: "5.10.10",
+        filename: "whatsapp-extension-5.10.10.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.10.zip",
+        current: false,
+        note: "Auto-dismiss popup 'Usa qui' (sessione altrove) durante verifySession",
+      },
+      {
+        version: "5.10.9",
+        filename: "whatsapp-extension-5.10.9.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.9.zip",
+        current: false,
+        note: "Tab inattive senza finestra bianca, riusa tab esistenti web.whatsapp.com",
+      },
+      {
+        version: "5.10.4",
+        filename: "whatsapp-extension-5.10.4.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.4.zip",
+        current: false,
+        note: "Fix: riusa la tab WhatsApp già autenticata invece di aprirne una nuova",
+      },
+      {
+        version: "5.10.3",
+        filename: "whatsapp-extension-5.10.3.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.3.zip",
+        current: false,
+        note: "Rimappa DOM invio manuale (Optimus send_form)",
+      },
+      {
+        version: "5.10.2",
+        filename: "whatsapp-extension-5.10.2.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.2.zip",
+        current: false,
+        note: "Fix selettore search box WA (chat-list-search-container)",
+      },
+      {
+        version: "5.10.1",
+        filename: "whatsapp-extension-5.10.1.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.1.zip",
+        current: false,
+        note: "Archivio — bridge AI iframe-aware (search box rotta su WA recente)",
+      },
+      {
+        version: "5.10.0",
+        filename: "whatsapp-extension-5.10.0.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.0.zip",
+        current: false,
+        note: "Archivio — focus isolation, no iframe bridge",
+      },
+      {
+        version: "5.9.0",
+        filename: "whatsapp-extension-5.9.0.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.9.0.zip",
+        current: false,
+        note: "Archivio — Optimus V2 (focus stealing bug)",
+      },
+    ],
+  },
+  linkedin: {
+    title: "LinkedIn Cookie Sync",
+    latestVersion: "3.9.59",
+    items: [
+      {
+        version: "3.9.59",
+        filename: "linkedin-extension-3.9.59.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip",
+        current: true,
+        note: "Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Send invariato.",
+      },
+      {
+        version: "3.9.58",
+        filename: "linkedin-extension-3.9.58.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.58.zip",
+        current: false,
+        note: "Persistent Worker Tab: una sola tab di servizio in background parcheggiata su /messaging/, mai attivata. read/send messaging usano la worker tab pre-warmed (cold start una volta sola). Pre-warm onInstalled/onStartup, invalidazione su tabs.onRemoved.",
+      },
+      {
+        version: "3.9.56",
+        filename: "linkedin-extension-3.9.56.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56.zip",
+        current: false,
+        note: "AI-Verified Click: AILearn (read-only) fornisce sendButtonSelector verificato prima del click. Cache-first, relearn+1 retry SOLO se bottone non trovato (zero rischio doppio invio). Fallback regex se AI giù. Single writer e anti-double-send 2s invariati.",
+      },
+      {
+        version: "3.9.55",
+        filename: "linkedin-extension-3.9.55.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.55.zip",
+        current: false,
+        note: "Path tab READ-ONLY separato per readInbox: legge l'inbox in una nuova tab background invece di dirottare la pagina LinkedIn attiva dell'utente. Pipeline sendMessage invariata.",
+      },
+      {
+        version: "3.9.54",
+        filename: "linkedin-extension-3.9.54.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.54.zip",
+        current: false,
+        note: "Click ottimistico post-Send: physical click su bottone enabled, verifica soft (verified=true|false) senza submit/Ctrl+Enter/CDP fallback. Anti-double-send 2s su tab+path+msg. Cleanup overlay stale. Tab targeting URL esatto.",
+      },
+      {
+        version: "3.9.53",
+        filename: "linkedin-extension-3.9.53.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.53.zip",
+        current: false,
+        note: "Restore backup 3.9.48 + anti-doppio-invio (stessa coppia url+messaggio entro 4s bloccata). Pipeline invariata: navigate focus-safe, clickMessage, attesa composer, writer.",
+      },
+      {
+        version: "3.9.52",
+        filename: "linkedin-extension-3.9.52.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.52.zip",
+        current: false,
+        note: "Fix probe composer: no-navigation reale. Il test composer cerca solo tab LinkedIn già aperte con textbox visibile, senza getLinkedInTab/navigate né attese load che causavano Timeout 8s.",
+      },
+      {
+        version: "3.9.51",
+        filename: "linkedin-extension-3.9.51.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.51.zip",
+        current: false,
+        note: "Fix background composer: passa mode dal bridge, non naviga via dal composer già aperto e non chiude overlay in background. Ripristina scrittura dai backup mantenendo interactive opt-in.",
+      },
+      {
+        version: "3.9.50",
+        filename: "linkedin-extension-3.9.50.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.50.zip",
+        current: false,
+        note: "Due modalità composer: background_existing_composer (default safe, fail in ~4s se chat non aperta) e interactive_open_composer (opt-in, porta tab in foreground). Niente più attesa cieca 30s in background; UI test con probe + selettore modalità.",
+      },
+      {
+        version: "3.9.49",
+        filename: "linkedin-extension-3.9.49.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.49.zip",
+        current: false,
+        note: "Pipeline UNICA send/diagnostic: gate reale (HybridOps.waitForMessageComposer) anche nel path standard, write/send separati con send_button_not_enabled_after_write, niente sleep(3000), niente fallback writer su gate fail.",
+      },
+      {
+        version: "3.9.48",
+        filename: "linkedin-extension-3.9.48.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.48.zip",
+        current: false,
+        note: "Backup ripristinato esatto, nessuna modifica. Pipeline originale: navigate focus-safe, click Messaggia, attesa composer, writer (doppio invio nelle due finestre come da backup).",
+      },
+      {
+        version: "3.9.47",
+        filename: "linkedin-extension-3.9.47.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.47.zip",
+        current: false,
+        note: "Fix composer_not_open: se il probe del composer fallisce, fallback automatico a HybridOps.sendMessage (writer produzione, attesa textbox 20s + cascata invio).",
+      },
+      {
+        version: "3.9.46",
+        filename: "linkedin-extension-3.9.46.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.46.zip",
+        current: false,
+        note: "Fix profile_not_ready: lo ZIP include davvero attesa tab complete, polling Messaggia esteso e click ottimistico.",
+      },
+      {
+        version: "3.9.45",
+        filename: "linkedin-extension-3.9.45.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.45.zip",
+        current: false,
+        note: "Fix composer_not_open: clickMessage non considera più dialog/overlay senza textbox come composer aperto; clicca davvero Messaggia dal profilo.",
+      },
+      {
+        version: "3.9.44",
+        filename: "linkedin-extension-3.9.44.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.44.zip",
+        current: false,
+        note: "Background mode: i test diagnostici (physical_click, CDP, form_submit, ecc.) aprono da soli il composer focus-safe e poi eseguono il metodo. L'operatore non deve più aprire la chat manualmente.",
+      },
+      {
+        version: "3.9.43",
+        filename: "linkedin-extension-3.9.43.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.43.zip",
+        current: false,
+        note: "Composer-first fast test: Invia LI e i test isolati usano la tab con composer visibile, senza navigare e senza timeout 90s.",
+      },
+      {
+        version: "3.9.42",
+        filename: "linkedin-extension-3.9.42.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.42.zip",
+        current: false,
+        note: "Archivio — ultimo miglio con native click/requestSubmit; ancora lento sul path sendMessage standard.",
+      },
+      {
+        version: "3.9.40",
+        filename: "linkedin-extension-3.9.40.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.40.zip",
+        current: false,
+        note: "Manual test safe-path: niente navigazione/click Messaggia nei test diagnostici; ripristinato backup writer Selection API che scrive nel composer già aperto, poi solo ultimo miglio.",
+      },
+      {
+        version: "3.9.39",
+        filename: "linkedin-extension-3.9.39.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.39.zip",
+        current: false,
+        note: "Diagnostic fast-path: i pulsanti CDP/Ctrl+Enter/physical_click su /test-extensions partono istantaneamente sul composer LinkedIn già aperto (≤2s). Invio produttivo invariato.",
+      },
+      {
+        version: "3.9.38",
+        filename: "linkedin-extension-3.9.38.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.38.zip",
+        current: false,
+        note: "P23 — Single writer policy: AX/AI rimossi dal percorso di invio. Solo DOM writer deterministico (paste/execCommand/textContent) + cascata click. Nessun writer parallelo, fallimenti espliciti.",
+      },
+      {
+        version: "3.9.37",
+        filename: "linkedin-extension-3.9.37.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.37.zip",
+        current: false,
+        note: "P22 — clickMessage scoped al top-card profilo (no overlay multipli), readThread/backfill su profilo navigano sempre al target, AX typeMessage off in invio produzione.",
+      },
+      {
+        version: "3.9.36",
+        filename: "linkedin-extension-3.9.36.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.36.zip",
+        current: false,
+        note: "P20 — Form submit bounded/no-navigation: niente requestSubmit, niente tab nuove, niente timeout 90s.",
+      },
+      {
+        version: "3.9.34",
+        filename: "linkedin-extension-3.9.34.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.34.zip",
+        current: false,
+        note: "P19 — Tutte le azioni no-new-tab; invio con fallback CDP reali per click e Ctrl/Cmd+Enter.",
+      },
+      {
+        version: "3.9.33",
+        filename: "linkedin-extension-3.9.33.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.33.zip",
+        current: false,
+        note: "P18 — Invio non invasivo: non apre nuove tab Chrome e non attiva LinkedIn; usa solo una tab LinkedIn già esistente.",
+      },
+      {
+        version: "3.9.32",
+        filename: "linkedin-extension-3.9.32.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.32.zip",
+        current: false,
+        note: "P17 — Invio focus-safe: non attiva né porta davanti la tab LinkedIn durante l'invio; l'operatore resta sulla webapp.",
+      },
+      {
+        version: "3.9.31",
+        filename: "linkedin-extension-3.9.31.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.31.zip",
+        current: false,
+        note: "P16 — Thread test usa URL fisso/profilo; invio finale con physical click + form submit + Ctrl/Cmd Enter fallback.",
+      },
+      {
+        version: "3.9.29",
+        filename: "linkedin-extension-3.9.29.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.29.zip",
+        current: false,
+        note: "P1/P2 — ReadThread e backfill robusti, dedup stabile, ID reali e pannello qualità sync.",
+      },
+      {
+        version: "3.9.28",
+        filename: "linkedin-extension-3.9.28.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.28.zip",
+        current: false,
+        note: "P0 — Dedup chiave composita (mai solo nome), AX Tree honest, method/confidence su thread e messaggi.",
+      },
+      {
+        version: "3.9.27",
+        filename: "linkedin-extension-3.9.27.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.27.zip",
+        current: false,
+        note: "P15.2 — Fix avvio test: il diagnostico naviga al profilo richiesto prima di cercare il composer.",
+      },
+      {
+        version: "3.9.26",
+        filename: "linkedin-extension-3.9.26.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.26.zip",
+        current: false,
+        note: "P15.1 — Fix bridge: il content script ora inoltra `method` al background, sbloccando i 3 test diagnostici di click invio.",
+      },
+      {
+        version: "3.9.25",
+        filename: "linkedin-extension-3.9.25.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.25.zip",
+        current: false,
+        note: "P15 — Diagnostico: 3 pulsanti di test isolati per i metodi di click invio (physical_click / form_submit / keyboard_shortcut). Cascata produzione invariata.",
+      },
+      {
+        version: "3.9.24",
+        filename: "linkedin-extension-3.9.24.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.24.zip",
+        current: false,
+        note: "P14 — Riusa il composer LinkedIn già aperto: non naviga fuori pagina, non apre una seconda chat, non forza focus; conserva invio P13.",
+      },
+      {
+        version: "3.9.21",
+        filename: "linkedin-extension-3.9.21.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.21.zip",
+        current: false,
+        note: "Anti-mis-recipient: chiude overlay chat fluttuanti e verifica URL profilo prima di clickMessage/sendMessage",
+      },
+      {
+        version: "3.9.19",
+        filename: "linkedin-extension-3.9.19.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.19.zip",
+        current: false,
+        note: "Fix invio: timeout AX/AI controllati, bridge test a 90s, rimappa DOM su thread reale.",
+      },
+      {
+        version: "3.9.18",
+        filename: "linkedin-extension-3.9.18.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.18.zip",
+        current: false,
+        note: "Fix invio: textbox cercato in shadow DOM, attesa thread + readyState, polling esteso a 20s.",
+      },
+      {
+        version: "3.9.17",
+        filename: "linkedin-extension-3.9.17.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.17.zip",
+        current: false,
+        note: "Fix invio: guardia URL accetta /messaging/thread/ (LinkedIn redireziona la tab dopo click Messaggia per contatti 1° grado)",
+      },
+      {
+        version: "3.9.16",
+        filename: "linkedin-extension-3.9.16.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.16.zip",
+        current: false,
+        note: "Diagnostica invio: probe DOM read-only quando textbox non trovato (overlay/dialog/contenteditable counts).",
+      },
+      {
+        version: "3.9.15",
+        filename: "linkedin-extension-3.9.15.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.15.zip",
+        current: false,
+        note: "Fix invio: bottone Messaggia scoped al profilo (esclude top-nav inbox), guardia URL pre-invio + retry su drift",
+      },
+      {
+        version: "3.9.14",
+        filename: "linkedin-extension-3.9.14.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.14.zip",
+        current: false,
+        note: "Fix invio: textbox composer più robusto, supporto dialog e menu Altro/More",
+      },
+      {
+        version: "3.9.13",
+        filename: "linkedin-extension-3.9.13.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.13.zip",
+        current: false,
+        note: "Fix extractProfile: scoped a <main>, blacklist nav (no più 'Nome: 0 notifiche'), headline+location anche da AX tree",
+      },
+      {
+        version: "3.9.12",
+        filename: "linkedin-extension-3.9.12.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.12.zip",
+        current: false,
+        note: "Fix invio: poll textbox 8s + retry click Messaggia + attesa Send abilitato",
+      },
+      {
+        version: "3.9.11",
+        filename: "linkedin-extension-3.9.11.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.11.zip",
+        current: false,
+        note: "Deep inbox harvest: più thread, ID e URL profilo contatto-specifici",
+      },
+      {
+        version: "3.9.10",
+        filename: "linkedin-extension-3.9.10.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.10.zip",
+        current: false,
+        note: "Harvest URL inbox post-Optimus: recupera thread/profile URL anche da plan cached",
+      },
+      {
+        version: "3.9.9",
+        filename: "linkedin-extension-3.9.9.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.9.zip",
+        current: false,
+        note: "Fallback profile URL nelle inbox cards senza thread anchor (contatti con URL valido)",
+      },
+      {
+        version: "3.9.8",
+        filename: "linkedin-extension-3.9.8.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.8.zip",
+        current: false,
+        note: "Tab inattive senza finestra bianca, riusa tab esistenti linkedin.com",
+      },
+      {
+        version: "3.9.3",
+        filename: "linkedin-extension-3.9.3.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.3.zip",
+        current: false,
+        note: "Rimappa DOM invio manuale (Optimus relearn messaging/profile)",
+      },
+      {
+        version: "3.9.2",
+        filename: "linkedin-extension-3.9.2.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.2.zip",
+        current: false,
+        note: "Optimus V2.1 — bridge AI ora trova la webapp anche dentro iframe (editor Lovable)",
+      },
+      {
+        version: "3.9.0",
+        filename: "linkedin-extension-3.9.0.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.0.zip",
+        current: false,
+        note: "Archivio — focus isolation, no iframe bridge",
+      },
+      {
+        version: "3.8.0",
+        filename: "linkedin-extension-3.8.0.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.8.0.zip",
+        current: false,
+        note: "Archivio — Optimus V2 (focus stealing bug)",
+      },
+    ],
+  },
+  "partner-connect": {
+    title: "Partner Connect",
+    latestVersion: "3.4.3",
+    items: [
+      {
+        version: "3.4.3",
+        filename: "partner-connect-extension-3.4.3.zip",
+        path: "/chrome-extensions/partner-connect/partner-connect-extension-3.4.3.zip",
+        current: true,
+        note: "Partner Connect 3.4.3 — canale LinkedIn disabilitato: LinkedIn passa solo da LinkedIn Cookie Sync.",
+      },
+      {
+        version: "3.4.2",
+        filename: "partner-connect-extension-3.4.2.zip",
+        path: "/chrome-extensions/partner-connect/partner-connect-extension-3.4.2.zip",
+        current: false,
+        note: "Archivio.",
+      },
+    ],
+  },
+  email: {
+    title: "Email Client Universale",
+    latestVersion: "5.0.0",
+    items: [
+      {
+        version: "5.0.0",
+        filename: "email-extension-5.0.0.zip",
+        path: "/chrome-extensions/email/email-extension-5.0.0.zip",
+        current: true,
+        note: "Universal Communication Hub — pannello laterale email e canali.",
+      },
+    ],
+  },
+  ra: {
+    title: "ReportAziende Cookie Sync",
+    latestVersion: "1.0",
+    items: [
+      {
+        version: "1.0",
+        filename: "ra-extension-1.0.zip",
+        path: "/chrome-extensions/ra/ra-extension-1.0.zip",
+        current: true,
+        note: "Login automatico e sincronizzazione cookie per ReportAziende.it.",
+      },
+    ],
+  },
+  wca: {
+    title: "WCA Cookie Sync",
+    latestVersion: "3.0",
+    items: [
+      {
+        version: "3.0",
+        filename: "wca-extension-3.0.zip",
+        path: "/chrome-extensions/wca/wca-extension-3.0.zip",
+        current: true,
+        note: "Login automatico, sincronizzazione cookie ed estrazione contatti WCA.",
+      },
+    ],
+  },
+};
+
