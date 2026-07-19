@@ -18,7 +18,7 @@ import DOMPurify from "dompurify";
 
 // Config email-safe + hardening extra.
 // `RETURN_TRUSTED_TYPE: false` garantisce che l'output sia sempre `string`.
-const CONFIG = {
+const CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   USE_PROFILES: { html: true },
   ADD_ATTR: ["target", "rel"],
   FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "form", "noscript", "svg", "math"],
@@ -26,7 +26,7 @@ const CONFIG = {
   ALLOW_DATA_ATTR: false,
   ALLOW_UNKNOWN_PROTOCOLS: false,
   RETURN_TRUSTED_TYPE: false,
-} as const;
+};
 
 // Hook per forzare rel="noopener noreferrer" su tutti i link target="_blank"
 let hooksInstalled = false;
