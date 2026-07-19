@@ -20,6 +20,14 @@ Piano ordinato per risolvere le 7 debolezze identificate dall'audit esterno.
 - `docs/audit/v1-v2-duplicates.md` — 23 candidati con path v1/v2
 - `docs/audit/eslint-suppressions.md` — 237 hit per regola e file
 
+## Eseguito il 2026-07-19
+
+- ✅ **E2E nightly bloccante** su 10 test critici (auth-guard, csp, prompt-injection, mailbox-access, public-edge, cron-secret, ai-invocation-charter, editorial-review, wca-risk-gate, home.smoke). Suite completa resta in modalità report-only.
+- ✅ **Consolidamento `inboxPostProcess`**: `check-inbox/postProcessing.ts` ≡ `check-inbox-booking/postProcessing.ts` (identici byte-per-byte) → estratti in `supabase/functions/_shared/inboxPostProcess.ts`. Risolve il P0 #11 dell'audit (fix drift sul filter `direction`).
+- ⏸️ **Duplicati v1/v2**: dei 23 candidati basename-match, la maggior parte NON sono veri duplicati (contenuti diversi). Richiede audit manuale, non elimino nulla in automatico.
+- ⏸️ **Baseline migrazioni**: richiede backup DB esplicito dell'utente.
+- ⏸️ **Repo privato**: azione utente su GitHub.
+
 ## Priorità (in ordine di ROI)
 
 ### P0 — Sicurezza / decisione utente
