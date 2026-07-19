@@ -1,5 +1,22 @@
 # WCA Network Navigator
 
+<!-- STATS:START -->
+<!-- Generato automaticamente da scripts/gen-readme-stats.mjs — non editare a mano -->
+
+| Metrica | Valore reale |
+|---------|--------------|
+| Edge Functions | **150** |
+| Migrazioni SQL | **411** |
+| File test (`*.test.{ts,tsx}`) | **365** |
+| Coverage threshold — statements | **10%** |
+| Coverage threshold — branches | **53%** |
+| Coverage threshold — functions | **30%** |
+| Coverage threshold — lines | **10%** |
+
+_Ultimo aggiornamento: 2026-07-19_
+<!-- STATS:END -->
+
+
 CRM con intelligenza artificiale per il freight forwarding globale.
 
 ## Stack
