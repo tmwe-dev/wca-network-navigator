@@ -24,6 +24,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+import {
+  ACTION_VARIANT,
+  LAYER_META,
+  SEVERITY_CLS,
+  TEST_URGENCY_LABEL,
+  isDocNote,
+  isManaged,
+  isSafe,
+} from "./harmonizeReview.constants";
 
 function EditableAfter({
   value,
@@ -115,33 +124,6 @@ interface Props {
   applyingSelected?: boolean;
 }
 
-const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
-  UPDATE: "bg-primary/10 text-primary border-primary/20",
-  INSERT: "bg-success/10 text-success border-success/20",
-  MOVE: "bg-warning/10 text-warning border-warning/20",
-  DELETE: "bg-destructive/10 text-destructive border-destructive/20",
-};
-
-const LAYER_META: Record<HarmonizeProposal["resolution_layer"], { label: string; icon: typeof FileText; cls: string }> = {
-  text: { label: "Testo", icon: FileText, cls: "bg-muted text-muted-foreground" },
-  contract: { label: "Contratto backend", icon: Wrench, cls: "bg-warning/10 text-warning border-warning/20" },
-  code_policy: { label: "Policy nel codice", icon: Code2, cls: "bg-destructive/10 text-destructive border-destructive/20" },
-  kb_governance: { label: "Governance KB", icon: BookOpen, cls: "bg-primary/10 text-primary border-primary/20" },
-};
-
-const SEVERITY_CLS: Record<NonNullable<HarmonizeProposal["severity"]>, string> = {
-  low: "bg-muted text-muted-foreground",
-  medium: "bg-warning/10 text-warning border-warning/20",
-  high: "bg-warning/10 text-warning border-warning/30",
-  critical: "bg-destructive/15 text-destructive border-destructive/30",
-};
-
-const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>, string> = {
-  none: "Nessun test",
-  manual_smoke: "Smoke manuale",
-  regression_full: "Regression completa",
-};
-
 export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle, onDiscardSingle, onApplySelected, applyingSelected }: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [discardingId, setDiscardingId] = useState<string | null>(null);
@@ -182,19 +164,6 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
   }
 
   const readOnly = proposals.filter((p) => p.resolution_layer === "contract" || p.resolution_layer === "code_policy");
-
-  // Una proposta è "nota documentale" se l'AI l'ha marcata come tale.
-  const isDocNote = (p: HarmonizeProposal) => p.is_document_note === true;
-  // "Gestita" = già applicata al DB (executed) o fallita.
-  const isManaged = (p: HarmonizeProposal) => p.status === "executed" || p.status === "failed";
-
-  // Una proposta è "sicura" se è solo testo, non DELETE, non INSERT su agents, e impatto non alto.
-  const isSafe = (p: HarmonizeProposal) =>
-    !isDocNote(p) &&
-    p.resolution_layer === "text" &&
-    p.action !== "DELETE" &&
-    p.impact !== "high" &&
-    !(p.action === "INSERT" && p.target.table === "agents");
 
   // Conteggi per i tab — sempre escludendo le note doc dai gruppi sicure/da rivedere
   // (le note doc hanno il loro tab dedicato).

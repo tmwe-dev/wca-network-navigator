@@ -11,7 +11,7 @@
  * Layout: 3 colonne (prompt list • test cases • dettaglio + esiti).
  * Logic-less: tutta la business logic è in DAL (`@/data/promptTests`).
  */
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
 import { findOperativePrompts } from "@/data/operativePrompts";
@@ -34,42 +34,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Play, Plus, Trash2, CheckCircle2, XCircle, AlertTriangle, History, Building2, Languages, BookOpen, ChevronRight } from "lucide-react";
-
-interface PromptOption { id: string; name: string }
-
-const QK_PROMPTS = ["prompt-tests", "prompts-list"] as const;
-const qkCases = (promptId: string) => ["prompt-tests", "cases", promptId] as const;
-const qkRuns = (promptId: string) => ["prompt-tests", "runs", promptId] as const;
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: "bg-destructive/15 text-destructive border-destructive/30",
-  warning: "bg-warning/15 text-warning dark:text-warning border-warning/30",
-  info: "bg-info/15 text-info border-info/30",
-};
-
-const STATUS_ICON: Record<string, ReactNode> = {
-  passed: <CheckCircle2 className="h-3.5 w-3.5 text-success" />,
-  failed: <XCircle className="h-3.5 w-3.5 text-destructive" />,
-  error: <AlertTriangle className="h-3.5 w-3.5 text-warning" />,
-  skipped: <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />,
-};
-
-function emptyDraft(promptId: string): Partial<PromptTestCase> {
-  return {
-    prompt_id: promptId,
-    name: "Nuovo test case",
-    description: "",
-    input_payload: {},
-    expected_contains: [],
-    expected_not_contains: [],
-    expected_regex: null,
-    severity: "warning",
-    is_active: true,
-    temperature: 0.3,
-    model: null,
-  };
-}
+import { Loader2, Play, Plus, Trash2, XCircle, History, Building2, Languages, BookOpen, ChevronRight } from "lucide-react";
+import {
+  QK_PROMPTS,
+  qkCases,
+  qkRuns,
+  SEVERITY_COLORS,
+  STATUS_ICON,
+  emptyDraft,
+  type PromptOption,
+} from "./promptTestsTab.constants";
 
 export function PromptTestsTab() {
   const { user } = useAuth();
