@@ -130,6 +130,17 @@ function plannerFallbackResponse(
   );
 }
 
+function openAiLimitMessage(error: AiGatewayError): string {
+  const detail = (error.detail ?? "").toLowerCase();
+  if (detail.includes("insufficient_quota")) {
+    return "OpenAI ha rifiutato la richiesta per credito/quota non disponibile. Non è un errore dei dati: aggiorna credito o chiave OpenAI e riprova.";
+  }
+  if (detail.includes("tokens per min") || detail.includes("tpm") || detail.includes("rate_limit_exceeded")) {
+    return "OpenAI ha rifiutato la richiesta per limite temporaneo di token al minuto. Ho evitato retry aggiuntivi per non peggiorare il blocco: attendi qualche secondo e riprova.";
+  }
+  return "OpenAI ha rifiutato la richiesta per limite temporaneo (429). Non è un errore della ricerca o del database: attendi qualche secondo e riprova.";
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
@@ -175,13 +186,15 @@ Deno.serve(async (req: Request) => {
         // provider di fallback potenzialmente sotto rate-limit.
         scope: "ai_query_planner",
         temperature: 0.1,
+        max_tokens: 900,
+        maxRetries: 0,
       });
       content = r.content ?? "";
     } catch (e) {
       if (e instanceof AiGatewayError) {
         const userMsg =
           e.kind === "credits_exhausted" ? "Crediti AI esauriti."
-          : e.kind === "rate_limited" ? "Troppe richieste, riprova tra qualche secondo."
+          : e.kind === "rate_limited" ? openAiLimitMessage(e)
           : e.kind === "unauthorized" ? "Chiave AI non valida o scaduta."
           : `Errore AI: ${e.kind}`;
         return plannerFallbackResponse(corsHeaders, userMsg, e.kind);
