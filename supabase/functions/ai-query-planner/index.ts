@@ -187,7 +187,7 @@ Deno.serve(async (req: Request) => {
         scope: "ai_query_planner",
         temperature: 0.1,
         max_tokens: 900,
-        maxRetries: 1,
+        maxRetries: 0,
       });
       content = r.content ?? "";
     } catch (e) {
