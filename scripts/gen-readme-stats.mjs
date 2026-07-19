@@ -3,10 +3,10 @@
  * gen-readme-stats.mjs — rigenera il blocco STATS del README con numeri reali.
  *
  * Fonti:
- *  - Edge functions: conteggio di `supabase/functions/*/index.ts`
- *  - Migrazioni:     conteggio di `supabase/migrations/*.sql`
- *  - Vitest coverage: parsing di `vitest.config.ts`
- *  - Test files:     conteggio dei `*.test.{ts,tsx}` in `src/`
+ *  - Edge functions: sottocartelle di supabase/functions (escluso _shared)
+ *  - Migrazioni: file .sql in supabase/migrations
+ *  - Vitest coverage: parsing di vitest.config.ts
+ *  - Test files: file .test.ts/.test.tsx in src
  *
  * Uso:
  *   node scripts/gen-readme-stats.mjs         # aggiorna README.md
