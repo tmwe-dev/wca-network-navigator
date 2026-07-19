@@ -19,9 +19,6 @@ import {
   Edit3,
   Loader2,
   Sparkles,
-  BookOpen,
-  Wrench,
-  User,
   AlertTriangle,
   List,
   UserSquare2,
@@ -30,40 +27,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
-import type { SuggestedImprovement, SuggestionPriority } from "@/data/suggestedImprovements";
+import type { SuggestedImprovement } from "@/data/suggestedImprovements";
 import { findRecentHarmonizeRuns, type HarmonizeRun } from "@/data/harmonizeRuns";
 import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
 import { SingleProposalReview } from "./components/SingleProposalReview";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-function priorityColor(p: SuggestionPriority): string {
-  switch (p) {
-    case "critical": return "bg-destructive/15 text-destructive border-destructive/40";
-    case "high": return "bg-warning/15 text-warning border-warning/40";
-    case "medium": return "bg-warning/15 text-warning border-warning/40";
-    case "low": return "bg-muted text-muted-foreground border-border";
-  }
-}
-
-function typeIcon(type: string) {
-  switch (type) {
-    case "kb_rule": return <BookOpen className="h-3 w-3" />;
-    case "prompt_adjustment": return <Wrench className="h-3 w-3" />;
-    case "user_preference": return <User className="h-3 w-3" />;
-    default: return <BookmarkPlus className="h-3 w-3" />;
-  }
-}
-
-function typeLabel(type: string): string {
-  switch (type) {
-    case "kb_rule": return "Regola KB";
-    case "prompt_adjustment": return "Modifica Prompt";
-    case "user_preference": return "Preferenza utente";
-    default: return type;
-  }
-}
+import { priorityColor, typeIcon, typeLabel } from "./suggestionsReview.helpers";
 
 function SuggestionCard({
   item,
