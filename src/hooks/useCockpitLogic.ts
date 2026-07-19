@@ -23,30 +23,6 @@ import type { AssignmentInfo } from "@/types/cockpit";
 import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/types/cockpit";
 import { queryKeys } from "@/lib/queryKeys";
 
-/**
- * Lookup a LinkedIn profile URL via Google search (Partner Connect).
- * This replaces direct LinkedIn scraping to avoid TOS violations.
- * Returns enrichment_data to store in DB, NOT extracted profile data.
- */
-async function _lookupLinkedInProfileUrl(
-  linkedinLookup: ReturnType<typeof useLinkedInLookup>,
-  contactName: string,
-  company: string | null | undefined,
-  email: string | null | undefined,
-  signal: AbortSignal,
-): Promise<string | null> {
-  if (signal.aborted) return null;
-
-  const searchResult = await linkedinLookup.searchSingle({
-    name: contactName,
-    company: company || undefined,
-    email: email || undefined,
-  });
-
-  if (signal.aborted) return null;
-  return searchResult.url || null;
-}
-
 export function useCockpitLogic() {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
