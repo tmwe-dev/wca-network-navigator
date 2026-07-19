@@ -5,6 +5,7 @@
  * Tabella creata dopo la rigenerazione dei tipi: cast espliciti.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export type FunnemailJobStatus =
   | "nuovo"
@@ -66,20 +67,8 @@ export interface FunnemailStatusHistoryRow {
 const TABLE = "funnemail_message_status" as const;
 const HISTORY_TABLE = "funnemail_message_status_history" as const;
 
-type AnyFrom = (t: string) => {
-  select: (cols: string) => {
-    is?: (col: string, val: null) => unknown;
-    eq?: (col: string, val: unknown) => unknown;
-    order?: (col: string, opts?: { ascending?: boolean }) => unknown;
-  };
-  upsert: (row: Record<string, unknown>, opts?: Record<string, unknown>) => Promise<{ error: unknown }>;
-};
-
-const fromAny = supabase.from as unknown as AnyFrom;
-
 export async function listStatusesForGroup(groupId?: string | null): Promise<FunnemailStatusRow[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q = (supabase.from as unknown as (t: string) => any)(TABLE)
+  let q = untypedFrom(TABLE)
     .select("message_id, group_id, status, status_reason, changed_by, changed_at, user_id")
     .is("deleted_at", null);
   if (groupId) q = q.eq("group_id", groupId);
@@ -98,7 +87,7 @@ export async function setMessageStatus(args: {
   const uid = userData.user?.id;
   if (!uid) throw new Error("not_authenticated");
 
-  const { error } = await fromAny(TABLE).upsert(
+  const { error } = await untypedFrom(TABLE).upsert(
     {
       message_id: args.messageId,
       group_id: args.groupId ?? null,
@@ -114,8 +103,7 @@ export async function setMessageStatus(args: {
 }
 
 export async function listStatusHistory(messageId: string): Promise<FunnemailStatusHistoryRow[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from as unknown as (t: string) => any)(HISTORY_TABLE)
+  const { data, error } = await untypedFrom(HISTORY_TABLE)
     .select("*")
     .eq("message_id", messageId)
     .order("changed_at", { ascending: false });
@@ -124,10 +112,7 @@ export async function listStatusHistory(messageId: string): Promise<FunnemailSta
 }
 
 export async function listSortingQueue(): Promise<FunnemailStatusRow[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from as unknown as (t: string) => any)(
-    "funnemail_sorting_queue",
-  )
+  const { data, error } = await untypedFrom("funnemail_sorting_queue")
     .select("*")
     .order("changed_at", { ascending: true });
   if (error) throw error;
@@ -135,10 +120,7 @@ export async function listSortingQueue(): Promise<FunnemailStatusRow[]> {
 }
 
 export async function countSortingQueue(): Promise<number> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { count, error } = await (supabase.from as unknown as (t: string) => any)(
-    "funnemail_sorting_queue",
-  )
+  const { count, error } = await untypedFrom("funnemail_sorting_queue")
     .select("message_id", { count: "exact", head: true });
   if (error) throw error;
   return count ?? 0;
