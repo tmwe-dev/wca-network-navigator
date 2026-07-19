@@ -11,28 +11,13 @@ import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 import { searchWaRecipients, type WaTestRecipient } from "@/data/whatsappTestLookup";
-
-interface FoundContact {
-  contact: string;
-  time?: string;
-}
-
-const WA_FIXED_RECIPIENT_KEY = "wa_test_fixed_recipient";
-const WA_LEGACY_LAST_RECIPIENT_KEY = "wa_test_last_recipient";
-
-interface StoredWaTestRecipient {
-  phone?: string;
-  name?: string | null;
-  company?: string | null;
-  savedAt?: string;
-}
-
-function normalizeWaTestPhone(raw: string): string | null {
-  const cleaned = raw.trim().replace(/[^0-9+]/g, "");
-  const digits = cleaned.replace(/^\+/, "");
-  if (digits.length < 7) return null;
-  return cleaned.startsWith("+") ? cleaned : `+${digits}`;
-}
+import {
+  WA_FIXED_RECIPIENT_KEY,
+  WA_LEGACY_LAST_RECIPIENT_KEY,
+  normalizeWaTestPhone,
+  type FoundContact,
+  type StoredWaTestRecipient,
+} from "./whatsAppTest.types";
 
 export function WhatsAppTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
