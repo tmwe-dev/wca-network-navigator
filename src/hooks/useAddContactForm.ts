@@ -1,6 +1,6 @@
 /**
- * useAddContactForm — All state + async logic for AddContactDialog, extracted from monolith.
- * Zero `any` — fully typed.
+ * useAddContactForm — All state + async logic for AddContactDialog.
+ * Costanti, helper puri e reducer estratti in `useAddContactForm/*` per LOC budget.
  */
 import { useReducer, useCallback } from "react";
 import { toast } from "sonner";
@@ -11,159 +11,21 @@ import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { unwrapGoogleResultUrl } from "@/lib/linkedinSearch";
 import { insertContacts } from "@/data/contacts";
+import { reducer, initialState } from "./useAddContactForm/reducer";
+import type { ContactFormData, GoogleSearchResult } from "./useAddContactForm/reducer";
+import {
+  extractDomain,
+  extractDomainFromEmail,
+  isUsefulCompanyUrl,
+  getSearchResultDescription,
+  buildGoogleFaviconUrl,
+} from "./useAddContactForm/helpers";
+
+export { COUNTRY_OPTIONS } from "./useAddContactForm/constants";
+export { extractDomain, buildGoogleFaviconUrl } from "./useAddContactForm/helpers";
+export type { ContactFormData, GoogleSearchResult, AddContactState } from "./useAddContactForm/reducer";
 
 const log = createLogger("AddContactDialog");
-
-// ── Types ────────────────────────────────────────────────────────────
-
-export interface ContactFormData {
-  companyName: string;
-  companyAlias: string;
-  country: string;
-  city: string;
-  address: string;
-  zipCode: string;
-  companyPhone: string;
-  companyEmail: string;
-  website: string;
-  contactName: string;
-  contactAlias: string;
-  position: string;
-  contactEmail: string;
-  contactPhone: string;
-  contactMobile: string;
-  origin: string;
-  note: string;
-  logoUrl: string;
-  linkedinUrl: string;
-}
-
-export interface GoogleSearchResult {
-  title: string;
-  url: string;
-  description: string;
-}
-
-interface UIFlags {
-  saving: boolean;
-  savedId: string | null;
-  placesLoading: boolean;
-  logoLoading: boolean;
-  linkedinLoading: boolean;
-}
-
-export interface AddContactState {
-  form: ContactFormData;
-  ui: UIFlags;
-  placesResults: GoogleSearchResult[];
-}
-
-// ── Constants ────────────────────────────────────────────────────────
-
-export const COUNTRY_OPTIONS = [
-  "AF","AL","DZ","AD","AO","AR","AM","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BT","BO",
-  "BA","BW","BR","BN","BG","BF","BI","KH","CM","CA","CV","CF","TD","CL","CN","CO","KM","CG","CD","CR",
-  "CI","HR","CU","CY","CZ","DK","DJ","DM","DO","EC","EG","SV","GQ","ER","EE","SZ","ET","FJ","FI","FR",
-  "GA","GM","GE","DE","GH","GR","GD","GT","GN","GW","GY","HT","HN","HK","HU","IS","IN","ID","IR","IQ",
-  "IE","IL","IT","JM","JP","JO","KZ","KE","KI","KP","KR","KW","KG","LA","LV","LB","LS","LR","LY","LI",
-  "LT","LU","MO","MG","MW","MY","MV","ML","MT","MH","MR","MU","MX","FM","MD","MC","MN","ME","MA","MZ",
-  "MM","NA","NR","NP","NL","NZ","NI","NE","NG","MK","NO","OM","PK","PW","PA","PG","PY","PE","PH","PL",
-  "PT","QA","RO","RU","RW","KN","LC","VC","WS","SM","ST","SA","SN","RS","SC","SL","SG","SK","SI","SB",
-  "SO","ZA","SS","ES","LK","SD","SR","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TO","TT","TN","TR",
-  "TM","TV","UG","UA","AE","GB","US","UY","UZ","VU","VE","VN","YE","ZM","ZW",
-];
-
-const SKIP_SEARCH_DOMAINS = [
-  "linkedin.com","facebook.com","google.com","yelp.com",
-  "twitter.com","instagram.com","youtube.com","wikipedia.org",
-];
-
-const PERSONAL_EMAIL_DOMAINS = new Set([
-  "gmail.com","yahoo.com","hotmail.com","outlook.com","live.com",
-  "icloud.com","libero.it","alice.it","tin.it","virgilio.it","tiscali.it",
-]);
-
-// ── Pure helpers ─────────────────────────────────────────────────────
-
-export function extractDomain(url: string): string {
-  try {
-    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
-    return u.hostname.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
-}
-
-function extractDomainFromEmail(email: string): string {
-  const domain = email.split("@")[1]?.trim().toLowerCase() || "";
-  if (!domain || PERSONAL_EMAIL_DOMAINS.has(domain)) return "";
-  return domain.replace(/^www\./, "");
-}
-
-function isUsefulCompanyUrl(url: string | null | undefined): boolean {
-  const domain = extractDomain(url || "");
-  return Boolean(domain) && !SKIP_SEARCH_DOMAINS.some((item) => domain.includes(item));
-}
-
-function getSearchResultDescription(result: GoogleSearchResult): string {
-  return result?.description?.trim?.() || "";
-}
-
-export function buildGoogleFaviconUrl(domain: string): string {
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-}
-
-// ── Reducer ──────────────────────────────────────────────────────────
-
-const emptyForm: ContactFormData = {
-  companyName: "", companyAlias: "", country: "", city: "", address: "",
-  zipCode: "", companyPhone: "", companyEmail: "", website: "",
-  contactName: "", contactAlias: "", position: "", contactEmail: "",
-  contactPhone: "", contactMobile: "", origin: "", note: "",
-  logoUrl: "", linkedinUrl: "",
-};
-
-const initialState: AddContactState = {
-  form: { ...emptyForm },
-  ui: { saving: false, savedId: null, placesLoading: false, logoLoading: false, linkedinLoading: false },
-  placesResults: [],
-};
-
-type Action =
-  | { type: "SET_FIELD"; field: keyof ContactFormData; value: string }
-  | { type: "SET_SAVING"; payload: boolean }
-  | { type: "SET_SAVED_ID"; payload: string | null }
-  | { type: "SET_PLACES_LOADING"; payload: boolean }
-  | { type: "SET_PLACES_RESULTS"; payload: GoogleSearchResult[] }
-  | { type: "SET_LOGO_LOADING"; payload: boolean }
-  | { type: "SET_LINKEDIN_LOADING"; payload: boolean }
-  | { type: "RESET" }
-  | { type: "BATCH_FORM"; payload: Partial<ContactFormData> };
-
-function reducer(state: AddContactState, action: Action): AddContactState {
-  switch (action.type) {
-    case "SET_FIELD":
-      return { ...state, form: { ...state.form, [action.field]: action.value } };
-    case "SET_SAVING":
-      return { ...state, ui: { ...state.ui, saving: action.payload } };
-    case "SET_SAVED_ID":
-      return { ...state, ui: { ...state.ui, savedId: action.payload } };
-    case "SET_PLACES_LOADING":
-      return { ...state, ui: { ...state.ui, placesLoading: action.payload } };
-    case "SET_PLACES_RESULTS":
-      return { ...state, placesResults: action.payload };
-    case "SET_LOGO_LOADING":
-      return { ...state, ui: { ...state.ui, logoLoading: action.payload } };
-    case "SET_LINKEDIN_LOADING":
-      return { ...state, ui: { ...state.ui, linkedinLoading: action.payload } };
-    case "RESET":
-      return { ...initialState };
-    case "BATCH_FORM":
-      return { ...state, form: { ...state.form, ...action.payload } };
-    default:
-      return state;
-  }
-}
 
 // ── Hook ─────────────────────────────────────────────────────────────
 
