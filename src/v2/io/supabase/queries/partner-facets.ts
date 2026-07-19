@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * IO Queries: Partner Facets — countries, cities, types for filters
  */

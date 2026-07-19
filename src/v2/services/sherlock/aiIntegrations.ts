@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * AI function calls — extract and decide.
  */

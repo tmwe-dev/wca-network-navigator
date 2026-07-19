@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * FunnemailGroupHeader — header collassabile di un gruppo nella lista mail
  * con menu Azioni di gruppo (segna lette / assegna gruppo / archivia / elimina).

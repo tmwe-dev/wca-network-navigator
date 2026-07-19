@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * DeepSearchPage V2 — Sherlock Investigator standalone.
  * Form input (companyName/website/city) + selettore livello (Scout/Detective/Sherlock)

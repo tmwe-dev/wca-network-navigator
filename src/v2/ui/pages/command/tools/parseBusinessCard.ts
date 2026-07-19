@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Tool: parse-business-card — Run OCR/AI extraction on a business-card image URL.
  * Write tool → requires approval (consuma crediti AI).

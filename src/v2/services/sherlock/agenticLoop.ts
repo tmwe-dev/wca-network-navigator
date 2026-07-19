@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Agentic loop — iterative decide → scrape → extract cycle.
  */

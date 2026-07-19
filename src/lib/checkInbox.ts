@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { safeParseCheckInboxResult } from "@/lib/api/checkInbox.schemas";
 import { ApiError } from "@/lib/api/apiError";

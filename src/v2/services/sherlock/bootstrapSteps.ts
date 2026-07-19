@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Bootstrap steps — home page fetch and Google search.
  */

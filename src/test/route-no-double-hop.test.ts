@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Phase 7 hardening — Smoke test routing canonical.
  *

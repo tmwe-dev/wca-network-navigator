@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * BulkEmailActions — Buttons for bulk operations on emails with double-confirmation
  */

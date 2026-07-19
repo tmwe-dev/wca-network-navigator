@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useArchitectKb — carica la procedura Lab Architect (Fase 4).
  *

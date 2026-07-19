@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * FindingsView — visualizzazione leggibile dei findings AI di Sherlock.
  * Sostituisce il dump JSON crudo con card semantiche + toggle "Vedi JSON".

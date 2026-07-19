@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SenderActionsDialog — Popup grande, giocosa, con TUTTE le azioni e regole
  * applicabili ad un singolo sender.

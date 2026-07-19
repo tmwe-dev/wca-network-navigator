@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { ChevronLeft, Building2, MapPin, Search, Rocket } from "lucide-react";
 import type { ProspectFilters } from "../ProspectAdvancedFilters";
 import { FATTURATO_PRESETS, DIPENDENTI_PRESETS } from "./useImportWizard";

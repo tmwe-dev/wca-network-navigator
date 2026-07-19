@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * BlacklistStaleBanner — Banner globale (solo desktop, top di pagina) che
  * avvisa quando la blacklist non viene aggiornata da oltre 30 giorni.

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, MessageSquare, Zap, Volume2 } from "lucide-react";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";

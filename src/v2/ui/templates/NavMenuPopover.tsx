@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * NavMenuPopover — Dropdown di navigazione globale, identico in tutte le
  * pagine. Usato sia in CommandPage (trigger custom "Menu" fixed top-left)

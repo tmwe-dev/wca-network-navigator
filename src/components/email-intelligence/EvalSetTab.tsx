@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";

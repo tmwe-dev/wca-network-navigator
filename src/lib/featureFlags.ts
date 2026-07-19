@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Feature flags client-side.
  *

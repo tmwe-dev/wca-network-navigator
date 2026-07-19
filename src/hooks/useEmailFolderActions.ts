@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useEmailFolderActions — Mutazioni IMAP folder + regole email lato UI.
  *

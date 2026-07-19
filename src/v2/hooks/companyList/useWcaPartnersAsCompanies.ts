@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useWcaPartnersAsCompanies — adapter WCA → CompanyEntity[]
  *

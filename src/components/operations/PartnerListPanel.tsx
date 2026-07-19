@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { useInView } from "@/hooks/useInView";

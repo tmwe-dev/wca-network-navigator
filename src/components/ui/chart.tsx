@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 

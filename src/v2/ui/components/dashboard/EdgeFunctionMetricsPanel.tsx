@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * EdgeFunctionMetricsPanel — Sprint H Observability.
  * Shows aggregated metrics from edge_function_logs:

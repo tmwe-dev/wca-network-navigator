@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { Download, Search, Mail, Linkedin, Globe, Database, RefreshCw, Zap, FileSearch, Shield, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 

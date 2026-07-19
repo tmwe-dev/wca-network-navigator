@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { useOperators, useCurrentOperator, type Operator } from "@/hooks/useOperators";
 import { useAuth } from "@/providers/AuthProvider";

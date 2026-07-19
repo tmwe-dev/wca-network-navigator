@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SherlockCanvas — Canvas investigativo a 3 livelli (Scout / Detective / Sherlock).
  * Riusa il pattern di rendering markdown di DeepSearchCanvas + aggiunge:

@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SystemHealthPanel — Live health dashboard for the Diagnostics page.
  * Calls health-check edge function + queries existing tables for metrics.

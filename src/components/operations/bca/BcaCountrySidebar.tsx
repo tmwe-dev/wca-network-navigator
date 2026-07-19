@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import {
   Globe, SlidersHorizontal, Plane,
   LayoutList, LayoutGrid, Rows3, Calendar,

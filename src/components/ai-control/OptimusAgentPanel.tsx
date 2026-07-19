@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * OptimusAgentPanel — vista completa stato Optimus Agent.
  *  - Overview per (channel, pageType): stato, confidence, plan_version, cache hit rate

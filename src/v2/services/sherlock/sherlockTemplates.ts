@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Renderer template URL Sherlock — sostituisce {var} con vars[var] (URL-encoded).
  * Variabili mancanti restano come {var} → lo step viene saltato.

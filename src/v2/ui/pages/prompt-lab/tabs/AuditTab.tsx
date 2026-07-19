@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * AuditTab — Prompt Lab audit screen.
  *

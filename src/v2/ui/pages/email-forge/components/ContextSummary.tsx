@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * ContextSummary (LOVABLE-83) — Mostra all'utente cosa l'AI sa/ha usato.
  * Modalità compact (pillole inline pre/post generazione) ed expanded (pannello 3 colonne).

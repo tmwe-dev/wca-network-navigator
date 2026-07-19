@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, BookText, Inbox, RefreshCw, Download, Loader2, Package, Wrench } from "lucide-react";

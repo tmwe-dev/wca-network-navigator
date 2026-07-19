@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * DAL — channel_messages
  */

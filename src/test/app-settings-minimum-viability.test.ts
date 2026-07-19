@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockFrom = vi.fn();

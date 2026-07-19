@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import type { DetectedTone } from "../../lib/toneDetector";
 
 export function extractPersonAndCompany(prompt: string): { person: string | null; company: string | null; email: string | null } {

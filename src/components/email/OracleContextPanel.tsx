@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * OracleContextPanel — accordion that shows what Oracolo "knows" before/after generation.
  * Always visible (closed by default), powered by _context_summary returned by edges.

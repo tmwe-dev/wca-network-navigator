@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * Error Factory — Vol. II §5.3 + Vol. IV §3
  *

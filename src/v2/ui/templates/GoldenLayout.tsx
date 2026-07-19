@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * GoldenLayout — Reference split-panel layout for V2 pages (40/60).
  * Wraps ResizablePanelGroup with predictable sizes, header, and responsive

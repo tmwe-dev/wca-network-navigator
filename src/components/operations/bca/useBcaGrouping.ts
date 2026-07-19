@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useState, useMemo } from "react";
 import { guessCountryFromLocation, countryCodeToFlag } from "./bcaUtils";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";

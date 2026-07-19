@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * sherlockEngine — orchestratore sequenziale di un playbook investigativo.
  *

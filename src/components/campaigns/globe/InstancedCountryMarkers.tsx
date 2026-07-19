@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 import { useRef, useMemo, useEffect } from "react";
 import { useFrame, useThree, ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";

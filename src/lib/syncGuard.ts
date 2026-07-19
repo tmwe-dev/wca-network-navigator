@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * syncGuard — Single-op mutex + cooldown throttle per WhatsApp/LinkedIn.
  *

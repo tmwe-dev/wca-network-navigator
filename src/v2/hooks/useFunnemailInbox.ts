@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useFunnemailInbox — stato e query del client Funnemail.
  *

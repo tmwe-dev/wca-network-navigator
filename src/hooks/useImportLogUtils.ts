@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * useImportLogs — Pure utility functions (no hooks/state)
  * Split from the original 619-LOC monolith.

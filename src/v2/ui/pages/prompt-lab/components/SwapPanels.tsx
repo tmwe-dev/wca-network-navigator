@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * SwapPanels — 2 pannelli affiancati con:
  *  - drag&drop sulla handle (⠿) per scambiarne l'ordine

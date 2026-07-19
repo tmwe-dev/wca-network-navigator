@@ -1,4 +1,3 @@
-/* eslint-disable eqeqeq */
 /**
  * DataTable organism — STEP 4 Design System v2
  * Tabella generica tipizzata con sort, pagination.
