@@ -33,25 +33,17 @@ import { ClassificationInsightsPanel } from "./ClassificationInsightsPanel";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
 import { SuggestionCard, type AddressRow } from "./SuggestionCard";
-
-function getDomain(email: string): string {
-  const at = email.indexOf("@");
-  return at >= 0 ? email.slice(at + 1).toLowerCase() : email;
-}
-
+import {
+  getDomain,
+  sortRows,
+  groupRowsBySuggestion,
+  type StatusFilter,
+  type SortMode,
+  type SuggestedGroupFilter,
+} from "./aiSuggestionsTab.helpers";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("AISuggestionsTab");
-
-type StatusFilter = "uncategorized" | "categorized" | "all";
-type SortMode = "name-asc" | "name-desc" | "count-desc" | "count-asc";
-
-interface SuggestedGroupFilter {
-  value: string;
-  label: string;
-  count: number;
-  icon: string | null;
-}
 
 export default function AISuggestionsTab() {
   const qc = useQueryClient();
@@ -233,43 +225,12 @@ export default function AISuggestionsTab() {
     return filtered.filter((row) => row.ai_suggested_group === suggestedGroupFilter);
   }, [rows, suggestedGroupFilter, hiddenIds]);
 
-  const sortedRows = useMemo(() => {
-    const sorted = [...visibleRows];
-    const nameOf = (r: AddressRow) =>
-      (r.company_name || r.display_name || deriveSenderDisplayName(r.email_address) || r.email_address).toLowerCase();
-    switch (sortMode) {
-      case "name-asc":
-        return sorted.sort((a, b) => nameOf(a).localeCompare(nameOf(b), "it", { sensitivity: "base", numeric: true }));
-      case "name-desc":
-        return sorted.sort((a, b) => nameOf(b).localeCompare(nameOf(a), "it", { sensitivity: "base", numeric: true }));
-      case "count-desc":
-        return sorted.sort((a, b) => b.email_count - a.email_count);
-      case "count-asc":
-        return sorted.sort((a, b) => a.email_count - b.email_count);
-    }
-  }, [visibleRows, sortMode]);
+  const sortedRows = useMemo(() => sortRows(visibleRows, sortMode), [visibleRows, sortMode]);
 
-  const groupedRows = useMemo(() => {
-    if (!groupBySuggestion) return null;
-    const buckets = new Map<string, AddressRow[]>();
-    sortedRows.forEach((row) => {
-      const key = row.ai_suggested_group ?? "__none__";
-      const arr = buckets.get(key) ?? [];
-      arr.push(row);
-      buckets.set(key, arr);
-    });
-    const entries = Array.from(buckets.entries()).map(([key, items]) => ({
-      key,
-      label: key === "__none__" ? "Senza suggerimento" : key,
-      items,
-    }));
-    entries.sort((a, b) => {
-      if (a.key === "__none__") return 1;
-      if (b.key === "__none__") return -1;
-      return a.label.localeCompare(b.label, "it", { sensitivity: "base", numeric: true });
-    });
-    return entries;
-  }, [groupBySuggestion, sortedRows]);
+  const groupedRows = useMemo(
+    () => (groupBySuggestion ? groupRowsBySuggestion(sortedRows) : null),
+    [groupBySuggestion, sortedRows],
+  );
 
   const _suggestedGroupOptions = useMemo<SuggestedGroupFilter[]>(() => {
     const counts = new Map<string, number>();
