@@ -24,14 +24,14 @@ export default defineConfig({
         "src/i18n/**",
       ],
       thresholds: {
-        // Baseline 2026-05-27 (ratchet #2 — Sprint 90k Fase 1 DAL coverage):
-        // misurato 10.02 / 53.87 / 30.96 / 10.02 dopo l'aggiunta di 45 test DAL.
-        // Soglie allineate al misurato per bloccare regressioni reali.
-        // Da alzare incrementalmente man mano che aggiungiamo test.
-        statements: 10,
+        // Baseline 2026-07-19 (ratchet #3 — Sprint bonifica 7 punti):
+        // aggiunti test dedicati per v2/core/domain/errors e v2/core/security/sanitizeHtml.
+        // Statements/lines alzati di 1 punto rispetto al ratchet #2 (10 -> 11)
+        // per bloccare regressioni; branches/functions invariati.
+        statements: 11,
         branches: 53,
         functions: 30,
-        lines: 10,
+        lines: 11,
       },
     },
   },
