@@ -10,39 +10,15 @@ import { LINKEDIN_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip"
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
-
-// Area di TEST manuale: l'operatore guida il ritmo, non serve gating anti-throttle
-// di produzione. Cooldown ridotti al minimo per "parti e vai" come WhatsApp test.
-const LI_COOLDOWN_MS = 800;
-const LI_DIAGNOSTIC_COOLDOWN_MS = 300;
-const LI_FIXED_RECIPIENT_KEY = "li_test_fixed_recipient";
-
-interface StoredLiTestRecipient {
-  url?: string;
-  savedAt?: string;
-}
-
-function isValidLinkedInTestUrl(raw: string): boolean {
-  return /^https:\/\/(www\.)?linkedin\.com\/(in|messaging\/thread)\//i.test(raw.trim());
-}
-
-interface FoundThread {
-  name: string;
-  threadUrl?: string;
-}
-
-interface SyncQualitySummary {
-  newMessages: number;
-  rawCandidates: number;
-  threadsAccepted: number;
-  threadsDropped: Record<string, number>;
-  messagesAccepted: number;
-  messagesDropped: Record<string, number>;
-  methods: Record<string, number>;
-  avgConfidence: number;
-  warnings: string[];
-  at: number;
-}
+import {
+  LI_COOLDOWN_MS,
+  LI_DIAGNOSTIC_COOLDOWN_MS,
+  LI_FIXED_RECIPIENT_KEY,
+  isValidLinkedInTestUrl,
+  type StoredLiTestRecipient,
+  type FoundThread,
+  type SyncQualitySummary,
+} from "./linkedInTest.types";
 
 export function LinkedInTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
