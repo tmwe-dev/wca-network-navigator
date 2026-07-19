@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, XCircle,
   ChevronDown, ChevronUp,
-  ArrowRight, Edit3, RotateCcw,
+  ArrowRight, Edit3, RotateCcw, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
