@@ -34,7 +34,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Play, Plus, Trash2, History, Building2, Languages, BookOpen, ChevronRight } from "lucide-react";
+import { Loader2, Play, Plus, Trash2, XCircle, History, Building2, Languages, BookOpen, ChevronRight } from "lucide-react";
 import {
   QK_PROMPTS,
   qkCases,
