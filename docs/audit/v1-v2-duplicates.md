@@ -1,0 +1,30 @@
+# V1/V2 Duplicati Candidati
+
+Generato 2026-07-19. Basato su match esatto di basename.
+**23 candidati** — verificare uno per uno prima di eliminare.
+
+| File | V1 (legacy) | V2 (attuale) |
+|------|-------------|--------------|
+| `ActiveFiltersBar.tsx` | `src/components/email-intelligence/manual-grouping/ActiveFiltersBar.tsx` | `src/v2/ui/molecules/ActiveFiltersBar/ActiveFiltersBar.tsx` |
+| `activities.ts` | `src/data/activities.ts` | `src/v2/io/supabase/queries/activities.ts` |
+| `AgentDetail.tsx` | `src/components/agents/AgentDetail.tsx` | `src/v2/ui/pages/prompt-lab/atlas/AgentDetail.tsx` |
+| `agents.ts` | `src/data/agents.ts` | `src/v2/io/supabase/queries/agents.ts` |
+| `blacklist.ts` | `src/data/blacklist.ts` | `src/v2/ui/pages/command/tools/blacklist.ts` |
+| `bridge.ts` | `src/types/bridge.ts` | `src/v2/io/extensions/bridge.ts` |
+| `client.ts` | `src/integrations/supabase/client.ts` | `src/v2/io/edge/client.ts` |
+| `contacts.ts` | `src/data/contacts.ts` | `src/v2/io/supabase/queries/contacts.ts` |
+| `contacts.ts` | `src/types/contacts.ts` | `src/v2/io/supabase/queries/contacts.ts` |
+| `DeepSearchCanvas.tsx` | `src/components/operations/DeepSearchCanvas.tsx` | `src/v2/ui/pages/email-forge/DeepSearchCanvas.tsx` |
+| `EmptyState.tsx` | `src/components/shared/EmptyState.tsx` | `src/v2/ui/atoms/EmptyState.tsx` |
+| `EmptyState.tsx` | `src/components/ui/EmptyState.tsx` | `src/v2/ui/atoms/EmptyState.tsx` |
+| `errors.ts` | `src/lib/errors.ts` | `src/v2/core/domain/errors.ts` |
+| `fileParser.ts` | `src/lib/import/fileParser.ts` | `src/v2/ui/pages/prompt-lab/utils/fileParser.ts` |
+| `FunnemailTab.tsx` | `src/components/email-intelligence/FunnemailTab.tsx` | `src/v2/ui/pages/email-lab/FunnemailTab.tsx` |
+| `kb.ts` | `src/constants/agentTemplates/kb.ts` | `src/v2/agent/runtime/tools/kb.ts` |
+| `PageErrorBoundary.tsx` | `src/components/ui/PageErrorBoundary.tsx` | `src/v2/ui/atoms/PageErrorBoundary.tsx` |
+| `partners.ts` | `src/data/partners.ts` | `src/v2/io/supabase/queries/partners.ts` |
+| `prospects.ts` | `src/data/prospects.ts` | `src/v2/io/supabase/queries/prospects.ts` |
+| `rateLimiter.ts` | `src/lib/api/rateLimiter.ts` | `src/v2/services/sherlock/rateLimiter.ts` |
+| `system.ts` | `src/lib/queryKeysParts/system.ts` | `src/v2/agent/runtime/prompts/system.ts` |
+| `tabs.tsx` | `src/components/ui/tabs.tsx` | `src/v2/ui/pages/cestinone/tabs.tsx` |
+| `useActiveFilterChips.ts` | `src/components/shared/entity-toolbar/useActiveFilterChips.ts` | `src/v2/hooks/companyList/useActiveFilterChips.ts` |
