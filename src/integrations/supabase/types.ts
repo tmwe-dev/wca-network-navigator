@@ -575,6 +575,20 @@ export type Database = {
             referencedColumns: ["message_id"]
           },
           {
+            foreignKeyName: "activities_response_channel_message_id_fkey"
+            columns: ["response_channel_message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
+            referencedColumns: ["correlation_id"]
+          },
+          {
+            foreignKeyName: "activities_response_channel_message_id_fkey"
+            columns: ["response_channel_message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
+            referencedColumns: ["message_id"]
+          },
+          {
             foreignKeyName: "activities_selected_contact_id_fkey"
             columns: ["selected_contact_id"]
             isOneToOne: false
@@ -5256,6 +5270,20 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "funnemail_brain_v"
+            referencedColumns: ["message_id"]
+          },
+          {
+            foreignKeyName: "email_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
+            referencedColumns: ["correlation_id"]
+          },
+          {
+            foreignKeyName: "email_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
             referencedColumns: ["message_id"]
           },
           {
@@ -10716,6 +10744,20 @@ export type Database = {
             referencedColumns: ["message_id"]
           },
           {
+            foreignKeyName: "reply_classifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
+            referencedColumns: ["correlation_id"]
+          },
+          {
+            foreignKeyName: "reply_classifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
+            referencedColumns: ["message_id"]
+          },
+          {
             foreignKeyName: "reply_classifications_sender_group_id_fkey"
             columns: ["sender_group_id"]
             isOneToOne: false
@@ -12719,6 +12761,42 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      message_intelligence_v: {
+        Row: {
+          canonical_version: number | null
+          category: string | null
+          channel: string | null
+          classification: string | null
+          classified_at: string | null
+          confidence: number | null
+          correlation_id: string | null
+          direction: string | null
+          email_date: string | null
+          folder_hint: string | null
+          from_address: string | null
+          intent: string | null
+          message_created_at: string | null
+          message_id: string | null
+          model: string | null
+          policy_plan: Json | null
+          reasoning: string | null
+          sender_group_id: string | null
+          sentiment: string | null
+          subject: string | null
+          triage: Json | null
+          urgency: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_classifications_sender_group_id_fkey"
+            columns: ["sender_group_id"]
+            isOneToOne: false
+            referencedRelation: "email_sender_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tmwe_user_connections_v: {
         Row: {
