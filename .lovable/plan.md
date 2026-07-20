@@ -140,3 +140,41 @@ Solo migration additiva. **File da creare**:
 - Riuso `pipeline_traces` (tracer esistente), `invokeAi` charter, `pending-action-executor` (risk gate), `ai_interaction_log`.
 - Se doc `mem/` diverge dal codice: il codice vince (già documentato in `docs/audit/message-pipeline-2026-07-20.md`).
 - Nessuna riscrittura generale: 6 batch, ognuno < 1 giornata, ognuno reversibile.
+
+## Batch B2 — popolamento additivo campi canonici (COMPLETATO)
+
+**Modifica minima e localizzata** all'orchestratore SSOT
+`classify-inbound-message`, riutilizzo integrale del mapper esistente
+`mapInboundToEmailCategory`, zero round-trip DB extra, zero nuove chiamate AI.
+
+**File modificati**
+- `supabase/functions/classify-inbound-message/stages/canonicalFields.ts` (nuovo, puro, 45 LOC)
+  - `buildCanonicalExtension({ classification })` → riusa mapper esistente per `category`.
+  - `isMessageIntelligenceV1Enabled(env)` → gate `MESSAGE_INTELLIGENCE_V1_ENABLED === "true"`.
+- `supabase/functions/classify-inbound-message/stages/stageClassifyAi.ts`
+  - `persistClassificationSideEffects`: costruisce `insertPayload` legacy, poi se flag ON fa `Object.assign` con l'estensione canonica. Flag OFF ⇒ payload byte-identico al pre-B2.
+- `src/v2/core/domain/__tests__/canonicalFields.test.ts` (nuovo, 6 test verdi).
+
+**Campi popolati oggi (flag ON)**
+| Campo | Valore in B2 | Popolato in |
+|---|---|---|
+| `category` | derivato da `mapInboundToEmailCategory(classification)` | B2 |
+| `sender_group_id` | `null` | B3 (via funnemail-auto-route side-effect) |
+| `folder_hint` | `null` | B3 (via funnemail-classify side-effect) |
+| `policy_plan` | `null` | B4 (via funnemail-policy-engine side-effect) |
+| `triage` | `null` | B4 (via runTriageAndAlert stage 4) |
+| `canonical_version` | `1` | B2 |
+
+**Attivazione / disattivazione flag**
+- Attivare: aggiungere secret Edge Function `MESSAGE_INTELLIGENCE_V1_ENABLED=true` in Project Settings → Secrets, poi ridispiegare `classify-inbound-message`.
+- Disattivare: eliminare la secret (o impostare qualsiasi valore ≠ `"true"`) e ridispiegare. Comportamento torna identico al pre-B2 senza migration.
+- Rollback totale: `git revert` sui 3 file. Nessun dato pregresso viene toccato (i record già scritti restano con i nuovi campi valorizzati o `NULL` invariati).
+
+**Rischi residui**
+- Se il mapper `mapInboundToEmailCategory` cambia in futuro, cambia anche `category` scritto: accettabile (SSOT unica).
+- `sender_group_id`, `folder_hint`, `policy_plan`, `triage` restano `NULL` finché non parte B3/B4: consumer devono trattarli come opzionali (già previsto nel contratto `MessageIntelligenceResult`).
+
+**Prove**
+- 6/6 test vitest verdi (`canonicalFields.test.ts`): flag OFF (default), flag ON, mapping deterministico, campi null attesi.
+- `tsgo --noEmit` verde.
+- Diff funzionale: solo `stageClassifyAi.ts` (payload esteso via Object.assign gated) + 1 modulo puro nuovo + 1 test. Nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `journalistReview`, cron, trigger DB, RLS, migrations, UI.
