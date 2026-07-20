@@ -95,6 +95,7 @@ export async function classifyInboundEmails(
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${serviceRoleKey}`,
+          "x-invoke-source": "check-inbox-postProcess",
         },
         body: JSON.stringify(classifyPayload),
       }).catch((err) => {
