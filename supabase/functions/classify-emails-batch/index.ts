@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${serviceRoleKey}`,
+            "x-invoke-source": "cron-batch",
           },
           body: JSON.stringify({
             message_id: msg.id,
