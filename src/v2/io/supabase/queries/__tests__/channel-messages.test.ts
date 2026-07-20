@@ -35,8 +35,8 @@ import {
 } from "../channel-messages";
 
 const baseRow = {
-  id: "11111111-1111-1111-1111-111111111111",
-  user_id: "22222222-2222-2222-2222-222222222222",
+  id: "11111111-1111-4111-8111-111111111111",
+  user_id: "22222222-2222-4222-8222-222222222222",
   channel: "email",
   direction: "inbound",
   subject: "Hi",
