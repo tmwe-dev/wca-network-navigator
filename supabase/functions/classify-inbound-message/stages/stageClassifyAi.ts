@@ -11,6 +11,7 @@ import {
 } from "./types.ts";
 import { buildClassificationPrompt } from "./aiPromptBuilder.ts";
 import { aiFetch } from "../../_shared/aiCallShim.ts";
+import { buildCanonicalExtension, isMessageIntelligenceV1Enabled } from "./canonicalFields.ts";
 
 // deno-lint-ignore no-explicit-any
 type Sb = any;
@@ -97,8 +98,8 @@ export async function persistClassificationSideEffects(
 ): Promise<void> {
   const { message_id, activity_id, channel, from_address, subject, partner_id, mission_id } = body;
 
-  // Insert reply_classifications
-  const { error: classErr } = await supabase.from("reply_classifications").insert({
+  // Insert reply_classifications (payload legacy invariato).
+  const insertPayload: Record<string, unknown> = {
     message_id,
     channel,
     classification: result.classification,
@@ -108,7 +109,18 @@ export async function persistClassificationSideEffects(
     intent: result.intent,
     reasoning: result.reasoning,
     model,
-  });
+  };
+  // B2 — popolamento additivo dei campi canonici Message Intelligence v1.
+  // Gate esplicito: MESSAGE_INTELLIGENCE_V1_ENABLED="true". Assente/OFF =
+  // payload identico al comportamento pre-B2. Zero round-trip DB extra:
+  // usiamo esclusivamente dati già disponibili in `result`.
+  if (isMessageIntelligenceV1Enabled(Deno.env)) {
+    Object.assign(
+      insertPayload,
+      buildCanonicalExtension({ classification: result.classification }),
+    );
+  }
+  const { error: classErr } = await supabase.from("reply_classifications").insert(insertPayload);
   if (classErr) console.error("[classify-inbound] Insert error:", classErr);
 
   // Update activity description
