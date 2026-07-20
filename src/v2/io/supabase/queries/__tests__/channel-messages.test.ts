@@ -57,7 +57,7 @@ describe("fetchChannelMessagesFromView (B4.1)", () => {
     lastFromTable = ""; lastLimit = 0;
   });
 
-  it("legge dalla view canonica e mappa null i campi non presenti (body/read_at/partner_id)", async () => {
+  it("messaggio classificato: preserva tutti i campi reali (body, to_address, partner_id, read_at, category originale)", async () => {
     viewRows = [{
       message_id: baseRow.id,
       user_id: baseRow.user_id,
@@ -65,6 +65,12 @@ describe("fetchChannelMessagesFromView (B4.1)", () => {
       direction: "inbound",
       subject: "Hi",
       from_address: "a@b.com",
+      to_address: "me@x.com",
+      body_text: "ciao",
+      body_html: "<p>ciao</p>",
+      partner_id: "33333333-3333-4333-8333-333333333333",
+      message_category: "fornitori",
+      read_at: "2026-07-20T01:00:00Z",
       email_date: baseRow.email_date,
       message_created_at: baseRow.created_at,
     }];
@@ -73,12 +79,39 @@ describe("fetchChannelMessagesFromView (B4.1)", () => {
     expect(lastLimit).toBe(50);
     expect(r._tag).toBe("Ok");
     if (r._tag === "Ok") {
+      const m = r.value[0];
+      expect(m.bodyText).toBe("ciao");
+      expect(m.bodyHtml).toBe("<p>ciao</p>");
+      expect(m.toAddress).toBe("me@x.com");
+      expect(m.partnerId).toBe("33333333-3333-4333-8333-333333333333");
+      expect(m.readAt).toBe("2026-07-20T01:00:00Z");
+      expect(m.category).toBe("fornitori");
+    }
+  });
+
+  it("messaggio NON classificato: è comunque presente con campi rc null", async () => {
+    viewRows = [{
+      message_id: baseRow.id,
+      user_id: baseRow.user_id,
+      channel: "email",
+      direction: "inbound",
+      subject: "Not classified yet",
+      from_address: "a@b.com",
+      to_address: null,
+      body_text: "corpo",
+      body_html: null,
+      partner_id: null,
+      message_category: null,
+      read_at: null,
+      email_date: baseRow.email_date,
+      message_created_at: baseRow.created_at,
+    }];
+    const r = await fetchChannelMessagesFromView(10);
+    expect(r._tag).toBe("Ok");
+    if (r._tag === "Ok") {
       expect(r.value).toHaveLength(1);
-      expect(r.value[0].bodyText).toBeNull();
-      expect(r.value[0].bodyHtml).toBeNull();
-      expect(r.value[0].partnerId).toBeNull();
-      expect(r.value[0].readAt).toBeNull();
-      expect(r.value[0].subject).toBe("Hi");
+      expect(r.value[0].bodyText).toBe("corpo");
+      expect(r.value[0].category).toBeNull();
     }
   });
 
