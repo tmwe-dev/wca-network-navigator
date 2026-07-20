@@ -12764,6 +12764,8 @@ export type Database = {
       }
       message_intelligence_v: {
         Row: {
+          body_html: string | null
+          body_text: string | null
           canonical_version: number | null
           category: string | null
           channel: string | null
@@ -12776,14 +12778,18 @@ export type Database = {
           folder_hint: string | null
           from_address: string | null
           intent: string | null
+          message_category: string | null
           message_created_at: string | null
           message_id: string | null
           model: string | null
+          partner_id: string | null
           policy_plan: Json | null
+          read_at: string | null
           reasoning: string | null
           sender_group_id: string | null
           sentiment: string | null
           subject: string | null
+          to_address: string | null
           triage: Json | null
           urgency: string | null
           user_id: string | null
