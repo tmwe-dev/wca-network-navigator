@@ -10,7 +10,7 @@ import { markMessageRead } from "@/v2/io/supabase/mutations/channel-messages";
 import { isOk } from "@/v2/core/domain/result";
 import type { ChannelMessage } from "@/v2/core/domain/entities";
 import { queryKeys } from "@/lib/queryKeys";
-import { createLogger } from "@/lib/logger";
+import { createLogger } from "@/lib/log";
 
 const log = createLogger("useChannelMessagesV2");
 
