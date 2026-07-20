@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (existingClass) {
         void tracer.step("classify_inbound:dedup_hit", {
-          payload_summary: { source_hint: req.headers.get("x-invoke-source") ?? "unknown" },
+          output: { source_hint: req.headers.get("x-invoke-source") ?? "unknown" },
           status: "success",
         });
         endMetrics(metrics, true, 200);
