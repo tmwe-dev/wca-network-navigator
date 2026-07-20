@@ -178,3 +178,20 @@ Solo migration additiva. **File da creare**:
 - 6/6 test vitest verdi (`canonicalFields.test.ts`): flag OFF (default), flag ON, mapping deterministico, campi null attesi.
 - `tsgo --noEmit` verde.
 - Diff funzionale: solo `stageClassifyAi.ts` (payload esteso via Object.assign gated) + 1 modulo puro nuovo + 1 test. Nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `journalistReview`, cron, trigger DB, RLS, migrations, UI.
+
+---
+
+## Batch B2 — ATTIVAZIONE (2026-07-20)
+- Secret Edge Functions `MESSAGE_INTELLIGENCE_V1_ENABLED=true` impostata → orchestratore `classify-inbound-message` popola i campi canonici sui prossimi INSERT su `reply_classifications` senza toccare le colonne legacy.
+- Rollback: rimuovere/impostare a `false` la secret e ridispiegare `classify-inbound-message`.
+
+## Batch B3 — VIEW CANONICA READ-ONLY (2026-07-20)
+- Creata `public.message_intelligence_v` con `WITH (security_invoker = true)`.
+- JOIN LATERAL: 1 riga per `message_id` = classificazione più recente (`ORDER BY reply_classifications.created_at DESC LIMIT 1`).
+- `correlation_id = message_id`. Espone: base messaggio (channel_messages) + campi canonici v1 (category/sender_group_id/folder_hint/policy_plan/triage/canonical_version) + campi legacy classificazione.
+- GRANT SELECT solo a `authenticated` e `service_role`. Nessun grant `anon`. Nessun bypass RLS: SECURITY INVOKER eredita policy `channel_messages_select_own` + `Owner reads own reply classifications`.
+- Verifica: `count(*) = count(distinct message_id) = 8563` → nessun duplicato.
+- Nessuna mutazione, trigger, materialized view, backfill. Nessuna modifica a UI/hook/consumer. `email_classifications` e fallback restano invariati.
+- Rollback: `DROP VIEW public.message_intelligence_v;`.
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅**. B4–B6 non iniziati.
