@@ -1,7 +1,7 @@
 /**
  * report-classify-dedup.ts — Baseline B0.
  *
- * Interroga ai_runtime_traces degli ultimi 7 giorni e stampa un breakdown
+ * Interroga pipeline_traces degli ultimi 7 giorni e stampa un breakdown
  * per source_hint (check-inbox-postProcess | cron-batch | unknown = trigger DB)
  * di quante invocazioni classify-inbound-message hanno colpito il ramo
  * dedup (message_id già in reply_classifications).
@@ -32,12 +32,12 @@ const sinceIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 interface TraceRow {
   trace_id: string;
   step_name: string;
-  payload_summary: Record<string, unknown> | null;
+  output_summary: Record<string, unknown> | null;
 }
 
 const { data, error } = await supabase
-  .from("ai_runtime_traces")
-  .select("trace_id, step_name, payload_summary")
+  .from("pipeline_traces")
+  .select("trace_id, step_name, output_summary")
   .gte("created_at", sinceIso)
   .in("step_name", ["classify_inbound:received", "classify_inbound:dedup_hit"])
   .limit(50000);
@@ -52,7 +52,7 @@ const bySource = new Map<string, { received: Set<string>; dedup: number }>();
 
 for (const r of rows) {
   const src = String(
-    (r.payload_summary as Record<string, unknown> | null)?.source_hint ?? "unknown",
+    (r.output_summary as Record<string, unknown> | null)?.source_hint ?? "unknown",
   );
   const bucket = bySource.get(src) ?? { received: new Set<string>(), dedup: 0 };
   if (r.step_name === "classify_inbound:received") bucket.received.add(r.trace_id);
