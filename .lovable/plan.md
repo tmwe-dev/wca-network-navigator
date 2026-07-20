@@ -195,3 +195,13 @@ Solo migration additiva. **File da creare**:
 - Rollback: `DROP VIEW public.message_intelligence_v;`.
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅**. B4–B6 non iniziati.
+
+## Batch B4.1 — Consumer migration `useChannelMessagesV2` (2026-07-20)
+- Aggiunta `fetchChannelMessagesFromView` in `src/v2/io/supabase/queries/channel-messages.ts` (query alla view canonica `message_intelligence_v`, campi non presenti mappati a `null` per preservare shape `ChannelMessage`).
+- `useChannelMessagesV2`: primaria = view; fallback trasparente = `fetchChannelMessages` (legacy `channel_messages`) su qualsiasi errore/indisponibilità. Log strutturato solo sul fallback (`channel_messages_view_fallback` con reason/direction/limit — nessun body/PII).
+- Query key `queryKeys.v2.channelMessages(direction, limit)` invariata → invalidation post `markRead` preservata.
+- Consumer reali dell'hook: **0** (verificato con rg). Zero impatto UI.
+- Test: `src/v2/io/supabase/queries/__tests__/channel-messages.test.ts` (view OK con mapping null, view errore → Err per fallback, legacy invariato). Vitest 9/9 verdi (B2 + B4.1).
+- Rollback: revert dei 3 file (`useChannelMessagesV2.ts`, `channel-messages.ts`, test) — la view resta in DB, nessun altro sistema tocca la funzione B4.1.
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅**. B4.2 / B5 / B6 non iniziati.
