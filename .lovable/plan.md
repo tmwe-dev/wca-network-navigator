@@ -196,12 +196,13 @@ Solo migration additiva. **File da creare**:
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅**. B4–B6 non iniziati.
 
-## Batch B4.1 — Consumer migration `useChannelMessagesV2` (2026-07-20)
-- Aggiunta `fetchChannelMessagesFromView` in `src/v2/io/supabase/queries/channel-messages.ts` (query alla view canonica `message_intelligence_v`, campi non presenti mappati a `null` per preservare shape `ChannelMessage`).
-- `useChannelMessagesV2`: primaria = view; fallback trasparente = `fetchChannelMessages` (legacy `channel_messages`) su qualsiasi errore/indisponibilità. Log strutturato solo sul fallback (`channel_messages_view_fallback` con reason/direction/limit — nessun body/PII).
+## Batch B4.1 — Consumer migration `useChannelMessagesV2` (2026-07-20, corretto)
+- **Correzione view (B3-fix)**: `message_intelligence_v` ricreata con `LEFT JOIN LATERAL` a `reply_classifications` — ora espone TUTTI i messaggi (18763 righe = `channel_messages`, una per `id`, incluse le 10186 non ancora classificate). Aggiunti campi reali: `to_address`, `body_text`, `body_html`, `partner_id`, `read_at`, `message_category` (category originale di `channel_messages`, distinta dalla `category` AI di `reply_classifications`). `security_invoker=true`, grant invariati (`authenticated`, `service_role`, no anon). Nessun DROP distruttivo: verificate zero dipendenze.
+- `fetchChannelMessagesFromView` seleziona e mappa i campi reali (nessun `null` inventato). Rimosso il cast `supabase as any`: la view è tipizzata in `Database["public"]["Views"]`. `category` del `ChannelMessage` = `message_category`.
+- `useChannelMessagesV2`: primaria = view; fallback trasparente = `fetchChannelMessages` legacy solo su errore/indisponibilità. Log strutturato senza PII.
 - Query key `queryKeys.v2.channelMessages(direction, limit)` invariata → invalidation post `markRead` preservata.
 - Consumer reali dell'hook: **0** (verificato con rg). Zero impatto UI.
-- Test: `src/v2/io/supabase/queries/__tests__/channel-messages.test.ts` (view OK con mapping null, view errore → Err per fallback, legacy invariato). Vitest 9/9 verdi (B2 + B4.1).
-- Rollback: revert dei 3 file (`useChannelMessagesV2.ts`, `channel-messages.ts`, test) — la view resta in DB, nessun altro sistema tocca la funzione B4.1.
+- Test: 4 DAL (classificato con tutti i campi preservati, non classificato presente con rc.* null, view Err → Err per orchestrazione, legacy invariato) + 2 hook (view Ok = no legacy call, view Err = fallback legacy). Vitest 12/12 verdi (B2 + B4.1).
+- Rollback: revert dei 4 file TS + migration `DROP VIEW public.message_intelligence_v; CREATE VIEW ...` con la definizione precedente (INNER JOIN, solo classificati).
 
-Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅**. B4.2 / B5 / B6 non iniziati.
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ (corretto)**. B4.2 / B5 / B6 non iniziati.
