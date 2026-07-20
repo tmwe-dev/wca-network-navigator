@@ -9,15 +9,13 @@ let lastFromTable = "";
 let lastLimit = 0;
 
 function buildBuilder(rows: Row[], error: { message: string } | null) {
-  const builder: Record<string, unknown> = {
-    select: () => builder,
-    order: () => builder,
-    eq: () => builder,
-    limit: (n: number) => {
-      lastLimit = n;
-      return Promise.resolve({ data: error ? null : rows, error });
-    },
-  };
+  const builder: Record<string, unknown> = {};
+  builder.select = () => builder;
+  builder.order = () => builder;
+  builder.eq = () => builder;
+  builder.limit = (n: number) => { lastLimit = n; return builder; };
+  builder.then = (resolve: (v: unknown) => unknown) =>
+    resolve({ data: error ? null : rows, error });
   return builder;
 }
 
