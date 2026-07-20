@@ -1,27 +1,25 @@
 /**
  * HistoryTab — last 10 channel_messages for selected recipient (read-only).
  */
-import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchRecipientHistory,
+  fetchRecipientHistoryFromView,
+  type RecipientHistoryRow,
+} from "@/v2/io/supabase/queries/channel-messages";
+import { isOk } from "@/v2/core/domain/result";
+import { createLogger } from "@/lib/log";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare } from "lucide-react";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
+
+const log = createLogger("HistoryTab");
 
 interface Props {
   recipient: ForgeRecipient | null;
 }
 
-interface MessageRow {
-  id: string;
-  channel: string;
-  direction: string;
-  subject: string | null;
-  body_text: string | null;
-  from_address: string | null;
-  email_date: string | null;
-  created_at: string;
-}
+type MessageRow = RecipientHistoryRow;
 
 export function HistoryTab({ recipient }: Props) {
   const query = useQuery({
@@ -29,15 +27,13 @@ export function HistoryTab({ recipient }: Props) {
     enabled: !!recipient && (!!recipient.partnerId || !!recipient.email),
     queryFn: async () => {
       if (!recipient) return [];
-      let q = supabase
-        .from("channel_messages")
-        .select("id, channel, direction, subject, body_text, from_address, email_date, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (recipient.partnerId) q = q.eq("partner_id", recipient.partnerId);
-      else if (recipient.email) q = q.or(`from_address.ilike.${recipient.email},to_address.ilike.${recipient.email}`);
-      const { data } = await q;
-      return (data ?? []) as MessageRow[];
+      const filter = { partnerId: recipient.partnerId, email: recipient.email, limit: 10 };
+      // B4.2 — primaria: view canonica; fallback trasparente su channel_messages.
+      const viewResult = await fetchRecipientHistoryFromView(filter);
+      if (isOk(viewResult)) return viewResult.value;
+      log.warn("forge_history_view_fallback", { reason: viewResult.error.code });
+      const legacy = await fetchRecipientHistory(filter);
+      return isOk(legacy) ? legacy.value : [];
     },
   });
 
