@@ -10644,42 +10644,60 @@ export type Database = {
       }
       reply_classifications: {
         Row: {
+          canonical_version: number
+          category: string | null
           channel: string
           classification: string
           confidence: number
           created_at: string
+          folder_hint: string | null
           id: string
           intent: string | null
           message_id: string
           model: string | null
+          policy_plan: Json | null
           reasoning: string | null
+          sender_group_id: string | null
           sentiment: string | null
+          triage: Json | null
           urgency: string | null
         }
         Insert: {
+          canonical_version?: number
+          category?: string | null
           channel?: string
           classification: string
           confidence?: number
           created_at?: string
+          folder_hint?: string | null
           id?: string
           intent?: string | null
           message_id: string
           model?: string | null
+          policy_plan?: Json | null
           reasoning?: string | null
+          sender_group_id?: string | null
           sentiment?: string | null
+          triage?: Json | null
           urgency?: string | null
         }
         Update: {
+          canonical_version?: number
+          category?: string | null
           channel?: string
           classification?: string
           confidence?: number
           created_at?: string
+          folder_hint?: string | null
           id?: string
           intent?: string | null
           message_id?: string
           model?: string | null
+          policy_plan?: Json | null
           reasoning?: string | null
+          sender_group_id?: string | null
           sentiment?: string | null
+          triage?: Json | null
           urgency?: string | null
         }
         Relationships: [
@@ -10696,6 +10714,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "funnemail_brain_v"
             referencedColumns: ["message_id"]
+          },
+          {
+            foreignKeyName: "reply_classifications_sender_group_id_fkey"
+            columns: ["sender_group_id"]
+            isOneToOne: false
+            referencedRelation: "email_sender_groups"
+            referencedColumns: ["id"]
           },
         ]
       }
