@@ -35,21 +35,21 @@ export async function fetchChannelMessages(
 
 /**
  * B4.1 — Legge dalla view canonica `message_intelligence_v` (read-only,
- * SECURITY INVOKER). Restituisce solo messaggi già classificati.
- * Campi assenti nella view (body_text, body_html, to_address, partner_id,
- * read_at) vengono impostati a null per preservare la shape di ChannelMessage.
- * Il consumer deve fare fallback su `fetchChannelMessages` in caso di errore.
+ * SECURITY INVOKER). Espone TUTTI i messaggi autorizzati (anche non
+ * classificati) tramite LEFT JOIN LATERAL alla classificazione più recente.
+ * `category` del ChannelMessage = `message_category` originale di
+ * channel_messages (non la category AI derivata). Il consumer deve fare
+ * fallback su `fetchChannelMessages` solo in caso di errore/indisponibilità.
  */
 export async function fetchChannelMessagesFromView(
   limit = 100,
   direction?: string,
 ): Promise<Result<ChannelMessage[], AppError>> {
   try {
-    // deno-lint-ignore no-explicit-any
-    let query = (supabase as any)
+    let query = supabase
       .from("message_intelligence_v")
       .select(
-        "message_id,user_id,channel,direction,subject,from_address,email_date,message_created_at",
+        "message_id,user_id,channel,direction,subject,from_address,to_address,body_text,body_html,partner_id,message_category,read_at,email_date,message_created_at",
       )
       .order("message_created_at", { ascending: false })
       .limit(limit);
@@ -75,12 +75,12 @@ export async function fetchChannelMessagesFromView(
         direction: row.direction,
         subject: row.subject ?? null,
         from_address: row.from_address ?? null,
-        to_address: null,
-        body_text: null,
-        body_html: null,
-        partner_id: null,
-        category: null,
-        read_at: null,
+        to_address: row.to_address ?? null,
+        body_text: row.body_text ?? null,
+        body_html: row.body_html ?? null,
+        partner_id: row.partner_id ?? null,
+        category: row.message_category ?? null,
+        read_at: row.read_at ?? null,
         email_date: row.email_date ?? null,
         created_at: row.message_created_at,
       });
