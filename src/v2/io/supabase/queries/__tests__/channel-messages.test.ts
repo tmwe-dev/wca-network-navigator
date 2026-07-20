@@ -71,6 +71,7 @@ describe("fetchChannelMessagesFromView (B4.1)", () => {
     const r = await fetchChannelMessagesFromView(50, "inbound");
     expect(lastFromTable).toBe("message_intelligence_v");
     expect(lastLimit).toBe(50);
+    if (r._tag === "Err") console.error("VIEW ERR", r.error);
     expect(r._tag).toBe("Ok");
     if (r._tag === "Ok") {
       expect(r.value).toHaveLength(1);
@@ -93,6 +94,7 @@ describe("fetchChannelMessagesFromView (B4.1)", () => {
     const r = await fetchChannelMessages(25);
     expect(lastFromTable).toBe("channel_messages");
     expect(lastLimit).toBe(25);
+    if (r._tag === "Err") console.error("LEGACY ERR", r.error);
     expect(r._tag).toBe("Ok");
   });
 });
