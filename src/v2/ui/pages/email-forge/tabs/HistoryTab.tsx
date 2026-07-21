@@ -4,16 +4,12 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchRecipientHistory,
-  fetchRecipientHistoryFromView,
   type RecipientHistoryRow,
 } from "@/v2/io/supabase/queries/channel-messages";
 import { isOk } from "@/v2/core/domain/result";
-import { createLogger } from "@/lib/log";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare } from "lucide-react";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
-
-const log = createLogger("HistoryTab");
 
 interface Props {
   recipient: ForgeRecipient | null;
@@ -22,18 +18,18 @@ interface Props {
 type MessageRow = RecipientHistoryRow;
 
 export function HistoryTab({ recipient }: Props) {
-  const query = useQuery({
+  const query = useQuery<MessageRow[]>({
     queryKey: ["forge-history", recipient?.partnerId, recipient?.email],
     enabled: !!recipient && (!!recipient.partnerId || !!recipient.email),
     queryFn: async () => {
       if (!recipient) return [];
-      const filter = { partnerId: recipient.partnerId, email: recipient.email, limit: 10 };
-      // B4.2 — primaria: view canonica; fallback trasparente su channel_messages.
-      const viewResult = await fetchRecipientHistoryFromView(filter);
-      if (isOk(viewResult)) return viewResult.value;
-      log.warn("forge_history_view_fallback", { reason: viewResult.error.code });
-      const legacy = await fetchRecipientHistory(filter);
-      return isOk(legacy) ? legacy.value : [];
+      // B4.2 — SSOT DAL: view canonica con fallback interno trasparente.
+      const r = await fetchRecipientHistory({
+        partnerId: recipient.partnerId,
+        email: recipient.email,
+        limit: 10,
+      });
+      return isOk(r) ? r.value : [];
     },
   });
 
