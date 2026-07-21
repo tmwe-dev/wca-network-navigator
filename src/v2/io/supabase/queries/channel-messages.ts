@@ -6,6 +6,9 @@ import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type ChannelMessage } from "../../../core/domain/entities";
 import { mapChannelMessageRow } from "../../../core/mappers/channel-message-mapper";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("dal:recipient-history");
 
 export async function fetchChannelMessages(
   limit = 100,
@@ -112,31 +115,21 @@ export interface RecipientHistoryRow {
   readonly created_at: string;
 }
 
-const RECIPIENT_HISTORY_COLS =
+const RECIPIENT_HISTORY_COLS_VIEW =
   "id:message_id, channel, direction, subject, body_text, from_address, email_date, created_at:message_created_at";
 
 const RECIPIENT_HISTORY_COLS_LEGACY =
   "id, channel, direction, subject, body_text, from_address, email_date, created_at";
 
-/**
- * B4.2 — legge la history di un destinatario dalla view canonica
- * `message_intelligence_v`. Filtri equivalenti alla query legacy:
- *   - se `partnerId`: filtra su `partner_id`;
- *   - altrimenti se `email`: OR ILIKE su `from_address`/`to_address`;
- * ordine `message_created_at` DESC (equivalente al `created_at` originale
- * di `channel_messages`, che nella view è aliasato). Nessun fetch se
- * entrambi i filtri sono assenti.
- */
-export async function fetchRecipientHistoryFromView(
-  filter: RecipientHistoryFilter,
+async function queryRecipientHistoryFromView(
+  partnerId: string | null | undefined,
+  email: string | null | undefined,
+  limit: number,
 ): Promise<Result<RecipientHistoryRow[], AppError>> {
-  const { partnerId, email } = filter;
-  const limit = filter.limit ?? 10;
-  if (!partnerId && !email) return ok([]);
   try {
     let q = supabase
       .from("message_intelligence_v")
-      .select(RECIPIENT_HISTORY_COLS)
+      .select(RECIPIENT_HISTORY_COLS_VIEW)
       .order("message_created_at", { ascending: false })
       .limit(limit);
     if (partnerId) q = q.eq("partner_id", partnerId);
@@ -144,27 +137,20 @@ export async function fetchRecipientHistoryFromView(
     const { data, error } = await q;
     if (error) {
       return err(
-        ioError(
-          "DATABASE_ERROR",
-          error.message,
-          { table: "message_intelligence_v" },
-          "fetchRecipientHistoryFromView",
-        ),
+        ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "recipientHistory:view"),
       );
     }
     return ok((data ?? []) as unknown as RecipientHistoryRow[]);
   } catch (caught: unknown) {
-    return err(fromUnknown(caught, "DATABASE_ERROR", "fetchRecipientHistoryFromView"));
+    return err(fromUnknown(caught, "DATABASE_ERROR", "recipientHistory:view"));
   }
 }
 
-/** Legacy fallback: identica query originale di HistoryTab. */
-export async function fetchRecipientHistory(
-  filter: RecipientHistoryFilter,
+async function queryRecipientHistoryFromLegacy(
+  partnerId: string | null | undefined,
+  email: string | null | undefined,
+  limit: number,
 ): Promise<Result<RecipientHistoryRow[], AppError>> {
-  const { partnerId, email } = filter;
-  const limit = filter.limit ?? 10;
-  if (!partnerId && !email) return ok([]);
   try {
     let q = supabase
       .from("channel_messages")
@@ -176,16 +162,30 @@ export async function fetchRecipientHistory(
     const { data, error } = await q;
     if (error) {
       return err(
-        ioError(
-          "DATABASE_ERROR",
-          error.message,
-          { table: "channel_messages" },
-          "fetchRecipientHistory",
-        ),
+        ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "recipientHistory:legacy"),
       );
     }
     return ok((data ?? []) as unknown as RecipientHistoryRow[]);
   } catch (caught: unknown) {
-    return err(fromUnknown(caught, "DATABASE_ERROR", "fetchRecipientHistory"));
+    return err(fromUnknown(caught, "DATABASE_ERROR", "recipientHistory:legacy"));
   }
+}
+
+/**
+ * B4.2 — Public SSOT per la history di un destinatario.
+ * Sorgente primaria: view canonica `message_intelligence_v`. Se la view
+ * risponde con errore, si esegue fallback trasparente su `channel_messages`.
+ * Filtri: `partnerId` ha precedenza; altrimenti OR ILIKE su from/to address.
+ * Ordine DESC, limit default 10. Nessun fetch se nessun filtro.
+ */
+export async function fetchRecipientHistory(
+  filter: RecipientHistoryFilter,
+): Promise<Result<RecipientHistoryRow[], AppError>> {
+  const { partnerId, email } = filter;
+  const limit = filter.limit ?? 10;
+  if (!partnerId && !email) return ok([]);
+  const viewResult = await queryRecipientHistoryFromView(partnerId, email, limit);
+  if (viewResult._tag === "Ok") return viewResult;
+  log.warn("recipient_history_view_fallback", { code: viewResult.error.code });
+  return queryRecipientHistoryFromLegacy(partnerId, email, limit);
 }
