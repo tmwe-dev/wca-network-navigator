@@ -206,3 +206,15 @@ Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅**. B4–B6 non iniziati.
 - Rollback: revert dei 4 file TS + migration `DROP VIEW public.message_intelligence_v; CREATE VIEW ...` con la definizione precedente (INNER JOIN, solo classificati).
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ (corretto)**. B4.2 / B5 / B6 non iniziati.
+
+## Batch B4.2 — Consumer migration `HistoryTab` + semplificazione DAL (2026-07-21)
+
+- **API pubblica unica**: `fetchRecipientHistory(filter)` in `src/v2/io/supabase/queries/channel-messages.ts`. Helpers `queryRecipientHistoryFromView` / `queryRecipientHistoryFromLegacy` privati (non esportati). Il fallback trasparente è centralizzato nel DAL: prova view canonica → su `Err` logga senza PII (`code` only, via `createLogger("dal:recipient-history")`) e ricade su `channel_messages`.
+- **Consumer**: `src/v2/ui/pages/email-forge/tabs/HistoryTab.tsx` importa SOLO `fetchRecipientHistory` + `RecipientHistoryRow`. Rimossi `fetchRecipientHistoryFromView`, `createLogger`, il warn locale e la doppia gestione `isOk`. UI, filtri, query key, ordine DESC, limit 10, precedenza `partnerId`, OR ILIKE su email invariati.
+- **LOC DAL**: da ~95 LOC (2 API pubbliche + 2 blocchi try/catch duplicati) a ~80 LOC (1 API pubblica + 2 helper privati + 1 orchestratore). LOC HistoryTab: -8 (rimossi logger, import view, branch legacy).
+- **Test end-to-end** dell'API pubblica in `src/v2/io/supabase/queries/__tests__/recipient-history.test.ts` (6/6 ✅): (1) nessun filtro → nessuna query; (2) view OK non chiama legacy + filtri/ordine/limit/alias corretti; (3) solo email → OR ILIKE; (4) partnerId precede email; (5) view Err → fallback trasparente su legacy con ordine/limit legacy; (6) entrambe Err → propaga Err. Eliminati i test duplicati sulle API oggi private.
+- **Verifiche**: Vitest 16/16 ✅ (B2 + B4.1 + B4.2). `tsgo` verde. Nessuna migration/view/RLS/AI/cron/invio/scheduler/altro consumer toccati.
+- **Rischio**: minimo. Il fallback resta identico a prima, ma è ora invisibile al chiamante → nessun consumer può dimenticarsi di gestirlo.
+- **Rollback**: `git revert` di 3 file (DAL, HistoryTab, test).
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅**. B5 / B6 non iniziati.
