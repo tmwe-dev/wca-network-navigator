@@ -2,7 +2,7 @@
  * useSmartSuggestions — Data-driven action suggestions based on real system state
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSmartSuggestionCounts } from "@/data/smartSuggestionCounts";
 
 export interface SmartSuggestion {
   readonly id: string;
@@ -20,29 +20,9 @@ export function useSmartSuggestions() {
     queryFn: async () => {
       const suggestions: SmartSuggestion[] = [];
 
-      const [
-        pendingTasksRes,
-        unreadEmailsRes,
-        pendingApprovalRes,
-        pendingOutreachRes,
-        draftEmailsRes,
-        activeJobsRes,
-      ] = await Promise.all([
-        // Agent tasks needing review
-        supabase.from("agent_tasks").select("id", { count: "exact", head: true }).eq("status", "proposed"),
-        // Unread channel messages
-        supabase.from("channel_messages").select("id", { count: "exact", head: true }).eq("direction", "inbound").is("read_at", null),
-        // Mission actions pending approval
-        supabase.from("mission_actions").select("id", { count: "exact", head: true }).in("status", ["proposed"]),
-        // Outreach schedules pending
-        supabase.from("outreach_schedules").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        // Email drafts to review
-        supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("status", "draft"),
-        // Active download/sorting jobs
-        supabase.from("download_jobs").select("id", { count: "exact", head: true }).in("status", ["pending", "running"]),
-      ]);
+      const counts = await fetchSmartSuggestionCounts();
 
-      const unread = unreadEmailsRes.count ?? 0;
+      const unread = counts.unreadInboundMessages;
       if (unread > 0) {
         suggestions.push({
           id: "unread-emails",
@@ -55,7 +35,7 @@ export function useSmartSuggestions() {
         });
       }
 
-      const proposed = pendingTasksRes.count ?? 0;
+      const proposed = counts.pendingTasks;
       if (proposed > 0) {
         suggestions.push({
           id: "proposed-tasks",
@@ -68,7 +48,7 @@ export function useSmartSuggestions() {
         });
       }
 
-      const approval = pendingApprovalRes.count ?? 0;
+      const approval = counts.pendingApproval;
       if (approval > 0) {
         suggestions.push({
           id: "pending-approval",
@@ -81,7 +61,7 @@ export function useSmartSuggestions() {
         });
       }
 
-      const drafts = draftEmailsRes.count ?? 0;
+      const drafts = counts.draftEmails;
       if (drafts > 0) {
         suggestions.push({
           id: "draft-emails",
@@ -94,7 +74,7 @@ export function useSmartSuggestions() {
         });
       }
 
-      const pending = pendingOutreachRes.count ?? 0;
+      const pending = counts.pendingOutreach;
       if (pending > 0) {
         suggestions.push({
           id: "pending-outreach",
@@ -107,7 +87,7 @@ export function useSmartSuggestions() {
         });
       }
 
-      const jobs = activeJobsRes.count ?? 0;
+      const jobs = counts.activeJobs;
       if (jobs > 0) {
         suggestions.push({
           id: "active-jobs",
