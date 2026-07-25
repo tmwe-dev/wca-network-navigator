@@ -235,3 +235,20 @@ Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅**. B5 
 - **Rollback**: `git revert` di 3 file (`channel-messages.ts`, `ExportSendersDialog.tsx`, `sender-messages.test.ts`).
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅**. B5 / B6 non iniziati.
+
+## Batch B4.4 — Consumer migration `SenderEmailPreviewPanel` (2026-07-25)
+
+- **Consumer scelto**: `src/components/email-intelligence/management/SenderEmailPreviewPanel.tsx` — pannello inline read-only che mostra le ultime 20 email del mittente selezionato in Email Intelligence. Zero realtime, zero mutation, singola query on-demand con `channel="email"` + OR `ilike %email%` su `from_address`/`to_address` + `order email_date DESC` + `limit 20`. Nessuna intersezione con Funnemail Inbox.
+- **API DAL nuova (pubblica)**: `fetchSenderConversation(senderEmail, limit=20)` in `src/v2/io/supabase/queries/channel-messages.ts`. Helpers `querySenderConversationFromView` / `querySenderConversationFromLegacy` privati. Primaria = `message_intelligence_v` (alias `id:message_id`, include `body_html`/`body_text`/`channel`), fallback trasparente centralizzato nel DAL su `channel_messages` con log strutturato senza PII (`sender_conversation_view_fallback`, solo `code`).
+- **Prima**: `supabase.from("channel_messages").select("id, subject, email_date, direction, channel, from_address, to_address, body_text, body_html").eq("channel","email").or("from_address.ilike.%<email>%,to_address.ilike.%<email>%").order("email_date",{ascending:false}).limit(20)`.
+- **Dopo**: `const result = await fetchSenderConversation(senderEmail, PAGE_SIZE);` — filtri, ordinamento, limit, mapping (rimappato su `PreviewEmail` con gli stessi campi), rendering `EmailBody`/`EmailDetail`/`FullPageEmailDialog`, gestione loader e stato `selectedIdx` invariati. Rimosso `import { supabase }` dal componente.
+- **Test** (`src/v2/io/supabase/queries/__tests__/sender-conversation.test.ts`, 4/4 ✅):
+  1. `senderEmail` null/vuoto → nessuna query, `Ok([])`.
+  2. view OK → legge dalla view, non chiama legacy, verifica select con `id:message_id` e `body_html`, `eq(channel,email)`, `or(from_address.ilike.%…%,to_address.ilike.%…%)`, `order(email_date DESC)`, `limit 20`.
+  3. view Err → fallback trasparente su `channel_messages` con stessi filtri/ordine/limit.
+  4. view Err + legacy Err → propaga `Err`.
+- **Verifiche**: Vitest 12/12 ✅ sui test DAL pertinenti (B4.1 + B4.3 + B4.4). `tsgo --noEmit -p tsconfig.app.json` verde. Nessuna migration/view/RLS/grant/Edge Function/AI/classificatore/cron/invio/scheduler/prompt/agente. UI e query keys invariati.
+- **Rischio**: minimo. Pannello read-only, singola query on-demand, fallback identico al percorso pre-B4.4 e invisibile al chiamante. Perimetro = un solo pannello di preview.
+- **Rollback**: `git revert` di 3 file (`channel-messages.ts`, `SenderEmailPreviewPanel.tsx`, `sender-conversation.test.ts`).
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅ + B4.4 ✅**. B5 / B6 non iniziati.

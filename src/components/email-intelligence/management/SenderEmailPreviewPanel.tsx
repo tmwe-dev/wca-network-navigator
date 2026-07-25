@@ -24,12 +24,12 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 import { getFlagFromDomain, getDomainFaviconUrl } from "@/lib/domainUtils";
+import { fetchSenderConversation } from "@/v2/io/supabase/queries/channel-messages";
 
 function getDomainFromEmail(email: string | null): string {
   if (!email) return "";
@@ -143,18 +143,12 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
     (async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("channel_messages")
-          .select("id, subject, email_date, direction, channel, from_address, to_address, body_text, body_html")
-          .eq("channel", "email")
-          .or(`from_address.ilike.%${senderEmail}%,to_address.ilike.%${senderEmail}%`)
-          .order("email_date", { ascending: false })
-          .limit(PAGE_SIZE);
+        const result = await fetchSenderConversation(senderEmail, PAGE_SIZE);
         if (cancelled) return;
-        if (error) {
+        if (result._tag === "Err") {
           setEmails([]);
         } else {
-          setEmails((data ?? []) as PreviewEmail[]);
+          setEmails(result.value as unknown as PreviewEmail[]);
           setSelectedIdx(0);
         }
       } finally {

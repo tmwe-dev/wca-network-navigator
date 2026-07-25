@@ -270,3 +270,87 @@ export async function fetchMessagesBySenders(
   log.warn("sender_messages_view_fallback", { code: viewResult.error.code });
   return querySenderMessagesFromLegacy(senders, limit);
 }
+
+// ── B4.4 — Conversazione singolo mittente (consumer: SenderEmailPreviewPanel) ──
+
+export interface SenderConversationRow {
+  readonly id: string;
+  readonly subject: string | null;
+  readonly email_date: string | null;
+  readonly direction: string;
+  readonly channel: string | null;
+  readonly from_address: string | null;
+  readonly to_address: string | null;
+  readonly body_text: string | null;
+  readonly body_html: string | null;
+}
+
+const SENDER_CONV_COLS_VIEW =
+  "id:message_id, subject, email_date, direction, channel, from_address, to_address, body_text, body_html";
+const SENDER_CONV_COLS_LEGACY =
+  "id, subject, email_date, direction, channel, from_address, to_address, body_text, body_html";
+
+async function querySenderConversationFromView(
+  senderEmail: string,
+  limit: number,
+): Promise<Result<SenderConversationRow[], AppError>> {
+  try {
+    const { data, error } = await supabase
+      .from("message_intelligence_v")
+      .select(SENDER_CONV_COLS_VIEW)
+      .eq("channel", "email")
+      .or(`from_address.ilike.%${senderEmail}%,to_address.ilike.%${senderEmail}%`)
+      .order("email_date", { ascending: false })
+      .limit(limit);
+    if (error) {
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "senderConversation:view"),
+      );
+    }
+    return ok((data ?? []) as unknown as SenderConversationRow[]);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "senderConversation:view"));
+  }
+}
+
+async function querySenderConversationFromLegacy(
+  senderEmail: string,
+  limit: number,
+): Promise<Result<SenderConversationRow[], AppError>> {
+  try {
+    const { data, error } = await supabase
+      .from("channel_messages")
+      .select(SENDER_CONV_COLS_LEGACY)
+      .eq("channel", "email")
+      .or(`from_address.ilike.%${senderEmail}%,to_address.ilike.%${senderEmail}%`)
+      .order("email_date", { ascending: false })
+      .limit(limit);
+    if (error) {
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderConversation:legacy"),
+      );
+    }
+    return ok((data ?? []) as unknown as SenderConversationRow[]);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "senderConversation:legacy"));
+  }
+}
+
+/**
+ * B4.4 — Public SSOT per la conversazione email di un singolo mittente
+ * (consumer: SenderEmailPreviewPanel di Email Intelligence).
+ * Sorgente primaria: view canonica `message_intelligence_v`. Fallback
+ * trasparente su `channel_messages` in caso di errore/indisponibilità.
+ * Filtri: channel="email" + OR ILIKE su from/to address. Ordine email_date DESC.
+ * Nessun fetch se `senderEmail` è vuoto/null.
+ */
+export async function fetchSenderConversation(
+  senderEmail: string | null | undefined,
+  limit = 20,
+): Promise<Result<SenderConversationRow[], AppError>> {
+  if (!senderEmail) return ok([]);
+  const viewResult = await querySenderConversationFromView(senderEmail, limit);
+  if (viewResult._tag === "Ok") return viewResult;
+  log.warn("sender_conversation_view_fallback", { code: viewResult.error.code });
+  return querySenderConversationFromLegacy(senderEmail, limit);
+}
