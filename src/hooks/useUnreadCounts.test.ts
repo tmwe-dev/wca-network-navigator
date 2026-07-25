@@ -3,21 +3,31 @@ import { waitFor } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const mockIsNull = vi.fn();
+const mockNotHidden = vi.fn();
 const mockEqDir = vi.fn().mockReturnValue({
   is: (...a: any[]) => {
     mockIsNull(...a);
-    return { count: 3, error: null };
+    return {
+      not: (...notArgs: any[]) => {
+        mockNotHidden(...notArgs);
+        return { count: 3, error: null };
+      },
+    };
   },
 });
 const mockEqChan = vi.fn().mockReturnValue({ eq: mockEqDir });
 const mockIn = vi.fn().mockReturnValue({ count: 7, error: null });
+// activities: `.select().is("deleted_at", null).in("status", [...])`
+const mockActivitiesIsThenIn = vi.fn().mockReturnValue({
+  in: vi.fn().mockReturnValue({ count: 4, error: null }),
+});
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => ({
       select: () => {
         if (table === "partners") return { in: mockIn };
-        if (table === "activities") return { in: mockIn };
+        if (table === "activities") return { is: mockActivitiesIsThenIn };
         return { eq: mockEqChan };
       },
     }),
@@ -55,16 +65,20 @@ describe("useUnreadCounts", () => {
   it("handles error gracefully", async () => {
     mockEqChan.mockReturnValueOnce({
       eq: () => ({
-        is: () => {
-          throw new Error("DB down");
-        },
+        is: () => ({
+          not: () => {
+            throw new Error("DB down");
+          },
+        }),
       }),
     });
     const { result } = renderHookWithProviders(() => useUnreadCounts());
     await waitFor(() => expect(result.current.error).not.toBeNull());
   });
   it("defaults counts to 0 when null", async () => {
-    mockEqDir.mockReturnValueOnce({ is: () => ({ count: null, error: null }) });
+    mockEqDir.mockReturnValueOnce({
+      is: () => ({ not: () => ({ count: null, error: null }) }),
+    });
     const { result } = renderHookWithProviders(() => useUnreadCounts());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.email).toBe(0);

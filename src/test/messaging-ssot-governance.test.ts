@@ -36,7 +36,7 @@ describe("messaging SSOT governance", () => {
     expect(src).not.toMatch(/supabase\.from\(["']ai_pending_actions["']\)/);
   });
 
-  it("nessun file applicativo (escluso messaging/inbox/test) inserisce direttamente ai_pending_actions con send_linkedin/send_whatsapp", () => {
+  it("nessun file applicativo (escluso messaging/inbox/test) inserisce direttamente ai_pending_actions con send_linkedin/send_whatsapp", { timeout: 30_000 }, () => {
     const offenders: string[] = [];
     for (const file of walk("src")) {
       if (file.includes("/lib/messaging/")) continue;

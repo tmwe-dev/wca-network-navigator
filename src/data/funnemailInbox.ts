@@ -13,6 +13,7 @@
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { createLogger } from "@/lib/log";
+import { isViewSchemaError } from "@/data/_shared/viewFallbackPredicate";
 
 const inboxLog = createLogger("dal:funnemail-inbox");
 
@@ -38,6 +39,12 @@ async function readInboxOnce<T>(
 ): Promise<T[]> {
   const viewRes = await build("message_intelligence_v");
   if (!viewRes.error) return viewRes.data ?? [];
+  // Fallback SOLO per errori compatibili con view/schema non disponibile.
+  // Auth/RLS/permission/network/timeout devono propagarsi (bug reali).
+  if (!isViewSchemaError(viewRes.error)) {
+    inboxLog.error("view_error_no_fallback", { op, code: viewRes.error.code });
+    throw new Error(viewRes.error.message);
+  }
   inboxLog.warn("view_fallback", { op, code: viewRes.error.code });
   const legacyRes = await build("channel_messages");
   if (legacyRes.error) throw new Error(legacyRes.error.message);
@@ -57,13 +64,24 @@ async function readInboxPaginated<T>(
   try {
     return await fetchAllPages((from, to) => build("message_intelligence_v", from, to), maxRows);
   } catch (e: unknown) {
+    const errLike = e as { code?: string; message?: string } | null;
+    if (!isViewSchemaError(errLike)) {
+      inboxLog.error("view_error_no_fallback_paginated", {
+        op,
+        code: errLike?.code ?? null,
+      });
+      throw e;
+    }
     inboxLog.warn("view_fallback_paginated", {
       op,
-      code: (e as { code?: string } | null)?.code ?? null,
+      code: errLike?.code ?? null,
     });
     return await fetchAllPages((from, to) => build("channel_messages", from, to), maxRows);
   }
 }
+
+// Export interni per test di regressione B4.6b (solo test — non consumer UI).
+export const __internals = { readInboxOnce, readInboxPaginated };
 
 export interface FunnemailFolder {
   slug: string;

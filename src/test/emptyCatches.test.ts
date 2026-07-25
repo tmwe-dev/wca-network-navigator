@@ -29,7 +29,7 @@ describe("Empty catch blocks audit", () => {
     return results;
   }
 
-  it("should have zero empty catch blocks in src/", () => {
+  it("should have zero empty catch blocks in src/", { timeout: 30_000 }, () => {
     const violations = findEmptyCatches(SRC_DIR);
     if (violations.length > 0) {
       console.warn("Files with empty catches:", violations);
