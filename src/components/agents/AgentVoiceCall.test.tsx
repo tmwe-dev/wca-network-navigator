@@ -2,11 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 
-// Motivazione: dynamic import di AgentVoiceCall include grafo pesante
-// (ElevenLabs/framer-motion) — il transform Vite a freddo sotto carico
-// parallelo eccede i 5s default. Solo timeout, assertion invariate.
-vi.setConfig({ testTimeout: 30_000 });
-
 // Mock all external dependencies
 vi.mock("@elevenlabs/react", () => ({
   useConversation: () => ({

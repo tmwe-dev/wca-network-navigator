@@ -1,10 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { vi } from "vitest";
-
-// Motivazione: batteria di import() dinamici di moduli DAL/hook pesanti; il
-// transform Vite SSR a freddo sotto carico parallelo supera i 5s default.
-// Solo timeout — assertion e comportamento invariati.
-vi.setConfig({ testTimeout: 30_000 });
 
 /**
  * Tests for the Data Access Layer module structure.

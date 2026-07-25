@@ -1,8 +1,4 @@
 import { describe, it, expect, vi } from "vitest";
-
-// Motivazione: import dinamico modulo pesante — transform Vite SSR a freddo
-// eccede i 5s default sotto carico parallelo. Nessun cambio runtime.
-vi.setConfig({ testTimeout: 30_000 });
 const builder: any = {
   select: vi.fn(() => builder),
   insert: vi.fn(() => builder),

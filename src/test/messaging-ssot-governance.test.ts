@@ -6,13 +6,9 @@
  *  - useBulkLinkedInDispatch deve usare queueLinkedInForApproval.
  *  - Esiste un wrapper "Direct" e uno "Queue" per ciascun canale.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-
-// Motivazione: primo test importa dinamicamente moduli messaging pesanti;
-// transform Vite SSR a freddo può superare i 5s default sotto carico parallelo.
-vi.setConfig({ testTimeout: 30_000 });
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
