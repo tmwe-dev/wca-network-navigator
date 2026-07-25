@@ -368,8 +368,7 @@ Filtri, select, ordine, error semantics (silent `?? 0` sui null count → manten
 - DB read-only: `email_campaign_queue` e `email_drafts` → RLS ENABLED, 4 policy cad. Nessuna migration/schema/policy modificata in questo batch.
 
 ### Rischio & rollback
-- Rischio residuo: nullo sul comportamento utente (equivalenza filtri, key, semantica errori mantenuta identica: `?? 0`; il DAL introduce inoltre `throw` sul primo errore, invariante rispetto all'inline che ignorava error e restituiva 0 — vedi nota).
-- Nota semantica errori: l'inline originario NON leggeva `error` e restituiva `count ?? 0` anche in errore silenziando eventuali failure RLS. Il DAL propaga l'errore alla `useQuery`, che lo espone come `isError` senza cambiare il valore mostrato al primo render (stat card resta a 0 in entrambi i casi). Considerato **miglioramento non regressivo** — se serve preservare l'occultamento, si può wrappare con try/catch nel queryFn. Segnalato ma non modificato in questo batch.
+- Rischio residuo (post D2.1): nullo. Equivalenza osservabile completa — filtri, select, query key, e semantica errori identici all'inline originario.
 - Rollback: `git revert` del batch — 2 file nuovi + 1 MOD ristretta.
 
 ### Punteggio (conservativo)
@@ -377,4 +376,29 @@ Filtri, select, ordine, error semantics (silent `?? 0` sui null count → manten
 - Totale ponderato: ~74.760 → **~74.780 / 100.000** (Δ +20).
 
 ### Esito
-**GO** — batch reversibile, delta reale misurato, zero regressioni introdotte, DB invariato.
+**GO condizionato → GO pieno solo dopo D2.1**. D2 in isolamento cambiava la semantica errori (propagazione via `throw` vs. silenziamento inline): variazione runtime osservabile su React Query (`isError`, retry, logging). Accettabile solo con D2.1 applicato.
+
+---
+
+## D2.1 — Correzione equivalenza semantica errori (micro-gate)
+
+Base: `f95a0449116ef28acdac7127180f828e90fd0d87`.
+
+### Motivazione
+D2 introduceva `throw firstError` nel DAL, mentre l'inline originario ignorava `error` e restituiva `count ?? 0`. React Query avrebbe attivato `isError`, retry policy e logging — cambiamento runtime osservabile che viola il vincolo di equivalenza.
+
+### Modifiche (3 file, nessun'altro)
+- `src/data/campaignStats.ts`: rimossa la propagazione (`firstError`/`throw`). Ripristinata semantica `count ?? 0` anche in presenza di `error`. Commento header aggiornato per documentare la scelta intenzionale di silenziamento (specchio dell'inline).
+- `src/data/__tests__/campaignStats.test.ts`: sostituito il test "propaga il primo errore" con test di **equivalenza**: response con `error` + `count=null` → campo restituisce `0`; altri count preservati; nessun throw. Guardrail no-bypass invariato.
+- `.lovable/plan.md`: questo entry + correzione affermazioni errate in D2.
+
+### Verifiche
+- Vitest mirato `src/data/__tests__/campaignStats.test.ts`: 3/3 ✅
+- Typecheck ✅ · Lint mirato ✅ · Build ✅
+- Suite completa Run A: 3049 passed / 0 failed / 2 skipped (invariato)
+- Suite completa Run B: 3049 passed / 0 failed / 2 skipped (invariato)
+- Bypass DAL: **285** (stesso script D1/D2, invariato).
+- DB read-only: `email_campaign_queue` e `email_drafts` RLS ENABLED, 4 policy cad. Nessuna migration/schema/policy toccata.
+
+### Esito D2 + D2.1
+**GO pieno** — equivalenza osservabile provata. Fermo prima di D3.

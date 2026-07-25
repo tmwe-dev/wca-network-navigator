@@ -5,6 +5,13 @@
  * Consolida 3 count head-only inline precedentemente in
  * `src/v2/hooks/useCampaignDraftsV2.ts`. Nessuna scrittura, RLS applicata
  * dall'utente autenticato. Filtri identici agli inline originari.
+ *
+ * Semantica errori: PRESERVATA identica all'inline originario (D2.1).
+ * L'inline usava `count ?? 0` senza leggere `error`, quindi eventuali
+ * failure auth/RLS/network venivano silenziate e il campo restituiva 0.
+ * Manteniamo intenzionalmente lo stesso comportamento per equivalenza
+ * osservabile su React Query (`isError` non si attiva, nessun retry,
+ * nessun logging). Non aggiungere try/catch, retry o throw qui.
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,10 +41,7 @@ export async function fetchCampaignStatsCounts(): Promise<CampaignStatsCounts> {
       .eq("queue_status", "completed"),
   ]);
 
-  // Propaga eventuali errori auth/RLS/network — non mascherare.
-  const firstError = sentRes.error ?? pendingRes.error ?? completedRes.error;
-  if (firstError) throw firstError;
-
+  // Semantica originaria: `count ?? 0` anche in presenza di `error`.
   return {
     sent: n(sentRes.count),
     pending: n(pendingRes.count),
