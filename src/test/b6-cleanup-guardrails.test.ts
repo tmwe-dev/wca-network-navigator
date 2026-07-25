@@ -41,7 +41,7 @@ describe("B6 — orphan edge function cleanup", () => {
     let raw = "";
     try {
       raw = execSync(
-        "grep -rEn \"(functions/v1/classify-email-response|invoke\\(['\\\"]classify-email-response|fetch\\([^)]*classify-email-response)\" src supabase/functions 2>/dev/null || true",
+        "grep -rEn --exclude=b6-cleanup-guardrails.test.ts \"(functions/v1/classify-email-response|invoke\\(['\\\"]classify-email-response|fetch\\([^)]*classify-email-response)\" src supabase/functions 2>/dev/null || true",
         { encoding: "utf8" },
       );
     } catch {
