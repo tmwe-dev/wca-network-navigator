@@ -9,6 +9,13 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Motivazione (D1.1): molte suite DAL usano `await import()` di moduli
+    // pesanti; il transform Vite SSR a freddo, sotto carico parallelo,
+    // supera i 5s default provocando timeout intermittenti (flaky).
+    // Alziamo solo il timeout di default: assertion e comportamento runtime
+    // invariati, nessuno skip, nessun retry.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "lcov", "json-summary"],
