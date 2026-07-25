@@ -1,3 +1,85 @@
+# Batch D4 — DAL bypass, cluster READ-only (AgentRolesOverviewPage)
+
+Base: `38150b47`. Nessun deploy, nessuna migration, nessuno schema/policy modificato.
+
+## Fase A — classificazione baseline
+
+Formula riproducibile (stesso script D1/D2/D3):
+```
+grep -rEn --include=*.ts --include=*.tsx \
+  -e 'supabase\.from\(' -e 'untypedFrom\(' -e 'tFrom\(' -e 'supabase\.rpc\(' src \
+  | grep -v -E '^src/(data|integrations/supabase|lib/(supabaseUntyped|typedSupabase))' \
+  | grep -v -E '\.test\.(ts|tsx)|^src/test/|^src/__tests__/'
+```
+
+Ogni linea contiene al più una call-expression: linee = call-site.
+
+KPI (nuovi, non retroattivi):
+- **KPI storico** — output dello script sopra. Include `src/v2/io/**`. Pre-D4: **278**.
+- **KPI true UI/service bypass** — KPI storico meno `src/v2/io/**`. Motivazione: `src/v2/io/{supabase/queries,supabase/mutations,edge,external}` è un boundary IO parallelo alla DAL `src/data/`, documentato dalla struttura, importato da hook/pagine, mai da `src/components/`. Pre-D4: **236**.
+
+ESLint non modificato in questo batch (allow-list attuale: `src/data/**`, `src/integrations/**`, `src/test/**`). Governance del boundary `src/v2/io` rimandata a batch dedicato.
+
+Distribuzione per layer (baseline 278):
+
+| Layer | Linee |
+|---|---:|
+| `src/v2/ui/**` | 93 |
+| `src/components/**` | 75 |
+| `src/v2/io/**` (boundary IO — escluso da KPI true) | 42 |
+| `src/hooks/**` | 34 |
+| `src/v2/hooks/**` | 19 |
+| `src/v2/services/**` | 8 |
+| `src/lib/**` | 3 |
+| `src/v2/observability/**` | 2 |
+| `src/v2/agent/**` | 2 |
+
+## Fase B — cluster scelto
+
+`src/v2/ui/pages/AgentRolesOverviewPage.tsx` (pagina "Chi fa cosa"): 5 query `supabase.from(...)` in un solo `Promise.all`, tutte READ-only, dichiarate nell'header del file come "Vista SOLA LETTURA, nessuna scrittura, nessun side-effect". Il metric script rileva 4 linee (una call è spezzata su più righe); post-migrazione entrambi i KPI scendono di 4.
+
+Tabelle: `agents`, `agent_personas`, `agent_capabilities`, `funnemail_autoresponder_templates`, `wake_up_rules`.
+
+DB (read-only): tutte 5 esistenti in `public`, RLS ON, policies count 5 / 4 / 4 / 2 / 4.
+
+File modificati (4, inclusi test e plan):
+- `src/data/agentRolesOverview.ts` — DAL specifico tipizzato `fetchAgentRolesOverview()`.
+- `src/v2/ui/pages/AgentRolesOverviewPage.tsx` — sostituito `import { supabase }` con `import { fetchAgentRolesOverview }`; corpo `queryFn` invariato (stesso Set/Map/filter/map).
+- `src/data/__tests__/agentRolesOverview.test.ts` — 3 test: chain builder esatta (select/is/eq/order) + mapping + equivalenza silenziosa (data null anche con error → []) + guardrail no-reintroduction.
+- `.lovable/plan.md` — questa sezione.
+
+Equivalenza preservata: stesse 5 tabelle, stesso ordine, stesso `select(...)` stringa, stessi `.is("deleted_at", null)` / `.eq("is_active", true)` / `.order("role", { ascending: true })`, stessa normalizzazione `data ?? []`. Il consumer non ispezionava `.error` prima e non lo ispeziona ora; nessun throw/retry/log introdotto. `queryKey ["agents", "roles-overview"]` e opzioni React Query invariati.
+
+## Metriche
+
+| Metrica | Pre-D4 | Post-D4 | Delta |
+|---|---:|---:|---:|
+| KPI storico | 278 | 274 | −4 (−1,44%) |
+| KPI true UI/service bypass | 236 | 232 | −4 (−1,69%) |
+
+Cumulativo D1+D2+D3+D4 su KPI storico: −20.
+
+## Prove
+
+- Vitest mirato `agentRolesOverview.test.ts`: 3/3 ✅.
+- Typecheck `tsgo --noEmit`: ✅.
+- ESLint sui 3 file toccati: ✅ (0 errori / 0 warning).
+- Vitest suite completa Run A: **383 file, 3055 pass / 2 skip / 0 fail** (252,93 s).
+- Vitest suite completa Run B: **383 file, 3055 pass / 2 skip / 0 fail** (226,20 s). Nessun nuovo skip vs pre-D4.
+- Build produzione `bun run build`: ✅.
+
+## Rischio & Rollback
+
+Rischio: **nullo**. Pagina resta 100% read-only, stessi contratti sul network, stesso payload restituito a React Query. Nessun cambio RLS/policy/schema. Consumer unico.
+
+Rollback: `git revert` del batch.
+
+## Verdetto
+
+**GO PIENO**. Fermo prima di D5.
+
+---
+
 # Audit Tecnico Read-Only — commit `fcbf8b4`
 
 Ambito: intero repository. Nessuna modifica applicata. Numeri "verificati" = calcolati con comandi shell in questo turno; "inferito" = derivato da `<supabase-tables>` in contesto o da memoria di progetto.
