@@ -64,21 +64,6 @@ export const EDGE_FN_REGISTRY: ReadonlyArray<EdgeFnPromptSpec> = [
     },
   },
   {
-    id: "fn:classify-email-response",
-    edgeFunction: "classify-email-response",
-    label: "Email Response Classifier",
-    description: "Classifica risposte commerciali (categoria, fiducia, urgenza) e fa progredire il lead status.",
-    defaultModel: "claude-opus-4-1-20250805",
-    hasTools: false,
-    basePrompt:
-      "Ti specializzi nella classificazione di email commerciali. Analizza con cura il dominio, la categoria, la fiducia e l'urgenza. Rispondi SOLO con JSON valido, no markdown, no code fences.",
-    loaderOptions: {
-      scope: "classification",
-      includeUniversal: true,
-      limit: 4,
-    },
-  },
-  {
     id: "fn:classify-inbound-message",
     edgeFunction: "classify-inbound-message",
     label: "Inbound Message Classifier (multi-canale)",

@@ -23,7 +23,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 const EXPECTED_LLM_FUNCTIONS = [
   // Strumentate via aiChat
   "ai-arena-suggest", "ai-deep-search-helper", "analyze-email-edit",
-  "classify-email-response", "country-kb-generator", "daily-briefing",
+  "country-kb-generator", "daily-briefing",
   "generate-email", "generate-outreach", "improve-email", "voice-brain-bridge",
   // Migrate via interceptor
   "agent-execute", "agent-loop", "agent-prompt-refiner", "agentic-decide",
