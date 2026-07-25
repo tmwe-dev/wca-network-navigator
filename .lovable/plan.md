@@ -409,3 +409,69 @@ Commit base: `62d6a29d`
 
 ### Verdetto: **GO PIENO**
 Nessuna regressione B4. Zero test rossi. Fallback view→legacy ora sicuro (mascheramento auth/RLS/network eliminato).
+
+---
+## B5 — Consolidamento pipeline classificazione (2026-07-25)
+
+### Flusso reale ricostruito
+| Trigger | Path | Volume 7d |
+|---|---|---|
+| INSERT `channel_messages` → trigger DB `on_inbound_message` → `pg_net.http_post(classify-inbound-message)` | **canonico** | 1230 unique msgs (100% coverage inbound_email_7d=1230) |
+| `check-inbox` fine-batch → fetch `classify-inbound-message` header `x-invoke-source=check-inbox-postProcess` | fallback rete | 156 invocazioni / 156 dedup_hits (100% dedup) |
+| Cron 5m `classify-emails-batch` → fetch `classify-inbound-message` `x-invoke-source=cron-batch` | safety net | 2 dedup_hits (< 1% volume) |
+| Trigger DB anche su `check-inbox-booking` (stesso path) | idem canonico | incluso in 1230 |
+
+Legacy `classify-email-response` = orfano runtime (già segnalato in `docs/audit/message-pipeline-2026-07-20.md` §D3, zero caller live confermato con `rg`).
+
+### Baseline telemetria (query reali `pipeline_traces` last 7d)
+```
+source                  | dedup_hits | note
+check-inbox-postProcess | 156        | 100% delle sue invocazioni sono ridondanti
+cron-batch              | 2          | safety net minima
+unknown (trigger DB)    | 673 / 3761 received / 1230 unique | copertura 100% inbound
+```
+`classified_7d (reply_classifications) = 1389`, `inbound_email_7d = 1230`, `email_classifications legacy 7d = 0`. Backlog non-classificati ~ 0.
+
+### Gate
+- postProcess dedup_hits/invocations = 156/156 = **100%** ≥ 60% ✅
+- trigger DB copre 1230/1230 = **100%** unique messages ≥ 95% ✅
+- cron-batch < 5% volume ✅
+- Nessun buco di copertura (classified_7d ≥ inbound_email_7d)
+
+**Verdetto: GO.**
+
+### Change minimo reversibile
+File modificato: `supabase/functions/_shared/inboxPostProcess.ts`.
+- `classifyInboundEmails` ora gated da feature flag env `CLASSIFY_POSTPROCESS_FALLBACK_ENABLED` (default `false` → early return).
+- Path legacy (fetch classify-inbound-message) preservato dietro il flag per rollback immediato senza redeploy.
+- Trigger DB `on_inbound_message` invariato = pipeline canonica primaria.
+- Cron `classify-emails-batch` invariato = safety net 5 min.
+- Zero modifiche a UI/schema/RLS/vista/tabelle/altri edge.
+
+### Test aggiunti
+`src/test/classifyPostprocessFlag.test.ts` (3 test):
+- presenza flag `CLASSIFY_POSTPROCESS_FALLBACK_ENABLED`
+- early return `if (!enabled) return;`
+- path legacy fetch preservato per rollback
+
+Copertura complementare (già in repo, non modificata):
+- dedup idempotente: `classify-inbound-message/index.ts` guardia `reply_classifications` (linee 97-113) + test `classifyPostprocessFlag` verifica invariante flusso.
+- cron recovery: `classify-emails-batch` continua a girare ogni 5m.
+- singola invocazione primaria: garantita dal trigger DB + dedup guard.
+
+### Risultati numerici
+| Check | Risultato |
+|---|---|
+| `tsgo --noEmit` | ✅ exit 0 |
+| `eslint src/` | ✅ 0 errors, 233 warnings pre-esistenti |
+| `vitest run` (full) | ✅ **378 file / 3037 test passed**, 0 failed, 2 skipped |
+| `npm run build` | ✅ exit 0 |
+
+### Rischio
+Minimo. Il fallback rete era 100% ridondante negli ultimi 7gg. Se in un caso patologico il trigger DB smettesse di funzionare (GUC service_role_key non configurata), il cron safety net (5m) copre entro un ciclo e telemetria `pipeline_traces` mostrerebbe drop di `unknown` received events.
+
+### Rollback
+1. **Immediato (senza redeploy)**: `supabase secrets set CLASSIFY_POSTPROCESS_FALLBACK_ENABLED=true` → il path legacy si riattiva al prossimo boot funzione.
+2. **Codice**: `git revert` del commit B5 (ripristina il fetch incondizionato).
+
+Stato piano P0: **B0…B5 ✅**. B6 non iniziato. Nessuna pubblicazione/deploy.
