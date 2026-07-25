@@ -14,6 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -28,20 +29,10 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
-    }
-
-    const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "AUTH_INVALID" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
-    }
-    const userId = claimsData.claims.sub as string;
+    // Auth check — E3: authGuard terse (contratto HTTP byte-identico al pre-E3).
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (isAuthError(auth)) return auth;
+    const userId = auth.userId;
 
     // Rate limit
     const rl = checkRateLimit(`ai-import:${userId}`, { maxTokens: 10, refillRate: 0.1 });
