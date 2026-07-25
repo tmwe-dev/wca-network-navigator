@@ -12,6 +12,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 interface LogActionBody {
   channel: "email" | "whatsapp" | "linkedin" | "sms";
@@ -50,31 +51,12 @@ Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    // Auth
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "AUTH_REQUIRED" }),
-        { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } },
-      );
-    }
+    // Auth — E2: authGuard terse (contract byte-identico al pre-E2).
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (isAuthError(auth)) return auth;
+    const userId = auth.userId;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(
-      authHeader.replace("Bearer ", ""),
-    );
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(
-        JSON.stringify({ error: "AUTH_INVALID" }),
-        { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } },
-      );
-    }
-
-    const userId = claimsData.claims.sub as string;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 

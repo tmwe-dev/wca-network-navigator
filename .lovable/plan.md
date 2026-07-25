@@ -751,3 +751,62 @@ Rollback: `git revert` del batch. Il guardrail test fallirebbe volutamente per o
 
 **GO PIENO**. Fermo prima del prossimo batch. Il completamento della migrazione v1→v2 sui domini "attivi" (useActivities/useDownloadJobs/useAgents/useChannelMessages) resta escluso da questo scope per rispetto del limite max 3 file eliminati / 5 file totali.
 
+
+---
+
+# BATCH E2 — Auth guard terse mode + migrazione 2 consumer
+
+## Scope
+
+Additivo su `_shared/authGuard.ts`: nuovo parametro opzionale `options.errorFormat: "verbose" | "terse"` con default `"verbose"` (comportamento pre-E2 byte-identico per i 16 caller esistenti). Migrazione di **2** consumer che emettevano auth inline in formato terse (`{"error":"AUTH_REQUIRED"}` / `{"error":"AUTH_INVALID"}`).
+
+## File modificati (4, entro tetto 5)
+
+1. `supabase/functions/_shared/authGuard.ts` — extend firma con `options.errorFormat`; nessun cambio al success path.
+2. `supabase/functions/_shared/authGuard.test.ts` — **nuovo**, 4 test Deno: verbose default byte-identico, terse `AUTH_REQUIRED`, terse `AUTH_INVALID`, verbose `AUTH_INVALID` byte-identico.
+3. `supabase/functions/wca-country-counts/index.ts` — auth inline (17 LOC) → `requireAuth(req, dynCors, { errorFormat: "terse" })`.
+4. `supabase/functions/log-action/index.ts` — auth inline (24 LOC) → `requireAuth(req, dynCors, { errorFormat: "terse" })`.
+5. `.lovable/plan.md` — questo aggiornamento.
+
+Consumer scartato: **`save-correction-memory`** — già usa `edgeError` con firma non allineata al contratto terse; migrazione richiederebbe cambiare il body. Fuori scope E2 per rispetto del tetto di 5 file e del vincolo byte-identico.
+
+## Contratto preservato (byte-per-byte)
+
+Per entrambi i consumer migrati:
+- `AUTH_REQUIRED`: status **401**, body esatto `{"error":"AUTH_REQUIRED"}`, headers `{ ...dynCors, "Content-Type": "application/json" }`.
+- `AUTH_INVALID`: status **401**, body esatto `{"error":"AUTH_INVALID"}`, headers idem.
+- Ordine controlli invariato: Bearer prefix → getClaims → sub check.
+- Success path: `userId` estratto da `claimsData.claims.sub`, poi client service-role/ext creato dopo l'auth (invariato).
+- CORS preflight, catch 500, logging invariati.
+
+## Metriche
+
+| Metrica | Pre-E2 | Post-E2 | Delta |
+|---|---:|---:|---:|
+| Caller `requireAuth` | 16 | **18** | +2 |
+| Consumer auth inline (formato terse) | 33 | **31** | −2 |
+| LOC auth duplicate rimosse dai consumer | — | ~41 (17 + 24) | −41 |
+| LOC nette `_shared/authGuard.ts` | 50 | ~72 | +22 |
+| LOC nette totali (net edge) | 0 | ~ −19 | favorevole |
+
+Δpunteggio assegnato: **+80 punti** (consolidamento runtime reale su 2 consumer, contratto verificato).
+
+## Prove
+
+- Deno test `supabase/functions/_shared/authGuard.test.ts`: **4/4 ✅** (27 ms). Verificato:
+  - verbose default `AUTH_REQUIRED` == `{"error":"AUTH_REQUIRED","message":"Bearer token required"}` (byte-identico pre-E2, garantisce i 16 caller esistenti).
+  - verbose `AUTH_INVALID` == `{"error":"AUTH_INVALID","message":"Invalid or expired token"}`.
+  - terse `AUTH_REQUIRED` == `{"error":"AUTH_REQUIRED"}` (byte-identico a wca-country-counts / log-action pre-E2).
+  - terse `AUTH_INVALID` == `{"error":"AUTH_INVALID"}` idem.
+- Static smoke `deno check` dei due consumer: nessun **nuovo** errore introdotto. Rimangono **2 errori pre-esistenti** in `wca-country-counts` (TS2538 su `r.country_code` alle righe 36/49, dentro codice non toccato dal batch — vedi issue draft debt separata).
+- Nessuna migration DB, nessun secret, nessuna modifica di config/UX/RLS.
+
+## Rischio & Rollback
+
+Rischio: **basso**. Contratto HTTP byte-identico verificato tramite test. Success path invariato. Nessun deploy in questo batch.
+
+Rollback: `git revert` del batch. I 4 file tornano allo stato pre-E2. I 16 caller preesistenti di `requireAuth` sono già coperti dal default `verbose` e non richiedono azione.
+
+## Verdetto
+
+**GO PIENO** su E2. Fermo prima di E3.
