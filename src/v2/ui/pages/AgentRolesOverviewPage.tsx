@@ -10,23 +10,13 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Users, Mail, MessageSquare, Inbox, Wrench, BookOpen, Bell, MailCheck, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAgentRolesOverview } from "@/data/agentRolesOverview";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-interface AgentRow {
-  id: string;
-  name: string;
-  role: string;
-  avatar_emoji: string;
-  is_active: boolean;
-  can_send_email: boolean | null;
-  can_send_whatsapp: boolean | null;
-  can_access_inbox: boolean | null;
-  assigned_tools: unknown;
-}
+import type { AgentRolesOverviewRawAgent as AgentRow } from "@/data/agentRolesOverview";
 
 /** Descrizione umana di "chi fa cosa" per ruolo. */
 const ROLE_INFO: Record<string, { label: string; does: string }> = {
@@ -54,38 +44,27 @@ export function AgentRolesOverviewPage(): React.ReactElement {
   const { data, isLoading } = useQuery({
     queryKey: ["agents", "roles-overview"],
     queryFn: async () => {
-      const [agentsRes, personasRes, capsRes, autoRes, wakeRes] = await Promise.all([
-        supabase
-          .from("agents")
-          .select("id, name, role, avatar_emoji, is_active, can_send_email, can_send_whatsapp, can_access_inbox, assigned_tools")
-          .is("deleted_at", null)
-          .eq("is_active", true)
-          .order("role", { ascending: true }),
-        supabase.from("agent_personas").select("agent_id"),
-        supabase.from("agent_capabilities").select("agent_id, allowed_tools, execution_mode"),
-        supabase.from("funnemail_autoresponder_templates").select("id, enabled"),
-        supabase.from("wake_up_rules").select("id, is_active").is("deleted_at", null),
-      ]);
+      const raw = await fetchAgentRolesOverview();
 
-      const personaSet = new Set((personasRes.data ?? []).map((p) => p.agent_id));
+      const personaSet = new Set(raw.personas.map((p) => p.agent_id));
       const capsMap = new Map<string, { tools: number; mode: string }>();
-      for (const c of capsRes.data ?? []) {
+      for (const c of raw.capabilities) {
         capsMap.set(c.agent_id, {
           tools: Array.isArray(c.allowed_tools) ? c.allowed_tools.length : 0,
           mode: (c.execution_mode as string) ?? "supervised",
         });
       }
 
-      const agents = ((agentsRes.data ?? []) as AgentRow[]).map((a) => ({
+      const agents = (raw.agents as AgentRow[]).map((a) => ({
         ...a,
         hasPersona: personaSet.has(a.id),
         caps: capsMap.get(a.id) ?? null,
       }));
 
-      const autoTotal = (autoRes.data ?? []).length;
-      const autoEnabled = (autoRes.data ?? []).filter((t) => t.enabled).length;
-      const wakeTotal = (wakeRes.data ?? []).length;
-      const wakeActive = (wakeRes.data ?? []).filter((r) => r.is_active).length;
+      const autoTotal = raw.autoresponderTemplates.length;
+      const autoEnabled = raw.autoresponderTemplates.filter((t) => t.enabled).length;
+      const wakeTotal = raw.wakeUpRules.length;
+      const wakeActive = raw.wakeUpRules.filter((r) => r.is_active).length;
 
       return { agents, autoTotal, autoEnabled, wakeTotal, wakeActive };
     },
