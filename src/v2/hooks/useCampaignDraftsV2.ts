@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
+import { fetchCampaignStatsCounts } from "@/data/campaignStats";
 
 interface CampaignDraft {
   readonly id: string;
@@ -35,18 +36,7 @@ interface CampaignStats {
 export function useCampaignStatsV2() {
   return useQuery({
     queryKey: ["v2", "campaign-stats"],
-    queryFn: async (): Promise<CampaignStats> => {
-      const [sentRes, pendingRes, completedRes] = await Promise.all([
-        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
-        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("queue_status", "completed"),
-      ]);
-      return {
-        sent: sentRes.count ?? 0,
-        pending: pendingRes.count ?? 0,
-        completed: completedRes.count ?? 0,
-      };
-    },
+    queryFn: (): Promise<CampaignStats> => fetchCampaignStatsCounts(),
   });
 }
 

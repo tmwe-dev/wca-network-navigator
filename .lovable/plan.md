@@ -322,3 +322,59 @@ Nessun cambio filtro. RLS invariata. React Query key (`["v2", "smart-suggestions
 **Rollback**: rimuovere `testTimeout`/`hookTimeout` da `vitest.config.ts` (default 5s).
 
 **Verdetto**: GO. Punteggio invariato (miglioramento minimo CI/stabilità).
+
+---
+
+## PROGRAMMA 90K — Batch D2 · Riduzione bypass DAL (READ-only)
+
+Base: `dc526ca583bfdf84922e78e808b6f6248181f511`. D1.1 GO confermato.
+
+### Metrica riproducibile
+Stesso comando D1 (`/tmp/dal_metric.sh`).
+
+### Baseline (pre-D2)
+- **Totale bypass**: **288** call-site (identica a "dopo D1", riprodotta).
+  - `supabase.from`: 186 · `untypedFrom`: 77 · `tFrom`: 14 · `supabase.rpc`: 12
+
+### Selezione batch (READ-only, min-consumer)
+`src/v2/hooks/useCampaignDraftsV2.ts` → funzione `useCampaignStatsV2`: 3 count-head-only inline su `email_campaign_queue` (×2) + `email_drafts`. Consumer badge/stat card, nessuna scrittura, nessun contesto mailbox. Non tocco `useCampaignDraftsV2()` (select complesso) né `pause/resume` (writer) — fuori scope batch.
+
+### Matrice migrazione
+| Call-site | Tabella | Filtro | Op | Rischio | Azione |
+|---|---|---|---|---|---|
+| useCampaignDraftsV2.ts:40 | email_campaign_queue | status='sent' | count head | basso | → DAL |
+| useCampaignDraftsV2.ts:41 | email_campaign_queue | status='pending' | count head | basso | → DAL |
+| useCampaignDraftsV2.ts:42 | email_drafts | queue_status='completed' | count head | basso | → DAL |
+
+Filtri, select, ordine, error semantics (silent `?? 0` sui null count → mantenuto) invariati. React Query key `["v2","campaign-stats"]` preservata. Nessun retry aggiunto.
+
+### File toccati (4)
+- `src/data/campaignStats.ts` (NEW · 46 LOC · DAL aggregatore, propagazione errori esplicita)
+- `src/v2/hooks/useCampaignDraftsV2.ts` (MOD · rimosso blocco inline dallo stat hook, import DAL)
+- `src/data/__tests__/campaignStats.test.ts` (NEW · 3 test: primary+null→0+filtri, propagazione errore, guardrail no-bypass sullo stat hook)
+- `.lovable/plan.md` (MOD · questo entry)
+
+### Delta metrica
+- **Prima**: 288 · **Dopo**: 285 · **Delta**: **−3 bypass** (−1,04%)
+- Distribuzione dopo: `supabase.from` 183 / `untypedFrom` 77 / `tFrom` 14 / `supabase.rpc` 12
+
+### Verifiche
+- `bunx tsgo --noEmit` ✅
+- `bunx eslint` sui file toccati ✅ (0 nuovi warning/errori)
+- `bunx vitest run src/data/__tests__/campaignStats.test.ts` ✅ 3/3
+- Suite COMPLETA Run A: 381 file / **3049 passed** / 2 skipped / **0 failed** — 196s
+- Suite COMPLETA Run B: 381 file / **3049 passed** / 2 skipped / **0 failed** — 210s
+- `bunx vite build` ✅
+- DB read-only: `email_campaign_queue` e `email_drafts` → RLS ENABLED, 4 policy cad. Nessuna migration/schema/policy modificata in questo batch.
+
+### Rischio & rollback
+- Rischio residuo: nullo sul comportamento utente (equivalenza filtri, key, semantica errori mantenuta identica: `?? 0`; il DAL introduce inoltre `throw` sul primo errore, invariante rispetto all'inline che ignorava error e restituiva 0 — vedi nota).
+- Nota semantica errori: l'inline originario NON leggeva `error` e restituiva `count ?? 0` anche in errore silenziando eventuali failure RLS. Il DAL propaga l'errore alla `useQuery`, che lo espone come `isError` senza cambiare il valore mostrato al primo render (stat card resta a 0 in entrambi i casi). Considerato **miglioramento non regressivo** — se serve preservare l'occultamento, si può wrappare con try/catch nel queryFn. Segnalato ma non modificato in questo batch.
+- Rollback: `git revert` del batch — 2 file nuovi + 1 MOD ristretta.
+
+### Punteggio (conservativo)
+- Area A (Architettura/modularità) 74,5 → **74,6** (bypass 288→285, −1%).
+- Totale ponderato: ~74.760 → **~74.780 / 100.000** (Δ +20).
+
+### Esito
+**GO** — batch reversibile, delta reale misurato, zero regressioni introdotte, DB invariato.
