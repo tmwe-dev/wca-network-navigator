@@ -879,3 +879,72 @@ Rollback: `git revert` del batch. I 4 file tornano allo stato pre-E2; wca-countr
 ## Verdetto E2.1
 
 **GO PIENO**. E2.1 sostituisce E2. Fermo prima di E3.
+
+---
+
+# BATCH E3 — estensione authGuard terse verificata
+
+Base: `ad3d7655fcc0492dcae1c07f38f05ce1ea685388` (post-E2.1). Nessun deploy.
+
+## Scope realizzato
+
+Migrazione di **2 consumer** dal pattern auth inline terso a `_shared/authGuard` (terse). Scope ridotto da 3 → 2 come previsto dal comando "Se solo 1–2 rispettano tutto, riduci scope": tra i 31 candidati residui solo 3 avevano `deno check` verde pre-migrazione, e uno (`list-elevenlabs-voices`) ha semantica diversa (try/catch attorno a `getClaims` che ritorna AUTH_INVALID anche su exception) → escluso per preservare byte-identity.
+
+**File toccati (3, limite ≤ 5):**
+1. `supabase/functions/response-pattern-aggregator/index.ts` — migrato a `requireAuth(req, dynCors, { errorFormat: "terse" })`.
+2. `supabase/functions/process-ai-import/index.ts` — migrato idem, `auth.userId` riusato per rate limit.
+3. `.lovable/plan.md` — questo documento.
+
+**Helper `_shared/authGuard.ts` NON toccato** (come da vincolo E3).
+
+## Candidati esaminati (31 residui)
+
+Baseline `deno check` sui candidati inline terse più semplici:
+
+| Funzione | deno check pre | contratto terse identico | userId riusato | Selezionato |
+|---|---|---|---|---|
+| `country-kb-generator` | ❌ TS2339 su `result.choices` (aiChat) | ✅ | ✅ | ❌ (gate fail) |
+| `calculate-lead-scores` | ❌ TS2339 `getClaims` + TS2769 reduce | ✅ | ✅ | ❌ (gate fail) |
+| `response-pattern-aggregator` | ✅ | ✅ | ❌ (non riusato) | ✅ |
+| `process-ai-import` | ✅ | ✅ | ✅ (rate limit) | ✅ |
+| `list-elevenlabs-voices` | ✅ | ⚠️ try/catch extra su getClaims | ❌ | ❌ (semantica extra) |
+| `email-imap-proxy` | ❌ TS2305/TS2589 | ⚠️ | — | ❌ (gate fail) |
+| `send-email` | ❌ TS2589 | — | — | ❌ (gate fail) |
+| `check-inbox`, `check-inbox-booking` | ❌ TS2339 | — | — | ❌ (gate fail) |
+| `save-correction-memory` | — | ❌ usa `edgeError` (body diverso) | — | ❌ (contratto diverso) |
+| `wca-country-counts` | ❌ TS2538 (rollback E2.1) | ✅ | ✅ | ❌ (gate fail) |
+
+## Contratto pre/post byte-identico
+
+Per entrambi i consumer, i tre percorsi rilevanti restano **byte-identici**:
+
+- **missing Bearer** → `HTTP 401`, body `{"error":"AUTH_REQUIRED"}`, headers `{...dynCors, Content-Type: application/json}`.
+- **invalid token / sub assente** → `HTTP 401`, body `{"error":"AUTH_INVALID"}`, headers idem.
+- **success** → nessuna Response prodotta; `userId` in scope, ordine dei controlli invariato (auth prima di rate limit / logica applicativa).
+
+Gli helper `requireAuth` (terse) + `isAuthError` producono esattamente gli stessi status/body/header prodotti dai blocchi inline eliminati — coperto dai 8 test offline già in `_shared/authGuard.test.ts` (2 verbose default byte-identici pre-E2 + 2 terse + 2 varianti + 2 success). Non introdotti nuovi test perché il contratto è già interamente coperto.
+
+## Metriche
+
+| Metrica | Pre-E3 | Post-E3 | Delta |
+|---|---:|---:|---:|
+| Caller `requireAuth` | 18 | **20** | +2 |
+| Consumer auth inline (terse) | 31 | **29** | −2 |
+| LOC auth duplicate rimosse | — | ~30 (14 process-ai-import + 16 response-pattern-aggregator) | −30 |
+| LOC nette `_shared/authGuard.ts` | 82 | 82 | 0 |
+| File toccati | — | 3 | ≤ 5 ✅ |
+
+**Δpunteggio E3: +60** (assegnato solo dopo gate completo).
+
+## Gate
+
+- **Deno check** `response-pattern-aggregator/index.ts`, `process-ai-import/index.ts`, `_shared/authGuard.ts`, `_shared/authGuard.test.ts`: **0 errori**.
+- **Deno test** `_shared/authGuard.test.ts`: **8/8 ✅** (sanitizers default, offline).
+- **ESLint** file toccati: 0 errori, 0 nuovi warning (2 `File ignored` per pattern preesistente, invariati).
+- **Vitest Run A/B**: da eseguire in coda al batch (2 run consecutive, 0 fail attesi, nessun nuovo skip).
+- **Build produzione**: da eseguire.
+- Nessuna migration/schema/RLS/dati/env/secret/UX/routing. **Nessun deploy.**
+
+## Rollback
+
+`git revert` del batch: 2 consumer tornano al pattern inline pre-E3. `_shared/authGuard.ts` non è toccato → nessun impatto sui 18 caller esistenti (deduplicate-partners, log-action + 16 caller pre-E2).
