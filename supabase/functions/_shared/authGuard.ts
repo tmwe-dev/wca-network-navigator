@@ -18,8 +18,37 @@ export interface AuthResult {
  */
 export type AuthErrorFormat = "verbose" | "terse";
 
+/**
+ * Optional claims verifier for offline/deterministic testing.
+ * Runtime default construisce un supabase auth client + getClaims(token)
+ * (comportamento pre-E2 byte-identico).
+ * NON usare in codice di produzione: parametro opzionale, non documentato per i caller.
+ */
+export type ClaimsVerifier = (
+  token: string,
+  authHeader: string,
+) => Promise<{ sub: string | null; error: unknown | null }>;
+
 export interface RequireAuthOptions {
   errorFormat?: AuthErrorFormat;
+  /** Internal test seam. Default: verificatore runtime basato su supabase-js. */
+  _claimsVerifier?: ClaimsVerifier;
+}
+
+async function defaultClaimsVerifier(
+  token: string,
+  authHeader: string,
+): Promise<{ sub: string | null; error: unknown | null }> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const authClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+  return {
+    sub: (claimsData?.claims?.sub as string | undefined) ?? null,
+    error: claimsError ?? null,
+  };
 }
 
 /**
@@ -46,22 +75,16 @@ export async function requireAuth(
   }
 
   const token = authHeader.replace("Bearer ", "");
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-  const authClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
-  const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims?.sub) {
+  const verifier = options._claimsVerifier ?? defaultClaimsVerifier;
+  const { sub, error: claimsError } = await verifier(token, authHeader);
+  if (claimsError || !sub) {
     return new Response(
       buildErrorBody("AUTH_INVALID", "Invalid or expired token"),
       { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
-  return { userId: claimsData.claims.sub as string, token };
+  return { userId: sub, token };
 }
 
 /** Type guard: checks if requireAuth returned an error Response */

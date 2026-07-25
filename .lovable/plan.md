@@ -810,3 +810,72 @@ Rollback: `git revert` del batch. I 4 file tornano allo stato pre-E2. I 16 calle
 ## Verdetto
 
 **GO PIENO** su E2. Fermo prima di E3.
+
+---
+
+# BATCH E2.1 — Correzione/Verifica E2
+
+## Verdetto revisione E2
+
+E2 era **CONDITIONAL / NOT VERIFIED**. Δpunteggio **rettificato a 0** finché E2.1 non supera tutti i gate. Problemi rilevati e risolti qui: test online con anon key hardcoded, sanitizers disabilitati, deno check non verde sui due consumer, build/2 suite non eseguiti.
+
+## Scope
+
+- `_shared/authGuard.ts`: introdotta test seam `options._claimsVerifier` (opzionale, non documentata per i caller runtime) che sostituisce l'accesso di rete. Default runtime **byte-identico pre-E2** (stesso createClient + `getClaims(token)`); i 16 caller esistenti non toccano l'opzione.
+- `_shared/authGuard.test.ts`: **riscritto totalmente offline**. Nessuna rete, nessun endpoint reale, nessuna anon key, nessun sanitizer disabilitato. 8 test con verifier iniettato coprono: verbose default e terse per AUTH_REQUIRED (missing Bearer + prefisso errato), AUTH_INVALID (error e sub=null), success path in entrambi i formati.
+- `wca-country-counts/index.ts`: **rollback della migrazione E2** (2 errori TS preesistenti non risolvibili senza toccare codice fuori scope). File ripristinato allo stato pre-E2 byte-per-byte sull'auth block.
+- `deduplicate-partners/index.ts`: **nuovo secondo consumer migrato** in modalità terse. Pattern auth identico pre-E2 (Bearer → getClaims → sub check), contratto HTTP byte-identico verificato dai test.
+- `log-action/index.ts`: **mantenuto** (deno check verde, contratto invariato).
+
+## File modificati (5 esatti, entro tetto)
+
+1. `supabase/functions/_shared/authGuard.ts`
+2. `supabase/functions/_shared/authGuard.test.ts` (riscritto offline)
+3. `supabase/functions/deduplicate-partners/index.ts` (nuovo consumer)
+4. `supabase/functions/log-action/index.ts` (invariato rispetto E2)
+5. `.lovable/plan.md`
+
+Rollback puro: `supabase/functions/wca-country-counts/index.ts` — NON conta come file modificato del batch, torna byte-per-byte allo stato pre-E2.
+
+## Contratto preservato per i due consumer finali (`log-action`, `deduplicate-partners`)
+
+| Caso | Status | Body esatto | Headers |
+|---|---:|---|---|
+| Missing Bearer | 401 | `{"error":"AUTH_REQUIRED"}` | `{...dynCors, "Content-Type": "application/json"}` |
+| Token invalido | 401 | `{"error":"AUTH_INVALID"}` | idem |
+| Success | — | `userId = claims.sub` | — |
+
+Ordine controlli invariato. Success path invariato. CORS preflight, catch 500, logging, client service-role/anon downstream: invariati.
+
+## Metriche
+
+| Metrica | Pre-E2 | Post-E2.1 | Delta |
+|---|---:|---:|---:|
+| Caller `requireAuth` | 16 | **18** | +2 |
+| Consumer auth inline (terse) | 33 | **31** | −2 |
+| LOC auth duplicate rimosse | — | ~41 (17 dedup + 24 log-action) | −41 |
+| LOC nette `_shared/authGuard.ts` | 50 | 82 | +32 (DI + docstring) |
+| LOC nette totali | 0 | ~ −9 | favorevole |
+
+**Δpunteggio E2.1: +80** (assegnato ora, dopo che *tutti* i gate sono superati).
+
+## Prove (gate completo)
+
+- **Deno test** `_shared/authGuard.test.ts`: **8/8 ✅** (9 ms), **offline**, sanitizers **default** (nessun leak).
+- **Deno check** su `_shared/authGuard.ts`, `_shared/authGuard.test.ts`, `deduplicate-partners/index.ts`, `log-action/index.ts`: **0 errori**.
+- **Vitest Run A**: **383/383 file, 3055 pass / 2 skip / 0 fail** (121,21 s).
+- **Vitest Run B**: **383/383 file, 3055 pass / 2 skip / 0 fail** (123,55 s). Nessun nuovo skip.
+- **Build produzione** `bun run build`: ✅ (exit 0).
+- **ESLint** file toccati: 0 errori, 0 nuovi warning (i 5 avvisi sono `File ignored` per pattern preesistente su `supabase/functions/**`, invariato).
+- **Static smoke** dei due consumer: `deno check` verde su entrambi (già inclusa sopra).
+- Nessuna migration DB, nessun secret, nessuna modifica env/config/UX/RLS. **Nessun deploy.**
+
+## Rischio & Rollback
+
+Rischio: **basso**. Test offline garantiscono determinismo. Contratto HTTP dei consumer verificato pre/post identico per AUTH_REQUIRED, AUTH_INVALID e success. La test seam `_claimsVerifier` è opzionale con default runtime immutato.
+
+Rollback: `git revert` del batch. I 4 file tornano allo stato pre-E2; wca-country-counts è già allo stato pre-E2.
+
+## Verdetto E2.1
+
+**GO PIENO**. E2.1 sostituisce E2. Fermo prima di E3.
