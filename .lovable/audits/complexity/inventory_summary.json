@@ -1,0 +1,208 @@
+{
+  "base_sha_head": "9bfcb627ce574a78cc67ecd34e4444c2507baeb9",
+  "requested_base_sha": "b5de1e7994b74fd22a489eecb883188df1e74582",
+  "delta_note": "HEAD is 2 commits ahead of requested base (b5de1e7 → 9bfcb62). Audit performed at HEAD; delta is 2 non-runtime commits (b15415594 Changes, 9bfcb627c 'Esposso errore upstream AI' — 1-line edit to whatsapp-ai-extract error payload).",
+  "totals": {
+    "files_git_ls": 4130,
+    "files_in_manifest": 4130,
+    "text_files": 3963,
+    "binary_files": 167,
+    "read_errors": 0,
+    "bytes_total": 51304029,
+    "lines_total": 545596
+  },
+  "by_language": {
+    "other": {
+      "files": 184,
+      "bytes": 29245887,
+      "lines": 2890
+    },
+    "markdown": {
+      "files": 286,
+      "bytes": 1263773,
+      "lines": 25882
+    },
+    "yaml": {
+      "files": 7,
+      "bytes": 8740,
+      "lines": 337
+    },
+    "toml": {
+      "files": 2,
+      "bytes": 3056,
+      "lines": 129
+    },
+    "json": {
+      "files": 24,
+      "bytes": 789237,
+      "lines": 19282
+    },
+    "text": {
+      "files": 6,
+      "bytes": 46351,
+      "lines": 1091
+    },
+    "javascript": {
+      "files": 84,
+      "bytes": 1301726,
+      "lines": 34213
+    },
+    "python": {
+      "files": 2,
+      "bytes": 24506,
+      "lines": 732
+    },
+    "shell": {
+      "files": 2,
+      "bytes": 4034,
+      "lines": 172
+    },
+    "html": {
+      "files": 16,
+      "bytes": 193915,
+      "lines": 3648
+    },
+    "tsx": {
+      "files": 1131,
+      "bytes": 7508261,
+      "lines": 180415
+    },
+    "typescript": {
+      "files": 1964,
+      "bytes": 9145904,
+      "lines": 247048
+    },
+    "lock": {
+      "files": 1,
+      "bytes": 508094,
+      "lines": 2868
+    },
+    "css": {
+      "files": 4,
+      "bytes": 66460,
+      "lines": 1702
+    },
+    "svg": {
+      "files": 1,
+      "bytes": 3253,
+      "lines": 1
+    },
+    "sql": {
+      "files": 416,
+      "bytes": 1190832,
+      "lines": 25186
+    }
+  },
+  "by_area": {
+    "other": {
+      "files": 28,
+      "bytes": 13563817,
+      "lines": 25755
+    },
+    "ci_config": {
+      "files": 15,
+      "bytes": 21031,
+      "lines": 651
+    },
+    "docs_memory": {
+      "files": 217,
+      "bytes": 1150612,
+      "lines": 19095
+    },
+    "build_config": {
+      "files": 13,
+      "bytes": 30853,
+      "lines": 965
+    },
+    "archive": {
+      "files": 107,
+      "bytes": 1025998,
+      "lines": 25132
+    },
+    "test_e2e": {
+      "files": 85,
+      "bytes": 218241,
+      "lines": 5786
+    },
+    "lint_rules": {
+      "files": 2,
+      "bytes": 4612,
+      "lines": 134
+    },
+    "public_asset": {
+      "files": 265,
+      "bytes": 10350084,
+      "lines": 32004
+    },
+    "scripts": {
+      "files": 13,
+      "bytes": 33042,
+      "lines": 1025
+    },
+    "src_other": {
+      "files": 204,
+      "bytes": 9175831,
+      "lines": 39581
+    },
+    "src_components": {
+      "files": 725,
+      "bytes": 4542575,
+      "lines": 109197
+    },
+    "src_state": {
+      "files": 9,
+      "bytes": 36105,
+      "lines": 1067
+    },
+    "src_data": {
+      "files": 264,
+      "bytes": 941711,
+      "lines": 24464
+    },
+    "src_support": {
+      "files": 25,
+      "bytes": 59123,
+      "lines": 1857
+    },
+    "src_hooks": {
+      "files": 216,
+      "bytes": 1034521,
+      "lines": 27396
+    },
+    "src_lib": {
+      "files": 149,
+      "bytes": 543758,
+      "lines": 14049
+    },
+    "src_pages": {
+      "files": 1,
+      "bytes": 5504,
+      "lines": 162
+    },
+    "src_v2": {
+      "files": 823,
+      "bytes": 4114175,
+      "lines": 105085
+    },
+    "supabase_other": {
+      "files": 1,
+      "bytes": 2715,
+      "lines": 112
+    },
+    "edge_shared": {
+      "files": 215,
+      "bytes": 1112183,
+      "lines": 31176
+    },
+    "edge_functions": {
+      "files": 337,
+      "bytes": 2146706,
+      "lines": 55717
+    },
+    "db_migrations": {
+      "files": 416,
+      "bytes": 1190832,
+      "lines": 25186
+    }
+  }
+}
