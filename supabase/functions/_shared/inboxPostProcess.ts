@@ -59,12 +59,14 @@ export async function classifyInboundEmails(
   userId: string,
   messages: MessageRecord[]
 ): Promise<void> {
-  // Fire-and-forget: classify inbound emails via classify-inbound-message
-  // (orchestratore unico: legacy classify-email-response + scout + funnemail-classify
-  //  + auto-route + content + refine-classification-rule).
-  // Fallback rete in caso il trigger DB on_inbound_message non riesca a invocare
-  // l'edge function (es. GUC service_role_key non configurata).
-  // Max 10 per sync per non saturare AI.
+  // B5 (2026-07-25) — GATE PASSED, fallback DISATTIVATO di default.
+  // Baseline 7d: postProcess 156 invocazioni / 156 dedup_hits = 100% (≥ 60%).
+  // Trigger DB on_inbound_message copre 1230/1230 messaggi (100%, ≥ 95%).
+  // Cron classify-emails-batch resta safety net (< 5% volume).
+  // Feature flag reversibile: CLASSIFY_POSTPROCESS_FALLBACK_ENABLED=true riabilita.
+  const enabled = (Deno.env.get("CLASSIFY_POSTPROCESS_FALLBACK_ENABLED") ?? "false").toLowerCase() === "true";
+  if (!enabled) return;
+  // Path legacy (mantenuto per rollback): fire-and-forget via classify-inbound-message.
   try {
     // FIX 2026-05-11: `direction` è top-level su channel_messages, NON dentro raw_payload.
     // Tutti i messages sintetizzati da check-inbox sono inbound (saveMessageToDb forza direction="inbound"),
