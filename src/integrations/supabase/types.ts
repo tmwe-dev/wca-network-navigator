@@ -586,6 +586,13 @@ export type Database = {
             columns: ["response_channel_message_id"]
             isOneToOne: false
             referencedRelation: "message_intelligence_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_response_channel_message_id_fkey"
+            columns: ["response_channel_message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
             referencedColumns: ["message_id"]
           },
           {
@@ -5278,6 +5285,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "message_intelligence_v"
             referencedColumns: ["correlation_id"]
+          },
+          {
+            foreignKeyName: "email_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "email_attachments_message_id_fkey"
@@ -10755,6 +10769,13 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "message_intelligence_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reply_classifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message_intelligence_v"
             referencedColumns: ["message_id"]
           },
           {
@@ -12764,37 +12785,67 @@ export type Database = {
       }
       message_intelligence_v: {
         Row: {
+          ai_classification_suggestion: Json | null
+          bcc_addresses: string | null
           body_html: string | null
           body_text: string | null
           canonical_version: number | null
           category: string | null
+          cc_addresses: string | null
           channel: string | null
           classification: string | null
           classified_at: string | null
           confidence: number | null
           correlation_id: string | null
+          created_at: string | null
           direction: string | null
           email_date: string | null
+          folder: string | null
           folder_hint: string | null
           from_address: string | null
+          id: string | null
+          imap_flags: string | null
+          imap_uid: number | null
+          in_reply_to: string | null
           intent: string | null
+          internal_date: string | null
+          mailbox_id: string | null
           message_category: string | null
           message_created_at: string | null
           message_id: string | null
+          message_id_external: string | null
           model: string | null
+          parse_status: string | null
+          parse_warnings: string[] | null
           partner_id: string | null
           policy_plan: Json | null
+          raw_payload: Json | null
+          raw_sha256: string | null
+          raw_size_bytes: number | null
+          raw_storage_path: string | null
           read_at: string | null
           reasoning: string | null
+          references_header: string | null
           sender_group_id: string | null
           sentiment: string | null
+          source_id: string | null
+          source_type: string | null
           subject: string | null
+          thread_id: string | null
           to_address: string | null
           triage: Json | null
+          uidvalidity: number | null
           urgency: string | null
           user_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "channel_messages_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reply_classifications_sender_group_id_fkey"
             columns: ["sender_group_id"]

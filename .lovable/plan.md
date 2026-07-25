@@ -270,3 +270,24 @@ Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3
 - **Rollback**: `git revert` di 3 file (`channel-messages.ts` — solo la sezione B4.5, `useNavBadgeCountsV2.ts`, `funnemail-unread-count.test.ts`).
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅ + B4.4 ✅ + B4.5 ✅**. B5 / B6 non iniziati.
+
+## Batch B4.6a — Estensione view `message_intelligence_v` per consumer Funnemail Inbox (2026-07-25)
+
+- **Obiettivo**: rendere la view canonica sufficiente per il consumer principale `src/data/funnemailInbox.ts` (`listFunnemailGroupedInbox` + `listMailsByFolder` + `markFunnemailMessagesRead`) SENZA migrare ancora il consumer. Solo estensione additiva di colonne.
+- **Analisi consumer** (`src/data/funnemailInbox.ts`): campi letti/filtrati/ordinati/usati per mapping da `channel_messages`:
+  - Da `MESSAGE_LIST_SELECT`: `id, user_id, channel, direction, source_type, source_id, partner_id, from_address, to_address, cc_addresses, bcc_addresses, subject, category, folder, ai_classification_suggestion, body_text, raw_payload, message_id_external, in_reply_to, read_at, created_at, email_date, raw_storage_path, raw_sha256, raw_size_bytes, imap_uid, uidvalidity, imap_flags, internal_date, parse_status, parse_warnings, thread_id, references_header`.
+  - Extra: `body_html` (in `listMailsByFolder`), `mailbox_id` (filtro `is null` / `eq`).
+- **Campi già presenti nella view (B3/B4.1)**: `user_id, channel, direction, subject, from_address, to_address, body_text, body_html, partner_id, read_at, category (via alias `message_category`), email_date, created_at (via alias `message_created_at`), id (via alias `message_id`)`.
+- **Campi aggiunti in coda (append-only, stessi nomi e tipi di `channel_messages`)**: `id, created_at, cc_addresses, bcc_addresses, mailbox_id, folder, ai_classification_suggestion, raw_payload, message_id_external, in_reply_to, references_header, thread_id, source_type, source_id, raw_storage_path, raw_sha256, raw_size_bytes, imap_uid, uidvalidity, imap_flags, internal_date, parse_status, parse_warnings`. Gli alias pre-esistenti (`message_id`, `message_category`, `message_created_at`) sono preservati per non rompere consumer B4.1/B4.2/B4.3/B4.4/B4.5.
+- **Migration**: unica `CREATE OR REPLACE VIEW public.message_intelligence_v WITH (security_invoker = true) AS …` con `LEFT JOIN LATERAL … LIMIT 1` invariato (una riga per `cm.id`). Grants riemessi: `REVOKE ALL … FROM PUBLIC, anon; GRANT SELECT TO authenticated; GRANT ALL TO service_role`. Ordine delle 29 colonne pre-esistenti rigorosamente preservato (obbligo di `CREATE OR REPLACE VIEW`).
+- **NON toccato**: schema `channel_messages` / `reply_classifications`, tabelle nuove, backfill, RLS/policy, trigger, Edge Functions, scheduler, classificatori, prompt, UI, hook consumer (`useFunnemailInbox`, `listFunnemailGroupedInbox`, `listMailsByFolder`), query keys, invalidation, realtime. Feature flag `MESSAGE_INTELLIGENCE_V1_ENABLED` invariato.
+- **Prove eseguite**:
+  - Invarianti conteggio: `count(channel_messages) = count(v) = count(distinct message_id v) = 19743`.
+  - `security_invoker = true` confermato: nessun bypass RLS (le righe restano scopate dalla policy di `channel_messages`).
+  - Grants: `authenticated=SELECT`, `service_role=ALL`, `anon` senza accesso.
+  - Contract test statico `src/v2/io/supabase/queries/__tests__/message-intelligence-view-contract.test.ts` (2/2 ✅): asserisce che TUTTI i campi di `FUNNEMAIL_INBOX_FIELDS_FROM_CM` sono esposti dalla view con lo stesso nome, e che le colonne canoniche B3/B4.1 (`message_id, message_category, message_created_at, classification, correlation_id`) non siano state rimosse.
+  - Vitest DAL: 24/24 ✅ (`channel-messages`, `recipient-history`, `sender-messages`, `sender-conversation`, `funnemail-unread-count`, `message-intelligence-view-contract`). Nessun consumer esistente rotto.
+- **Rischio**: minimo. Solo `CREATE OR REPLACE VIEW` additivo: nessuna colonna esistente rinominata/rimossa, nessun cambio di semantica dei join, `security_invoker=true` preservato, grants identici. Consumer legacy sulla vista non impattati (colonne pre-esistenti in stesso ordine).
+- **Rollback**: `DROP VIEW public.message_intelligence_v; CREATE OR REPLACE VIEW … AS …` con la definizione B4.1 (visibile nel migration ledger antecedente). Alternativa: `CREATE OR REPLACE VIEW` con lo stesso testo pre-B4.6a — permesso perché rimuovere colonne trailing non viola i vincoli di `CREATE OR REPLACE`.
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅ + B4.4 ✅ + B4.5 ✅ + B4.6a ✅**. B4.6b / B5 / B6 non iniziati.
