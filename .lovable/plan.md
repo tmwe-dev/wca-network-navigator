@@ -236,6 +236,28 @@ Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅**. B5 
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅**. B5 / B6 non iniziati.
 
+## Batch B4.6b — Migrazione consumer principale Funnemail Inbox (2026-07-25)
+
+- **Consumer migrato**: `src/data/funnemailInbox.ts` — DAL principale della Inbox Funnemail. Due reader diretti su `channel_messages` sostituiti con letture su `message_intelligence_v` (canonica, resa sufficiente da B4.6a) con fallback trasparente su `channel_messages`.
+  - `listMailsByFolder(folderSlug, limit)` — join JS tra `funnemail_decisions` e messaggi.
+  - `listFunnemailGroupedInbox(userId, targetUserId?, mailboxFilter?)` — lista paginata per il client di posta (usata da `useFunnemailInbox` e `useFunnemailInboxSidebarData`).
+- **Helper unico**: `readInboxOnce` (single-shot) e `readInboxPaginated` (multi-page) locali al DAL. Un solo punto di orchestrazione view→legacy, log strutturato senza PII (`dal:funnemail-inbox` con `op` + `code` errore). Zero duplicazione di query logic: il builder riceve `source` e adatta solo colonne alias (`id:message_id`, `created_at:message_created_at`, `category:message_category`) e nome colonna d'ordine (`message_created_at` vs `created_at`).
+- **SCRITTURE preservate**: `markFunnemailMessagesRead` continua a scrivere su `channel_messages` (la view è read-only). Commento inline aggiunto per prevenire regressioni. `overrideFunnemailFolder` non tocca `channel_messages` (scrive su `funnemail_decisions`).
+- **Feature preservate**: firme pubbliche, tipi restituiti (`FunnemailMailRow`, `FunnemailGroupedInbox`, `ChannelMessage & {...}`), filtri (`channel="email"`, `direction="inbound"`, `user_id`, `mailbox_id`), ordini (`email_date DESC nullsLast` + `created_at DESC`), paginazione (`FUNNEMAIL_QUERY_PAGE_SIZE=500`, cap `MAX_MESSAGES=1000`), unread/read logic, thread, IMAP fields (`imap_uid`, `imap_flags`, `internal_date`, `parse_status`, `parse_warnings`, `raw_*`), decisioni, override, sender intel, partner snapshot, group folder mapping. Nessuna modifica a UI, schema/view/RLS, Edge Functions, trigger, scheduler, invio, classificatori.
+- **Cast**: nessun nuovo `as unknown as`. Il `untypedFrom` esistente resta l'unico boundary any (invariato).
+- **Test** (`src/data/__tests__/funnemailInbox.b46b.test.ts`, 5/5 ✅):
+  1. `listMailsByFolder` OK → legge da `message_intelligence_v`, non chiama `channel_messages`, filtri (`channel=email`, `direction=inbound`) e `in(message_id_external,…)` corretti.
+  2. `listMailsByFolder` view Err → fallback trasparente su `channel_messages` con stessi filtri; una singola chiamata alla view + una singola al legacy.
+  3. `listMailsByFolder` view Err + legacy Err → propaga throw.
+  4. `markFunnemailMessagesRead` → SCRIVE su `channel_messages`, MAI su `message_intelligence_v`; verifica `update({read_at})` + `in("id", ids)`.
+  5. `markFunnemailMessagesRead([])` → no-op, nessuna query.
+- **Verifiche**: `bunx tsgo --noEmit` verde. `vitest run src/data/__tests__ src/v2/io/supabase/queries/__tests__` — **127 file, 492 test tutti verdi**. Nessuna regressione introdotta da B4.6b (test pre-esistenti su HistoryTab, ExportSenders, SenderConversation, NavBadge, DAL utility invariati).
+- **Reader diretti su `channel_messages` residui** (post-B4.6b, escluse mutation `.update`/`.insert`/`.delete`/`.upsert`): **71 letture su 39 file** (era 73/40 prima di B4.6b: `funnemailInbox.ts` conteneva 2 reader ora rimossi). Target per i batch successivi: hook di notifica (`useInboundNotifications`, `useUnreadCounts*`), download queue, analytics, `command/tools/readInbox`, `channelActivity`, `cestinone`.
+- **Rischio**: contenuto. Fallback trasparente identico al percorso pre-migrazione. La view `message_intelligence_v` è già stata verificata sufficiente per tutti i campi consumati (contract test B4.6a). Le SCRITTURE non sono toccate.
+- **Rollback**: `git revert` di 2 file (`src/data/funnemailInbox.ts`, `src/data/__tests__/funnemailInbox.b46b.test.ts`).
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅ + B4.4 ✅ + B4.5 ✅ + B4.6a ✅ + B4.6b ✅**. B5 / B6 non iniziati.
+
 ## Batch B4.4 — Consumer migration `SenderEmailPreviewPanel` (2026-07-25)
 
 - **Consumer scelto**: `src/components/email-intelligence/management/SenderEmailPreviewPanel.tsx` — pannello inline read-only che mostra le ultime 20 email del mittente selezionato in Email Intelligence. Zero realtime, zero mutation, singola query on-demand con `channel="email"` + OR `ilike %email%` su `from_address`/`to_address` + `order email_date DESC` + `limit 20`. Nessuna intersezione con Funnemail Inbox.

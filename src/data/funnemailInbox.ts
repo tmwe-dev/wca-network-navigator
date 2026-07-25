@@ -12,6 +12,58 @@
  */
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
+import { createLogger } from "@/lib/log";
+
+const inboxLog = createLogger("dal:funnemail-inbox");
+
+/**
+ * B4.6b — Sorgente canonica per LETTURE della Inbox.
+ * La view `message_intelligence_v` (B4.6a) è pass-through additivo di
+ * `channel_messages`. Le SCRITTURE (es. mark-as-read, IMAP actions) restano
+ * sulla tabella per definizione: la view è read-only.
+ */
+type InboxReadSource = "message_intelligence_v" | "channel_messages";
+
+interface RawResult<T> { data: T[] | null; error: { message: string; code?: string } | null }
+
+/**
+ * Esegue una singola lettura Inbox provando prima la view canonica; su errore
+ * (schema-mismatch, view non disponibile, ecc.) fallback trasparente su
+ * `channel_messages` senza duplicare la query logic. Il builder riceve il nome
+ * della sorgente ed è responsabile di mapping colonne/alias equivalenti.
+ */
+async function readInboxOnce<T>(
+  op: string,
+  build: (source: InboxReadSource) => PromiseLike<RawResult<T>>,
+): Promise<T[]> {
+  const viewRes = await build("message_intelligence_v");
+  if (!viewRes.error) return viewRes.data ?? [];
+  inboxLog.warn("view_fallback", { op, code: viewRes.error.code });
+  const legacyRes = await build("channel_messages");
+  if (legacyRes.error) throw new Error(legacyRes.error.message);
+  return legacyRes.data ?? [];
+}
+
+/**
+ * Paginated variant. Se la view fallisce a qualunque pagina (raro,
+ * catastrofico), si ricomincia integralmente dalla tabella legacy per
+ * garantire consistenza dei risultati.
+ */
+async function readInboxPaginated<T>(
+  op: string,
+  build: (source: InboxReadSource, from: number, to: number) => PromiseLike<QueryPage<T>>,
+  maxRows: number,
+): Promise<T[]> {
+  try {
+    return await fetchAllPages((from, to) => build("message_intelligence_v", from, to), maxRows);
+  } catch (e: unknown) {
+    inboxLog.warn("view_fallback_paginated", {
+      op,
+      code: (e as { code?: string } | null)?.code ?? null,
+    });
+    return await fetchAllPages((from, to) => build("channel_messages", from, to), maxRows);
+  }
+}
 
 export interface FunnemailFolder {
   slug: string;
@@ -97,6 +149,49 @@ const MESSAGE_LIST_SELECT = [
   "in_reply_to",
   "read_at",
   "created_at",
+  "email_date",
+  "raw_storage_path",
+  "raw_sha256",
+  "raw_size_bytes",
+  "imap_uid",
+  "uidvalidity",
+  "imap_flags",
+  "internal_date",
+  "parse_status",
+  "parse_warnings",
+  "thread_id",
+  "references_header",
+].join(", ");
+
+/**
+ * Stesse colonne di `MESSAGE_LIST_SELECT`, ma con alias per la view canonica:
+ * `id` = `message_id`, `created_at` = `message_created_at`,
+ * `category` = `message_category` (category originale di `channel_messages`).
+ * Tutti gli altri campi conservano lo stesso nome (B4.6a li ha aggiunti
+ * additivamente al pass-through).
+ */
+const MESSAGE_LIST_SELECT_VIEW = [
+  "id:message_id",
+  "user_id",
+  "channel",
+  "direction",
+  "source_type",
+  "source_id",
+  "partner_id",
+  "from_address",
+  "to_address",
+  "cc_addresses",
+  "bcc_addresses",
+  "subject",
+  "category:message_category",
+  "folder",
+  "ai_classification_suggestion",
+  "body_text",
+  "raw_payload",
+  "message_id_external",
+  "in_reply_to",
+  "read_at",
+  "created_at:message_created_at",
   "email_date",
   "raw_storage_path",
   "raw_sha256",
@@ -253,12 +348,15 @@ export async function listMailsByFolder(
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.message_id);
-  const { data: msgs, error: mErr } = await untypedFrom("channel_messages")
-    .select("message_id_external,subject,from_address,body_text,body_html,email_date,partner_id")
-    .eq("channel", "email")
-    .eq("direction", "inbound")
-    .in("message_id_external", ids);
-  if (mErr) throw mErr;
+  const msgs = await readInboxOnce<{ message_id_external: string } & Record<string, unknown>>(
+    "listMailsByFolder",
+    (source) =>
+      untypedFrom(source)
+        .select("message_id_external,subject,from_address,body_text,body_html,email_date,partner_id")
+        .eq("channel", "email")
+        .eq("direction", "inbound")
+        .in("message_id_external", ids),
+  );
 
   const byId = new Map<string, {
     subject: string | null;
@@ -268,7 +366,7 @@ export async function listMailsByFolder(
     email_date: string | null;
     partner_id: string | null;
   }>();
-  for (const m of (msgs ?? []) as Array<{ message_id_external: string } & Record<string, unknown>>) {
+  for (const m of msgs) {
     byId.set(m.message_id_external, {
       subject: (m.subject as string | null) ?? null,
       from_address: (m.from_address as string | null) ?? null,
@@ -322,6 +420,8 @@ export async function overrideFunnemailFolder(
 
 export async function markFunnemailMessagesRead(messageIds: string[]): Promise<void> {
   if (messageIds.length === 0) return;
+  // NOTA B4.6b: SCRITTURA — resta su `channel_messages` (la view canonica è
+  // read-only). Non tentare mai `.update()` su `message_intelligence_v`.
   const { error } = await untypedFrom("channel_messages")
     .update({ read_at: new Date().toISOString() })
     .in("id", messageIds);
@@ -349,21 +449,27 @@ export async function listFunnemailGroupedInbox(
   // può essere una fattura (Amministrativo) o una RFQ (Offerte) — il
   // classificatore Funnemail decide il contenitore.
   const [messages, foldersData, decisions, groups, rules] = await Promise.all([
-    fetchAllPages<ChannelMessage>((from, to) => {
-      let q = untypedFrom("channel_messages")
-        .select(MESSAGE_LIST_SELECT)
-        .eq("channel", "email")
-        .eq("direction", "inbound");
-      if (targetUserId) q = q.eq("user_id", targetUserId);
-      // Filtro casella: personale = mailbox_id NULL (legacy + caselle non taggate);
-      // condivisa = mailbox_id == id specifico. Nessun filtro = vista aggregata.
-      if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
-      else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
-      return q
-        .order("email_date", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .range(from, to);
-    }, MAX_MESSAGES),
+    readInboxPaginated<ChannelMessage>(
+      "listFunnemailGroupedInbox.messages",
+      (source, from, to) => {
+        const cols = source === "message_intelligence_v" ? MESSAGE_LIST_SELECT_VIEW : MESSAGE_LIST_SELECT;
+        const createdAtCol = source === "message_intelligence_v" ? "message_created_at" : "created_at";
+        let q = untypedFrom(source)
+          .select(cols)
+          .eq("channel", "email")
+          .eq("direction", "inbound");
+        if (targetUserId) q = q.eq("user_id", targetUserId);
+        // Filtro casella: personale = mailbox_id NULL (legacy + caselle non taggate);
+        // condivisa = mailbox_id == id specifico. Nessun filtro = vista aggregata.
+        if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
+        else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
+        return q
+          .order("email_date", { ascending: false, nullsFirst: false })
+          .order(createdAtCol, { ascending: false })
+          .range(from, to);
+      },
+      MAX_MESSAGES,
+    ),
     listFunnemailFolders(),
     fetchAllPages<FunnemailDecisionRow>(
       (from, to) => untypedFrom("funnemail_decisions")
