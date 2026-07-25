@@ -550,3 +550,86 @@ Stesso comando D1/D2 (`/tmp/dal_metric.sh`). Metrica primaria per **linee uniche
 
 ### Esito
 **GO pieno** — equivalenza semantica preservata (inclusa gestione errori silenziosa), delta reale misurato, suite verde riproducibile, DB invariato. Fermo prima di D4.
+
+---
+
+# Batch V1 — Priorità 2, rimozione hook V2 orfani (v1↔v2 overlap)
+
+Base: `920b435d`. Nessun deploy, nessuna migration, nessun cambio routing/schema/RLS.
+
+## Fase 1 — baseline quantitativa
+
+- LOC (`.ts`+`.tsx`): `src/v2` 103.318, `src/components` 108.472, `src/hooks` 27.180, `src/pages` 161.
+- Route registry: unica sorgente in `src/v2/routes.tsx` (nessun router legacy attivo; nessun path `/v1`).
+- File V2-suffisso analizzati: **49** (`find src -name "*V2.{ts,tsx}" ! -path "*__tests__*"`).
+- Matrice caller v1 vs v2 (import path `@/…`, esclusi `__tests__`): 26 coppie con controparte v1 attiva.
+- **Regola scelta orfano**: file `*V2.{ts,tsx}` con zero import in tutto `src/**` e `supabase/**` (rg su identifier con word-boundary), esclusa sola self-reference.
+
+## Fase 2 — matrice top-10 candidati
+
+| Legacy path | V2 replacement | V1 callers | V2 callers | Status route | Rischio |
+|---|---|---:|---:|---|---|
+| `src/hooks/useDownloadJobs.ts` | `src/v2/hooks/useDownloadJobsV2.ts` | 19 | **0** | n/a (hook) | nullo (V2 orfano) |
+| `src/hooks/useProspects.ts` | `src/v2/hooks/useProspectsV2.ts` | 1 | **0** | n/a | nullo (V2 orfano) |
+| `src/hooks/useActivities.ts` | `src/v2/hooks/useActivitiesV2.ts` | 18 | **0** | n/a | nullo (V2 orfano) |
+| `src/hooks/useAgents.ts` | `src/v2/hooks/useAgentsV2.ts` | 22 | 0 | n/a | V2 orfano ma > scope |
+| `src/hooks/useChannelMessages.ts` | `src/v2/hooks/useChannelMessagesV2.ts` | 22 | 1 (test) | n/a | alto (V2 attivo via test) |
+| `src/hooks/useBusinessCards.ts` | `src/v2/hooks/useBusinessCardsV2.ts` | 18 | 0 | n/a | V2 orfano ma > scope |
+| `src/hooks/useBlacklist.ts` | `src/v2/hooks/useBlacklistV2.ts` | 6 | 0 | n/a | V2 orfano ma > scope |
+| `src/hooks/useOperators.ts` | `src/v2/hooks/useOperatorsV2.ts` | 5 | 0 | n/a | V2 orfano ma > scope |
+| `src/hooks/useEmailSync.ts` | `src/v2/hooks/useEmailSyncV2.ts` | 3 | 0 | n/a | V2 orfano ma > scope |
+| `src/hooks/useOutreachQueue.ts` | `src/v2/hooks/useOutreachQueueV2.ts` | 3 | 0 | n/a | V2 orfano ma > scope |
+
+Osservazione: la migrazione v1→v2 sui domini "download-jobs / prospects / activities" era stata solo scaffolded — gli hook v2 non risultano importati da nessuna pagina, hook, componente, edge o test. Il codice v1 resta l'unico percorso runtime.
+
+## Fase 3 — cluster scelto e prove di orphanhood
+
+Tre thin-wrapper V2 privi di caller (verificati via `rg` globale su `src/` e `supabase/` con word-boundary; unica hit residua = `tsconfig.app.tsbuildinfo`, cache di build):
+
+- `src/v2/hooks/useDownloadJobsV2.ts` (20 righe)
+- `src/v2/hooks/useProspectsV2.ts` (20 righe)
+- `src/v2/hooks/useActivitiesV2.ts` (21 righe)
+
+Dipendenze IO (`fetchDownloadJobs*`, `fetchProspects*`, `fetchActivities`) restano usate da altri consumer (`src/hooks/useOperationsCenter.ts`, `src/v2/ui/pages/command/tools/agentReport.ts`) — non toccate.
+
+Le voci `queryKeys.v2.{downloadJobs,prospects,activities}` restano esportate in `src/lib/queryKeysParts/v2.ts` (fuori scope: rimozione simboli morti in query-keys registry non richiesta da questo batch).
+
+## Fase 4 — diff (5 file, di cui 3 delete)
+
+- **DELETE** `src/v2/hooks/useDownloadJobsV2.ts`
+- **DELETE** `src/v2/hooks/useProspectsV2.ts`
+- **DELETE** `src/v2/hooks/useActivitiesV2.ts`
+- **ADD** `src/__tests__/v1-cleanup-orphan-v2-hooks.test.ts` — 4 test: 3 x "path non deve tornare", 1 x "gli identifier `useDownloadJobsV2` / `useProspectsV2` / `useActivitiesV2` non devono ricomparire in `src/**` non-test".
+- **UPDATE** `.lovable/plan.md` — questa sezione.
+
+Nessuna modifica a: componenti attivi, router, edge functions, migrations, RLS, policies, ESLint config, package.json.
+
+## Metriche
+
+| Metrica | Pre-V1 | Post-V1 | Delta |
+|---|---:|---:|---:|
+| File V2 con zero caller runtime (rilevati) | ≥ 40 | ≥ 37 | −3 |
+| LOC morte rimosse | — | 61 | −61 |
+| Test file | 383 (D4) | 384 | +1 (guardrail) |
+| Bypass DAL (KPI storico) | 274 | 274 | 0 (fuori scope) |
+
+## Prove
+
+- Vitest mirato `v1-cleanup-orphan-v2-hooks.test.ts`: **4/4 ✅** (220 ms).
+- Typecheck `tsgo --noEmit`: ✅.
+- ESLint sui file toccati: ✅ (0 nuovi errori / 0 nuovi warning; baseline pre-esistente invariata: 0 errori / 233 warning).
+- Vitest suite completa Run A: **384 file, 3059 pass / 2 skip / 0 fail** (227,75 s).
+- Vitest suite completa Run B: **384 file, 3059 pass / 2 skip / 0 fail** (249,79 s). Nessun nuovo skip.
+- Build produzione `bun run build`: ✅.
+- DB: **non applicabile** (cluster è pure hook client, nessuna tabella toccata).
+
+## Rischio & Rollback
+
+Rischio: **nullo**. Nessun caller runtime, nessun test, nessun tipo esportato consumato. Le dipendenze IO restano invariate e in uso da altri consumer.
+
+Rollback: `git revert` del batch. Il guardrail test fallirebbe volutamente per obbligare a documentare il ripristino nel piano.
+
+## Verdetto
+
+**GO PIENO**. Fermo prima del prossimo batch. Il completamento della migrazione v1→v2 sui domini "attivi" (useActivities/useDownloadJobs/useAgents/useChannelMessages) resta escluso da questo scope per rispetto del limite max 3 file eliminati / 5 file totali.
+
