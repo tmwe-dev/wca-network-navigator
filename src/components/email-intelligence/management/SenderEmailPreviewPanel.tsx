@@ -24,7 +24,6 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
