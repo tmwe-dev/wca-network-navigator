@@ -12,20 +12,18 @@ type Call = {
 };
 
 let calls: Call[] = [];
-let viewShouldError = false;
-let legacyShouldError = false;
-let viewRows: unknown[] = [];
-let legacyRows: unknown[] = [];
+/** Per-table stub: rows + optional error. */
+const tableStub: Record<string, { rows: unknown[]; error: { message: string; code?: string } | null }> = {};
+
+function setTable(name: string, rows: unknown[] = [], error: { message: string; code?: string } | null = null) {
+  tableStub[name] = { rows, error };
+}
 
 function makeBuilder(table: string) {
   const call: Call = { table, eqs: [], ins: [], orders: [] };
   calls.push(call);
-  const isView = table === "message_intelligence_v";
-  const rows = isView ? viewRows : legacyRows;
-  const err = (isView ? viewShouldError : legacyShouldError)
-    ? { message: `${table} boom`, code: "42P01" }
-    : null;
-  const result = { data: err ? null : rows, error: err };
+  const stub = tableStub[table] ?? { rows: [], error: null };
+  const result = { data: stub.error ? null : stub.rows, error: stub.error };
   const b: Record<string, unknown> = {};
   b.select = (cols: string) => { call.select = cols; return b; };
   b.eq = (col: string, val: unknown) => { call.eqs.push({ column: col, value: val }); return b; };
@@ -35,7 +33,7 @@ function makeBuilder(table: string) {
   b.range = (from: number, to: number) => { call.range = { from, to }; return b; };
   b.update = (payload: unknown) => { call.update = payload; return b; };
   b.limit = () => b;
-  b.maybeSingle = () => Promise.resolve(result);
+  b.maybeSingle = () => Promise.resolve({ data: (stub.rows[0] as unknown) ?? null, error: stub.error });
   b.then = (resolve: (v: unknown) => unknown) => Promise.resolve(result).then(resolve);
   return b;
 }
@@ -55,30 +53,58 @@ import { listMailsByFolder, markFunnemailMessagesRead } from "@/data/funnemailIn
 describe("B4.6b — funnemailInbox migration to message_intelligence_v", () => {
   beforeEach(() => {
     calls = [];
-    viewShouldError = false;
-    legacyShouldError = false;
-    viewRows = [];
-    legacyRows = [];
+    for (const k of Object.keys(tableStub)) delete tableStub[k];
   });
 
   it("listMailsByFolder: primaria = view; nessuna chiamata a channel_messages su OK", async () => {
-    // 1° call = funnemail_decisions (returns rows); 2° = view.
-    viewRows = [];
-    // Preload decisions call to return one row
-    const origFrom = calls;
-    void origFrom;
-    // Trick: enqueue decisions first via untypedFrom stub — the DAL calls
-    // untypedFrom("funnemail_decisions") first. We accept an empty view result.
-    // First we must simulate a decision. We do this by mutating rows for the
-    // "funnemail_decisions" table via legacyRows toggling... simpler: patch
-    // the mock to key by table.
-    // Instead of complicating, we drive a scenario where decisions is empty
-    // -> function returns early. So we test the msgs path with a helper:
-    // call it once with decisions=empty, expect [].
+    setTable("funnemail_decisions", [
+      { id: "d1", message_id: "ext-1", folder_slug: "rfq", from_address: "a@x.io", partner_id: null, created_at: "2026-01-01T00:00:00Z" },
+    ]);
+    setTable("message_intelligence_v", [
+      { message_id_external: "ext-1", subject: "Ciao", from_address: "a@x.io", body_text: "hi", body_html: null, email_date: "2026-01-01T00:00:00Z", partner_id: null },
+    ]);
     const out = await listMailsByFolder("rfq", 10);
-    expect(out).toEqual([]);
-    // Only the decisions call happened; no message reads at all.
-    expect(calls.map((c) => c.table)).toEqual(["funnemail_decisions"]);
+    expect(out).toHaveLength(1);
+    expect(out[0].subject).toBe("Ciao");
+    const tables = calls.map((c) => c.table);
+    expect(tables).toContain("message_intelligence_v");
+    expect(tables).not.toContain("channel_messages");
+    const viewCall = calls.find((c) => c.table === "message_intelligence_v")!;
+    expect(viewCall.eqs).toEqual([
+      { column: "channel", value: "email" },
+      { column: "direction", value: "inbound" },
+    ]);
+    expect(viewCall.ins).toEqual([{ column: "message_id_external", values: ["ext-1"] }]);
+  });
+
+  it("listMailsByFolder: view Err → fallback trasparente su channel_messages con stessi filtri", async () => {
+    setTable("funnemail_decisions", [
+      { id: "d1", message_id: "ext-1", folder_slug: "rfq", from_address: "a@x.io", partner_id: null, created_at: "2026-01-01T00:00:00Z" },
+    ]);
+    setTable("message_intelligence_v", [], { message: "view down", code: "42P01" });
+    setTable("channel_messages", [
+      { message_id_external: "ext-1", subject: "FromLegacy", from_address: "a@x.io", body_text: null, body_html: null, email_date: null, partner_id: null },
+    ]);
+    const out = await listMailsByFolder("rfq", 10);
+    expect(out[0].subject).toBe("FromLegacy");
+    const tables = calls.map((c) => c.table);
+    expect(tables.filter((t) => t === "message_intelligence_v")).toHaveLength(1);
+    expect(tables.filter((t) => t === "channel_messages")).toHaveLength(1);
+    const legacyCall = calls.find((c) => c.table === "channel_messages")!;
+    expect(legacyCall.eqs).toEqual([
+      { column: "channel", value: "email" },
+      { column: "direction", value: "inbound" },
+    ]);
+    expect(legacyCall.ins).toEqual([{ column: "message_id_external", values: ["ext-1"] }]);
+  });
+
+  it("listMailsByFolder: view Err + legacy Err → propaga throw", async () => {
+    setTable("funnemail_decisions", [
+      { id: "d1", message_id: "ext-1", folder_slug: "rfq", from_address: null, partner_id: null, created_at: "2026-01-01T00:00:00Z" },
+    ]);
+    setTable("message_intelligence_v", [], { message: "view down" });
+    setTable("channel_messages", [], { message: "legacy down" });
+    await expect(listMailsByFolder("rfq", 10)).rejects.toBeDefined();
   });
 
   it("markFunnemailMessagesRead: SCRITTURA rimane su channel_messages, MAI su view", async () => {
