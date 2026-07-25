@@ -252,3 +252,21 @@ Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3
 - **Rollback**: `git revert` di 3 file (`channel-messages.ts`, `SenderEmailPreviewPanel.tsx`, `sender-conversation.test.ts`).
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅ + B4.4 ✅**. B5 / B6 non iniziati.
+
+## Batch B4.5 — Consumer migration `useNavBadgeCountsV2` / badge Funnemail Inbox (2026-07-25)
+
+- **Consumer scelto**: `src/v2/hooks/useNavBadgeCountsV2.ts` — hook che alimenta il badge "email inbound non lette" della voce di menu `/v2/funnemail-inbox`. È il consumer ATTIVO principale della Funnemail Inbox con il blast radius più basso: HEAD count (`count: "exact", head: true`), zero mutation, zero realtime, zero paginazione, projection minimale i cui filtri (`read_at IS NULL`, `direction='inbound'`, `channel='email'`) sono TUTTI esposti dalla view canonica `message_intelligence_v`. Nessuna modifica al hook principale `useFunnemailInbox` (che richiede campi non presenti nella view: `message_id_external`, `imap_uid`, `mailbox_id`, `folder`, …) né al DAL `listFunnemailGroupedInbox`.
+- **API DAL nuova (pubblica)**: `fetchFunnemailUnreadCount()` in `src/v2/io/supabase/queries/channel-messages.ts`. Helpers `queryFunnemailUnreadCountFromView` / `queryFunnemailUnreadCountFromLegacy` privati. Primaria = `message_intelligence_v` (HEAD count su `message_id`), fallback trasparente su `channel_messages` (HEAD count su `id`) con log strutturato senza PII (`funnemail_unread_count_view_fallback`, solo `code`).
+- **Prima**: `supabase.from("channel_messages").select("id", { count:"exact", head:true }).is("read_at", null).eq("direction","inbound").eq("channel","email")` inline nel `Promise.all` di `useNavBadgeCountsV2`.
+- **Dopo**: `fetchFunnemailUnreadCount()` come 4ª promise del `Promise.all`. Estratto count da `Result`: `funnemailRes._tag === "Ok" ? funnemailRes.value : 0` (fallback a 0 identico a `?? 0` legacy in caso di doppio errore).
+- **Preservato integralmente**: query key `["v2","nav-badge-counts"]`, `refetchInterval: 30_000`, `staleTime: 15_000`, `placeholderData: EMPTY`, mapping `NavBadgeCounts.funnemailInbox`, `badgeForPath("/v2/funnemail-inbox")`, invalidation upstream, UI/menu di navigazione, filtri, ordinamento (n/a per HEAD count), realtime (n/a). Nessuna modifica agli altri 4 count del Promise.all.
+- **Test** (`src/v2/io/supabase/queries/__tests__/funnemail-unread-count.test.ts`, 4/4 ✅):
+  1. view OK → HEAD count sulla view canonica, non chiama legacy, verifica `select("message_id",{count:"exact",head:true})`, `is(read_at,null)`, `eq(direction,inbound)`, `eq(channel,email)`.
+  2. view Err → fallback trasparente su `channel_messages` con stessi filtri e `select("id",{count:"exact",head:true})`.
+  3. view Err + legacy Err → propaga `Err`.
+  4. count null (nessuna riga) → `Ok(0)`.
+- **Verifiche**: Vitest 18/18 ✅ sui test DAL pertinenti (B4.2 + B4.3 + B4.4 + B4.5). `tsgo --noEmit -p tsconfig.app.json` verde. Nessuna migration/view/RLS/grant/Edge Function/AI/classificatore/scheduler/invio/prompt/agente/`journalistReview`. Nessuna modifica alla Funnemail Inbox page, a `useFunnemailInbox`, o al DAL `funnemailInbox`.
+- **Rischio**: minimo. HEAD count è la primitiva più semplice possibile; il fallback è identico al percorso pre-B4.5 e ora centralizzato. Perimetro = un solo numero mostrato accanto a una voce di menu.
+- **Rollback**: `git revert` di 3 file (`channel-messages.ts` — solo la sezione B4.5, `useNavBadgeCountsV2.ts`, `funnemail-unread-count.test.ts`).
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅ + B4.4 ✅ + B4.5 ✅**. B5 / B6 non iniziati.
