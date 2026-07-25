@@ -10,17 +10,37 @@ export interface AuthResult {
 }
 
 /**
+ * Error body format:
+ *  - "verbose" (default, PRE-E2 behavior): { error: CODE, message: "..." }
+ *  - "terse":   { error: CODE }
+ * Aggiunto in E2 in modo strettamente additivo. Default e i 16 caller
+ * esistenti restano byte-identici.
+ */
+export type AuthErrorFormat = "verbose" | "terse";
+
+export interface RequireAuthOptions {
+  errorFormat?: AuthErrorFormat;
+}
+
+/**
  * Validates the Authorization header and returns the authenticated user ID.
  * Returns a Response (401) if auth fails, or AuthResult on success.
  */
 export async function requireAuth(
   req: Request,
   corsHeaders: Record<string, string>,
+  options: RequireAuthOptions = {},
 ): Promise<AuthResult | Response> {
+  const errorFormat: AuthErrorFormat = options.errorFormat ?? "verbose";
+  const buildErrorBody = (code: "AUTH_REQUIRED" | "AUTH_INVALID", message: string): string =>
+    errorFormat === "terse"
+      ? JSON.stringify({ error: code })
+      : JSON.stringify({ error: code, message });
+
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(
-      JSON.stringify({ error: "AUTH_REQUIRED", message: "Bearer token required" }),
+      buildErrorBody("AUTH_REQUIRED", "Bearer token required"),
       { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
@@ -36,7 +56,7 @@ export async function requireAuth(
   const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
   if (claimsError || !claimsData?.claims?.sub) {
     return new Response(
-      JSON.stringify({ error: "AUTH_INVALID", message: "Invalid or expired token" }),
+      buildErrorBody("AUTH_INVALID", "Invalid or expired token"),
       { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
