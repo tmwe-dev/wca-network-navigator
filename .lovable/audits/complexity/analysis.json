@@ -1,0 +1,3973 @@
+{
+  "semantic_scope": {
+    "files": 3445,
+    "lines": 426729
+  },
+  "size_distribution": {
+    "50-200": 1807,
+    "<50": 969,
+    "500-1000": 37,
+    "200-500": 631,
+    "1000-2000": 1
+  },
+  "top_files_by_lines": [
+    {
+      "path": "src/index.css",
+      "lines": 1015,
+      "area": "src_other"
+    },
+    {
+      "path": "supabase/migrations/20260408064922_wave5_agents_kb_seed.sql",
+      "lines": 729,
+      "area": "db_migrations"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/HarmonizeSystemDialog.tsx",
+      "lines": 723,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/data/partners.ts",
+      "lines": 684,
+      "area": "src_data"
+    },
+    {
+      "path": "src/components/test-extensions/LinkedInTest.tsx",
+      "lines": 667,
+      "area": "src_components"
+    },
+    {
+      "path": "src/hooks/useCockpitLogic.ts",
+      "lines": 643,
+      "area": "src_hooks"
+    },
+    {
+      "path": "src/test/rbac.test.ts",
+      "lines": 639,
+      "area": "src_other"
+    },
+    {
+      "path": "src/data/funnemailInbox.ts",
+      "lines": 636,
+      "area": "src_data"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx",
+      "lines": 627,
+      "area": "src_v2"
+    },
+    {
+      "path": "supabase/functions/send-email/index.ts",
+      "lines": 616,
+      "area": "edge_functions"
+    },
+    {
+      "path": "e2e/calendar-flow.spec.ts",
+      "lines": 615,
+      "area": "test_e2e"
+    },
+    {
+      "path": "src/test/contact-merge-logic.test.ts",
+      "lines": 606,
+      "area": "src_other"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx",
+      "lines": 594,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/pages/command/canvas/ComposerCanvas.tsx",
+      "lines": 590,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/email-intelligence/management/SenderActionsDialog.tsx",
+      "lines": 577,
+      "area": "src_components"
+    },
+    {
+      "path": "src/test/export-generation.test.ts",
+      "lines": 577,
+      "area": "src_other"
+    },
+    {
+      "path": "supabase/functions/_shared/processManagers/leadProcessManager.ts",
+      "lines": 573,
+      "area": "edge_shared"
+    },
+    {
+      "path": "src/test/bug-registry-confirmation.test.ts",
+      "lines": 559,
+      "area": "src_other"
+    },
+    {
+      "path": "src/data/cestinone.ts",
+      "lines": 558,
+      "area": "src_data"
+    },
+    {
+      "path": "src/components/email-intelligence/ManualGroupingTab.tsx",
+      "lines": 557,
+      "area": "src_components"
+    },
+    {
+      "path": "src/lib/extensions/catalog.ts",
+      "lines": 554,
+      "area": "src_lib"
+    },
+    {
+      "path": "src/components/cockpit/AIDraftStudio.tsx",
+      "lines": 553,
+      "area": "src_components"
+    },
+    {
+      "path": "src/components/email-intelligence/management/SenderEmailPreviewPanel.tsx",
+      "lines": 549,
+      "area": "src_components"
+    },
+    {
+      "path": "src/components/email-intelligence/AISuggestionsTab.tsx",
+      "lines": 547,
+      "area": "src_components"
+    },
+    {
+      "path": "supabase/functions/_shared/domainHandler.ts",
+      "lines": 545,
+      "area": "edge_shared"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/GlobalImproverDialog.tsx",
+      "lines": 541,
+      "area": "src_v2"
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersRead.ts",
+      "lines": 540,
+      "area": "edge_shared"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/SuggestionsReviewPage.tsx",
+      "lines": 538,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/test/query-keys-integrity.test.ts",
+      "lines": 537,
+      "area": "src_other"
+    },
+    {
+      "path": "supabase/functions/improve-email/index.ts",
+      "lines": 535,
+      "area": "edge_functions"
+    },
+    {
+      "path": "src/components/test-extensions/WhatsAppTest.tsx",
+      "lines": 530,
+      "area": "src_components"
+    },
+    {
+      "path": "supabase/functions/prompt-test-runner/index.ts",
+      "lines": 527,
+      "area": "edge_functions"
+    },
+    {
+      "path": "src/test/notifications.test.ts",
+      "lines": 521,
+      "area": "src_other"
+    },
+    {
+      "path": "src/v2/services/sherlock/sherlockEngine.ts",
+      "lines": 519,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx",
+      "lines": 519,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts",
+      "lines": 513,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/constants/salesKnowledgeBase.ts",
+      "lines": 501,
+      "area": "src_other"
+    },
+    {
+      "path": "supabase/functions/cadence-engine/index.ts",
+      "lines": 501,
+      "area": "edge_functions"
+    },
+    {
+      "path": "supabase/functions/voice-brain-bridge/index.ts",
+      "lines": 495,
+      "area": "edge_functions"
+    },
+    {
+      "path": "supabase/functions/_shared/journalistSelector.ts",
+      "lines": 493,
+      "area": "edge_shared"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/HarmonizeReviewPanel.tsx",
+      "lines": 492,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/templates/NavMenuPopover.tsx",
+      "lines": 486,
+      "area": "src_v2"
+    },
+    {
+      "path": "supabase/functions/classify-inbound-content/index.ts",
+      "lines": 486,
+      "area": "edge_functions"
+    },
+    {
+      "path": "src/hooks/email-composer/useEmailComposerState.ts",
+      "lines": 485,
+      "area": "src_hooks"
+    },
+    {
+      "path": "supabase/functions/agent-execute/contextInjection.ts",
+      "lines": 484,
+      "area": "edge_functions"
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersWrite.ts",
+      "lines": 483,
+      "area": "edge_shared"
+    },
+    {
+      "path": "src/hooks/useCockpitContacts.ts",
+      "lines": 480,
+      "area": "src_hooks"
+    },
+    {
+      "path": "src/lib/api/wcaAppApi.ts",
+      "lines": 476,
+      "area": "src_lib"
+    },
+    {
+      "path": "src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx",
+      "lines": 469,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/operations/PartnerListPanel.tsx",
+      "lines": 468,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/ui/pages/SettingsPage.tsx",
+      "lines": 467,
+      "area": "src_v2"
+    },
+    {
+      "path": "supabase/functions/_shared/domainEvents.ts",
+      "lines": 466,
+      "area": "edge_shared"
+    },
+    {
+      "path": "src/hooks/useImportWizard.ts",
+      "lines": 465,
+      "area": "src_hooks"
+    },
+    {
+      "path": "src/test/calendar.test.ts",
+      "lines": 465,
+      "area": "src_other"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/promptRubrics.ts",
+      "lines": 465,
+      "area": "src_v2"
+    },
+    {
+      "path": "supabase/functions/agent-autonomous-cycle/index.ts",
+      "lines": 465,
+      "area": "edge_functions"
+    },
+    {
+      "path": "src/test/token-budget-enforcement.test.ts",
+      "lines": 464,
+      "area": "src_other"
+    },
+    {
+      "path": "src/data/analytics.ts",
+      "lines": 462,
+      "area": "src_data"
+    },
+    {
+      "path": "supabase/functions/ai-assistant/index.ts",
+      "lines": 462,
+      "area": "edge_functions"
+    },
+    {
+      "path": "src/hooks/useDeepSearchLocal.ts",
+      "lines": 460,
+      "area": "src_hooks"
+    },
+    {
+      "path": "src/components/agenda/AgendaDayDetail.tsx",
+      "lines": 458,
+      "area": "src_components"
+    },
+    {
+      "path": "src/hooks/useEnrichmentData.ts",
+      "lines": 458,
+      "area": "src_hooks"
+    },
+    {
+      "path": "src/test/token-usage.test.ts",
+      "lines": 458,
+      "area": "src_other"
+    },
+    {
+      "path": "src/components/settings/ContentManager.tsx",
+      "lines": 455,
+      "area": "src_components"
+    },
+    {
+      "path": "supabase/functions/process-ai-import/index.ts",
+      "lines": 454,
+      "area": "edge_functions"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/ProposalsReviewPage.tsx",
+      "lines": 452,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/pages/AILabPage.tsx",
+      "lines": 451,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/email-intelligence/management/SenderCard.tsx",
+      "lines": 450,
+      "area": "src_components"
+    },
+    {
+      "path": "src/components/ai-control/CostDashboardWidget.tsx",
+      "lines": 448,
+      "area": "src_components"
+    },
+    {
+      "path": "src/components/email-intelligence/manual-grouping/useGroupingData.ts",
+      "lines": 448,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts",
+      "lines": 448,
+      "area": "src_v2"
+    },
+    {
+      "path": "supabase/functions/_shared/dimensionCalculators.ts",
+      "lines": 448,
+      "area": "edge_shared"
+    },
+    {
+      "path": "src/test/analytics.test.ts",
+      "lines": 447,
+      "area": "src_other"
+    },
+    {
+      "path": "src/components/partners/PartnerDetailCompact.tsx",
+      "lines": 446,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/ui/templates/AuthenticatedLayout.tsx",
+      "lines": 444,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/ai-control/SupervisorFeedPanel.tsx",
+      "lines": 442,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/AgentRoutingTab.tsx",
+      "lines": 442,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/settings/AIProfileSettings.tsx",
+      "lines": 439,
+      "area": "src_components"
+    },
+    {
+      "path": "src/components/contacts/ContactFiltersBar.tsx",
+      "lines": 438,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/agent/runtime/tools/dom.ts",
+      "lines": 437,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/global/filters-drawer/NetworkFiltersSection.tsx",
+      "lines": 436,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/contracts.ts",
+      "lines": 436,
+      "area": "src_v2"
+    },
+    {
+      "path": "supabase/functions/backfill-email-rules/index.ts",
+      "lines": 436,
+      "area": "edge_functions"
+    },
+    {
+      "path": "supabase/migrations/20260408095954_wave6_hardening_telemetry_staff.sql",
+      "lines": 435,
+      "area": "db_migrations"
+    },
+    {
+      "path": "src/components/ai-control/PendingActionsPanel.tsx",
+      "lines": 434,
+      "area": "src_components"
+    },
+    {
+      "path": "src/data/seeds/funnemailEvalSeed.ts",
+      "lines": 434,
+      "area": "src_data"
+    },
+    {
+      "path": "src/components/prospects/ProspectListPanel.tsx",
+      "lines": 428,
+      "area": "src_components"
+    },
+    {
+      "path": "supabase/functions/generate-email/index.ts",
+      "lines": 427,
+      "area": "edge_functions"
+    },
+    {
+      "path": "src/v2/ui/pages/MissionsAutopilotPage.tsx",
+      "lines": 426,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/composeEmail/executor.ts",
+      "lines": 426,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/components/GordonChatPanel.tsx",
+      "lines": 425,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/routes.tsx",
+      "lines": 423,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/guida/parts/TutorialChapters.tsx",
+      "lines": 422,
+      "area": "src_components"
+    },
+    {
+      "path": "src/components/partners/CSVImport.tsx",
+      "lines": 422,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/ui/organisms/EntityListWithDetail.tsx",
+      "lines": 422,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/partners/CountryOverview.tsx",
+      "lines": 419,
+      "area": "src_components"
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/useHarmonizeOrchestrator.ts",
+      "lines": 419,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/pages/EmailStrategiesPage.tsx",
+      "lines": 418,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/v2/ui/pages/kb-supervisor/hooks/useKBSupervisorState.ts",
+      "lines": 417,
+      "area": "src_v2"
+    },
+    {
+      "path": "src/components/partners/PartnerFiltersSheet.tsx",
+      "lines": 416,
+      "area": "src_components"
+    }
+  ],
+  "top_files_by_cyclomatic": [
+    {
+      "path": "supabase/functions/_shared/toolHandlersRead.ts",
+      "cyclo": 290,
+      "lines": 540
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersWrite.ts",
+      "cyclo": 250,
+      "lines": 483
+    },
+    {
+      "path": "src/hooks/useCockpitLogic.ts",
+      "cyclo": 225,
+      "lines": 643
+    },
+    {
+      "path": "src/components/test-extensions/LinkedInTest.tsx",
+      "cyclo": 221,
+      "lines": 667
+    },
+    {
+      "path": "src/data/cestinone.ts",
+      "cyclo": 203,
+      "lines": 558
+    },
+    {
+      "path": "src/hooks/email-composer/useEmailComposerState.ts",
+      "cyclo": 203,
+      "lines": 485
+    },
+    {
+      "path": "src/hooks/useCockpitContacts.ts",
+      "cyclo": 197,
+      "lines": 480
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersEnterprise.ts",
+      "cyclo": 184,
+      "lines": 401
+    },
+    {
+      "path": "src/hooks/useDeepSearchLocal.ts",
+      "cyclo": 181,
+      "lines": 460
+    },
+    {
+      "path": "supabase/functions/save-wca-contacts/index.ts",
+      "cyclo": 177,
+      "lines": 380
+    },
+    {
+      "path": "supabase/functions/check-inbox-booking/mimeDecoder.ts",
+      "cyclo": 169,
+      "lines": 299
+    },
+    {
+      "path": "supabase/functions/check-inbox/mimeDecoder.ts",
+      "cyclo": 169,
+      "lines": 299
+    },
+    {
+      "path": "src/data/funnemailInbox.ts",
+      "cyclo": 165,
+      "lines": 636
+    },
+    {
+      "path": "supabase/functions/agent-execute/toolHandlers.ts",
+      "cyclo": 165,
+      "lines": 358
+    },
+    {
+      "path": "supabase/functions/improve-email/index.ts",
+      "cyclo": 161,
+      "lines": 535
+    },
+    {
+      "path": "src/components/test-extensions/WhatsAppTest.tsx",
+      "cyclo": 155,
+      "lines": 530
+    },
+    {
+      "path": "src/components/global/filters-drawer/useFiltersDrawerState.ts",
+      "cyclo": 147,
+      "lines": 232
+    },
+    {
+      "path": "src/hooks/useLinkedInSync.ts",
+      "cyclo": 147,
+      "lines": 381
+    },
+    {
+      "path": "src/hooks/useEnrichmentData.ts",
+      "cyclo": 146,
+      "lines": 458
+    },
+    {
+      "path": "supabase/functions/agent-execute/toolHandlers/crmTools.ts",
+      "cyclo": 144,
+      "lines": 358
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/harmonizeExecutor.ts",
+      "cyclo": 139,
+      "lines": 258
+    },
+    {
+      "path": "src/data/partners.ts",
+      "cyclo": 137,
+      "lines": 684
+    },
+    {
+      "path": "supabase/functions/send-email/index.ts",
+      "cyclo": 136,
+      "lines": 616
+    },
+    {
+      "path": "supabase/functions/_shared/platformTools/domainsExtraHandler.ts",
+      "cyclo": 134,
+      "lines": 281
+    },
+    {
+      "path": "src/v2/services/sherlock/sherlockEngine.ts",
+      "cyclo": 132,
+      "lines": 519
+    },
+    {
+      "path": "src/v2/hooks/companyList/useCompanyFilters.ts",
+      "cyclo": 129,
+      "lines": 159
+    },
+    {
+      "path": "supabase/functions/generate-outreach/index.ts",
+      "cyclo": 129,
+      "lines": 390
+    },
+    {
+      "path": "supabase/functions/_shared/aiGateway.ts",
+      "cyclo": 125,
+      "lines": 400
+    },
+    {
+      "path": "src/v2/agent/runtime/tools/dom.ts",
+      "cyclo": 124,
+      "lines": 437
+    },
+    {
+      "path": "supabase/functions/apply-email-rules/index.ts",
+      "cyclo": 122,
+      "lines": 411
+    },
+    {
+      "path": "supabase/functions/generate-email/index.ts",
+      "cyclo": 120,
+      "lines": 427
+    },
+    {
+      "path": "supabase/functions/backfill-email-rules/index.ts",
+      "cyclo": 118,
+      "lines": 436
+    },
+    {
+      "path": "src/components/prospects/ProspectListPanel.tsx",
+      "cyclo": 117,
+      "lines": 428
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/composeEmail/executor.ts",
+      "cyclo": 117,
+      "lines": 426
+    },
+    {
+      "path": "supabase/functions/_shared/scopeConfigs.ts",
+      "cyclo": 116,
+      "lines": 403
+    },
+    {
+      "path": "supabase/functions/agent-execute/toolHandlers/emailTools.ts",
+      "cyclo": 116,
+      "lines": 357
+    },
+    {
+      "path": "src/components/workspace/ContactListPanel.tsx",
+      "cyclo": 115,
+      "lines": 347
+    },
+    {
+      "path": "src/components/cockpit/AIDraftStudio.tsx",
+      "cyclo": 113,
+      "lines": 553
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/composeEmail/promptParse.ts",
+      "cyclo": 112,
+      "lines": 252
+    },
+    {
+      "path": "src/components/operations/PartnerListPanel.tsx",
+      "cyclo": 110,
+      "lines": 468
+    },
+    {
+      "path": "src/hooks/useLinkedInFlow.ts",
+      "cyclo": 109,
+      "lines": 294
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts",
+      "cyclo": 109,
+      "lines": 448
+    },
+    {
+      "path": "src/components/settings/BlacklistManager.tsx",
+      "cyclo": 108,
+      "lines": 368
+    },
+    {
+      "path": "src/hooks/useAddContactForm.ts",
+      "cyclo": 107,
+      "lines": 334
+    },
+    {
+      "path": "supabase/functions/agent-execute/contextInjection.ts",
+      "cyclo": 107,
+      "lines": 484
+    },
+    {
+      "path": "supabase/functions/voice-brain-bridge/index.ts",
+      "cyclo": 107,
+      "lines": 495
+    },
+    {
+      "path": "src/lib/partnerUtils.ts",
+      "cyclo": 106,
+      "lines": 190
+    },
+    {
+      "path": "src/v2/services/enrichment/baseEnrichment.ts",
+      "cyclo": 106,
+      "lines": 409
+    },
+    {
+      "path": "src/components/outreach/email/emailContentNormalization.ts",
+      "cyclo": 105,
+      "lines": 254
+    },
+    {
+      "path": "supabase/functions/agent-execute/toolHandlers/searchTools.ts",
+      "cyclo": 105,
+      "lines": 206
+    },
+    {
+      "path": "src/hooks/useAcquisitionPipeline.tsx",
+      "cyclo": 104,
+      "lines": 322
+    },
+    {
+      "path": "supabase/functions/check-inbox/imapParser.ts",
+      "cyclo": 104,
+      "lines": 251
+    },
+    {
+      "path": "src/hooks/useImportWizard.ts",
+      "cyclo": 103,
+      "lines": 465
+    },
+    {
+      "path": "src/components/contact-drawer/ContactRecordFields.tsx",
+      "cyclo": 102,
+      "lines": 213
+    },
+    {
+      "path": "src/hooks/useWhatsAppAdaptiveSync.ts",
+      "cyclo": 101,
+      "lines": 407
+    },
+    {
+      "path": "src/v2/ui/pages/command/lib/localResultFormatter.ts",
+      "cyclo": 101,
+      "lines": 392
+    },
+    {
+      "path": "src/hooks/useActionPanelLogic.ts",
+      "cyclo": 100,
+      "lines": 320
+    },
+    {
+      "path": "src/hooks/useEmailContactPicker.ts",
+      "cyclo": 100,
+      "lines": 295
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/HarmonizeSystemDialog.tsx",
+      "cyclo": 100,
+      "lines": 723
+    },
+    {
+      "path": "supabase/functions/ai-assistant/index.ts",
+      "cyclo": 100,
+      "lines": 462
+    },
+    {
+      "path": "supabase/functions/check-inbox-booking/messageProcessor.ts",
+      "cyclo": 100,
+      "lines": 397
+    },
+    {
+      "path": "supabase/functions/check-inbox/messageProcessor.ts",
+      "cyclo": 100,
+      "lines": 397
+    },
+    {
+      "path": "src/v2/io/supabase/queries/channel-messages.ts",
+      "cyclo": 99,
+      "lines": 412
+    },
+    {
+      "path": "src/v2/ui/pages/command/canvas/ComposerCanvas.tsx",
+      "cyclo": 99,
+      "lines": 590
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/useHarmonizeOrchestrator.ts",
+      "cyclo": 99,
+      "lines": 419
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx",
+      "cyclo": 99,
+      "lines": 594
+    },
+    {
+      "path": "supabase/functions/agent-autonomous-cycle/index.ts",
+      "cyclo": 99,
+      "lines": 465
+    },
+    {
+      "path": "supabase/functions/cadence-engine/index.ts",
+      "cyclo": 98,
+      "lines": 501
+    },
+    {
+      "path": "supabase/functions/check-inbox-booking/imapParser.ts",
+      "cyclo": 98,
+      "lines": 226
+    },
+    {
+      "path": "supabase/functions/classify-inbound-content/index.ts",
+      "cyclo": 98,
+      "lines": 486
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx",
+      "cyclo": 95,
+      "lines": 627
+    },
+    {
+      "path": "supabase/functions/funnemail-auto-route/index.ts",
+      "cyclo": 95,
+      "lines": 375
+    },
+    {
+      "path": "src/hooks/useApproveAndDispatch.ts",
+      "cyclo": 93,
+      "lines": 269
+    },
+    {
+      "path": "src/hooks/useWhatsAppBackfill.ts",
+      "cyclo": 92,
+      "lines": 361
+    },
+    {
+      "path": "src/v2/ui/organisms/EntityListWithDetail.tsx",
+      "cyclo": 92,
+      "lines": 422
+    },
+    {
+      "path": "src/components/agenda/AgendaDayDetail.tsx",
+      "cyclo": 91,
+      "lines": 458
+    },
+    {
+      "path": "src/components/ai-control/PendingActionsPanel.tsx",
+      "cyclo": 91,
+      "lines": 434
+    },
+    {
+      "path": "src/lib/import/fileParser.ts",
+      "cyclo": 91,
+      "lines": 319
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/aiQueryTool.ts",
+      "cyclo": 91,
+      "lines": 316
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/harmonizeCollector.ts",
+      "cyclo": 91,
+      "lines": 413
+    },
+    {
+      "path": "src/v2/ui/pages/AILabPage.tsx",
+      "cyclo": 90,
+      "lines": 451
+    },
+    {
+      "path": "supabase/functions/_shared/platformTools/partnersSearchHandler.ts",
+      "cyclo": 90,
+      "lines": 392
+    },
+    {
+      "path": "src/data/contacts/queries.ts",
+      "cyclo": 89,
+      "lines": 334
+    },
+    {
+      "path": "src/v2/hooks/useFunnemailInbox.ts",
+      "cyclo": 88,
+      "lines": 357
+    },
+    {
+      "path": "supabase/functions/prompt-copilot-chat/index.ts",
+      "cyclo": 88,
+      "lines": 310
+    },
+    {
+      "path": "supabase/functions/tmwe-catalog-sync/index.ts",
+      "cyclo": 88,
+      "lines": 274
+    },
+    {
+      "path": "supabase/functions/tmwe-oauth-callback/index.ts",
+      "cyclo": 88,
+      "lines": 376
+    },
+    {
+      "path": "supabase/functions/_shared/platformToolHandlers/partnerTools.ts",
+      "cyclo": 86,
+      "lines": 224
+    },
+    {
+      "path": "supabase/functions/ai-assistant/contextAssembly.ts",
+      "cyclo": 86,
+      "lines": 372
+    },
+    {
+      "path": "supabase/functions/manage-email-folders/index.ts",
+      "cyclo": 86,
+      "lines": 269
+    },
+    {
+      "path": "src/components/email-intelligence/AISuggestionsTab.tsx",
+      "cyclo": 85,
+      "lines": 547
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/diagnostics.ts",
+      "cyclo": 85,
+      "lines": 286
+    },
+    {
+      "path": "supabase/functions/_shared/funnemailDispatcher.ts",
+      "cyclo": 85,
+      "lines": 376
+    },
+    {
+      "path": "supabase/functions/parse-profile-ai/index.ts",
+      "cyclo": 85,
+      "lines": 338
+    },
+    {
+      "path": "src/components/settings/ContentManager.tsx",
+      "cyclo": 84,
+      "lines": 455
+    },
+    {
+      "path": "src/data/analytics.ts",
+      "cyclo": 84,
+      "lines": 462
+    },
+    {
+      "path": "src/hooks/useLinkedInMessagingBridge.ts",
+      "cyclo": 84,
+      "lines": 337
+    },
+    {
+      "path": "src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx",
+      "cyclo": 84,
+      "lines": 469
+    },
+    {
+      "path": "src/components/home/OperationsCenter.tsx",
+      "cyclo": 83,
+      "lines": 325
+    },
+    {
+      "path": "src/components/missions/builder/useMissionBuilder.ts",
+      "cyclo": 83,
+      "lines": 272
+    }
+  ],
+  "top_longest_functions": [
+    {
+      "path": "src/components/test-extensions/LinkedInTest.tsx",
+      "name": "LinkedInTest",
+      "lines": 645
+    },
+    {
+      "path": "src/hooks/useCockpitLogic.ts",
+      "name": "useCockpitLogic",
+      "lines": 618
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersRead.ts",
+      "name": "createReadHandlers",
+      "lines": 527
+    },
+    {
+      "path": "src/components/test-extensions/WhatsAppTest.tsx",
+      "name": "WhatsAppTest",
+      "lines": 509
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersWrite.ts",
+      "name": "createWriteHandlers",
+      "lines": 469
+    },
+    {
+      "path": "src/hooks/email-composer/useEmailComposerState.ts",
+      "name": "useEmailComposerState",
+      "lines": 445
+    },
+    {
+      "path": "src/components/email-intelligence/manual-grouping/useGroupingData.ts",
+      "name": "useGroupingData",
+      "lines": 434
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts",
+      "name": "useGlobalPromptImprover",
+      "lines": 421
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx",
+      "name": "PromptTestsTab",
+      "lines": 419
+    },
+    {
+      "path": "src/hooks/useDeepSearchLocal.ts",
+      "name": "useDeepSearchLocal",
+      "lines": 412
+    },
+    {
+      "path": "src/components/guida/parts/TutorialChapters.tsx",
+      "name": "TutorialChapters",
+      "lines": 411
+    },
+    {
+      "path": "src/hooks/useImportWizard.ts",
+      "name": "useImportWizard",
+      "lines": 408
+    },
+    {
+      "path": "src/components/global/filters-drawer/NetworkFiltersSection.tsx",
+      "name": "NetworkFiltersSection",
+      "lines": 403
+    },
+    {
+      "path": "src/components/ai-control/PendingActionsPanel.tsx",
+      "name": "PendingActionsPanel",
+      "lines": 402
+    },
+    {
+      "path": "src/components/ai-control/CostDashboardWidget.tsx",
+      "name": "CostDashboardWidget",
+      "lines": 399
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/SimulatorTab.tsx",
+      "name": "SimulatorTab",
+      "lines": 382
+    },
+    {
+      "path": "src/v2/ui/pages/AgentChatHubPage.tsx",
+      "name": "AgentChatHub",
+      "lines": 375
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersEnterprise.ts",
+      "name": "createEnterpriseHandlers",
+      "lines": 364
+    },
+    {
+      "path": "src/v2/ui/templates/AuthenticatedLayout.tsx",
+      "name": "AuthenticatedLayout",
+      "lines": 360
+    },
+    {
+      "path": "src/v2/ui/pages/OnboardingPage.tsx",
+      "name": "Onboarding",
+      "lines": 348
+    },
+    {
+      "path": "src/components/global/filters-drawer/CRMFiltersSection.tsx",
+      "name": "CRMFiltersSection",
+      "lines": 344
+    },
+    {
+      "path": "src/data/cestinone.ts",
+      "name": "fetchCestinone",
+      "lines": 343
+    },
+    {
+      "path": "src/v2/ui/pages/kb-supervisor/hooks/useKBSupervisorState.ts",
+      "name": "useKBSupervisorState",
+      "lines": 335
+    },
+    {
+      "path": "src/components/partners/WCAScraper.tsx",
+      "name": "WCAScraper",
+      "lines": 333
+    },
+    {
+      "path": "src/hooks/useWhatsAppAdaptiveSync.ts",
+      "name": "useWhatsAppAdaptiveSync",
+      "lines": 327
+    },
+    {
+      "path": "supabase/functions/_shared/aiGateway.ts",
+      "name": "aiChat",
+      "lines": 319
+    },
+    {
+      "path": "supabase/functions/agent-execute/contextInjection.ts",
+      "name": "buildContextBlock",
+      "lines": 319
+    },
+    {
+      "path": "src/hooks/useEnrichmentData.ts",
+      "name": "useEnrichmentData",
+      "lines": 315
+    },
+    {
+      "path": "src/components/email-intelligence/SenderManagementTab.tsx",
+      "name": "SenderManagementTab",
+      "lines": 314
+    },
+    {
+      "path": "src/components/outreach/AttivitaTab.tsx",
+      "name": "AttivitaTab",
+      "lines": 312
+    },
+    {
+      "path": "src/v2/hooks/useFunnemailInbox.ts",
+      "name": "useFunnemailInbox",
+      "lines": 310
+    },
+    {
+      "path": "src/v2/ui/pages/CommandPage.tsx",
+      "name": "CommandPage",
+      "lines": 310
+    },
+    {
+      "path": "src/v2/ui/pages/command/hooks/useCommandSubmit.ts",
+      "name": "useCommandSubmit",
+      "lines": 310
+    },
+    {
+      "path": "src/hooks/useAddContactForm.ts",
+      "name": "useAddContactForm",
+      "lines": 303
+    },
+    {
+      "path": "src/v2/ui/pages/RAExplorerPage.tsx",
+      "name": "RAExplorer",
+      "lines": 303
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/useHarmonizeOrchestrator.ts",
+      "name": "useHarmonizeOrchestrator",
+      "lines": 303
+    },
+    {
+      "path": "src/components/settings/PromptManager.tsx",
+      "name": "PromptManager",
+      "lines": 297
+    },
+    {
+      "path": "src/hooks/useAcquisitionPipeline.tsx",
+      "name": "useAcquisitionPipeline",
+      "lines": 295
+    },
+    {
+      "path": "src/hooks/useLinkedInSync.ts",
+      "name": "useLinkedInSync",
+      "lines": 295
+    },
+    {
+      "path": "src/components/outreach/InviatiSubTab.tsx",
+      "name": "InviatiSubTab",
+      "lines": 294
+    },
+    {
+      "path": "src/hooks/useWhatsAppBackfill.ts",
+      "name": "useWhatsAppBackfill",
+      "lines": 286
+    },
+    {
+      "path": "src/components/email-intelligence/SmartInboxView.tsx",
+      "name": "SmartInboxView",
+      "lines": 285
+    },
+    {
+      "path": "src/components/ai-control/AIAutomationDashboard.tsx",
+      "name": "AIAutomationDashboard",
+      "lines": 280
+    },
+    {
+      "path": "src/hooks/useEmailContactPicker.ts",
+      "name": "useEmailContactPicker",
+      "lines": 270
+    },
+    {
+      "path": "supabase/functions/_shared/domainHandler.ts",
+      "name": "handleOperativeRequest",
+      "lines": 270
+    },
+    {
+      "path": "src/components/ai-control/LinkedInLimitsPanel.tsx",
+      "name": "LinkedInLimitsPanel",
+      "lines": 269
+    },
+    {
+      "path": "src/components/ai-control/GlobalAIAutomationPause.tsx",
+      "name": "GlobalAIAutomationPause",
+      "lines": 267
+    },
+    {
+      "path": "src/v2/ui/pages/AgentPersonaEditorPage.tsx",
+      "name": "AgentPersonaEditorPage",
+      "lines": 266
+    },
+    {
+      "path": "src/components/outreach/DaInviareSubTab.tsx",
+      "name": "DaInviareSubTab",
+      "lines": 265
+    },
+    {
+      "path": "src/v2/ui/components/admin/SystemDiagnosticsBadge.tsx",
+      "name": "SystemDiagnosticsBadge",
+      "lines": 265
+    },
+    {
+      "path": "src/components/ai-control/LearningDashboard.tsx",
+      "name": "LearningDashboard",
+      "lines": 260
+    },
+    {
+      "path": "supabase/functions/_shared/postClassificationPipeline.ts",
+      "name": "runPostClassificationPipeline",
+      "lines": 252
+    },
+    {
+      "path": "src/components/settings/KnowledgeBaseManager.tsx",
+      "name": "KnowledgeBaseManager",
+      "lines": 250
+    },
+    {
+      "path": "src/components/ai-control/OptimusAgentPanel.tsx",
+      "name": "OptimusAgentPanel",
+      "lines": 247
+    },
+    {
+      "path": "supabase/functions/_shared/platformToolHandlers/inboxTools.ts",
+      "name": "executeInboxToolHandler",
+      "lines": 246
+    },
+    {
+      "path": "src/components/missions/builder/useMissionBuilder.ts",
+      "name": "useMissionBuilder",
+      "lines": 245
+    },
+    {
+      "path": "src/components/guida/parts/ManualChapters.tsx",
+      "name": "ManualChapters",
+      "lines": 244
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/VoiceElevenLabsTab.tsx",
+      "name": "VoiceElevenLabsTab",
+      "lines": 244
+    },
+    {
+      "path": "src/v2/ui/pages/command/CommandHelpPage.tsx",
+      "name": "CommandHelpPage",
+      "lines": 243
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/utils/systemManifest.ts",
+      "name": "buildSystemManifest",
+      "lines": 242
+    },
+    {
+      "path": "supabase/functions/_shared/decisionEngine/evaluator.ts",
+      "name": "evaluatePartner",
+      "lines": 242
+    },
+    {
+      "path": "supabase/functions/generate-email/promptBuilder.ts",
+      "name": "buildEmailPrompts",
+      "lines": 240
+    },
+    {
+      "path": "src/hooks/useLinkedInFlow.ts",
+      "name": "useLinkedInFlow",
+      "lines": 239
+    },
+    {
+      "path": "src/v2/services/sherlock/sherlockEngine.ts",
+      "name": "runSherlock",
+      "lines": 236
+    },
+    {
+      "path": "src/v2/ui/pages/EmailComposerPage.tsx",
+      "name": "EmailComposerPage",
+      "lines": 236
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/AgentPersonasTab.tsx",
+      "name": "AgentPersonasTab",
+      "lines": 235
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/harmonizer/useHarmonizerLibraryIngestion.ts",
+      "name": "useHarmonizerLibraryIngestion",
+      "lines": 234
+    },
+    {
+      "path": "supabase/functions/_shared/journalistSelector.ts",
+      "name": "getDefaultConfig",
+      "lines": 233
+    },
+    {
+      "path": "src/components/settings/KBIngestPanel.tsx",
+      "name": "KBIngestPanel",
+      "lines": 231
+    },
+    {
+      "path": "src/components/audit/AuditTrailPanel.tsx",
+      "name": "AuditTrailPanel",
+      "lines": 229
+    },
+    {
+      "path": "src/v2/ui/pages/AcquisizionePartnerPage.tsx",
+      "name": "AcquisizionePartner",
+      "lines": 229
+    },
+    {
+      "path": "src/v2/ui/pages/GuidedOnboardingPage.tsx",
+      "name": "GuidedOnboardingPage",
+      "lines": 229
+    },
+    {
+      "path": "src/hooks/useLinkedInBackfill.ts",
+      "name": "useLinkedInBackfill",
+      "lines": 228
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/PromptHistoryTab.tsx",
+      "name": "PromptHistoryTab",
+      "lines": 228
+    },
+    {
+      "path": "src/components/test-extensions/LinkedInMatrixTest.tsx",
+      "name": "LinkedInMatrixTest",
+      "lines": 227
+    },
+    {
+      "path": "src/data/promptLabSignals.ts",
+      "name": "analyzeAndGenerateSignals",
+      "lines": 227
+    },
+    {
+      "path": "src/hooks/useCockpitContacts.ts",
+      "name": "useCockpitContacts",
+      "lines": 227
+    },
+    {
+      "path": "src/components/global/filters-drawer/useFiltersDrawerState.ts",
+      "name": "useFiltersDrawerState",
+      "lines": 225
+    },
+    {
+      "path": "src/components/settings/AiMonitorPanel.tsx",
+      "name": "AiMonitorPanel",
+      "lines": 224
+    },
+    {
+      "path": "src/v2/routes.tsx",
+      "name": "V2Routes",
+      "lines": 223
+    },
+    {
+      "path": "supabase/functions/_shared/platformTools/partnersSearchHandler.ts",
+      "name": "handleGetPartnerDetail",
+      "lines": 222
+    },
+    {
+      "path": "src/components/operations/BusinessCardsView.tsx",
+      "name": "BusinessCardsView",
+      "lines": 221
+    },
+    {
+      "path": "src/v2/ui/pages/AiTestHubPage.tsx",
+      "name": "AiTestHubPage",
+      "lines": 221
+    },
+    {
+      "path": "src/components/prototypes/CommandCenterShell.tsx",
+      "name": "CommandCenterShell",
+      "lines": 220
+    },
+    {
+      "path": "supabase/functions/agent-execute/toolHandlers.ts",
+      "name": "executeTool",
+      "lines": 220
+    },
+    {
+      "path": "src/hooks/useLinkedInLookup.ts",
+      "name": "useLinkedInLookup",
+      "lines": 218
+    },
+    {
+      "path": "src/v2/ui/pages/AiRoutingConfigPage.tsx",
+      "name": "AiRoutingConfigPage",
+      "lines": 218
+    },
+    {
+      "path": "src/v2/ui/pages/EmailDownloadPage.tsx",
+      "name": "EmailDownloadPage",
+      "lines": 218
+    },
+    {
+      "path": "supabase/functions/_shared/platformToolHandlers/partnerTools.ts",
+      "name": "executePartnerToolHandler",
+      "lines": 217
+    },
+    {
+      "path": "src/v2/ui/pages/finder-api/FinderApiSchemaMapPage.tsx",
+      "name": "FinderApiSchemaMapPage",
+      "lines": 216
+    },
+    {
+      "path": "src/v2/ui/pages/command/_legacy/hooks/useToolExecution.ts",
+      "name": "useToolExecution",
+      "lines": 214
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/RunHistoryPanel.tsx",
+      "name": "RunHistoryPanel",
+      "lines": 214
+    },
+    {
+      "path": "src/components/ai-arena/useArenaSession.ts",
+      "name": "useArenaSession",
+      "lines": 212
+    },
+    {
+      "path": "src/components/layout/AppLayout.tsx",
+      "name": "AppLayout",
+      "lines": 212
+    },
+    {
+      "path": "src/hooks/useContactListPanel.ts",
+      "name": "useContactListPanel",
+      "lines": 212
+    },
+    {
+      "path": "src/hooks/useDeepSearchRunner.ts",
+      "name": "useDeepSearchRunner",
+      "lines": 212
+    },
+    {
+      "path": "src/hooks/useWhatsAppExtensionBridge.ts",
+      "name": "useWhatsAppExtensionBridge",
+      "lines": 212
+    },
+    {
+      "path": "src/v2/ui/pages/agenda/DepartmentKanbanView.tsx",
+      "name": "DepartmentKanbanView",
+      "lines": 212
+    },
+    {
+      "path": "src/v2/ui/pages/PromptLabPage.tsx",
+      "name": "PromptLabPage",
+      "lines": 210
+    },
+    {
+      "path": "supabase/functions/check-inbox/dbOperations.ts",
+      "name": "saveMessageToDb",
+      "lines": 206
+    }
+  ],
+  "top_deep_nesting": [
+    {
+      "path": "supabase/functions/ai-match-business-cards/index.ts",
+      "nesting": 14
+    },
+    {
+      "path": "src/hooks/useLinkedInSync.ts",
+      "nesting": 13
+    },
+    {
+      "path": "supabase/functions/classify-inbound-content/index.ts",
+      "nesting": 13
+    },
+    {
+      "path": "src/v2/ui/templates/NavMenuPopover.tsx",
+      "nesting": 12
+    },
+    {
+      "path": "supabase/functions/generate-aliases/index.ts",
+      "nesting": 12
+    },
+    {
+      "path": "supabase/functions/process-ai-import/index.ts",
+      "nesting": 12
+    },
+    {
+      "path": "supabase/functions/refresh-conversation-context/index.ts",
+      "nesting": 12
+    },
+    {
+      "path": "src/components/outreach/AttivitaTab.tsx",
+      "nesting": 11
+    },
+    {
+      "path": "supabase/functions/_shared/aiGateway.ts",
+      "nesting": 11
+    },
+    {
+      "path": "supabase/functions/agent-execute/toolDefs-planning.ts",
+      "nesting": 11
+    },
+    {
+      "path": "supabase/functions/analyze-import-structure/index.ts",
+      "nesting": 11
+    },
+    {
+      "path": "supabase/functions/enrich-partner-website/index.ts",
+      "nesting": 11
+    },
+    {
+      "path": "supabase/functions/parse-profile-ai/index.ts",
+      "nesting": 11
+    },
+    {
+      "path": "supabase/functions/suggest-email-groups/index.ts",
+      "nesting": 11
+    },
+    {
+      "path": "src/components/ai-control/PendingActionsPanel.tsx",
+      "nesting": 10
+    },
+    {
+      "path": "src/components/missions/builder/useMissionBuilder.ts",
+      "nesting": 10
+    },
+    {
+      "path": "src/components/outreach/ProgrammatiSubTab.tsx",
+      "nesting": 10
+    },
+    {
+      "path": "src/data/__tests__/businessCards.test.ts",
+      "nesting": 10
+    },
+    {
+      "path": "src/hooks/useAcquisitionResume.ts",
+      "nesting": 10
+    },
+    {
+      "path": "src/hooks/useLinkedInFlow.ts",
+      "nesting": 10
+    },
+    {
+      "path": "supabase/functions/_shared/inboundTriage.ts",
+      "nesting": 10
+    },
+    {
+      "path": "supabase/functions/_shared/smtpRateLimit.test.ts",
+      "nesting": 10
+    },
+    {
+      "path": "supabase/functions/analyze-partner/index.ts",
+      "nesting": 10
+    },
+    {
+      "path": "supabase/functions/funnemail-classify/index.ts",
+      "nesting": 10
+    },
+    {
+      "path": "supabase/functions/memory-promoter/index.ts",
+      "nesting": 10
+    },
+    {
+      "path": "supabase/functions/simulate-funnemail-classify/index.ts",
+      "nesting": 10
+    },
+    {
+      "path": "supabase/functions/sync-wca-partners/index.ts",
+      "nesting": 10
+    },
+    {
+      "path": "src/components/global/filters-drawer/CRMFiltersSection.tsx",
+      "nesting": 9
+    },
+    {
+      "path": "src/components/missions/MissionChatWidgets.tsx",
+      "nesting": 9
+    },
+    {
+      "path": "src/components/prospects/ProspectListPanel.tsx",
+      "nesting": 9
+    },
+    {
+      "path": "src/components/settings/enrichment/EnrichmentRowList.tsx",
+      "nesting": 9
+    },
+    {
+      "path": "src/data/__tests__/appSettings.test.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/data/__tests__/emailTemplates.test.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/hooks/useAcquisitionPipeline.tsx",
+      "nesting": 9
+    },
+    {
+      "path": "src/hooks/useHoldingPattern.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/hooks/useSendLinkedIn.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/lib/acquisition/scanDirectory.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/lib/inbox/__tests__/sessionTracker.test.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/v2/agent/prompts/core/harmonizer-briefing.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/v2/ui/copilot/useFloatingCoPilotVoice.ts",
+      "nesting": 9
+    },
+    {
+      "path": "src/v2/ui/pages/AiTestHubPage.tsx",
+      "nesting": 9
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/promptReader/ReaderContent.tsx",
+      "nesting": 9
+    },
+    {
+      "path": "supabase/functions/agent-execute/contextInjection.ts",
+      "nesting": 9
+    },
+    {
+      "path": "supabase/functions/apply-email-rules/index.ts",
+      "nesting": 9
+    },
+    {
+      "path": "supabase/functions/finder-api-chat/index.ts",
+      "nesting": 9
+    },
+    {
+      "path": "supabase/functions/funnemail-auto-route/index.ts",
+      "nesting": 9
+    },
+    {
+      "path": "eslint-rules/no-direct-bulk-op.cjs",
+      "nesting": 8
+    },
+    {
+      "path": "src/__tests__/token-logger.test.ts",
+      "nesting": 8
+    },
+    {
+      "path": "src/components/campaigns/JobList.tsx",
+      "nesting": 8
+    },
+    {
+      "path": "src/components/cockpit/BulkActionMenu.tsx",
+      "nesting": 8
+    }
+  ],
+  "top_any_type": [
+    {
+      "path": "src/test/token-usage.test.ts",
+      "any": 26
+    },
+    {
+      "path": "src/test/permission-gate.test.tsx",
+      "any": 23
+    },
+    {
+      "path": "src/test/calendar.test.ts",
+      "any": 21
+    },
+    {
+      "path": "src/__tests__/token-logger.test.ts",
+      "any": 15
+    },
+    {
+      "path": "src/data/__tests__/analytics.test.ts",
+      "any": 15
+    },
+    {
+      "path": "src/test/collaudo-c5-enterprise-tools.test.ts",
+      "any": 12
+    },
+    {
+      "path": "src/test/wca-app-api.test.ts",
+      "any": 12
+    },
+    {
+      "path": "src/hooks/__tests__/useAgents.test.ts",
+      "any": 11
+    },
+    {
+      "path": "src/data/__tests__/agentAvatars.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/agentCapabilities.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/agentsForPromptLab.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/brain.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/cestinone.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/channelActivity.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/contacts.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/defaultContentPresets.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/emailRulesBackfill.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/finderApiKb.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/finderApiSchemaMap.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/funnemailClaims.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/funnemailInbox.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/funnemailReminders.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/funnemailRoutingRules.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/funnemailScoutCache.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/funnemailStatuses.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/harmonizeRuns.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/harmonizerFollowups.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/harmonizerSessions.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/kbGovernance.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/kbProposals.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/linkedinFlow.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/outreachTimingTemplates.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/partners.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/promptCatalog.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/promptLabGlobalRuns.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/rpc.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/sherlockInvestigations.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/sherlockPlaybooks.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/siblingRisk.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/tmwe.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/tmweApiCatalog.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/uiNavigationMap.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/whatsappTestLookup.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/data/__tests__/workspaceDocs.test.ts",
+      "any": 10
+    },
+    {
+      "path": "src/hooks/__tests__/useAppSettings.test.ts",
+      "any": 9
+    },
+    {
+      "path": "src/test/push-notifications.test.ts",
+      "any": 9
+    },
+    {
+      "path": "src/v2/observability/supabaseTraceProxy.ts",
+      "any": 9
+    },
+    {
+      "path": "supabase/functions/_shared/injectionGuard.test.ts",
+      "any": 9
+    },
+    {
+      "path": "supabase/functions/generate-aliases/index.ts",
+      "any": 9
+    },
+    {
+      "path": "src/hooks/__tests__/useHoldingMessages.test.ts",
+      "any": 8
+    }
+  ],
+  "top_console": [
+    {
+      "path": "scripts/report-classify-dedup.ts",
+      "console": 13
+    },
+    {
+      "path": "scripts/seed-kb.ts",
+      "console": 10
+    },
+    {
+      "path": "scripts/audit-function-auth.mjs",
+      "console": 8
+    },
+    {
+      "path": "supabase/functions/agent-execute/toolHandlers/emailTools.ts",
+      "console": 8
+    },
+    {
+      "path": "supabase/functions/replay-domain-events/index.ts",
+      "console": 8
+    },
+    {
+      "path": "supabase/functions/send-email/index.ts",
+      "console": 8
+    },
+    {
+      "path": "supabase/functions/tmwe-oauth-callback/index.ts",
+      "console": 8
+    },
+    {
+      "path": "scripts/bundle-size-guard.mjs",
+      "console": 7
+    },
+    {
+      "path": "scripts/debt-budget.js",
+      "console": 7
+    },
+    {
+      "path": "supabase/functions/_shared/tokenLogger.ts",
+      "console": 7
+    },
+    {
+      "path": "supabase/functions/check-inbox-booking/mimeDecoder.ts",
+      "console": 7
+    },
+    {
+      "path": "supabase/functions/check-inbox/mimeDecoder.ts",
+      "console": 7
+    },
+    {
+      "path": "supabase/functions/process-email-queue/index.ts",
+      "console": 7
+    },
+    {
+      "path": "supabase/functions/ai-assistant/aiCallHandler.ts",
+      "console": 6
+    },
+    {
+      "path": "supabase/functions/ai-assistant/memoryContextLoader.ts",
+      "console": 6
+    },
+    {
+      "path": "supabase/functions/check-inbox-booking/dbOperations.ts",
+      "console": 6
+    },
+    {
+      "path": "supabase/functions/check-inbox/dbOperations.ts",
+      "console": 6
+    },
+    {
+      "path": "supabase/functions/send-linkedin/index.ts",
+      "console": 6
+    },
+    {
+      "path": "e2e/global-setup.ts",
+      "console": 5
+    },
+    {
+      "path": "scripts/i18n-coverage.mjs",
+      "console": 5
+    },
+    {
+      "path": "scripts/post-e2e-results.mjs",
+      "console": 5
+    },
+    {
+      "path": "supabase/functions/_shared/postSendPipeline.ts",
+      "console": 5
+    },
+    {
+      "path": "supabase/functions/batch-enrichment-worker/index.ts",
+      "console": 5
+    },
+    {
+      "path": "supabase/functions/check-inbox-booking/index.ts",
+      "console": 5
+    },
+    {
+      "path": "supabase/functions/generate-aliases/index.ts",
+      "console": 5
+    },
+    {
+      "path": "supabase/functions/receive-channel-message/index.ts",
+      "console": 5
+    },
+    {
+      "path": "supabase/functions/sherlock-extract/index.ts",
+      "console": 5
+    },
+    {
+      "path": "scripts/audit-ai-invocations.ts",
+      "console": 4
+    },
+    {
+      "path": "src/lib/log.ts",
+      "console": 4
+    },
+    {
+      "path": "src/test/FeatureErrorBoundary.test.tsx",
+      "console": 4
+    },
+    {
+      "path": "src/test/token-usage.test.ts",
+      "console": 4
+    },
+    {
+      "path": "src/v2/bridge/internal-logger.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/_shared/approvalFlow.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/_shared/assistantEngine.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/_shared/cadenceEngine.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/_shared/structuredLogger.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/agent-loop/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/agent-prompt-refiner/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/agent-task-drainer/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/agentic-decide/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/ai-assistant/kbContextLoader.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/check-inbox/imapParser.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/elevenlabs-conversation-token/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/generate-email/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/generate-outreach/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/mission-executor/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/send-whatsapp/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/suggest-email-groups/index.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/super-mario/summarizer.ts",
+      "console": 4
+    },
+    {
+      "path": "supabase/functions/sync-business-cards/index.ts",
+      "console": 4
+    }
+  ],
+  "top_supabase_bypass_out_of_dal": [
+    {
+      "path": "src/v2/io/supabase/queries/dashboard.ts",
+      "hits": 20
+    },
+    {
+      "path": "src/components/email-intelligence/RulesAndActionsTab.tsx",
+      "hits": 14
+    },
+    {
+      "path": "src/components/outreach/InUscitaTab.tsx",
+      "hits": 9
+    },
+    {
+      "path": "e2e/fixtures/seed.ts",
+      "hits": 8
+    },
+    {
+      "path": "src/components/ai-control/PendingActionsPanel.tsx",
+      "hits": 5
+    },
+    {
+      "path": "src/components/email-intelligence/AddressRulesManager.tsx",
+      "hits": 5
+    },
+    {
+      "path": "src/components/email-intelligence/manual-grouping/useGroupAssignment.ts",
+      "hits": 5
+    },
+    {
+      "path": "src/v2/io/supabase/queries/partner-facets.ts",
+      "hits": 4
+    },
+    {
+      "path": "src/v2/ui/organisms/settings/DataSettingsTab.tsx",
+      "hits": 4
+    },
+    {
+      "path": "src/v2/ui/organisms/settings/EnrichmentSettingsTab.tsx",
+      "hits": 4
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/agentAdmin.ts",
+      "hits": 4
+    },
+    {
+      "path": "src/components/email-intelligence/AISuggestionsTab.tsx",
+      "hits": 3
+    },
+    {
+      "path": "src/components/email-intelligence/SenderManagementTab.tsx",
+      "hits": 3
+    },
+    {
+      "path": "src/components/email-intelligence/SmartInboxView.tsx",
+      "hits": 3
+    },
+    {
+      "path": "src/hooks/useContactMerge.ts",
+      "hits": 3
+    },
+    {
+      "path": "src/v2/hooks/useDeepSearchV2.ts",
+      "hits": 3
+    },
+    {
+      "path": "src/v2/io/supabase/mutations/kb-entries.ts",
+      "hits": 3
+    },
+    {
+      "path": "src/v2/ui/pages/EmailStrategiesPage.tsx",
+      "hits": 3
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/kbAdmin.ts",
+      "hits": 3
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/markMessage.ts",
+      "hits": 3
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/scheduleActivity.ts",
+      "hits": 3
+    },
+    {
+      "path": "eslint.config.js",
+      "hits": 2
+    },
+    {
+      "path": "src/components/ai-arena/useArenaSession.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/components/email-intelligence/SenderProfilesView.tsx",
+      "hits": 2
+    },
+    {
+      "path": "src/components/missions/builder/useMissionBuilder.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/components/outreach/AttivitaTab.tsx",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/hooks/useAcquisitionV2.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/hooks/useAgentCapabilities.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/hooks/useCampaignDraftsV2.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/hooks/useUnreadCountsV2.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/io/supabase/mutations/business-cards.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/io/supabase/mutations/workspace-docs.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/ui/organisms/settings/AISettingsTab.tsx",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/blacklist.ts",
+      "hits": 2
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/useHarmonizeOrchestrator.ts",
+      "hits": 2
+    },
+    {
+      "path": "scripts/seed-kb.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/components/agents/AgentChatHubView.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/diagnostics/ErrorLogPanel.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/onboarding/StepImport.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/outreach/DaInviareSubTab.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/settings/AdminUsersPanel.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/settings/NotificationPreferences.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/settings/TeamManagementPanel.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/system/GlobalErrorBoundary.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/components/voice/GlobalVoiceFAB.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/hooks/useApproveAndDispatch.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/hooks/useEnrichmentData.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/hooks/useOutreachQueue.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/hooks/useSortingJobs.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/hooks/useWhatsAppBackfill.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/lib/errorCatchers.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/lib/messaging/linkedinSender.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/lib/messaging/whatsappSender.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/lib/supabaseUntyped.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/lib/typedSupabase.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/hooks/useAgentTasksV2.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/hooks/useDiagnosticsV2.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/hooks/useEmailCampaignQueueV2.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/hooks/useEmailComposerV2.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/hooks/useForgeKb.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/hooks/useInreachV2.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/hooks/useSortingV2.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/io/supabase/mutations/outreach-queue.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/io/supabase/mutations/prospects.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/io/supabase/queries/activities.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/io/supabase/queries/contacts.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/observability/supabaseTraceProxy.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/organisms/CreateActivityDrawer.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/AdminUsersPage.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/AgentChatHubPage.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/AiRoutingConfigPage.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/command/_legacy/hooks/useAgentLoop.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/command/canvas/ComposerCanvas.tsx",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/cancelOutreach.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/closeActivity.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/rescheduleActivity.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/sendEmailDirect.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/email-forge/hooks/usePreContext.ts",
+      "hits": 1
+    },
+    {
+      "path": "src/v2/ui/pages/email-forge/tabs/PromptsTab.tsx",
+      "hits": 1
+    }
+  ],
+  "top_fan_in": [
+    {
+      "path": "src/integrations/supabase/client.ts",
+      "fan_in": 493,
+      "fan_out": 1,
+      "lines": 17
+    },
+    {
+      "path": "src/components/ui/button.tsx",
+      "fan_in": 414,
+      "fan_out": 1,
+      "lines": 48
+    },
+    {
+      "path": "src/lib/utils.ts",
+      "fan_in": 380,
+      "fan_out": 0,
+      "lines": 20
+    },
+    {
+      "path": "src/components/ui/badge.tsx",
+      "fan_in": 271,
+      "fan_out": 1,
+      "lines": 38
+    },
+    {
+      "path": "src/lib/queryKeys.ts",
+      "fan_in": 263,
+      "fan_out": 5,
+      "lines": 20
+    },
+    {
+      "path": "src/lib/log.ts",
+      "fan_in": 231,
+      "fan_out": 0,
+      "lines": 205
+    },
+    {
+      "path": "src/components/ui/input.tsx",
+      "fan_in": 186,
+      "fan_out": 1,
+      "lines": 23
+    },
+    {
+      "path": "src/components/ui/card.tsx",
+      "fan_in": 124,
+      "fan_out": 1,
+      "lines": 44
+    },
+    {
+      "path": "src/components/ui/scroll-area.tsx",
+      "fan_in": 119,
+      "fan_out": 1,
+      "lines": 39
+    },
+    {
+      "path": "src/lib/api/invokeEdge.ts",
+      "fan_in": 111,
+      "fan_out": 7,
+      "lines": 185
+    },
+    {
+      "path": "src/components/ui/select.tsx",
+      "fan_in": 98,
+      "fan_out": 1,
+      "lines": 144
+    },
+    {
+      "path": "src/components/ui/textarea.tsx",
+      "fan_in": 91,
+      "fan_out": 1,
+      "lines": 23
+    },
+    {
+      "path": "src/components/ui/dialog.tsx",
+      "fan_in": 82,
+      "fan_out": 1,
+      "lines": 96
+    },
+    {
+      "path": "src/components/ui/label.tsx",
+      "fan_in": 80,
+      "fan_out": 1,
+      "lines": 18
+    },
+    {
+      "path": "src/v2/ui/pages/command/tools/types.ts",
+      "fan_in": 76,
+      "fan_out": 0,
+      "lines": 224
+    },
+    {
+      "path": "src/hooks/use-toast.ts",
+      "fan_in": 66,
+      "fan_out": 1,
+      "lines": 187
+    },
+    {
+      "path": "src/lib/countries.ts",
+      "fan_in": 64,
+      "fan_out": 1,
+      "lines": 221
+    },
+    {
+      "path": "src/components/ui/tooltip.tsx",
+      "fan_in": 61,
+      "fan_out": 1,
+      "lines": 29
+    },
+    {
+      "path": "src/lib/supabaseUntyped.ts",
+      "fan_in": 61,
+      "fan_out": 1,
+      "lines": 31
+    },
+    {
+      "path": "src/providers/AuthProvider.tsx",
+      "fan_in": 59,
+      "fan_out": 2,
+      "lines": 146
+    },
+    {
+      "path": "src/components/ui/switch.tsx",
+      "fan_in": 57,
+      "fan_out": 1,
+      "lines": 28
+    },
+    {
+      "path": "src/components/ui/tabs.tsx",
+      "fan_in": 54,
+      "fan_out": 1,
+      "lines": 54
+    },
+    {
+      "path": "src/contexts/GlobalFiltersContext.tsx",
+      "fan_in": 53,
+      "fan_out": 0,
+      "lines": 229
+    },
+    {
+      "path": "src/components/ui/checkbox.tsx",
+      "fan_in": 52,
+      "fan_out": 1,
+      "lines": 27
+    },
+    {
+      "path": "src/data/partners.ts",
+      "fan_in": 40,
+      "fan_out": 4,
+      "lines": 684
+    },
+    {
+      "path": "src/components/ui/popover.tsx",
+      "fan_in": 38,
+      "fan_out": 1,
+      "lines": 30
+    },
+    {
+      "path": "src/components/ui/skeleton.tsx",
+      "fan_in": 36,
+      "fan_out": 1,
+      "lines": 8
+    },
+    {
+      "path": "src/components/ui/progress.tsx",
+      "fan_in": 35,
+      "fan_out": 1,
+      "lines": 24
+    },
+    {
+      "path": "src/v2/core/domain/result.ts",
+      "fan_in": 34,
+      "fan_out": 1,
+      "lines": 97
+    },
+    {
+      "path": "src/lib/ai/invokeAi.ts",
+      "fan_in": 28,
+      "fan_out": 4,
+      "lines": 208
+    },
+    {
+      "path": "src/components/shared/OptimizedImage.tsx",
+      "fan_in": 27,
+      "fan_out": 0,
+      "lines": 35
+    },
+    {
+      "path": "src/components/ui/collapsible.tsx",
+      "fan_in": 26,
+      "fan_out": 0,
+      "lines": 10
+    },
+    {
+      "path": "src/hooks/useAppNavigate.ts",
+      "fan_in": 26,
+      "fan_out": 0,
+      "lines": 29
+    },
+    {
+      "path": "src/hooks/useAppSettings.ts",
+      "fan_in": 25,
+      "fan_out": 2,
+      "lines": 60
+    },
+    {
+      "path": "src/components/download/theme.ts",
+      "fan_in": 24,
+      "fan_out": 0,
+      "lines": 78
+    },
+    {
+      "path": "src/components/ui/dropdown-menu.tsx",
+      "fan_in": 24,
+      "fan_out": 1,
+      "lines": 180
+    },
+    {
+      "path": "src/data/wcaCountries.ts",
+      "fan_in": 24,
+      "fan_out": 0,
+      "lines": 275
+    },
+    {
+      "path": "src/constants/agentPrompts.ts",
+      "fan_in": 22,
+      "fan_out": 4,
+      "lines": 52
+    },
+    {
+      "path": "src/hooks/useAgents.ts",
+      "fan_in": 22,
+      "fan_out": 2,
+      "lines": 50
+    },
+    {
+      "path": "src/hooks/useChannelMessages.ts",
+      "fan_in": 22,
+      "fan_out": 6,
+      "lines": 197
+    },
+    {
+      "path": "src/data/contacts.ts",
+      "fan_in": 21,
+      "fan_out": 1,
+      "lines": 43
+    },
+    {
+      "path": "src/types/cockpit.ts",
+      "fan_in": 21,
+      "fan_out": 6,
+      "lines": 82
+    },
+    {
+      "path": "e2e/fixtures/auth.ts",
+      "fan_in": 20,
+      "fan_out": 0,
+      "lines": 38
+    },
+    {
+      "path": "src/components/ui/slider.tsx",
+      "fan_in": 20,
+      "fan_out": 1,
+      "lines": 24
+    },
+    {
+      "path": "src/hooks/useActivities.ts",
+      "fan_in": 20,
+      "fan_out": 3,
+      "lines": 105
+    },
+    {
+      "path": "src/lib/api/apiError.ts",
+      "fan_in": 20,
+      "fan_out": 1,
+      "lines": 133
+    },
+    {
+      "path": "src/v2/ui/templates/PageTitleHeader.tsx",
+      "fan_in": 20,
+      "fan_out": 0,
+      "lines": 42
+    },
+    {
+      "path": "src/components/guida/SectionWrapper.tsx",
+      "fan_in": 19,
+      "fan_out": 0,
+      "lines": 36
+    },
+    {
+      "path": "src/hooks/useDownloadJobs.ts",
+      "fan_in": 19,
+      "fan_out": 5,
+      "lines": 164
+    },
+    {
+      "path": "supabase/functions/_shared/platformTools/supabaseClient.ts",
+      "fan_in": 19,
+      "fan_out": 0,
+      "lines": 15
+    }
+  ],
+  "top_fan_out": [
+    {
+      "path": "src/v2/ui/pages/command/tools/registry.ts",
+      "fan_in": 3,
+      "fan_out": 74,
+      "lines": 293
+    },
+    {
+      "path": "src/data/index.ts",
+      "fan_in": 0,
+      "fan_out": 44,
+      "lines": 95
+    },
+    {
+      "path": "src/v2/ui/pages/PromptLabPage.tsx",
+      "fan_in": 0,
+      "fan_out": 37,
+      "lines": 325
+    },
+    {
+      "path": "src/v2/ui/pages/SettingsPage.tsx",
+      "fan_in": 0,
+      "fan_out": 36,
+      "lines": 467
+    },
+    {
+      "path": "src/v2/ui/templates/AuthenticatedLayout.tsx",
+      "fan_in": 1,
+      "fan_out": 34,
+      "lines": 444
+    },
+    {
+      "path": "src/components/global/filters-drawer/FiltersDrawer.tsx",
+      "fan_in": 1,
+      "fan_out": 28,
+      "lines": 203
+    },
+    {
+      "path": "src/components/contacts/bca/BCAUnifiedHub.tsx",
+      "fan_in": 0,
+      "fan_out": 24,
+      "lines": 392
+    },
+    {
+      "path": "src/components/partners/PartnerDetailCompact.tsx",
+      "fan_in": 3,
+      "fan_out": 24,
+      "lines": 446
+    },
+    {
+      "path": "src/App.tsx",
+      "fan_in": 1,
+      "fan_out": 23,
+      "lines": 187
+    },
+    {
+      "path": "src/components/contacts/ContactDetailPanel.tsx",
+      "fan_in": 1,
+      "fan_out": 23,
+      "lines": 284
+    },
+    {
+      "path": "src/components/email-intelligence/AISuggestionsTab.tsx",
+      "fan_in": 0,
+      "fan_out": 22,
+      "lines": 547
+    },
+    {
+      "path": "src/components/operations/BusinessCardsView.tsx",
+      "fan_in": 2,
+      "fan_out": 21,
+      "lines": 252
+    },
+    {
+      "path": "src/components/email-intelligence/ManualGroupingTab.tsx",
+      "fan_in": 0,
+      "fan_out": 20,
+      "lines": 557
+    },
+    {
+      "path": "src/components/cockpit/BulkActionMenu.tsx",
+      "fan_in": 1,
+      "fan_out": 19,
+      "lines": 399
+    },
+    {
+      "path": "src/components/layout/AppLayout.tsx",
+      "fan_in": 0,
+      "fan_out": 19,
+      "lines": 244
+    },
+    {
+      "path": "src/components/operations/PartnerListPanel.tsx",
+      "fan_in": 3,
+      "fan_out": 19,
+      "lines": 468
+    },
+    {
+      "path": "src/components/outreach/AttivitaTab.tsx",
+      "fan_in": 0,
+      "fan_out": 19,
+      "lines": 340
+    },
+    {
+      "path": "src/components/outreach/EmailDetailView.tsx",
+      "fan_in": 2,
+      "fan_out": 19,
+      "lines": 410
+    },
+    {
+      "path": "src/hooks/email-composer/useEmailComposerState.ts",
+      "fan_in": 1,
+      "fan_out": 19,
+      "lines": 485
+    },
+    {
+      "path": "supabase/functions/_shared/platformTools/platformToolHandlers.ts",
+      "fan_in": 1,
+      "fan_out": 19,
+      "lines": 153
+    },
+    {
+      "path": "src/components/email/OraclePanel.tsx",
+      "fan_in": 6,
+      "fan_out": 18,
+      "lines": 364
+    },
+    {
+      "path": "src/hooks/useCockpitLogic.ts",
+      "fan_in": 1,
+      "fan_out": 18,
+      "lines": 643
+    },
+    {
+      "path": "src/v2/ui/pages/EmailComposerPage.tsx",
+      "fan_in": 2,
+      "fan_out": 18,
+      "lines": 262
+    },
+    {
+      "path": "src/v2/ui/pages/funnemail-inbox/FunnemailMailCard.tsx",
+      "fan_in": 1,
+      "fan_out": 18,
+      "lines": 369
+    },
+    {
+      "path": "src/v2/ui/pages/CommandPage.tsx",
+      "fan_in": 0,
+      "fan_out": 17,
+      "lines": 353
+    },
+    {
+      "path": "src/v2/ui/pages/GuidaPage.tsx",
+      "fan_in": 0,
+      "fan_out": 17,
+      "lines": 87
+    },
+    {
+      "path": "src/v2/ui/pages/ImportPage.tsx",
+      "fan_in": 0,
+      "fan_out": 17,
+      "lines": 333
+    },
+    {
+      "path": "src/v2/ui/pages/OperationsPage.tsx",
+      "fan_in": 0,
+      "fan_out": 17,
+      "lines": 333
+    },
+    {
+      "path": "src/components/contacts/bca/BCADetailPanel.tsx",
+      "fan_in": 1,
+      "fan_out": 16,
+      "lines": 215
+    },
+    {
+      "path": "src/components/download/AdvancedTools.tsx",
+      "fan_in": 0,
+      "fan_out": 16,
+      "lines": 259
+    },
+    {
+      "path": "src/components/operations/OperationsView.tsx",
+      "fan_in": 0,
+      "fan_out": 16,
+      "lines": 311
+    },
+    {
+      "path": "src/components/prospects/ProspectListPanel.tsx",
+      "fan_in": 1,
+      "fan_out": 16,
+      "lines": 428
+    },
+    {
+      "path": "src/components/prototypes/CommandCenterShell.tsx",
+      "fan_in": 0,
+      "fan_out": 16,
+      "lines": 295
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/GlobalImproverDialog.tsx",
+      "fan_in": 1,
+      "fan_out": 16,
+      "lines": 541
+    },
+    {
+      "path": "src/components/contacts/ContactListPanel.tsx",
+      "fan_in": 0,
+      "fan_out": 15,
+      "lines": 241
+    },
+    {
+      "path": "src/components/email/OraclePanelSlim.tsx",
+      "fan_in": 2,
+      "fan_out": 15,
+      "lines": 232
+    },
+    {
+      "path": "src/components/outreach/InArrivoTab.tsx",
+      "fan_in": 1,
+      "fan_out": 15,
+      "lines": 189
+    },
+    {
+      "path": "src/components/partners/PartnerDetailHeader.tsx",
+      "fan_in": 1,
+      "fan_out": 15,
+      "lines": 171
+    },
+    {
+      "path": "src/components/settings/ContentManager.tsx",
+      "fan_in": 0,
+      "fan_out": 15,
+      "lines": 455
+    },
+    {
+      "path": "src/v2/ui/pages/MissionsAutopilotPage.tsx",
+      "fan_in": 0,
+      "fan_out": 15,
+      "lines": 426
+    },
+    {
+      "path": "supabase/functions/_shared/platformToolDefs.ts",
+      "fan_in": 0,
+      "fan_out": 15,
+      "lines": 64
+    },
+    {
+      "path": "src/components/ai-control/PendingActionsPanel.tsx",
+      "fan_in": 0,
+      "fan_out": 14,
+      "lines": 434
+    },
+    {
+      "path": "src/components/cockpit/ContactActionMenu.tsx",
+      "fan_in": 4,
+      "fan_out": 14,
+      "lines": 260
+    },
+    {
+      "path": "src/components/cockpit/ContactStream.tsx",
+      "fan_in": 1,
+      "fan_out": 14,
+      "lines": 258
+    },
+    {
+      "path": "src/components/contacts/ContactCard.tsx",
+      "fan_in": 2,
+      "fan_out": 14,
+      "lines": 235
+    },
+    {
+      "path": "src/components/email-intelligence/RulesAndActionsTab.tsx",
+      "fan_in": 0,
+      "fan_out": 14,
+      "lines": 410
+    },
+    {
+      "path": "src/components/outreach/EmailInboxView.tsx",
+      "fan_in": 1,
+      "fan_out": 14,
+      "lines": 359
+    },
+    {
+      "path": "src/components/partners/PartnerFiltersSheet.tsx",
+      "fan_in": 0,
+      "fan_out": 14,
+      "lines": 416
+    },
+    {
+      "path": "src/components/prototypes/FocusFlowShell.tsx",
+      "fan_in": 0,
+      "fan_out": 14,
+      "lines": 190
+    },
+    {
+      "path": "src/components/workspace/EmailCanvas.tsx",
+      "fan_in": 0,
+      "fan_out": 14,
+      "lines": 346
+    }
+  ],
+  "exact_duplicates": {
+    "6093ebd3fa421903f3779287af3249c3c45576a2": [
+      "src/components/campaigns/AuroraBorealis.tsx",
+      "src/standalone-globe/components/AuroraBorealis.tsx"
+    ],
+    "c7e1bd202a5d794a547117a65ed918a92581cd29": [
+      "supabase/functions/apply-email-rules/caCerts.ts",
+      "supabase/functions/backfill-email-rules/caCerts.ts",
+      "supabase/functions/check-inbox-booking/caCerts.ts",
+      "supabase/functions/check-inbox/caCerts.ts",
+      "supabase/functions/imap-list-folders/caCerts.ts",
+      "supabase/functions/manage-email-folders/caCerts.ts"
+    ],
+    "0881774fac786b811ee5a5f45ba6467af589237d": [
+      "supabase/functions/check-inbox-booking/bounceDetector.ts",
+      "supabase/functions/check-inbox/bounceDetector.ts"
+    ],
+    "4747699711f5753294b50319cebd45f276cb2748": [
+      "supabase/functions/check-inbox-booking/enqueueEnrichment.ts",
+      "supabase/functions/check-inbox/enqueueEnrichment.ts"
+    ],
+    "fa183ca171dab8607f5e31f72f6b8bc86abafa7a": [
+      "supabase/functions/check-inbox-booking/index.integration.test.ts",
+      "supabase/functions/check-inbox/index.integration.test.ts"
+    ],
+    "6519ab73fc1121dfb32d6fbfb86fdecec4059a0f": [
+      "supabase/functions/check-inbox-booking/index_test.ts",
+      "supabase/functions/check-inbox/index_test.ts"
+    ],
+    "26cf95955bff26f4f3227f6715c5f6ac7863a8fa": [
+      "supabase/functions/check-inbox-booking/mimeDecoder.ts",
+      "supabase/functions/check-inbox/mimeDecoder.ts"
+    ],
+    "c24298de7c4fc68c0082e0cdab9e7b65a863160d": [
+      "supabase/migrations/20260403010412_5a73dc6d-e605-4933-99d5-45ef06cb1fa6.sql",
+      "supabase/migrations/20260403010449_37a8cfe4-d20a-438d-9370-15578b2b9f72.sql"
+    ]
+  },
+  "exact_duplicates_count": 8,
+  "near_duplicates_sample": {
+    "f325ab32e860d2f2": [
+      "src/components/campaigns/AuroraBorealis.tsx",
+      "src/standalone-globe/components/AuroraBorealis.tsx"
+    ],
+    "891eb3820b99dea8": [
+      "supabase/functions/apply-email-rules/caCerts.ts",
+      "supabase/functions/backfill-email-rules/caCerts.ts",
+      "supabase/functions/check-inbox-booking/caCerts.ts",
+      "supabase/functions/check-inbox/caCerts.ts",
+      "supabase/functions/imap-list-folders/caCerts.ts",
+      "supabase/functions/manage-email-folders/caCerts.ts"
+    ],
+    "e221c39a4dbab9dd": [
+      "supabase/functions/check-inbox-booking/bounceDetector.ts",
+      "supabase/functions/check-inbox/bounceDetector.ts"
+    ],
+    "e079706f75ca9ec9": [
+      "supabase/functions/check-inbox-booking/enqueueEnrichment.ts",
+      "supabase/functions/check-inbox/enqueueEnrichment.ts"
+    ],
+    "da8341d34be20519": [
+      "supabase/functions/check-inbox-booking/index.integration.test.ts",
+      "supabase/functions/check-inbox/index.integration.test.ts"
+    ],
+    "1e3c1a66f32dbb9d": [
+      "supabase/functions/check-inbox-booking/index_test.ts",
+      "supabase/functions/check-inbox/index_test.ts"
+    ],
+    "82f304d8e7b3a10c": [
+      "supabase/functions/check-inbox-booking/mimeDecoder.ts",
+      "supabase/functions/check-inbox/mimeDecoder.ts"
+    ],
+    "c24298de7c4fc68c": [
+      "supabase/migrations/20260403010412_5a73dc6d-e605-4933-99d5-45ef06cb1fa6.sql",
+      "supabase/migrations/20260403010449_37a8cfe4-d20a-438d-9370-15578b2b9f72.sql"
+    ],
+    "0203569a90f5b846": [
+      "supabase/migrations/20260419100310_b4b8e4af-b700-4e2b-84ce-6fd90c4045cb.sql",
+      "supabase/migrations/20260420034510_e1d1b58c-95ce-46ab-9f3c-5fba23c6fb55.sql"
+    ]
+  },
+  "near_duplicates_count": 9,
+  "v2_v1_basename_overlaps_count": 45,
+  "v2_v1_basename_overlaps_sample": [
+    {
+      "v2": "src/v2/agent/runtime/prompts/system.ts",
+      "v1_candidates": [
+        "src/lib/queryKeysParts/system.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/agent/runtime/tools/index.ts",
+      "v1_candidates": [
+        "src/components/email-intelligence/management/index.ts",
+        "src/components/email-intelligence/manual-grouping/index.ts",
+        "src/components/global/filters-drawer/index.ts",
+        "src/components/settings/content-manager/index.ts",
+        "src/components/ui/sidebar/index.ts",
+        "src/constants/agentTemplates/index.ts",
+        "src/constants/operationsProcedures/index.ts",
+        "src/data/atecoRanking/index.ts",
+        "src/data/contacts/index.ts",
+        "src/data/index.ts",
+        "src/hooks/email-composer/index.ts",
+        "src/i18n/index.ts",
+        "src/integrations/lovable/index.ts",
+        "src/lib/import/index.ts",
+        "src/lib/mcp/index.ts",
+        "src/standalone-globe/index.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/agent/runtime/tools/kb.ts",
+      "v1_candidates": [
+        "src/constants/agentTemplates/kb.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/hooks/companyList/useActiveFilterChips.ts",
+      "v1_candidates": [
+        "src/components/shared/entity-toolbar/useActiveFilterChips.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/edge/client.ts",
+      "v1_candidates": [
+        "src/integrations/supabase/client.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/mutations/activities.ts",
+      "v1_candidates": [
+        "src/data/activities.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/mutations/agents.ts",
+      "v1_candidates": [
+        "src/data/agents.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/mutations/contacts.ts",
+      "v1_candidates": [
+        "src/data/contacts.ts",
+        "src/types/contacts.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/mutations/partners.ts",
+      "v1_candidates": [
+        "src/data/partners.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/mutations/prospects.ts",
+      "v1_candidates": [
+        "src/data/prospects.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/queries/activities.ts",
+      "v1_candidates": [
+        "src/data/activities.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/queries/agents.ts",
+      "v1_candidates": [
+        "src/data/agents.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/queries/contacts.ts",
+      "v1_candidates": [
+        "src/data/contacts.ts",
+        "src/types/contacts.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/queries/partners.ts",
+      "v1_candidates": [
+        "src/data/partners.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/io/supabase/queries/prospects.ts",
+      "v1_candidates": [
+        "src/data/prospects.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/services/bulkOps/index.ts",
+      "v1_candidates": [
+        "src/components/email-intelligence/management/index.ts",
+        "src/components/email-intelligence/manual-grouping/index.ts",
+        "src/components/global/filters-drawer/index.ts",
+        "src/components/settings/content-manager/index.ts",
+        "src/components/ui/sidebar/index.ts",
+        "src/constants/agentTemplates/index.ts",
+        "src/constants/operationsProcedures/index.ts",
+        "src/data/atecoRanking/index.ts",
+        "src/data/contacts/index.ts",
+        "src/data/index.ts",
+        "src/hooks/email-composer/index.ts",
+        "src/i18n/index.ts",
+        "src/integrations/lovable/index.ts",
+        "src/lib/import/index.ts",
+        "src/lib/mcp/index.ts",
+        "src/standalone-globe/index.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/services/bulkOps/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/services/sherlock/rateLimiter.ts",
+      "v1_candidates": [
+        "src/lib/api/rateLimiter.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/atoms/EmptyState.tsx",
+      "v1_candidates": [
+        "src/components/shared/EmptyState.tsx",
+        "src/components/ui/EmptyState.tsx"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/atoms/PageErrorBoundary.tsx",
+      "v1_candidates": [
+        "src/components/ui/PageErrorBoundary.tsx"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/molecules/ActiveFiltersBar/ActiveFiltersBar.tsx",
+      "v1_candidates": [
+        "src/components/email-intelligence/manual-grouping/ActiveFiltersBar.tsx"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/molecules/ActiveFiltersBar/index.ts",
+      "v1_candidates": [
+        "src/components/email-intelligence/management/index.ts",
+        "src/components/email-intelligence/manual-grouping/index.ts",
+        "src/components/global/filters-drawer/index.ts",
+        "src/components/settings/content-manager/index.ts",
+        "src/components/ui/sidebar/index.ts",
+        "src/constants/agentTemplates/index.ts",
+        "src/constants/operationsProcedures/index.ts",
+        "src/data/atecoRanking/index.ts",
+        "src/data/contacts/index.ts",
+        "src/data/index.ts",
+        "src/hooks/email-composer/index.ts",
+        "src/i18n/index.ts",
+        "src/integrations/lovable/index.ts",
+        "src/lib/import/index.ts",
+        "src/lib/mcp/index.ts",
+        "src/standalone-globe/index.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/molecules/CompanyCardList/index.ts",
+      "v1_candidates": [
+        "src/components/email-intelligence/management/index.ts",
+        "src/components/email-intelligence/manual-grouping/index.ts",
+        "src/components/global/filters-drawer/index.ts",
+        "src/components/settings/content-manager/index.ts",
+        "src/components/ui/sidebar/index.ts",
+        "src/constants/agentTemplates/index.ts",
+        "src/constants/operationsProcedures/index.ts",
+        "src/data/atecoRanking/index.ts",
+        "src/data/contacts/index.ts",
+        "src/data/index.ts",
+        "src/hooks/email-composer/index.ts",
+        "src/i18n/index.ts",
+        "src/integrations/lovable/index.ts",
+        "src/lib/import/index.ts",
+        "src/lib/mcp/index.ts",
+        "src/standalone-globe/index.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/molecules/CompanyCardList/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/molecules/EmailCard/index.ts",
+      "v1_candidates": [
+        "src/components/email-intelligence/management/index.ts",
+        "src/components/email-intelligence/manual-grouping/index.ts",
+        "src/components/global/filters-drawer/index.ts",
+        "src/components/settings/content-manager/index.ts",
+        "src/components/ui/sidebar/index.ts",
+        "src/constants/agentTemplates/index.ts",
+        "src/constants/operationsProcedures/index.ts",
+        "src/data/atecoRanking/index.ts",
+        "src/data/contacts/index.ts",
+        "src/data/index.ts",
+        "src/hooks/email-composer/index.ts",
+        "src/i18n/index.ts",
+        "src/integrations/lovable/index.ts",
+        "src/lib/import/index.ts",
+        "src/lib/mcp/index.ts",
+        "src/standalone-globe/index.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/molecules/EmailCard/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/molecules/ListToolbar/index.ts",
+      "v1_candidates": [
+        "src/components/email-intelligence/management/index.ts",
+        "src/components/email-intelligence/manual-grouping/index.ts",
+        "src/components/global/filters-drawer/index.ts",
+        "src/components/settings/content-manager/index.ts",
+        "src/components/ui/sidebar/index.ts",
+        "src/constants/agentTemplates/index.ts",
+        "src/constants/operationsProcedures/index.ts",
+        "src/data/atecoRanking/index.ts",
+        "src/data/contacts/index.ts",
+        "src/data/index.ts",
+        "src/hooks/email-composer/index.ts",
+        "src/i18n/index.ts",
+        "src/integrations/lovable/index.ts",
+        "src/lib/import/index.ts",
+        "src/lib/mcp/index.ts",
+        "src/standalone-globe/index.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/cestinone/tabs.tsx",
+      "v1_candidates": [
+        "src/components/ui/tabs.tsx"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/cestinone/utils.ts",
+      "v1_candidates": [
+        "src/components/campaigns/globe/utils.ts",
+        "src/hooks/email-composer/utils.ts",
+        "src/lib/utils.ts",
+        "src/standalone-globe/utils.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/command/constants.ts",
+      "v1_candidates": [
+        "src/components/global/filters-drawer/constants.ts",
+        "src/components/settings/content-manager/constants.ts",
+        "src/hooks/useAddContactForm/constants.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/command/tools/blacklist.ts",
+      "v1_candidates": [
+        "src/data/blacklist.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/command/tools/composeEmail/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/command/tools/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/email-forge/DeepSearchCanvas.tsx",
+      "v1_candidates": [
+        "src/components/operations/DeepSearchCanvas.tsx"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/email-lab/FunnemailTab.tsx",
+      "v1_candidates": [
+        "src/components/email-intelligence/FunnemailTab.tsx"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/funnemail-inbox/utils.ts",
+      "v1_candidates": [
+        "src/components/campaigns/globe/utils.ts",
+        "src/hooks/email-composer/utils.ts",
+        "src/lib/utils.ts",
+        "src/standalone-globe/utils.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/prompt-lab/hooks/useLabAgent/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/prompt-lab/promptReader/constants.ts",
+      "v1_candidates": [
+        "src/components/global/filters-drawer/constants.ts",
+        "src/components/settings/content-manager/constants.ts",
+        "src/hooks/useAddContactForm/constants.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/prompt-lab/promptReader/utils.ts",
+      "v1_candidates": [
+        "src/components/campaigns/globe/utils.ts",
+        "src/hooks/email-composer/utils.ts",
+        "src/lib/utils.ts",
+        "src/standalone-globe/utils.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/prompt-lab/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/prompt-lab/utils/fileParser.ts",
+      "v1_candidates": [
+        "src/lib/import/fileParser.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/telemetry/constants.ts",
+      "v1_candidates": [
+        "src/components/global/filters-drawer/constants.ts",
+        "src/components/settings/content-manager/constants.ts",
+        "src/hooks/useAddContactForm/constants.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/telemetry/index.ts",
+      "v1_candidates": [
+        "src/components/email-intelligence/management/index.ts",
+        "src/components/email-intelligence/manual-grouping/index.ts",
+        "src/components/global/filters-drawer/index.ts",
+        "src/components/settings/content-manager/index.ts",
+        "src/components/ui/sidebar/index.ts",
+        "src/constants/agentTemplates/index.ts",
+        "src/constants/operationsProcedures/index.ts",
+        "src/data/atecoRanking/index.ts",
+        "src/data/contacts/index.ts",
+        "src/data/index.ts",
+        "src/hooks/email-composer/index.ts",
+        "src/i18n/index.ts",
+        "src/integrations/lovable/index.ts",
+        "src/lib/import/index.ts",
+        "src/lib/mcp/index.ts",
+        "src/standalone-globe/index.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/telemetry/types.ts",
+      "v1_candidates": [
+        "src/components/acquisition/types.ts",
+        "src/components/global/email-picker/types.ts",
+        "src/components/global/filters-drawer/types.ts",
+        "src/components/missions/steps/types.ts",
+        "src/constants/agentPromptsParts/types.ts",
+        "src/constants/operationsProcedures/types.ts",
+        "src/data/atecoRanking/types.ts",
+        "src/data/contacts/types.ts",
+        "src/hooks/diagnostics/types.ts",
+        "src/hooks/email-composer/types.ts",
+        "src/lib/import/types.ts",
+        "src/lib/inbox/types.ts",
+        "src/standalone-globe/types.ts"
+      ]
+    },
+    {
+      "v2": "src/v2/ui/pages/telemetry/utils.ts",
+      "v1_candidates": [
+        "src/components/campaigns/globe/utils.ts",
+        "src/hooks/email-composer/utils.ts",
+        "src/lib/utils.ts",
+        "src/standalone-globe/utils.ts"
+      ]
+    }
+  ],
+  "orphan_candidates_count": 473,
+  "orphan_candidates_sample": [
+    "src/App.css",
+    "src/components/CommandPalette.tsx",
+    "src/components/admin/SystemHealthDashboard.tsx",
+    "src/components/agenda/ActivitiesTab.tsx",
+    "src/components/agenda/AgendaBulkBar.tsx",
+    "src/components/agenda/AgendaCardView.tsx",
+    "src/components/agenda/AgendaListView.tsx",
+    "src/components/agents/AgentCard.tsx",
+    "src/components/agents/AgentChat.tsx",
+    "src/components/agents/AgentClientList.tsx",
+    "src/components/agents/AgentKnowledgeBase.tsx",
+    "src/components/agents/AgentOperationsDashboard.tsx",
+    "src/components/agents/AgentPromptEditor.tsx",
+    "src/components/agents/AgentTaskList.tsx",
+    "src/components/agents/AgentTerritoryConfig.tsx",
+    "src/components/agents/AgentToolSelector.tsx",
+    "src/components/agents/AgentVoiceConfig.tsx",
+    "src/components/agents/CreateAgentDialog.tsx",
+    "src/components/ai-arena/ContactCard3D.tsx",
+    "src/components/ai-control/AIAutomationDashboard.tsx",
+    "src/components/ai-control/AIGeneratedActivitiesPanel.tsx",
+    "src/components/ai-control/AIPerformancePanel.tsx",
+    "src/components/ai-control/CostControlPanel.tsx",
+    "src/components/ai-control/CostDashboardWidget.tsx",
+    "src/components/ai-control/DecisionLogPanel.tsx",
+    "src/components/ai-control/GlobalAIAutomationPause.tsx",
+    "src/components/ai-control/LearningDashboard.tsx",
+    "src/components/ai-control/LinkedInLimitsPanel.tsx",
+    "src/components/ai-control/OptimusAgentPanel.tsx",
+    "src/components/ai-control/PendingActionsPanel.tsx",
+    "src/components/ai-control/SupervisorFeedPanel.tsx",
+    "src/components/ai/FeedbackButtons.tsx",
+    "src/components/analytics/CampaignAnalyticsTab.tsx",
+    "src/components/analytics/DashboardCharts.tsx",
+    "src/components/analytics/OutreachMiniCharts.tsx",
+    "src/components/analytics/ResponseRateCard.tsx",
+    "src/components/auth/ProtectedRoute.tsx",
+    "src/components/campaigns/EmailPreview.tsx",
+    "src/components/campaigns/RecipientSelector.tsx",
+    "src/components/contact-drawer/ContactRecordDrawer.tsx",
+    "src/components/contacts/AddContactDialog.tsx",
+    "src/components/contacts/ContactFiltersBar.tsx",
+    "src/components/contacts/ContactListPanel.tsx",
+    "src/components/contacts/DuplicateReviewList.tsx",
+    "src/components/contacts/ExpandedGroupContent.tsx",
+    "src/components/contacts/GroupStrip.tsx",
+    "src/components/contacts/InteractionMarkers.tsx",
+    "src/components/contacts/bca/BCACardRenderers.tsx",
+    "src/components/contacts/bca/BCAUnifiedHub.tsx",
+    "src/components/download/ActionPanel.tsx",
+    "src/components/download/ActiveJobBar.tsx",
+    "src/components/download/AdvancedTools.tsx",
+    "src/components/download/DownloadExperienceDialog.tsx",
+    "src/components/download/DownloadProgressBar.tsx",
+    "src/components/download/JobMonitor.tsx",
+    "src/components/download/ResyncConfigure.tsx",
+    "src/components/download/SpeedGauge.tsx",
+    "src/components/download/WcaSessionIndicator.tsx",
+    "src/components/email-intelligence/AISuggestionsTab.tsx",
+    "src/components/email-intelligence/AddressRulesManager.tsx",
+    "src/components/email-intelligence/EvalSetTab.tsx",
+    "src/components/email-intelligence/FunnemailTab.tsx",
+    "src/components/email-intelligence/JobLedgerTab.tsx",
+    "src/components/email-intelligence/ManualGroupingTab.tsx",
+    "src/components/email-intelligence/RoutingRulesTab.tsx",
+    "src/components/email-intelligence/RulesAndActionsTab.tsx",
+    "src/components/email-intelligence/ScoutCacheTab.tsx",
+    "src/components/email-intelligence/SenderManagementTab.tsx",
+    "src/components/email-intelligence/SenderProfileCard.tsx",
+    "src/components/email-intelligence/SenderProfilesView.tsx",
+    "src/components/email-intelligence/SmartClassificationView.tsx",
+    "src/components/email-intelligence/SmartInboxView.tsx",
+    "src/components/email-intelligence/management/EmailIntelligenceHeader.tsx",
+    "src/components/email-intelligence/management/RulesConfigurationDialog.tsx",
+    "src/components/email-intelligence/management/SenderActionBar.tsx",
+    "src/components/email-intelligence/management/SenderEmailsDialog.tsx",
+    "src/components/email-intelligence/management/index.ts",
+    "src/components/email-intelligence/manual-grouping/index.ts",
+    "src/components/email/EmailAIPanel.tsx",
+    "src/components/email/EmailRecipientFields.tsx",
+    "src/components/email/RecipientSnapshotHeader.tsx",
+    "src/components/filters/NetworkFilterSlot.tsx",
+    "src/components/global/DownloadStatusPanel.tsx",
+    "src/components/global/GlobalChat.tsx",
+    "src/components/global/MissionDrawer.tsx",
+    "src/components/global/filters-drawer/index.ts",
+    "src/components/guida/AnnotatedScreenshot.tsx",
+    "src/components/guida/TutorialSection.tsx",
+    "src/components/header/MailboxSelector.tsx",
+    "src/components/header/TokenUsageCounter.tsx",
+    "src/components/home/AgentStatusPanel.tsx",
+    "src/components/home/OperationsCenter.tsx",
+    "src/components/home/OperativeMetricsGrid.tsx",
+    "src/components/home/SmartActions.tsx",
+    "src/components/import/ContactsGridTab.tsx",
+    "src/components/import/ImportAssistant.tsx",
+    "src/components/import/ImportErrorMonitor.tsx",
+    "src/components/import/ImportMappingPreview.tsx",
+    "src/components/import/ManageActivityDialog.tsx",
+    "src/components/intelliflow/AiEntity.tsx",
+    "src/components/intelliflow/ApprovalPanel.tsx",
+    "src/components/intelliflow/CanvasViews.tsx",
+    "src/components/intelliflow/ExecutionFlow.tsx",
+    "src/components/intelliflow/IntelliFlowOverlay.tsx",
+    "src/components/intelliflow/ToolActivationBar.tsx",
+    "src/components/layout/AppLayout.tsx",
+    "src/components/layout/CreditCounter.tsx",
+    "src/components/notifications/NotificationsProvider.tsx",
+    "src/components/onboarding/OnboardingWizard.tsx",
+    "src/components/onboarding/StepAI.tsx",
+    "src/components/onboarding/StepImport.tsx",
+    "src/components/onboarding/StepProfile.tsx",
+    "src/components/onboarding/StepWCA.tsx",
+    "src/components/operations/AiAssistantDialog.tsx",
+    "src/components/operations/DownloadCanvas.tsx",
+    "src/components/operations/OperationsView.tsx",
+    "src/components/outreach/AttivitaTab.tsx",
+    "src/components/outreach/CampagneTab.tsx",
+    "src/components/outreach/CodaAITab.tsx",
+    "src/components/outreach/EmailBulkToolbar.tsx",
+    "src/components/outreach/EmailFolderSidebar.tsx",
+    "src/components/outreach/HoldingPatternCommandCenter.tsx",
+    "src/components/outreach/HoldingPatternTab.tsx",
+    "src/components/outreach/InUscitaTab.tsx",
+    "src/components/outreach/SchedulingTab.tsx",
+    "src/components/outreach/ToolsTab.tsx",
+    "src/components/partners/BulkActionBar.tsx",
+    "src/components/partners/CountryCards.tsx",
+    "src/components/partners/CountryOverview.tsx",
+    "src/components/partners/CountryWorkbench.tsx",
+    "src/components/partners/PartnerAIBar.tsx",
+    "src/components/partners/PartnerCard.tsx",
+    "src/components/partners/PartnerFiltersSheet.tsx",
+    "src/components/partners/PartnerListItem.tsx",
+    "src/components/partners/UnifiedActionBar.tsx",
+    "src/components/partners/shared/CardSocialIcons.tsx",
+    "src/components/prototypes/CommandCenterShell.tsx",
+    "src/components/prototypes/ConversationalShell.tsx",
+    "src/components/prototypes/FocusFlowShell.tsx",
+    "src/components/settings/ContentManager.tsx",
+    "src/components/settings/WcaSessionCard.tsx",
+    "src/components/settings/content-manager/constants.ts",
+    "src/components/settings/content-manager/index.ts",
+    "src/components/settings/enrichment/EnrichmentBatchActions.tsx",
+    "src/components/settings/enrichment/EnrichmentDetailPopover.tsx",
+    "src/components/settings/enrichment/EnrichmentExtraInfo.tsx",
+    "src/components/shared/ActiveContextBar.tsx",
+    "src/components/shared/AddContactDialog.tsx",
+    "src/components/shared/NotFound.tsx",
+    "src/components/shared/PageHeader.tsx",
+    "src/components/shared/SendConfirmationGate.tsx",
+    "src/components/shared/UnifiedContactRow.tsx",
+    "src/components/system/RuntimeDiagnosticPanel.tsx",
+    "src/components/ui/breadcrumb.tsx",
+    "src/components/ui/carousel.tsx",
+    "src/components/ui/chart.tsx",
+    "src/components/ui/context-menu.tsx",
+    "src/components/ui/drawer.tsx",
+    "src/components/ui/empty-state.tsx",
+    "src/components/ui/form.tsx",
+    "src/components/ui/hover-card.tsx",
+    "src/components/ui/input-otp.tsx",
+    "src/components/ui/menubar.tsx",
+    "src/components/ui/navigation-menu.tsx",
+    "src/components/ui/pagination.tsx",
+    "src/components/ui/sidebar/index.ts",
+    "src/components/ui/use-toast.ts",
+    "src/components/voice/GlobalVoiceFAB.tsx",
+    "src/components/workspace/BulkLinkedInDialog.tsx",
+    "src/components/workspace/CanvasViews.tsx",
+    "src/components/workspace/ContactListPanel.tsx",
+    "src/components/workspace/EmailCanvas.tsx",
+    "src/components/workspace/GoalBar.tsx",
+    "src/constants/styles.ts",
+    "src/data/index.ts",
+    "src/data/kbGovernance.ts",
+    "src/data/schemas/jsonValidators.ts",
+    "src/data/seeds/funnemailEvalSeed.ts",
+    "src/integrations/lovable/index.ts",
+    "src/lib/download/jobState.ts",
+    "src/lib/download/jobUpdater.ts",
+    "src/lib/download/profileSaver.ts",
+    "src/lib/download/terminalLog.ts",
+    "src/lib/mcp/index.ts",
+    "src/lib/messaging/linkedinDownloader.ts",
+    "src/lib/messaging/whatsappDownloader.ts",
+    "src/lib/messaging/whatsappSender.ts",
+    "src/pages/OAuthConsent.tsx",
+    "src/types/edgeMetrics.ts",
+    "src/types/tracking.ts",
+    "src/v2/agent/policy/hardGuards.ts",
+    "src/v2/agent/prompts/assembler.ts",
+    "src/v2/agent/runtime/prompts/system.ts",
+    "src/v2/bridge/event-bus.ts",
+    "src/v2/bridge/handlers/agent-bridge.ts",
+    "src/v2/bridge/handlers/campaign-bridge.ts",
+    "src/v2/bridge/handlers/contact-bridge.ts",
+    "src/v2/bridge/handlers/partner-bridge.ts",
+    "src/v2/bridge/health.ts",
+    "src/v2/bridge/retry.ts"
+  ],
+  "edge_functions_count": 154,
+  "edge_prefix_groups_ge3": {
+    "": [
+      "_shared",
+      "_shared",
+      "_shared",
+      "_shared"
+    ],
+    "agent": [
+      "agent-audit",
+      "agent-autonomous-cycle",
+      "agent-autopilot-worker",
+      "agent-execute",
+      "agent-execute",
+      "agent-loop",
+      "agent-prompt-refiner",
+      "agent-simulate",
+      "agent-task-drainer"
+    ],
+    "ai": [
+      "ai-arena-suggest",
+      "ai-assistant",
+      "ai-backup",
+      "ai-deep-search-helper",
+      "ai-gateway-micro",
+      "ai-match-business-cards",
+      "ai-monitor",
+      "ai-query-planner",
+      "ai-test-runner",
+      "ai-tracking-healthcheck",
+      "ai-utility"
+    ],
+    "analyze": [
+      "analyze-email-edit",
+      "analyze-import-structure",
+      "analyze-partner"
+    ],
+    "check": [
+      "check-external-db",
+      "check-inbox-booking",
+      "check-inbox"
+    ],
+    "classify": [
+      "classify-emails-batch",
+      "classify-inbound-content",
+      "classify-inbound-message"
+    ],
+    "email": [
+      "email-cron-sync",
+      "email-delivery-webhook",
+      "email-imap-proxy",
+      "email-sync-worker"
+    ],
+    "funnemail": [
+      "funnemail-auto-route",
+      "funnemail-backfill-inbound",
+      "funnemail-classify",
+      "funnemail-policy-engine",
+      "funnemail-policy-executor",
+      "funnemail-reminders-tick",
+      "funnemail-scout-sender",
+      "funnemail-send-autoresponder"
+    ],
+    "generate": [
+      "generate-aliases",
+      "generate-content",
+      "generate-email",
+      "generate-outreach"
+    ],
+    "get": [
+      "get-linkedin-credentials",
+      "get-ra-credentials",
+      "get-wca-credentials"
+    ],
+    "kb": [
+      "kb-doctrine-audit",
+      "kb-embed-backfill",
+      "kb-index-map",
+      "kb-ingest-document",
+      "kb-intake-analyze",
+      "kb-promoter",
+      "kb-supervisor"
+    ],
+    "process": [
+      "process-ai-import",
+      "process-download-job",
+      "process-email-queue",
+      "process-inbound-enrichment"
+    ],
+    "prompt": [
+      "prompt-copilot-chat",
+      "prompt-registry-drift-check",
+      "prompt-test-runner"
+    ],
+    "save": [
+      "save-correction-memory",
+      "save-linkedin-cookie",
+      "save-linkedin-credentials",
+      "save-ra-cookie",
+      "save-ra-prospects",
+      "save-wca-contacts",
+      "save-wca-cookie"
+    ],
+    "send": [
+      "send-email",
+      "send-linkedin",
+      "send-whatsapp"
+    ],
+    "tmwe": [
+      "tmwe-catalog-sync",
+      "tmwe-customer-sync",
+      "tmwe-disconnect",
+      "tmwe-oauth-callback",
+      "tmwe-oauth-start",
+      "tmwe-partner-link",
+      "tmwe-partner-match",
+      "tmwe-proxy",
+      "tmwe-quote-lookup"
+    ]
+  },
+  "db_migrations": {
+    "files": 416,
+    "lines": 25186
+  },
+  "debt_aggregates": {
+    "total_any": 977,
+    "total_ts_ignore": 0,
+    "total_todo": 13,
+    "total_fixme": 1,
+    "total_deprecated": 32,
+    "total_eslint_disable": 92,
+    "total_console": 527,
+    "supabase_from_bypass_files_out_of_dal": 80,
+    "supabase_from_bypass_total_hits": 185
+  },
+  "test_ratio": {
+    "runtime_files": 2880,
+    "runtime_lines": 376056,
+    "test_files": 565,
+    "test_lines": 50673,
+    "ratio_lines_test_to_runtime": 0.135
+  }
+}
