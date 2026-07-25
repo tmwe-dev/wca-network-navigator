@@ -382,3 +382,30 @@ Nessuno dei 7 fallimenti tocca `funnemailInbox.ts`, `channel-messages` DAL, `mes
 **NO-GO globale sulla test suite** solo se la policy release richiede 0 test rossi in assoluto: in quel caso serve un pre-batch di bonifica dei 4 file pre-esistenti (stimato 30-60 min, indipendente da B4.x).
 
 Non iniziati: B5, B6. Nessuna pubblicazione/deploy eseguita.
+
+---
+## BONIFICA RELEASE (post-B4.6b) — GO PIENO
+Commit base: `62d6a29d`
+
+### Fix mirati
+1. **ai-gateway-config.test.ts** — 7° mapping OpenAI (`google/gemini-2.5-pro → gpt-4o`) è intenzionale (finder-api-chat). Aggiornate aspettative 6→7.
+2. **htmlSanitizer.test.ts (src/test)** — aspettativa allineata a policy: `style` attribute vietato, `expression()` deve sparire, contenuto testuale preservato. Nessun indebolimento.
+3. **authRoutingLegacyLeak.test.ts** — CommandPalette riscritto su navConfig SSOT; guardrail ora verifica assenza reale di leak `/v1` invece di stringhe obsolete.
+4. **useUnreadCounts.test.ts** — mock esteso con `.not("hidden_by_rule",…)` e catena `.is().in()` per activities; comportamento production intatto.
+5. **B4.6b fallback gating** — nuovo predicate condiviso `src/data/_shared/viewFallbackPredicate.ts` (`isViewSchemaError`). Fallback `readInboxOnce`/`readInboxPaginated` scatta SOLO per codici schema (`42P01`, `42703`, `PGRST200/202/204/205`) o messaggi "does not exist"/"schema cache". Auth/RLS (`42501`, `PGRST301`), network, timeout → **throw** senza mascheramento.
+6. **Timeout FS-heavy tests** — bumped a 30s per `emptyCatches`, `edgeFunctionDecomposition` (x2), `messaging-ssot-governance` (walk src ~2400 file sotto carico paralelo).
+
+### Test aggiunti
+- `src/data/_shared/__tests__/viewFallbackPredicate.test.ts` (9 test)
+- `src/data/__tests__/funnemailInbox.fallback.test.ts` (7 test — schema→fallback, RLS→throw, network→throw, paginated variants)
+
+### Risultati numerici finali
+| Check | Risultato |
+|---|---|
+| `tsgo --noEmit` | ✅ exit 0 |
+| `eslint src/` | ✅ 0 errors, 233 warnings pre-esistenti |
+| `vitest run` (full) | ✅ **377 file / 3034 test passed**, 0 failed, 2 skipped |
+| `npm run build` | ✅ exit 0 |
+
+### Verdetto: **GO PIENO**
+Nessuna regressione B4. Zero test rossi. Fallback view→legacy ora sicuro (mascheramento auth/RLS/network eliminato).
