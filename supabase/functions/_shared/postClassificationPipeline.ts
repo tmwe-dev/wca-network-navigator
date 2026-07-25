@@ -1,7 +1,7 @@
 /**
  * postClassificationPipeline.ts — Orchestrator for post-classification actions (LOVABLE-86).
  *
- * After classify-email-response classifies an inbound email, this pipeline decides
+ * After classify-inbound-message classifies an inbound email, this pipeline decides
  * and executes appropriate actions based on classification domain and category.
  *
  * Refactored into focused modules:

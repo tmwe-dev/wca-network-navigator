@@ -44,10 +44,10 @@ improve-email
   Email copywriting improvement. Enhances tone, clarity, persuasion while
   preserving brand voice and doctrine compliance.
 
-classify-email-response
-  Inbound email classification into 8 categories: positive_reply,
-  meeting_request, info_request, referral, auto_reply, negative_reply,
-  unsubscribe, other.
+classify-inbound-message
+  Canonical inbound classifier (email/WA/LinkedIn). Multi-stage pipeline:
+  content+context → funnemail routing → canonical fields → routing rules.
+  Writes reply_classifications and message_intelligence_v.
 
 daily-briefing
   Daily operational summary generation. Aggregates metrics, pending actions,

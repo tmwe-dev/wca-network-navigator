@@ -241,7 +241,7 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
       { label: "Smistamento dominio", source: "Regole smistamento per dominio", promptLabTab: "doctrine" },
     ],
     runtime: {
-      edgeFunction: "classify-email-response",
+      edgeFunction: "classify-inbound-message",
       modelDefault: "gpt-4o-mini",
       triggers: ["Email inbound ricevuta", "Webhook inbox", "Check-inbox manuale"],
     },

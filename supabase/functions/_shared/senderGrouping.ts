@@ -41,6 +41,6 @@ export async function suggestGroupForSender(
         .eq("id", addressRule.id);
     }
   } catch (aiSuggestErr) {
-    console.warn("[classify-email-response] AI suggestion update error (non-blocking):", aiSuggestErr);
+    console.warn("[classify-inbound-message] AI suggestion update error (non-blocking):", aiSuggestErr);
   }
 }

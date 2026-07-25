@@ -17,11 +17,11 @@ export const CONTEXT_TO_ORCHESTRATORS: Record<string, string[]> = {
   email: ["generate-email", "improve-email", "ai-assistant", "agent-execute"],
   "email-quality": ["improve-email"],
   outreach: ["generate-outreach", "agent-execute"],
-  "lead-status": ["classify-email-response", "agent-execute"],
+  "lead-status": ["classify-inbound-message", "agent-execute"],
   "post-send": ["agent-execute"],
   "multi-channel": ["agent-execute", "agent-loop"],
   whatsapp: ["whatsapp-ai-extract", "agent-execute"],
-  inbound: ["classify-inbound-message", "classify-email-response"],
+  inbound: ["classify-inbound-message"],
   audit: ["agent-audit", "agent-simulate"],
 };
 

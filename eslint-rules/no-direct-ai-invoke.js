@@ -6,7 +6,7 @@ const AI_FUNCTIONS = new Set([
   "ai-assistant", "agent-execute", "agent-loop", "agent-simulate",
   "agent-prompt-refiner", "agent-task-drainer", "unified-assistant",
   "generate-email", "generate-outreach", "improve-email",
-  "classify-email-response", "classify-inbound-message",
+  "classify-inbound-message",
   "categorize-content", "suggest-email-groups", "parse-business-card",
   "agentic-decide", "sherlock-extract", "prompt-test-runner", "daily-briefing",
 ]);
