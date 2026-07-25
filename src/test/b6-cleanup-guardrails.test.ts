@@ -22,7 +22,7 @@ describe("B6 — orphan edge function cleanup", () => {
     expect(existsSync("supabase/functions/classify-email-response")).toBe(false);
   });
 
-  it("nessun riferimento residuo a classify-email-response fuori dall'allowlist storica", () => {
+  it("nessun riferimento residuo a classify-email-response fuori dall'allowlist storica", async () => {
     let raw = "";
     try {
       raw = execSync(
@@ -37,7 +37,7 @@ describe("B6 — orphan edge function cleanup", () => {
     expect(offenders, `Riferimenti residui: ${offenders.join(", ")}`).toEqual([]);
   });
 
-  it("nessun caller runtime (invoke/fetch) verso classify-email-response", () => {
+  it("nessun caller runtime (invoke/fetch) verso classify-email-response", async () => {
     let raw = "";
     try {
       raw = execSync(
