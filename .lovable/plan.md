@@ -553,6 +553,42 @@ Stesso comando D1/D2 (`/tmp/dal_metric.sh`). Metrica primaria per **linee uniche
 
 ---
 
+# Batch V1 — Priorità 2, rimozione hook V2 orfani (v1↔v2 overlap) — **REJECTED / ROLLED BACK (V1.1)**
+
+> ⛔ **Esito V1: REJECTED.** La revisione indipendente del diff ha respinto il GO
+> di V1. Il gate originario richiedeva "legacy V1 orfano **con replacement V2
+> attivo/testato**": qui era vero l'opposto — i tre hook V2 non avevano alcun
+> caller, mentre i corrispettivi V1 (`useDownloadJobs`, `useProspects`,
+> `useActivities`) sono l'unico percorso runtime attivo con caller reali (19,
+> 1, 18). Eliminare gli scaffold V2 non riduce debito legacy: al contrario
+> distrugge il punto di partenza della migrazione v1→v2 (priorità 2) e vieta
+> per sempre — via test guardrail — la reintroduzione di simboli che potrebbero
+> essere legittimamente rimessi in servizio.
+>
+> **Correzione V1.1** (commit corrente):
+> 1. Ripristinati esattamente i tre file dal parent `920b435d`:
+>    `src/v2/hooks/useDownloadJobsV2.ts`, `useProspectsV2.ts`,
+>    `useActivitiesV2.ts` (diff byte-identico verificato).
+> 2. Eliminato il test guardrail
+>    `src/__tests__/v1-cleanup-orphan-v2-hooks.test.ts`.
+> 3. Nessun altro cambio di codice (opzione B del gate correttivo: nessun
+>    candidato barrel/export legacy soddisfa la prova "replacement V2
+>    runtime-attivo e testato" entro il budget di 5 file).
+>
+> **Metriche oneste**: il rollback vale **0 punti**. Nessun miglioramento di
+> punteggio, nessun delta LOC morto, nessun delta bypass DAL. Il GO V1.1
+> copre solo il ripristino della coerenza architetturale, non un avanzamento
+> del programma 90K.
+>
+> **Lezione**: la regola "orfano" deve essere invertita — si rimuove solo il
+> lato legacy quando il replacement V2 ha caller runtime attivi e copertura
+> test, non il contrario. La sezione storica sottostante è conservata solo a
+> scopo forense.
+
+---
+
+## Storico (contenuto originale V1, non più valido)
+
 # Batch V1 — Priorità 2, rimozione hook V2 orfani (v1↔v2 overlap)
 
 Base: `920b435d`. Nessun deploy, nessuna migration, nessun cambio routing/schema/RLS.
