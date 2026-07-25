@@ -235,3 +235,71 @@ Conclusione: **9/10 è raggiungibile in ~2 trimestri** solo se si eseguono stran
 ---
 
 Report chiuso. Nessuna modifica applicata. Se vuoi, posso approfondire una singola area con letture mirate (es. inventario delle 150 edge functions per candidati merge, o mappa dei 193 DAL bypass per dominio) sempre in read-only.
+
+---
+
+## PROGRAMMA 90K — Batch D1 · Riduzione bypass DAL (READ-only)
+
+**Commit di partenza**: `ffb93a25bdd1a81cdbe916db75c9a4d149c72926`
+**Ambito**: solo letture. Nessuna modifica RLS/UX/schema/comportamento. Nessun deploy.
+
+### Metrica riproducibile
+Comando (salvato in `/tmp/dal_metric.sh` per riproduzione locale):
+```
+grep -rEn --include='*.ts' --include='*.tsx' \
+  -e 'supabase\.from\(' -e 'untypedFrom\(' -e 'tFrom\(' -e 'supabase\.rpc\(' src \
+  | grep -v -E '^src/(data|integrations/supabase|lib/(supabaseUntyped|typedSupabase))' \
+  | grep -v -E '\.test\.(ts|tsx)|^src/test/|^src/__tests__/'
+```
+Esclusioni: DAL canonico, client generato, adapter escape-hatch, test, generated types, edge functions server-side, migrations.
+
+### Baseline (pre-D1)
+- **Totale bypass**: **294** call-site
+  - `supabase.from`: 187
+  - `untypedFrom`: 74
+  - `tFrom`: 11
+  - `supabase.rpc`: 10
+- Top-3 file per densità: `dashboard.ts` (20), `RulesAndActionsTab.tsx` (14), `useRAProspects.ts` (9).
+
+### Selezione batch (READ-only, min-consumer)
+`src/v2/hooks/useSmartSuggestions.ts`: 6 count()-head-only inline su tabelle diverse. Un solo consumer, badge/suggerimenti, nessun writer, chiaramente idempotente.
+
+### Matrice migrazione
+| Call-site | Tabella | Op | Rischio | Azione |
+|---|---|---|---|---|
+| useSmartSuggestions:32 | agent_tasks | count | basso | → DAL |
+| useSmartSuggestions:34 | channel_messages | count | basso | → DAL |
+| useSmartSuggestions:36 | mission_actions | count | basso | → DAL |
+| useSmartSuggestions:38 | outreach_schedules | count | basso | → DAL |
+| useSmartSuggestions:40 | email_drafts | count | basso | → DAL |
+| useSmartSuggestions:42 | download_jobs | count | basso | → DAL |
+
+Nessun cambio filtro. RLS invariata. React Query key (`["v2", "smart-suggestions"]`) preservata.
+
+### File toccati
+- `src/data/smartSuggestionCounts.ts` (NEW · 80 LOC · DAL aggregatore, propagazione errori, no fallback silenzioso)
+- `src/v2/hooks/useSmartSuggestions.ts` (MOD · rimosso import client, sostituito Promise.all inline con `fetchSmartSuggestionCounts`)
+- `src/data/__tests__/smartSuggestionCounts.test.ts` (NEW · 3 test: primary path, propagazione errore, guardrail no-bypass sul hook)
+
+### Delta metrica
+- **Prima**: 294 · **Dopo**: 288 · **Delta**: **−6 bypass** (−2,04%)
+- Distribuzione dopo: `supabase.from` 181 / `untypedFrom` 74 / `tFrom` 11 / `supabase.rpc` 10
+
+### Verifiche
+- `bunx tsgo --noEmit` ✅
+- `bunx eslint` sui file toccati ✅ (0 nuovi warning)
+- `bunx vitest run src/data/__tests__/smartSuggestionCounts.test.ts` ✅ 3/3
+- `bunx vitest run` (full): 3042 pass / 4 flaky pre-esistenti (cestinone, dalArchitecture partners/contacts, messaging-ssot, AgentVoiceCall) — tutti verdi in isolamento (`10.78s`). Sono timeout indotti dalla lunghezza della suite (transform 112s), non causati dal batch.
+- `bunx vite build` ✅
+
+### Rischio & rollback
+- Rischio residuo: nullo sul comportamento utente (stessi filtri, stessa key, no fallback).
+- Rollback: `git revert` del batch — un file nuovo + una MOD ristretta.
+
+### Punteggio (conservativo)
+- Area A (Architettura/modularità) 74 → **74,5** (bypass 294→288, −2%).
+- Nessun altro asse toccato — non gonfio UX/AI/Sicurezza/etc.
+- Totale ponderato: 74.720 → **~74.760 / 100.000** (Δ +40 punti; l'impatto reale su 9/10 arriverà con l'accumulo di batch D2…Dn).
+
+### Esito
+**GO** — batch reversibile, delta reale misurato, zero regressioni introdotte.
