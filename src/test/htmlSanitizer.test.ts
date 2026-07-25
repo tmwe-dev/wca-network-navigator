@@ -54,9 +54,14 @@ describe("sanitizeHtml", () => {
   });
 
   it("strips style/expression() in CSS", () => {
+    // Il sanitizer canonico (DOMPurify + FORBID_ATTR:['style']) rimuove
+    // completamente l'attributo `style` per policy di sicurezza (evita
+    // CSS injection, expression(), url(javascript:), etc.). Il contenuto
+    // testuale del nodo va preservato; expression() DEVE sparire.
     const out = sanitizeHtml(`<div style="color:red;background:expression(alert(1))">x</div>`);
-    expect(out).toContain("color: red");
     expect(out).not.toContain("expression");
+    expect(out).not.toContain("style=");
+    expect(out).toContain(">x<");
   });
 
   it("allows data:image URLs", () => {
