@@ -130,8 +130,12 @@ describe("aiGatewayConfig", () => {
       expect(MODEL_MAP.openrouter).toEqual({});
     });
 
-    it("openai provider should have 6 model mappings", () => {
-      expect(Object.keys(MODEL_MAP.openai)).toHaveLength(6);
+    it("openai provider should have 7 model mappings", () => {
+      // 7° mapping intenzionale: google/gemini-2.5-pro → gpt-4o
+      // aggiunto per finder-api-chat che passa gemini-2.5-pro come nome
+      // canonico; senza mapping fallirebbe lato OpenAI.
+      expect(Object.keys(MODEL_MAP.openai)).toHaveLength(7);
+      expect(MODEL_MAP.openai["google/gemini-2.5-pro"]).toBe("gpt-4o");
     });
 
     it("anthropic provider should have 6 model mappings", () => {
@@ -202,8 +206,10 @@ describe("aiGatewayConfig", () => {
       expect(ALLOWED_MODELS).toBeInstanceOf(Set);
     });
 
-    it("should contain exactly 6 models", () => {
-      expect(ALLOWED_MODELS.size).toBe(6);
+    it("should contain exactly 7 models", () => {
+      // Include google/gemini-2.5-pro come modello canonico consentito.
+      expect(ALLOWED_MODELS.size).toBe(7);
+      expect(ALLOWED_MODELS.has("google/gemini-2.5-pro")).toBe(true);
     });
 
     it("should contain google/gemini-2.5-flash", () => {
