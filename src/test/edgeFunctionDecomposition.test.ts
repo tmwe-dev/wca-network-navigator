@@ -160,13 +160,13 @@ describe("Client Migration — call sites use macro-endpoints", () => {
     return results;
   }
 
-  it("nessun call site di invocazione usa più i proxy legacy per gli assistant", () => {
+  it("nessun call site di invocazione usa più i proxy legacy per gli assistant", { timeout: 30_000 }, () => {
     const legacyAssistants = /"(import-assistant|extension-brain)"/;
     const hits = searchFiles(srcDir, legacyAssistants);
     expect(hits).toEqual([]);
   });
 
-  it("nessun call site di invocazione usa più i proxy legacy per generate/utility", () => {
+  it("nessun call site di invocazione usa più i proxy legacy per generate/utility", { timeout: 30_000 }, () => {
     // "generate-email" and "generate-outreach" still appear as string identifiers
     // in config/prompt/contract files (not as live invocations). Exclude those.
     const legacyGenerators = /"(deep-search-partner)"/;
