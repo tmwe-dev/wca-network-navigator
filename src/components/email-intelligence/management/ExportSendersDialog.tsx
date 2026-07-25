@@ -6,8 +6,10 @@
  *  • messages : CSV con metadata complete delle email da channel_messages
  *               (subject, date, direction, from, to, body_text troncato).
  *
- * Nessuna logica di business modificata: legge solo `channel_messages`
- * filtrato per `from_address IN (...)` e `channel='email'`.
+ * Nessuna logica di business modificata: legge tramite la DAL SSOT
+ * `fetchMessagesBySenders` (view canonica `message_intelligence_v` con
+ * fallback trasparente su `channel_messages`), filtrato per
+ * `from_address IN (...)` e `channel='email'`.
  */
 import { useState } from "react";
 import {
@@ -19,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchMessagesBySenders } from "@/v2/io/supabase/queries/channel-messages";
 
 interface ExportSendersDialogProps {
   open: boolean;
@@ -68,18 +70,13 @@ export function ExportSendersDialog({ open, onOpenChange, senderEmails }: Export
         downloadCSV(`mittenti-${stamp}.csv`, rows);
         toast.success(`Esportati ${senderEmails.length} indirizzi`);
       } else {
-        const { data, error } = await supabase
-          .from("channel_messages")
-          .select("id, email_date, direction, from_address, to_address, subject, body_text")
-          .eq("channel", "email")
-          .in("from_address", senderEmails)
-          .order("email_date", { ascending: false })
-          .limit(2000);
-        if (error) throw error;
+        const result = await fetchMessagesBySenders(senderEmails, 2000);
+        if (result._tag === "Err") throw new Error(result.error.message);
+        const data = result.value;
         const rows: string[][] = [
           ["id", "data", "direzione", "mittente", "destinatario", "oggetto", "anteprima_corpo"],
         ];
-        for (const m of data ?? []) {
+        for (const m of data) {
           rows.push([
             m.id,
             m.email_date ?? "",
@@ -91,7 +88,7 @@ export function ExportSendersDialog({ open, onOpenChange, senderEmails }: Export
           ]);
         }
         downloadCSV(`mittenti-messaggi-${stamp}.csv`, rows);
-        toast.success(`Esportati ${(data ?? []).length} messaggi`);
+        toast.success(`Esportati ${data.length} messaggi`);
       }
       onOpenChange(false);
     } catch (e) {
