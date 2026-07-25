@@ -303,3 +303,22 @@ Nessun cambio filtro. RLS invariata. React Query key (`["v2", "smart-suggestions
 
 ### Esito
 **GO** — batch reversibile, delta reale misurato, zero regressioni introdotte.
+
+---
+
+## D1.1 — Micro-gate stabilizzazione test (commit 3dd2bdc)
+
+**Causa radice**: molte suite DAL/governance usano `await import()` di moduli pesanti. Il transform Vite SSR a freddo, sotto carico parallelo (transform cumulato ~50–110s, environment ~10.000s), supera il `testTimeout` default di 5s → flaky intermittenti su: `cestinone`, `dalArchitecture` (partners/contacts), `messaging-ssot-governance`, `AgentVoiceCall`, `agentAvatars`, `agentSimulator`, `aiTestScenarios`. Non è un bug runtime né un leak di mock/timer: gli stessi moduli si caricano regolarmente in isolamento.
+
+**Fix** (test-infrastructure only, `vitest.config.ts`):
+- `testTimeout: 30_000`, `hookTimeout: 30_000`.
+- Nessun `skip`/`todo`/retry, nessuna modifica ad assertion, nessun cambio di codice production.
+
+**Prove**:
+- Run A completo: 380 file, 3046 passed, 2 skipped, **0 failed**, 214s.
+- Run B completo: 380 file, 3046 passed, 2 skipped, **0 failed**, 219s.
+- Typecheck: OK. Lint: 0 errori (233 warning invariati). Build: OK.
+
+**Rollback**: rimuovere `testTimeout`/`hookTimeout` da `vitest.config.ts` (default 5s).
+
+**Verdetto**: GO. Punteggio invariato (miglioramento minimo CI/stabilità).
