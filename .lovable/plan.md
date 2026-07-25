@@ -587,6 +587,88 @@ Stesso comando D1/D2 (`/tmp/dal_metric.sh`). Metrica primaria per **linee uniche
 
 ---
 
+# Batch E1 — Priorità 3, consolidamento Edge Functions — **NO-GO (nessuna modifica di codice)**
+
+Base: `06b409f5`. Nessun deploy. Nessuna migration. Nessun cambio di codice runtime.
+
+## Baseline riproducibile
+
+- Directory `supabase/functions/`: **150** function dirs, **551** file `.ts`, **86.230** LOC totali.
+- Shared modules già presenti (49 file), tra cui: `_shared/cors.ts` (`getCorsHeaders`, `corsPreflight`, `corsHeaders`), `_shared/authGuard.ts` (`requireAuth`, `isAuthError`), `_shared/handleEdgeError.ts` (`edgeError`, `extractErrorMessage`), `_shared/responseParserFactory.ts`, `_shared/internalAuth.ts`, `_shared/extensionAuth.ts`.
+- Import runtime di `_shared/cors`: **143** file (~95% dei consumer usa già l'helper).
+- Import runtime di `_shared/authGuard`: **16** file.
+
+## Fingerprint duplicazioni (whitespace/commenti normalizzati)
+
+| Cluster | Impl. duplicate | Consumer migrati | Contratto helper | Rischio consolidamento |
+|---|---:|---:|---|---|
+| C1 — CORS headers literal | 3 (`record-e2e-run`, `install-vault-service-role-key`, `imap-list-folders`) | 143 | `getCorsHeaders(origin)` restituisce origin validato (default `wca-network-navigator.lovable.app`) | **ALTO** — i 3 file usano `"Access-Control-Allow-Origin": "*"`; `record-e2e-run` include anche `x-e2e-secret` in `Allow-Headers`, assente nello shared. Consolidare cambia byte-per-byte il valore dell'header. |
+| C2 — Bearer parse + `getClaims` inline, contratto `AUTH_REQUIRED`/`AUTH_INVALID` | **33** file | 16 | `requireAuth` → `{"error":"AUTH_REQUIRED","message":"Bearer token required"}` (e analogo INVALID) | **MEDIO-ALTO** — i 33 inline emettono `{"error":"AUTH_REQUIRED"}` **senza `message`**. Migrazione aggiunge il campo `message` → body JSON byte-differente. |
+| C3 — Bearer parse inline con shape ad-hoc (`{error:"Non autorizzato"}`, `edgeError('AUTH_REQUIRED','Unauthorized')`, ...) | ~11 file | — | Nessun helper cattura esattamente questa shape | **ALTO** — varianti disomogenee; richiede prima normalizzazione contrattuale (fuori scope byte-per-byte). |
+| C4 — `edgeError` da `handleEdgeError.ts` | già condiviso (24 consumer) | 24 | ok | Non è duplicazione. |
+| C5 — JSON response helper inline (`new Response(JSON.stringify(...), { headers:{...cors,"Content-Type":"application/json"} })`) | pattern presente in centinaia di punti | — | Nessun `jsonResponse` unificato in `_shared/` (esiste solo dentro `ai-gateway-micro`) | **ALTO** — creare nuovo helper = nuovo framework (vietato dal gate se net gain ≤0). |
+| C6 — Request-id / structured logging | vari (`_shared/logger.ts`, `_shared/observability.ts`) | Parziale | ok per chi lo usa | Non consolidabile senza migrazione di massa. |
+
+## Top-10 candidati puntuali (file / caller / diff semantica)
+
+1. **C2/wca-country-counts** (67 LOC) — inline auth 18 LOC, body terso.
+2. **C2/list-elevenlabs-voices** (87 LOC) — inline auth 22 LOC dentro `try/catch` che protegge `await import()` dinamico.
+3. **C2/log-action** (120 LOC) — inline auth 15 LOC, body terso.
+4. **C2/save-correction-memory** (105 LOC) — inline auth 15 LOC, body terso.
+5. **C3/get-wca-credentials** — `edgeError('AUTH_REQUIRED', 'Unauthorized')` (shape 3-campi `code/error/detail`).
+6. **C3/get-linkedin-credentials**, **get-ra-credentials** — analogo `edgeError`.
+7. **C3/decision-dashboard** — `{error:"Non autorizzato"}` (i18n IT).
+8. **C3/tts** — token opzionale (default `userId="anonymous"`), non impone 401.
+9. **C1/record-e2e-run** — webhook server-to-server con secret custom `x-e2e-secret`.
+10. **C1/install-vault-service-role-key** — bootstrap admin curl.
+
+## Prova di equivalenza byte-per-byte
+
+Nessun cluster passa il gate combinato "byte-per-byte + max 5 file + net LOC negativo + niente nuovo framework".
+
+- **C1**: consolidare cambia `Access-Control-Allow-Origin` da `*` a dominio specifico; per `record-e2e-run` sparisce anche `x-e2e-secret` da `Allow-Headers`. I chiamanti sono non-browser e non subirebbero fault, ma il **valore dell'header cambia byte-per-byte** → viola il gate.
+- **C2**: consolidare aggiunge il campo `message` al body JSON → byte-differente. Anche 1 solo consumer viola il gate. Aggiungere a `requireAuth` un'opzione `errorFormat: "terse"` proteggerebbe i 16 caller esistenti, ma introduce due contratti d'errore convivented nello stesso helper: è **espansione di framework**, non consolidamento puro, e il beneficio LOC su 1-2 consumer (≤20 LOC lorde) non supera il costo di manutenzione del doppio formato.
+- **C3**: shape auth ad-hoc non normalizzabili senza cambio contratto.
+- **C5**: nuovo `jsonResponse` = nuovo framework, vietato.
+
+## Verdetto
+
+**NO-GO strutturale su E1.** Nessuna modifica di codice, test, config o piano al di fuori di questa registrazione. Δpunteggio = **0**. Nessun deploy.
+
+## Raccomandazione concreta per E2 (non eseguita)
+
+Batch preparatorio **contract-first**, due micro-step distinti, ciascuno commit isolato:
+
+1. **E2-prep** (solo helper, zero migrazione consumer — 1 file + 1 test):
+   - Estendere `_shared/authGuard.ts` con parametro opzionale `errorFormat: "verbose" | "terse"`, default `"verbose"` → preserva byte-per-byte i 16 caller esistenti. In modalità `"terse"` il body è esattamente `{"error":"AUTH_REQUIRED"}` / `{"error":"AUTH_INVALID"}`.
+   - Aggiungere `_shared/authGuard.test.ts` con confronto JSON byte-per-byte nei due formati.
+   - Nessun consumer modificato in questo step.
+
+2. **E2-migrate** (fino a 3 consumer C2 → helper condiviso — 3 file + test aggiornato):
+   - Migrare `wca-country-counts`, `log-action`, `save-correction-memory` (i più semplici, try/catch esterno intatto).
+   - Test di equivalenza: fixture registrata pre-migrazione con body JSON byte-uguale post-migrazione.
+
+Solo dopo il completamento verde di entrambi gli step si può rivendicare un Δpunteggio, misurato come `(consumer_shared_authGuard) / (consumer_totali_auth)`.
+
+## Metriche oneste
+
+| Metrica | Pre-E1 | Post-E1 | Delta |
+|---|---:|---:|---:|
+| LOC duplicate reali (C2 body terso) | ~450 | ~450 | 0 |
+| Consumer `_shared/authGuard` | 16 | 16 | 0 |
+| Consumer `_shared/cors` | 143 | 143 | 0 |
+| File modificati | 0 | 0 | 0 |
+| Δpunteggio programma 90K | — | — | **0** |
+
+## Verifiche
+
+- Diff codice: **vuoto**.
+- Typecheck / lint / build / suite: non necessari (nessun file di codice toccato).
+- DB: non applicabile.
+- Deploy: non eseguito.
+
+---
+
 ## Storico (contenuto originale V1, non più valido)
 
 # Batch V1 — Priorità 2, rimozione hook V2 orfani (v1↔v2 overlap)
