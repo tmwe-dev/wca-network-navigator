@@ -14,6 +14,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchFunnemailUnreadCount } from "@/v2/io/supabase/queries/channel-messages";
 
 export interface NavBadgeCounts {
   readonly cestinone: number;
@@ -54,12 +55,9 @@ export function useNavBadgeCountsV2() {
             .select("id", { count: "exact", head: true })
             .is("read_at", null)
             .eq("direction", "inbound"),
-          supabase
-            .from("channel_messages")
-            .select("id", { count: "exact", head: true })
-            .is("read_at", null)
-            .eq("direction", "inbound")
-            .eq("channel", "email"),
+          // B4.5 — SSOT canonica: view `message_intelligence_v` con fallback
+          // trasparente su `channel_messages` centralizzato nel DAL.
+          fetchFunnemailUnreadCount(),
           supabase
             .from("activities")
             .select("id", { count: "exact", head: true })
@@ -71,7 +69,7 @@ export function useNavBadgeCountsV2() {
         cestinone: cestRes.count ?? 0,
         cockpit: cockpitRes.count ?? 0,
         inbox: inboxRes.count ?? 0,
-        funnemailInbox: funnemailRes.count ?? 0,
+        funnemailInbox: funnemailRes._tag === "Ok" ? funnemailRes.value : 0,
         agenda: agendaRes.count ?? 0,
       };
     },

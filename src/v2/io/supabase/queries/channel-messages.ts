@@ -354,3 +354,58 @@ export async function fetchSenderConversation(
   log.warn("sender_conversation_view_fallback", { code: viewResult.error.code });
   return querySenderConversationFromLegacy(senderEmail, limit);
 }
+
+// ── B4.5 — Conteggio email inbound non lette (consumer: useNavBadgeCountsV2) ──
+
+async function queryFunnemailUnreadCountFromView(): Promise<Result<number, AppError>> {
+  try {
+    const { count, error } = await supabase
+      .from("message_intelligence_v")
+      .select("message_id", { count: "exact", head: true })
+      .is("read_at", null)
+      .eq("direction", "inbound")
+      .eq("channel", "email");
+    if (error) {
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "funnemailUnreadCount:view"),
+      );
+    }
+    return ok(count ?? 0);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "funnemailUnreadCount:view"));
+  }
+}
+
+async function queryFunnemailUnreadCountFromLegacy(): Promise<Result<number, AppError>> {
+  try {
+    const { count, error } = await supabase
+      .from("channel_messages")
+      .select("id", { count: "exact", head: true })
+      .is("read_at", null)
+      .eq("direction", "inbound")
+      .eq("channel", "email");
+    if (error) {
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "funnemailUnreadCount:legacy"),
+      );
+    }
+    return ok(count ?? 0);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "funnemailUnreadCount:legacy"));
+  }
+}
+
+/**
+ * B4.5 — Public SSOT per il badge "email inbound non lette" del menu
+ * navigazione (voce `/v2/funnemail-inbox`).
+ * Sorgente primaria: view canonica `message_intelligence_v` (HEAD count).
+ * Fallback trasparente su `channel_messages` in caso di errore/indisponibilità.
+ * Filtri identici al percorso legacy: `read_at IS NULL`, `direction='inbound'`,
+ * `channel='email'`. Ritorna 0 su assenza di righe. Log senza PII.
+ */
+export async function fetchFunnemailUnreadCount(): Promise<Result<number, AppError>> {
+  const viewResult = await queryFunnemailUnreadCountFromView();
+  if (viewResult._tag === "Ok") return viewResult;
+  log.warn("funnemail_unread_count_view_fallback", { code: viewResult.error.code });
+  return queryFunnemailUnreadCountFromLegacy();
+}
