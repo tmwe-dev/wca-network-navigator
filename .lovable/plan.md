@@ -402,3 +402,69 @@ D2 introduceva `throw firstError` nel DAL, mentre l'inline originario ignorava `
 
 ### Esito D2 + D2.1
 **GO pieno** — equivalenza osservabile provata. Fermo prima di D3.
+
+---
+
+## PROGRAMMA 90K — Batch D3 · Riduzione bypass DAL (READ-only)
+
+Base: `57c52f548c0dd90c6cad69384a95e1e79a43435a`. D2+D2.1 GO pieno confermato.
+
+### Metrica riproducibile
+Stesso comando D1/D2 (`/tmp/dal_metric.sh`). Metrica primaria per **linee uniche**:
+`bash /tmp/dal_metric.sh | awk -F: '{print $1":"$2}' | sort -u | wc -l`.
+
+### Baseline (pre-D3)
+- Totale bypass (linee uniche): **285** — coincide con il totale non-dedup (nessuna linea contiene più match).
+
+### Selezione cluster
+`src/hooks/useRADashboard.ts` → hook singolo, 7 chiamate `untypedFrom(...)` READ-only (4 count + 3 select) su `ra_prospects` (×6) e `ra_scraping_jobs` (×1). Nessuna scrittura, nessun contesto auth/permessi/mailbox, nessuna logica commerciale, nessuna UX critica (dashboard stats card). Cluster omogeneo, singolo file consumer.
+
+### Matrice migrazione (7 call-site)
+| # | Table | Select | Filtri | Order/Limit | Uso |
+|---|---|---|---|---|---|
+| 1 | ra_prospects | `*` head+count exact | — | — | totalProspects |
+| 2 | ra_prospects | `*` head+count exact | `not(email,is,null)` | — | withEmail |
+| 3 | ra_prospects | `*` head+count exact | `not(pec,is,null)` | — | withPec |
+| 4 | ra_prospects | `*` head+count exact | `not(phone,is,null)` | — | withPhone |
+| 5 | ra_prospects | `*` | — | `order(created_at desc) limit(10)` | recentProspects |
+| 6 | ra_scraping_jobs | `*` | `in(status,[pending,running])` | `order(created_at desc) limit(5)` | activeJobs |
+| 7 | ra_prospects | `codice_ateco, descrizione_ateco` | — | — | topAteco map (top 5 desc) |
+
+**Semantica errori (invariante)**: l'inline NON leggeva `error`. Count `null` → `0`, data `null` → `[]`. Il DAL preserva identico silenziamento intenzionale. Nessun throw/retry/logging aggiunto.
+
+**React Query**: `queryKey ["ra-dashboard"]` invariato. `staleTime 30_000` invariato. Nessuna modifica a cache/subscription.
+
+**Mapping ateco**: identico — Map accumulator, skip `!codice_ateco`, fallback `descrizione_ateco ?? codice_ateco`, sort desc, slice(0,5).
+
+### File toccati (4)
+- `src/data/raDashboard.ts` (NEW · DAL tipizzato specifico, non generic abstraction · commento header documenta silenziamento intenzionale).
+- `src/hooks/useRADashboard.ts` (MOD · corpo del `queryFn` sostituito da `fetchRaDashboardStats()`, tipi RAProspect/RAScrapingJob non più necessari nell'hook).
+- `src/data/__tests__/raDashboard.test.ts` (NEW · 3 test: aggregazione + filtri/ordine + mapping ateco; equivalenza errori silenziati; guardrail no-bypass).
+- `.lovable/plan.md` (MOD · questo entry).
+
+### Delta metrica
+- **Prima**: 285 · **Dopo**: **278** · **Delta**: **−7 bypass** (−2,46%)
+- Cumulativo D1+D2+D3: 294 → 278 (**−16**, −5,44%).
+
+### Verifiche
+- Vitest mirato `src/data/__tests__/raDashboard.test.ts`: **3/3** ✅ (include mapping ateco, filtri esatti, ordine, equivalenza semantica errori).
+- `bunx tsgo --noEmit` ✅
+- Lint mirato sui 3 file: 0 nuovi warning/errori ✅
+- Suite completa Run A: **382 file / 3052 passed / 2 skipped / 0 failed** — 234s (+1 file, +3 test vs D2.1; nessun nuovo skip).
+- Suite completa Run B: **382 file / 3052 passed / 2 skipped / 0 failed** — 242s.
+- `bunx vite build` ✅
+
+### DB read-only
+- `ra_prospects`, `ra_scraping_jobs`: **non esistono** nello schema public (tabelle "future/untyped" — `untypedFrom` esisteva proprio per questo). Nessun rischio RLS/policy. Nessuna migration/schema/policy toccata da questo batch.
+- Diff cambia solo i 4 file dichiarati. Nessun file `supabase/migrations/**`.
+
+### Rischio & rollback
+- Rischio residuo: nullo. Semantica byte-for-byte concettualmente identica: stesse chiamate al builder, stessi filtri/ordine/limit, stesso mapping ateco, stesso silenziamento errori, stessa React Query key e staleTime. La chain di `.select(...).not(...).order(...).limit(...)` è preservata parola per parola.
+- Rollback: `git revert` del batch (1 NEW hook DAL + 1 MOD hook consumer + 1 NEW test + 1 MOD plan).
+
+### Punteggio (conservativo)
+- Area A (Architettura/modularità): 74,6 → **74,7** (bypass 285→278, +7 in un file critico).
+- Totale ponderato: ~74.780 → **~74.820 / 100.000** (Δ +40).
+
+### Esito
+**GO pieno** — equivalenza semantica preservata (inclusa gestione errori silenziosa), delta reale misurato, suite verde riproducibile, DB invariato. Fermo prima di D4.
