@@ -328,7 +328,12 @@ REGOLE:
         }
 
         return new Response(
-          JSON.stringify({ error: "AI extraction failed" }),
+          JSON.stringify({
+            error: "AI extraction failed",
+            upstream_status: aiResponse.status,
+            upstream_body: errText.slice(0, 500),
+            model: selectedModel,
+          }),
           { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
         );
       }
