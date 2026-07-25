@@ -218,3 +218,20 @@ Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ (corretto)**. B4.
 - **Rollback**: `git revert` di 3 file (DAL, HistoryTab, test).
 
 Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅**. B5 / B6 non iniziati.
+
+## Batch B4.3 — Consumer migration `ExportSendersDialog` (2026-07-25)
+
+- **Consumer scelto**: `src/components/email-intelligence/management/ExportSendersDialog.tsx` — pannello di export CSV dei messaggi di N mittenti nella sezione Email Intelligence. Zero realtime, zero mutation, zero paginazione iterativa, singola query on-demand con `channel="email"` + `in from_address` + `order email_date DESC` + `limit 2000`. Nessuna intersezione con Funnemail Inbox.
+- **API DAL nuova (pubblica)**: `fetchMessagesBySenders(senders, limit=2000)` in `src/v2/io/supabase/queries/channel-messages.ts`. Helpers `querySenderMessagesFromView` / `querySenderMessagesFromLegacy` privati. Primaria = `message_intelligence_v` (alias `id:message_id`), fallback trasparente centralizzato nel DAL su `channel_messages` con log strutturato senza PII (`sender_messages_view_fallback`, solo `code`).
+- **Prima**: `supabase.from("channel_messages").select("id, email_date, direction, from_address, to_address, subject, body_text").eq("channel","email").in("from_address", senderEmails).order("email_date", { ascending: false }).limit(2000)`.
+- **Dopo**: `const result = await fetchMessagesBySenders(senderEmails, 2000);` — filtri, ordinamento, limit, mapping CSV, toast di successo/errore, comportamento UI (RadioGroup, bottone, loader, chiusura dialog) invariati. Rimosso `import { supabase }` dal componente.
+- **Test** (`src/v2/io/supabase/queries/__tests__/sender-messages.test.ts`, 4/4 ✅):
+  1. nessun mittente → nessuna query, `Ok([])`.
+  2. view OK → legge dalla view, non chiama legacy, verifica select/eq/in/order/limit e alias `id:message_id`.
+  3. view Err → fallback trasparente su `channel_messages` con stessi filtri/ordine/limit.
+  4. view Err + legacy Err → propaga `Err`.
+- **Verifiche**: Vitest 22/22 ✅ (B2 + B4.1 + B4.2 + B4.3). `tsgo --noEmit` verde. Nessuna migration/view/RLS/grant/Edge Function/AI/classificatore/cron/invio/scheduler/prompt/agente. Nessuna modifica a Funnemail Inbox né ad altri consumer.
+- **Rischio**: minimo. Fallback identico al percorso pre-B4.3 e ora invisibile al chiamante → nessun consumer può dimenticarlo. Perimetro = un solo dialog di export on-demand.
+- **Rollback**: `git revert` di 3 file (`channel-messages.ts`, `ExportSendersDialog.tsx`, `sender-messages.test.ts`).
+
+Stato piano P0: **B0 ✅ + B1 ✅ + B2 ✅ + B3 ✅ + B4.1 ✅ + B4.2 ✅ + B4.3 ✅**. B5 / B6 non iniziati.

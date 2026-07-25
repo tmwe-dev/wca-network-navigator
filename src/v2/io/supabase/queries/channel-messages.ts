@@ -189,3 +189,84 @@ export async function fetchRecipientHistory(
   log.warn("recipient_history_view_fallback", { code: viewResult.error.code });
   return queryRecipientHistoryFromLegacy(partnerId, email, limit);
 }
+
+// ── B4.3 — Messaggi per elenco mittenti (consumer: ExportSendersDialog) ──
+
+export interface SenderMessageRow {
+  readonly id: string;
+  readonly email_date: string | null;
+  readonly direction: string | null;
+  readonly from_address: string | null;
+  readonly to_address: string | null;
+  readonly subject: string | null;
+  readonly body_text: string | null;
+}
+
+const SENDER_MSGS_COLS_VIEW =
+  "id:message_id, email_date, direction, from_address, to_address, subject, body_text";
+const SENDER_MSGS_COLS_LEGACY =
+  "id, email_date, direction, from_address, to_address, subject, body_text";
+
+async function querySenderMessagesFromView(
+  senders: readonly string[],
+  limit: number,
+): Promise<Result<SenderMessageRow[], AppError>> {
+  try {
+    const { data, error } = await supabase
+      .from("message_intelligence_v")
+      .select(SENDER_MSGS_COLS_VIEW)
+      .eq("channel", "email")
+      .in("from_address", senders as string[])
+      .order("email_date", { ascending: false })
+      .limit(limit);
+    if (error) {
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "senderMessages:view"),
+      );
+    }
+    return ok((data ?? []) as unknown as SenderMessageRow[]);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "senderMessages:view"));
+  }
+}
+
+async function querySenderMessagesFromLegacy(
+  senders: readonly string[],
+  limit: number,
+): Promise<Result<SenderMessageRow[], AppError>> {
+  try {
+    const { data, error } = await supabase
+      .from("channel_messages")
+      .select(SENDER_MSGS_COLS_LEGACY)
+      .eq("channel", "email")
+      .in("from_address", senders as string[])
+      .order("email_date", { ascending: false })
+      .limit(limit);
+    if (error) {
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderMessages:legacy"),
+      );
+    }
+    return ok((data ?? []) as unknown as SenderMessageRow[]);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "senderMessages:legacy"));
+  }
+}
+
+/**
+ * B4.3 — Public SSOT per l'export dei messaggi email di un set di mittenti.
+ * Sorgente primaria: view canonica `message_intelligence_v`. Fallback
+ * trasparente su `channel_messages` in caso di errore/indisponibilità.
+ * Filtri: channel="email" + from_address IN senders. Ordine email_date DESC.
+ * Nessun fetch se la lista mittenti è vuota.
+ */
+export async function fetchMessagesBySenders(
+  senders: readonly string[],
+  limit = 2000,
+): Promise<Result<SenderMessageRow[], AppError>> {
+  if (senders.length === 0) return ok([]);
+  const viewResult = await querySenderMessagesFromView(senders, limit);
+  if (viewResult._tag === "Ok") return viewResult;
+  log.warn("sender_messages_view_fallback", { code: viewResult.error.code });
+  return querySenderMessagesFromLegacy(senders, limit);
+}
