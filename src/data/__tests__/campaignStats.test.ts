@@ -60,16 +60,18 @@ describe("DAL — fetchCampaignStatsCounts", () => {
     expect(c3).toContain('eq("queue_status","completed")');
   });
 
-  it("propaga il primo errore senza mascherarlo", async () => {
+  it("equivalenza D2.1 — response con error+count null → 0 per quel campo, altri count preservati", async () => {
     const err = new Error("RLS denied");
     const seq: BuilderReturn[] = [
-      { count: null, error: err },
-      { count: 1, error: null },
-      { count: 1, error: null },
+      { count: null, error: err }, // sent: error valorizzato → deve silenziare a 0
+      { count: 7, error: null },   // pending: preservato
+      { count: 4, error: null },   // completed: preservato
     ];
     let i = 0;
     fromMock.mockImplementation(() => makeBuilder(seq[i++], []));
-    await expect(fetchCampaignStatsCounts()).rejects.toBe(err);
+    // Non deve lanciare: semantica silenziosa preservata (inline originario).
+    const out = await fetchCampaignStatsCounts();
+    expect(out).toEqual({ sent: 0, pending: 7, completed: 4 });
   });
 });
 
