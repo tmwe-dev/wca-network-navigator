@@ -17,13 +17,17 @@ const mockEqDir = vi.fn().mockReturnValue({
 });
 const mockEqChan = vi.fn().mockReturnValue({ eq: mockEqDir });
 const mockIn = vi.fn().mockReturnValue({ count: 7, error: null });
+// activities: `.select().is("deleted_at", null).in("status", [...])`
+const mockActivitiesIsThenIn = vi.fn().mockReturnValue({
+  in: vi.fn().mockReturnValue({ count: 4, error: null }),
+});
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => ({
       select: () => {
         if (table === "partners") return { in: mockIn };
-        if (table === "activities") return { in: mockIn };
+        if (table === "activities") return { is: mockActivitiesIsThenIn };
         return { eq: mockEqChan };
       },
     }),
