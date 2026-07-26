@@ -10,7 +10,7 @@ const state = {
   lastCompanyIlike: null as string | null,
 };
 
-function makeBuilder(kind: "select" | "update") {
+function makeBuilder(_kind: "select" | "update") {
   const b: Record<string, unknown> = {};
   const chain = () => b;
   b.select = vi.fn(chain);
