@@ -110,6 +110,12 @@ describe("Contact Merge Logic", () => {
       expect(extractDomain("user@mail.example.com")).toBe("mail.example.com");
       expect(extractDomain("user@europe.company.co.uk")).toBe("europe.company.co.uk");
     });
+
+    // F20-P0.2 — guard di divergenza: comportamento storico su multi-@.
+    // Fallirebbe se la produzione cambiasse la strategia di split.
+    it("should preserve legacy multi-@ split contract", () => {
+      expect(extractDomain("a@b@c.com")).toBe("b");
+    });
   });
 
   // ─── Similarity Calculation ─────────────────────────
