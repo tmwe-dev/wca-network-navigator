@@ -1,0 +1,169 @@
+{
+  "generated_at_utc": "2026-07-26T01:55:55.243133Z",
+  "base_documental_sha": "ae9e456535540662fd1a7774196fbbc8751f4f21",
+  "note": "Analisi statica su HEAD sandbox; base documentale identifica solo il contesto storico. Nessuna modifica runtime.",
+  "count": 20,
+  "files": [
+    {
+      "path": "src/components/test-extensions/LinkedInTest.tsx",
+      "line_start": 1,
+      "line_end": 667,
+      "lines_total": 667,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 667
+    },
+    {
+      "path": "src/hooks/useCockpitLogic.ts",
+      "line_start": 1,
+      "line_end": 643,
+      "lines_total": 643,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 643
+    },
+    {
+      "path": "src/data/partners.ts",
+      "line_start": 1,
+      "line_end": 684,
+      "lines_total": 684,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 684
+    },
+    {
+      "path": "src/data/funnemailInbox.ts",
+      "line_start": 1,
+      "line_end": 636,
+      "lines_total": 636,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 636
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/HarmonizeSystemDialog.tsx",
+      "line_start": 1,
+      "line_end": 723,
+      "lines_total": 723,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 723
+    },
+    {
+      "path": "supabase/functions/send-email/index.ts",
+      "line_start": 1,
+      "line_end": 616,
+      "lines_total": 616,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 616
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersRead.ts",
+      "line_start": 1,
+      "line_end": 540,
+      "lines_total": 540,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 540
+    },
+    {
+      "path": "supabase/functions/_shared/toolHandlersWrite.ts",
+      "line_start": 1,
+      "line_end": 483,
+      "lines_total": 483,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 483
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx",
+      "line_start": 1,
+      "line_end": 627,
+      "lines_total": 627,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 627
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx",
+      "line_start": 1,
+      "line_end": 594,
+      "lines_total": 594,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 594
+    },
+    {
+      "path": "src/v2/ui/pages/command/canvas/ComposerCanvas.tsx",
+      "line_start": 1,
+      "line_end": 590,
+      "lines_total": 590,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 590
+    },
+    {
+      "path": "src/components/email-intelligence/management/SenderActionsDialog.tsx",
+      "line_start": 1,
+      "line_end": 577,
+      "lines_total": 577,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 577
+    },
+    {
+      "path": "e2e/calendar-flow.spec.ts",
+      "line_start": 1,
+      "line_end": 615,
+      "lines_total": 615,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 615
+    },
+    {
+      "path": "src/test/contact-merge-logic.test.ts",
+      "line_start": 1,
+      "line_end": 606,
+      "lines_total": 606,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 606
+    },
+    {
+      "path": "src/hooks/email-composer/useEmailComposerState.ts",
+      "line_start": 1,
+      "line_end": 485,
+      "lines_total": 485,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 485
+    },
+    {
+      "path": "src/components/email-intelligence/manual-grouping/useGroupingData.ts",
+      "line_start": 1,
+      "line_end": 448,
+      "lines_total": 448,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 448
+    },
+    {
+      "path": "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts",
+      "line_start": 1,
+      "line_end": 513,
+      "lines_total": 513,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 513
+    },
+    {
+      "path": "src/hooks/useDeepSearchLocal.ts",
+      "line_start": 1,
+      "line_end": 460,
+      "lines_total": 460,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 460
+    },
+    {
+      "path": "src/components/test-extensions/WhatsAppTest.tsx",
+      "line_start": 1,
+      "line_end": 530,
+      "lines_total": 530,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 530
+    },
+    {
+      "path": "src/components/email-intelligence/RulesAndActionsTab.tsx",
+      "line_start": 1,
+      "line_end": 410,
+      "lines_total": 410,
+      "read_mode": "full-content-scan",
+      "coverage_lines": 410
+    }
+  ],
+  "lines_covered_total": 11447
+}
