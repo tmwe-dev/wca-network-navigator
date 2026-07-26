@@ -1,0 +1,177 @@
+[
+  {
+    "path": "supabase/functions/classify-inbound-content/index.ts",
+    "lines_total": 486,
+    "max_nesting": 13,
+    "area": "edge_functions",
+    "score": 876
+  },
+  {
+    "path": "src/v2/ui/templates/NavMenuPopover.tsx",
+    "lines_total": 486,
+    "max_nesting": 12,
+    "area": "src_v2",
+    "score": 846
+  },
+  {
+    "path": "supabase/functions/process-ai-import/index.ts",
+    "lines_total": 454,
+    "max_nesting": 12,
+    "area": "edge_functions",
+    "score": 814
+  },
+  {
+    "path": "src/hooks/useLinkedInSync.ts",
+    "lines_total": 381,
+    "max_nesting": 13,
+    "area": "src_hooks",
+    "score": 771
+  },
+  {
+    "path": "src/components/email-intelligence/management/SenderEmailPreviewPanel.tsx",
+    "lines_total": 549,
+    "max_nesting": 7,
+    "area": "src_components",
+    "score": 759
+  },
+  {
+    "path": "supabase/functions/agent-execute/contextInjection.ts",
+    "lines_total": 484,
+    "max_nesting": 9,
+    "area": "edge_functions",
+    "score": 754
+  },
+  {
+    "path": "supabase/functions/_shared/processManagers/leadProcessManager.ts",
+    "lines_total": 573,
+    "max_nesting": 6,
+    "area": "edge_shared",
+    "score": 753
+  },
+  {
+    "path": "src/v2/ui/pages/prompt-lab/SuggestionsReviewPage.tsx",
+    "lines_total": 538,
+    "max_nesting": 7,
+    "area": "src_v2",
+    "score": 748
+  },
+  {
+    "path": "supabase/functions/improve-email/index.ts",
+    "lines_total": 535,
+    "max_nesting": 7,
+    "area": "edge_functions",
+    "score": 745
+  },
+  {
+    "path": "supabase/functions/cadence-engine/index.ts",
+    "lines_total": 501,
+    "max_nesting": 8,
+    "area": "edge_functions",
+    "score": 741
+  },
+  {
+    "path": "src/data/cestinone.ts",
+    "lines_total": 558,
+    "max_nesting": 6,
+    "area": "src_data",
+    "score": 738
+  },
+  {
+    "path": "src/components/email-intelligence/ManualGroupingTab.tsx",
+    "lines_total": 557,
+    "max_nesting": 6,
+    "area": "src_components",
+    "score": 737
+  },
+  {
+    "path": "src/components/ai-control/PendingActionsPanel.tsx",
+    "lines_total": 434,
+    "max_nesting": 10,
+    "area": "src_components",
+    "score": 734
+  },
+  {
+    "path": "src/components/cockpit/AIDraftStudio.tsx",
+    "lines_total": 553,
+    "max_nesting": 6,
+    "area": "src_components",
+    "score": 733
+  },
+  {
+    "path": "supabase/functions/_shared/aiGateway.ts",
+    "lines_total": 400,
+    "max_nesting": 11,
+    "area": "edge_shared",
+    "score": 730
+  },
+  {
+    "path": "src/components/email-intelligence/AISuggestionsTab.tsx",
+    "lines_total": 547,
+    "max_nesting": 6,
+    "area": "src_components",
+    "score": 727
+  },
+  {
+    "path": "supabase/functions/_shared/domainHandler.ts",
+    "lines_total": 545,
+    "max_nesting": 6,
+    "area": "edge_shared",
+    "score": 725
+  },
+  {
+    "path": "src/v2/ui/pages/prompt-lab/GlobalImproverDialog.tsx",
+    "lines_total": 541,
+    "max_nesting": 6,
+    "area": "src_v2",
+    "score": 721
+  },
+  {
+    "path": "src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx",
+    "lines_total": 469,
+    "max_nesting": 8,
+    "area": "src_v2",
+    "score": 709
+  },
+  {
+    "path": "supabase/functions/suggest-email-groups/index.ts",
+    "lines_total": 379,
+    "max_nesting": 11,
+    "area": "edge_functions",
+    "score": 709
+  },
+  {
+    "path": "src/components/operations/PartnerListPanel.tsx",
+    "lines_total": 468,
+    "max_nesting": 8,
+    "area": "src_components",
+    "score": 708
+  },
+  {
+    "path": "supabase/functions/prompt-test-runner/index.ts",
+    "lines_total": 527,
+    "max_nesting": 6,
+    "area": "edge_functions",
+    "score": 707
+  },
+  {
+    "path": "src/hooks/useImportWizard.ts",
+    "lines_total": 465,
+    "max_nesting": 8,
+    "area": "src_hooks",
+    "score": 705
+  },
+  {
+    "path": "supabase/functions/agent-autonomous-cycle/index.ts",
+    "lines_total": 465,
+    "max_nesting": 8,
+    "area": "edge_functions",
+    "score": 705
+  },
+  {
+    "path": "src/v2/ui/pages/prompt-lab/HarmonizeReviewPanel.tsx",
+    "lines_total": 492,
+    "max_nesting": 7,
+    "area": "src_v2",
+    "score": 702
+  }
+]
