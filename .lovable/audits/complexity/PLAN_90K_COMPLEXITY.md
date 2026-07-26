@@ -234,13 +234,44 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
 
 ---
 
-## Batch F20-P0.4 (CANDIDATE — deterministico, non ancora eseguito)
+## Batch F20-P0.4 (VERIFIED_FIXED — con DEFERRED su target primario)
 
-- **Finding trattato**: **P001-018** (medium sev — typing `SupabaseClient = any` in `supabase/functions/_shared/toolHandlersRead.ts` L8-L13).
-- **Prova**: cast `any` esplicito con `deno-lint disabled` motivato ma propaga perdita di safety a 15 handler `.from/.rpc`.
-- **Azione prevista**: introdurre alias `type SupabaseClientLike = SupabaseClient<Database>` importando `Database` dallo shared types generato, oppure lasciare `any` documentato se il generic `Database` non è importabile lato edge senza pulling di `src/integrations/supabase/types.ts` (rischio cross-boundary). Max 2 runtime file (`toolHandlersRead.ts`, `toolHandlersWrite.ts`).
-- **Fallback**: se `Database` non riutilizzabile lato edge senza copia, marcare P001-018 DEFERRED e passare al successivo FACT low-risk del ledger partition001 (candidato **P001-011** — DAL bypass residuo o **P001-004** — silent catch).
-- **Nessuna implementazione in questo job.**
+### Target primario: P001-018 → **DEFERRED**
+- Motivazione: fix richiederebbe import di `Database` generic da `src/integrations/supabase/types.ts` (auto-gen) dentro edge runtime. Cross-boundary vietato dall'architettura (edge non deve dipendere da `src/`). Alternativa (copia schema in `_shared/`) è alto-costo/high-drift.
+- Rimandato a batch dedicato che introduca `_shared/db-types.ts` DB-scoped (fuori scope P0).
+
+### Fallback eseguito: **P001-004 VERIFIED_FIXED**
+- **Finding**: `src/components/test-extensions/LinkedInTest.tsx` L89-L103 — `runWithCooldown` crea `setInterval` clearato solo dal tick di decremento. Se il componente smonta mid-cooldown, l'interval leak-a (timer vivo + setState su unmounted → warning React).
+- **Path/range**: `src/components/test-extensions/LinkedInTest.tsx` L34-L103.
+- **File modificati**: 1 runtime (`LinkedInTest.tsx` — +14 righe, −2 righe).
+- **Micro-refactor minimo**:
+  1. Nuovo `cooldownIntervalRef = useRef<ReturnType<typeof setInterval>|null>(null)`.
+  2. `useEffect` cleanup on unmount → `clearInterval(cooldownIntervalRef.current)`.
+  3. In `runWithCooldown` finally: clear residuo prima di creare nuovo interval; store in ref; on tick prev≤1 → clear + ref=null.
+- **Contratto preservato**: nessuna modifica a firma componente, nessuna dep di `useCallback` (ref stabili non entrano nelle deps), stesso `setRunning(false)` al termine, stessa durata cooldown observable.
+- **Prove F20-P0.4**:
+  - `tsgo --noEmit`: 0 errors
+  - `eslint LinkedInTest.tsx`: 0 warnings / 0 errors
+  - `vitest` full suite ×2: 384 files, **3060 pass / 2 skipped / 0 fail** (nessuno skip nuovo)
+  - `npm run build`: exit 0
+- **Nessun test dedicato**: `runWithCooldown` è closure privata di componente heavy (extensionBridge + optimus + syncGuard). Testarla in isolamento = estrazione = refactor scope-creep vietato dal gate P0. Regressione coperta da suite completa.
+- **Δpunteggio prudente**: **+15** (bug concurrency chiuso su componente diagnostico critico).
+
+### Cumulativo P0 finding chiusi: **4 / 33** partition001
+P001-007 (DAL bypass) · P001-025 (Levenshtein reimpl) · P001-016 (logging non strutturato) · P001-004 (interval leak).
+
+---
+
+## Batch F20-P0.5 (CANDIDATE — deterministico, non ancora eseguito)
+
+**Candidato primario**: **P001-002** (low storage — `src/components/test-extensions/LinkedInTest.tsx` L40-L52).
+- **Prova**: `localStorage.getItem(LI_FIXED_RECIPIENT_KEY)` → `JSON.parse` diretto castato a `StoredLiTestRecipient` senza validazione forte. `try/catch` esiste ma cattura solo errori di parse, non payload malformati (es. `{url: 42}` passerebbe).
+- **Azione prevista**: aggiungere validazione runtime — `typeof saved?.url === "string"` prima di chiamare `.trim()` (già chiamato → crash se `url` non stringa). Nessun cambio API, nessun test dedicato necessario (guard puro).
+- **Max 1 runtime file**.
+
+**Candidato secondario (se P001-002 blocca)**: **P001-013** (info typing — `funnemailInbox.ts` L1-L20) — sostituzione `untypedFrom()` con client tipizzato, se il typing centralizzato permette il cambio senza rompere call sites.
+
+**Fallback ultimo**: **P001-011** — DEFERRED (evidence dichiara che RPC target `apply_lead_status_rpc` non esiste; fix richiede migration = fuori scope P0).
 
 ---
 
