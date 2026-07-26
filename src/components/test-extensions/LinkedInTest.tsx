@@ -32,9 +32,22 @@ export function LinkedInTest() {
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
   const actionTimesRef = useRef<number[]>([]);
+  // P001-004 fix: track active cooldown interval so it can be cleared on unmount
+  // (previously setInterval leaked if the component unmounted mid-cooldown).
+  const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
+  }, []);
+
+  // Clear any pending cooldown interval when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (cooldownIntervalRef.current !== null) {
+        clearInterval(cooldownIntervalRef.current);
+        cooldownIntervalRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -93,12 +106,23 @@ export function LinkedInTest() {
     try { await fn(); } finally {
       log(`⏳ Cooldown ${cooldownMs / 1000}s...`, "info");
       setCooldown(Math.max(1, Math.round(cooldownMs / 1000)));
+      // Clear any residual interval from a previous cycle before starting a new one.
+      if (cooldownIntervalRef.current !== null) {
+        clearInterval(cooldownIntervalRef.current);
+        cooldownIntervalRef.current = null;
+      }
       const interval = setInterval(() => {
         setCooldown(prev => {
-          if (prev <= 1) { clearInterval(interval); setRunning(false); return 0; }
+          if (prev <= 1) {
+            clearInterval(interval);
+            cooldownIntervalRef.current = null;
+            setRunning(false);
+            return 0;
+          }
           return prev - 1;
         });
       }, 1000);
+      cooldownIntervalRef.current = interval;
     }
   }, [log]);
 
