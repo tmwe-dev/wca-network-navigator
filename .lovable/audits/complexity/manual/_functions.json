@@ -1,0 +1,901 @@
+{
+  "src/data/partners.ts": [
+    {
+      "name": "fetchAllRows",
+      "line": 110
+    },
+    {
+      "name": "findPartners",
+      "line": 126
+    },
+    {
+      "name": "findPartnersByCountry",
+      "line": 147
+    },
+    {
+      "name": "findPartnersPreview",
+      "line": 162
+    },
+    {
+      "name": "getPartner",
+      "line": 172
+    },
+    {
+      "name": "updatePartner",
+      "line": 182
+    },
+    {
+      "name": "toggleFavorite",
+      "line": 205
+    },
+    {
+      "name": "persistSherlockFindings",
+      "line": 226
+    },
+    {
+      "name": "asString",
+      "line": 246
+    },
+    {
+      "name": "prevEnrichment",
+      "line": 275
+    },
+    {
+      "name": "getPartnerStats",
+      "line": 312
+    },
+    {
+      "name": "countActivePartners",
+      "line": 344
+    },
+    {
+      "name": "getDistinctCountries",
+      "line": 353
+    },
+    {
+      "name": "getCountryCodesBatched",
+      "line": 362
+    },
+    {
+      "name": "searchPartners",
+      "line": 381
+    },
+    {
+      "name": "findPartnerByWcaId",
+      "line": 394
+    },
+    {
+      "name": "findPartnerByName",
+      "line": 405
+    },
+    {
+      "name": "countPartnersWithoutCountry",
+      "line": 417
+    },
+    {
+      "name": "getPartnersByIds",
+      "line": 427
+    },
+    {
+      "name": "getWcaIdsByCountries",
+      "line": 442
+    },
+    {
+      "name": "deletePartnersByIds",
+      "line": 453
+    },
+    {
+      "name": "createPartner",
+      "line": 462
+    },
+    {
+      "name": "getPartnersByIdsFiltered",
+      "line": 473
+    },
+    {
+      "name": "searchPartnersByNameAlias",
+      "line": 492
+    },
+    {
+      "name": "getPartnersByCountries",
+      "line": 505
+    },
+    {
+      "name": "deletePartnersWithRelations",
+      "line": 514
+    },
+    {
+      "name": "getPartnersByLeadStatus",
+      "line": 531
+    },
+    {
+      "name": "getPartnersByLeadStatusFromView",
+      "line": 577
+    },
+    {
+      "name": "findPartnerByEmail",
+      "line": 641
+    },
+    {
+      "name": "findPartnersForEnrichment",
+      "line": 652
+    },
+    {
+      "name": "getPartnerWebsite",
+      "line": 662
+    },
+    {
+      "name": "updateLeadStatus",
+      "line": 668
+    },
+    {
+      "name": "invalidatePartnerCache",
+      "line": 677
+    }
+  ],
+  "src/data/funnemailInbox.ts": [
+    {
+      "name": "readInboxOnce",
+      "line": 36
+    },
+    {
+      "name": "readInboxPaginated",
+      "line": 59
+    },
+    {
+      "name": "fetchAllPages",
+      "line": 281
+    },
+    {
+      "name": "extractEmail",
+      "line": 297
+    },
+    {
+      "name": "addr",
+      "line": 300
+    },
+    {
+      "name": "_slugifyGroup",
+      "line": 304
+    },
+    {
+      "name": "getSenderIntelByDomain",
+      "line": 315
+    },
+    {
+      "name": "listFunnemailFolders",
+      "line": 325
+    },
+    {
+      "name": "countFunnemailByFolder",
+      "line": 336
+    },
+    {
+      "name": "listMailsByFolder",
+      "line": 355
+    },
+    {
+      "name": "rows",
+      "line": 365
+    },
+    {
+      "name": "getFunnemailDecision",
+      "line": 414
+    },
+    {
+      "name": "overrideFunnemailFolder",
+      "line": 426
+    },
+    {
+      "name": "markFunnemailMessagesRead",
+      "line": 439
+    },
+    {
+      "name": "listFunnemailGroupedInbox",
+      "line": 453
+    },
+    {
+      "name": "groupNameToFolder",
+      "line": 535
+    },
+    {
+      "name": "externalId",
+      "line": 605
+    },
+    {
+      "name": "partner",
+      "line": 618
+    }
+  ],
+  "src/v2/ui/pages/prompt-lab/HarmonizeSystemDialog.tsx": [
+    {
+      "name": "HarmonizeSystemDialog",
+      "line": 33
+    },
+    {
+      "name": "sessionBootstrapEntities",
+      "line": 177
+    },
+    {
+      "name": "sessionRunCreatedEntities",
+      "line": 178
+    }
+  ],
+  "supabase/functions/send-email/index.ts": [
+    {
+      "name": "isValidHttpsUrl",
+      "line": 329
+    }
+  ],
+  "supabase/functions/_shared/toolHandlersRead.ts": [
+    {
+      "name": "createReadHandlers",
+      "line": 14
+    },
+    {
+      "name": "executeSearchPartners",
+      "line": 16
+    },
+    {
+      "name": "certIds",
+      "line": 31
+    },
+    {
+      "name": "netIds",
+      "line": 39
+    },
+    {
+      "name": "executeCountryOverview",
+      "line": 98
+    },
+    {
+      "name": "executeDirectoryStatus",
+      "line": 119
+    },
+    {
+      "name": "executeListJobs",
+      "line": 145
+    },
+    {
+      "name": "executePartnerDetail",
+      "line": 164
+    },
+    {
+      "name": "partnerContacts",
+      "line": 203
+    },
+    {
+      "name": "bcaContacts",
+      "line": 207
+    },
+    {
+      "name": "importedContacts",
+      "line": 213
+    },
+    {
+      "name": "executeGlobalSummary",
+      "line": 255
+    },
+    {
+      "name": "executeCheckBlacklist",
+      "line": 279
+    },
+    {
+      "name": "executeListReminders",
+      "line": 295
+    },
+    {
+      "name": "executePartnersWithoutContacts",
+      "line": 320
+    },
+    {
+      "name": "executeSearchContacts",
+      "line": 335
+    },
+    {
+      "name": "executeGetContactDetail",
+      "line": 359
+    },
+    {
+      "name": "executeSearchProspects",
+      "line": 377
+    },
+    {
+      "name": "executeListActivities",
+      "line": 400
+    },
+    {
+      "name": "executeSearchBusinessCards",
+      "line": 423
+    },
+    {
+      "name": "executeCheckJobStatus",
+      "line": 455
+    },
+    {
+      "name": "pending",
+      "line": 515
+    },
+    {
+      "name": "sending",
+      "line": 516
+    }
+  ],
+  "supabase/functions/_shared/toolHandlersWrite.ts": [
+    {
+      "name": "createWriteHandlers",
+      "line": 15
+    },
+    {
+      "name": "resolvePartnerId",
+      "line": 17
+    },
+    {
+      "name": "executeUpdatePartner",
+      "line": 29
+    },
+    {
+      "name": "executeAddPartnerNote",
+      "line": 71
+    },
+    {
+      "name": "executeCreateReminder",
+      "line": 84
+    },
+    {
+      "name": "executeUpdateLeadStatus",
+      "line": 97
+    },
+    {
+      "name": "executeBulkUpdatePartners",
+      "line": 151
+    },
+    {
+      "name": "ids",
+      "line": 164
+    },
+    {
+      "name": "executeLinkBusinessCard",
+      "line": 220
+    },
+    {
+      "name": "executeCreateActivity",
+      "line": 229
+    },
+    {
+      "name": "executeUpdateActivity",
+      "line": 252
+    },
+    {
+      "name": "executeManagePartnerContact",
+      "line": 263
+    },
+    {
+      "name": "executeUpdateReminder",
+      "line": 301
+    },
+    {
+      "name": "executeDeleteRecords",
+      "line": 317
+    },
+    {
+      "name": "executeGenerateOutreach",
+      "line": 330
+    },
+    {
+      "name": "executeSendEmail",
+      "line": 339
+    },
+    {
+      "name": "executeDeepSearchPartner",
+      "line": 402
+    },
+    {
+      "name": "executeDeepSearchContact",
+      "line": 415
+    },
+    {
+      "name": "executeEnrichPartnerWebsite",
+      "line": 431
+    },
+    {
+      "name": "executeScanDirectory",
+      "line": 444
+    },
+    {
+      "name": "executeGenerateAliases",
+      "line": 448
+    }
+  ],
+  "src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx": [
+    {
+      "name": "readFile",
+      "line": 103
+    },
+    {
+      "name": "handleFile",
+      "line": 112
+    },
+    {
+      "name": "send",
+      "line": 123
+    },
+    {
+      "name": "savePromptProposal",
+      "line": 203
+    },
+    {
+      "name": "saveKbProposal",
+      "line": 232
+    },
+    {
+      "name": "saveGlobalBatch",
+      "line": 262
+    }
+  ],
+  "src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx": [
+    {
+      "name": "PromptTestsTab",
+      "line": 47
+    },
+    {
+      "name": "RunCard",
+      "line": 474
+    },
+    {
+      "name": "meta",
+      "line": 476
+    },
+    {
+      "name": "company",
+      "line": 477
+    },
+    {
+      "name": "companyAlias",
+      "line": 478
+    },
+    {
+      "name": "contact",
+      "line": 479
+    },
+    {
+      "name": "language",
+      "line": 480
+    },
+    {
+      "name": "kbCount",
+      "line": 481
+    },
+    {
+      "name": "systemPrompt",
+      "line": 483
+    }
+  ],
+  "src/v2/ui/pages/command/canvas/ComposerCanvas.tsx": [],
+  "src/components/email-intelligence/management/SenderActionsDialog.tsx": [
+    {
+      "name": "SenderActionsDialog",
+      "line": 63
+    },
+    {
+      "name": "instr",
+      "line": 106
+    },
+    {
+      "name": "applyTemplate",
+      "line": 161
+    },
+    {
+      "name": "close",
+      "line": 169
+    },
+    {
+      "name": "applyRule",
+      "line": 177
+    },
+    {
+      "name": "handleExport",
+      "line": 202
+    },
+    {
+      "name": "savePrompt",
+      "line": 240
+    },
+    {
+      "name": "BigActionButton",
+      "line": 539
+    }
+  ],
+  "e2e/calendar-flow.spec.ts": [
+    {
+      "name": "buttonToClick",
+      "line": 225
+    }
+  ],
+  "src/test/contact-merge-logic.test.ts": [
+    {
+      "name": "levenshteinDistance",
+      "line": 10
+    },
+    {
+      "name": "extractDomain",
+      "line": 40
+    },
+    {
+      "name": "calculateSimilarity",
+      "line": 46
+    },
+    {
+      "name": "phone1",
+      "line": 302
+    },
+    {
+      "name": "phone2",
+      "line": 303
+    },
+    {
+      "name": "mobile1",
+      "line": 329
+    },
+    {
+      "name": "phone2",
+      "line": 330
+    }
+  ],
+  "src/hooks/email-composer/useEmailComposerState.ts": [
+    {
+      "name": "useEmailComposerState",
+      "line": 41
+    },
+    {
+      "name": "attachedTemplates",
+      "line": 205
+    },
+    {
+      "name": "draftId",
+      "line": 385
+    },
+    {
+      "name": "lines",
+      "line": 442
+    },
+    {
+      "name": "origLines",
+      "line": 443
+    }
+  ],
+  "src/components/email-intelligence/manual-grouping/useGroupingData.ts": [
+    {
+      "name": "useGroupingData",
+      "line": 15
+    },
+    {
+      "name": "fetchAllRows",
+      "line": 36
+    },
+    {
+      "name": "loadGroups",
+      "line": 54
+    },
+    {
+      "name": "loadAssignedRules",
+      "line": 68
+    },
+    {
+      "name": "loadData",
+      "line": 96
+    },
+    {
+      "name": "loadedGroups",
+      "line": 108
+    },
+    {
+      "name": "populateAddressRules",
+      "line": 283
+    },
+    {
+      "name": "key",
+      "line": 316
+    }
+  ],
+  "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts": [
+    {
+      "name": "loadSystemMission",
+      "line": 61
+    },
+    {
+      "name": "useGlobalPromptImprover",
+      "line": 90
+    },
+    {
+      "name": "newStatus",
+      "line": 228
+    },
+    {
+      "name": "newStatus",
+      "line": 394
+    }
+  ],
+  "src/hooks/useDeepSearchLocal.ts": [
+    {
+      "name": "setDeepSearchRuntimeConfig",
+      "line": 38
+    },
+    {
+      "name": "cfg",
+      "line": 41
+    },
+    {
+      "name": "useDeepSearchLocal",
+      "line": 49
+    },
+    {
+      "name": "priorityDomain",
+      "line": 107
+    },
+    {
+      "name": "existingED",
+      "line": 229
+    },
+    {
+      "name": "s",
+      "line": 340
+    },
+    {
+      "name": "domainKw",
+      "line": 357
+    },
+    {
+      "name": "existing",
+      "line": 444
+    }
+  ],
+  "src/components/test-extensions/WhatsAppTest.tsx": [
+    {
+      "name": "WhatsAppTest",
+      "line": 22
+    },
+    {
+      "name": "isExpectedWaVersion",
+      "line": 73
+    },
+    {
+      "name": "ensureCurrentWaExtension",
+      "line": 75
+    },
+    {
+      "name": "testPing",
+      "line": 94
+    },
+    {
+      "name": "version",
+      "line": 99
+    },
+    {
+      "name": "wid",
+      "line": 109
+    },
+    {
+      "name": "wready",
+      "line": 110
+    },
+    {
+      "name": "testPreWarm",
+      "line": 118
+    },
+    {
+      "name": "testSession",
+      "line": 134
+    },
+    {
+      "name": "testReadUnread",
+      "line": 157
+    },
+    {
+      "name": "msgs",
+      "line": 178
+    },
+    {
+      "name": "unread",
+      "line": 182
+    },
+    {
+      "name": "testSendMessage",
+      "line": 193
+    },
+    {
+      "name": "pinFixedRecipient",
+      "line": 232
+    },
+    {
+      "name": "resetSendForm",
+      "line": 247
+    },
+    {
+      "name": "runDbSearch",
+      "line": 268
+    },
+    {
+      "name": "q",
+      "line": 269
+    },
+    {
+      "name": "pickRecipient",
+      "line": 287
+    },
+    {
+      "name": "testRawDom",
+      "line": 298
+    },
+    {
+      "name": "testGuardSequence",
+      "line": 308
+    },
+    {
+      "name": "testGuardConcurrent",
+      "line": 339
+    },
+    {
+      "name": "testRemapSendDom",
+      "line": 368
+    }
+  ],
+  "src/components/email-intelligence/RulesAndActionsTab.tsx": [
+    {
+      "name": "AddressRulesSection",
+      "line": 87
+    },
+    {
+      "name": "openEdit",
+      "line": 143
+    },
+    {
+      "name": "GroupRulesSection",
+      "line": 246
+    },
+    {
+      "name": "PromptManagerSection",
+      "line": 297
+    },
+    {
+      "name": "openEdit",
+      "line": 339
+    }
+  ],
+  "src/components/test-extensions/LinkedInTest.tsx": [
+    {
+      "name": "LinkedInTest",
+      "line": 23
+    },
+    {
+      "name": "handler",
+      "line": 72
+    },
+    {
+      "name": "detail",
+      "line": 73
+    },
+    {
+      "name": "testPing",
+      "line": 105
+    },
+    {
+      "name": "wid",
+      "line": 110
+    },
+    {
+      "name": "wready",
+      "line": 111
+    },
+    {
+      "name": "testPreWarm",
+      "line": 120
+    },
+    {
+      "name": "testSession",
+      "line": 134
+    },
+    {
+      "name": "testSyncCookie",
+      "line": 158
+    },
+    {
+      "name": "testAutoLogin",
+      "line": 164
+    },
+    {
+      "name": "testExtractProfile",
+      "line": 170
+    },
+    {
+      "name": "testSearchProfile",
+      "line": 186
+    },
+    {
+      "name": "testReadInbox",
+      "line": 193
+    },
+    {
+      "name": "threads",
+      "line": 216
+    },
+    {
+      "name": "testSendMessage",
+      "line": 243
+    },
+    {
+      "name": "testSendWithMethod",
+      "line": 320
+    },
+    {
+      "name": "attempted",
+      "line": 330
+    },
+    {
+      "name": "testDiagnosticDom",
+      "line": 338
+    },
+    {
+      "name": "msgLinks",
+      "line": 352
+    },
+    {
+      "name": "liClasses",
+      "line": 357
+    },
+    {
+      "name": "testGuardSequence",
+      "line": 368
+    },
+    {
+      "name": "testGuardConcurrent",
+      "line": 396
+    },
+    {
+      "name": "testRemapSendDom",
+      "line": 422
+    },
+    {
+      "name": "mf",
+      "line": 427
+    },
+    {
+      "name": "pf",
+      "line": 428
+    },
+    {
+      "name": "testReadThread",
+      "line": 438
+    },
+    {
+      "name": "messages",
+      "line": 444
+    },
+    {
+      "name": "testBackfillThread",
+      "line": 462
+    },
+    {
+      "name": "messages",
+      "line": 470
+    },
+    {
+      "name": "pinFixedRecipient",
+      "line": 480
+    }
+  ],
+  "src/hooks/useCockpitLogic.ts": [
+    {
+      "name": "useCockpitLogic",
+      "line": 26
+    },
+    {
+      "name": "fieldVal",
+      "line": 161
+    },
+    {
+      "name": "existing",
+      "line": 312
+    }
+  ]
+}
