@@ -171,7 +171,7 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
 
 ---
 
-## Batch F20-P0.1 (eseguito)
+## Batch F20-P0.1 (VERIFIED_FIXED — gate F20-P0.1V)
 
 **Micro-cluster**: 1 finding priorità (c) — DAL bypass write in `useCockpitLogic.ts`.
 
@@ -182,7 +182,32 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
 - **Typecheck**: `tsgo --noEmit` verde.
 - **Contratti**: nessuna modifica di firma pubblica, nessuna migrazione DB, nessuna variazione UX/auth/permessi. Silent-on-error preservato (nessun toast, nessun throw).
 - **Deferred nello stesso cluster**: P001-004 (fuori priorità), P001-006 (split monolite vietato in gate), P001-008 (richiede Zod), P001-011 (richiede routing edge).
-- **Punti**: non assegnati in questo batch — l'impatto è compliance memoria DAL, non riduzione bypass count misurabile fuori dai 33 partition001. Prossimo micro-cluster candidato → **P001-014/015** (test che reimplementano produzione) da valutare per priorità (b).
+- **Commit gate**: `c062ca47aacce1617f2cf00a816952721b9f0f33`.
+- **Prove F20-P0.1V**:
+  - `npx vitest run src/data/__tests__/partners.linkedin.test.ts` → 4/4 pass.
+  - `npm run typecheck` (`tsc -p tsconfig.app.json --noEmit`) → exit 0.
+  - ESLint sui 3 file toccati → 0 errors 0 warnings (fix `_kind` param non usato).
+  - ESLint `--max-warnings 0` sul repo intero → 234 warnings baseline preesistenti in file non toccati dal batch (nessun errore, nessuna nuova warning introdotta dal batch).
+  - `npm run build` → exit 0.
+  - Vitest full suite run #1: 384 files, 3059 pass / 2 skipped / 0 fail.
+  - Vitest full suite run #2: 384 files, 3059 pass / 2 skipped / 0 fail (nessuno skip nuovo vs baseline).
+  - Verifica statica bypass: `rg 'supabase.from\("partners"\)' src/hooks/useCockpitLogic.ts` → nessuna occorrenza.
+  - Verifica caller helper: unico chiamante di `persistLinkedInProfileForCompany` = `src/hooks/useCockpitLogic.ts:309` (fire-and-forget con `mountedRef` guard L311/L315).
+  - Merge additivo enrichment_data (`...existing`), match `ilike("company_name", "%..%")` limit 1, silent-false-on-error (`return !error` + `catch → false`) confermati per read + write.
+- **Punti**: non assegnati (compliance DAL, no delta bypass count fuori partition-001).
+
+## Batch F20-P0.2 (CANDIDATE — deterministico, non ancora eseguito)
+
+**Micro-cluster selezionato**: 1 finding priorità (b) — test che reimplementa logica di produzione.
+
+- **Finding trattato**: **P001-025** (medium sev, low risk).
+- **Path/range test**: `src/test/contact-merge-logic.test.ts` L1-L606 — funzione `levenshteinDistance` reimplementata in-test a L10-L46 (verificato: `grep -n "^function levenshteinDistance" src/test/contact-merge-logic.test.ts` → riga 10).
+- **Path/range produzione**: `src/hooks/useContactMerge.ts` L14-L~51 — funzione `levenshteinDistance` presente in produzione ma **non esportata** (`grep '^export' src/hooks/useContactMerge.ts` mostra solo `ContactForMerge`, `DuplicatePair`, `MergeFieldChoice`, `useFindDuplicates`, `useMergeContacts`, `useDuplicateCount`; nessun `levenshteinDistance` esportato).
+- **Prova reimplementazione (deterministica)**: due implementazioni sintatticamente distinte del medesimo algoritmo coabitano nel repo — copia in-test **non può divergere in modo rilevabile** dai test stessi (falsa sicurezza), esattamente il pattern descritto in `PARTITION_001_REVIEW.md`.
+- **P001-014 / P001-015 esclusi da P0.2**: sono size-only high-sev (rispettivamente 723 e 616 righe monolitiche) e richiedono **split multi-file** (`Recommendation`: 4 step components per HarmonizeSystemDialog; 4 helper `resolveSender`/`applyJournalist`/`persistIdempotency`/`sendSmtp` per send-email). Fuori dai vincoli gate P0 (max 3 file, no refactor monoliti). Verranno accorpati in un batch P1 dedicato ai monoliti.
+- **Azione P0.2 prevista** (non eseguita in questo job): esportare `levenshteinDistance` da `src/hooks/useContactMerge.ts` (o estrarla in `src/lib/levenshtein.ts` senza cambio comportamento) e sostituire in `src/test/contact-merge-logic.test.ts` la copia locale con `import`. Max 2 file runtime + 1 test.
+- **Gate atteso**: `tsgo` verde + test contact-merge-logic invariato per numero e nome dei casi + due suite complete 0 fail.
+- **Δpunteggio prudente**: **+30** (in linea con aumento fiducia test senza calo copertura).
 
 ---
 
