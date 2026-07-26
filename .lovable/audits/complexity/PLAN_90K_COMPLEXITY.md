@@ -171,6 +171,21 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
 
 ---
 
+## Batch F20-P0.1 (eseguito)
+
+**Micro-cluster**: 1 finding priorità (c) — DAL bypass write in `useCockpitLogic.ts`.
+
+- **Finding trattato**: P001-007 (DAL bypass, medium sev, low risk).
+- **File runtime modificati**: 2 (`src/data/partners.ts` +55 righe helper, `src/hooks/useCockpitLogic.ts` −12 / +14 righe).
+- **File totali toccati**: 4 (aggiunta `src/data/__tests__/partners.linkedin.test.ts`, aggiornamento ledger, aggiornamento questo plan).
+- **Test mirati pre/post**: 4/4 pass nel nuovo file; 384 file test / 3059 pass / 2 skipped invariati, due run consecutive.
+- **Typecheck**: `tsgo --noEmit` verde.
+- **Contratti**: nessuna modifica di firma pubblica, nessuna migrazione DB, nessuna variazione UX/auth/permessi. Silent-on-error preservato (nessun toast, nessun throw).
+- **Deferred nello stesso cluster**: P001-004 (fuori priorità), P001-006 (split monolite vietato in gate), P001-008 (richiede Zod), P001-011 (richiede routing edge).
+- **Punti**: non assegnati in questo batch — l'impatto è compliance memoria DAL, non riduzione bypass count misurabile fuori dai 33 partition001. Prossimo micro-cluster candidato → **P001-014/015** (test che reimplementano produzione) da valutare per priorità (b).
+
+---
+
 ## Regole trasversali su ogni batch
 1. **Un file per commit** dove possibile.
 2. **Test unit di regressione** aggiunto o esistente **prima** dello split.

@@ -22,6 +22,7 @@ import type { CockpitAIAction, SourceTab } from "@/types/cockpit";
 import type { AssignmentInfo } from "@/types/cockpit";
 import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/types/cockpit";
 import { queryKeys } from "@/lib/queryKeys";
+import { persistLinkedInProfileForCompany } from "@/data/partners";
 
 export function useCockpitLogic() {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
@@ -302,18 +303,19 @@ export function useCockpitLogic() {
     if (signal.aborted) return;
     setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating", contactLinkedinUrl: linkedinUrl }));
 
-    // Salva URL LinkedIn in background se trovato
+    // Salva URL LinkedIn in background se trovato (P001-007: via DAL)
     if (isLinkedInChannel && linkedinUrl) {
-      import("@/integrations/supabase/client").then(async ({ supabase: sb }) => {
-        if (!mountedRef.current || !linkedinUrl) return;
-        try {
-          const { data: partnerRows } = await sb.from("partners").select("id, enrichment_data").ilike("company_name", `%${contact.company}%`).limit(1);
-          if (partnerRows?.[0]) {
-            const existing = (partnerRows[0].enrichment_data as Record<string, unknown>) || {};
-            await sb.from("partners").update({ enrichment_data: { ...existing, linkedin_profile_url: linkedinUrl, linkedin_lookup_at: new Date().toISOString(), linkedin_resolved_method: "google_search" } }).eq("id", partnerRows[0].id);
-          }
-        } catch (e: unknown) { log.error("save linkedin url failed", { message: e instanceof Error ? e.message : String(e) }); }
-      });
+      const urlToPersist = linkedinUrl;
+      void persistLinkedInProfileForCompany(contact.company, urlToPersist, "google_search").then(
+        (ok) => {
+          if (!mountedRef.current) return;
+          if (!ok) log.error("save linkedin url failed", { company: contact.company });
+        },
+        (e: unknown) => {
+          if (!mountedRef.current) return;
+          log.error("save linkedin url failed", { message: e instanceof Error ? e.message : String(e) });
+        },
+      );
     }
 
     const result = await generate({

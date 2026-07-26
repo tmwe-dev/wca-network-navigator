@@ -681,3 +681,47 @@ export function invalidatePartnerCache(qc: QueryClient, partnerId?: string) {
     qc.invalidateQueries({ queryKey: queryKeys.partner(partnerId) });
   }
 }
+
+/**
+ * Persiste su `partners.enrichment_data` un URL LinkedIn scoperto in fase di
+ * Cockpit lookup. Silent-on-error: nessuna eccezione, nessun toast; il chiamante
+ * riceve solo un boolean di esito (true = riga trovata e aggiornata).
+ *
+ * Sostituisce il blocco inline `useCockpitLogic.ts` (P001-007) mantenendo
+ * comportamento identico:
+ *   - match azienda via `ilike("company_name", "%<name>%")` limit 1
+ *   - merge additivo su `enrichment_data`
+ *   - scrittura chiavi `linkedin_profile_url`, `linkedin_lookup_at`,
+ *     `linkedin_resolved_method`
+ */
+export async function persistLinkedInProfileForCompany(
+  companyName: string,
+  linkedinUrl: string,
+  method: string,
+): Promise<boolean> {
+  if (!companyName || !linkedinUrl) return false;
+  try {
+    const { data: partnerRows } = await supabase
+      .from("partners")
+      .select("id, enrichment_data")
+      .ilike("company_name", `%${companyName}%`)
+      .limit(1);
+    const row = partnerRows?.[0];
+    if (!row) return false;
+    const existing = (row.enrichment_data as Record<string, unknown> | null) ?? {};
+    const { error } = await supabase
+      .from("partners")
+      .update({
+        enrichment_data: {
+          ...existing,
+          linkedin_profile_url: linkedinUrl,
+          linkedin_lookup_at: new Date().toISOString(),
+          linkedin_resolved_method: method,
+        },
+      } as never)
+      .eq("id", row.id);
+    return !error;
+  } catch {
+    return false;
+  }
+}
