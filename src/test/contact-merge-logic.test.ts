@@ -4,51 +4,14 @@
  * Based on useContactMerge.ts
  */
 import { describe, it, expect } from "vitest";
-
-// ─── Levenshtein Distance Implementation ─────────────────
-
-function levenshteinDistance(a: string, b: string): number {
-  const aLower = a.toLowerCase().trim();
-  const bLower = b.toLowerCase().trim();
-
-  if (aLower === bLower) return 0;
-
-  const matrix: number[][] = [];
-
-  for (let i = 0; i <= bLower.length; i++) {
-    matrix[i] = [i];
-  }
-
-  for (let j = 0; j <= aLower.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= bLower.length; i++) {
-    for (let j = 1; j <= aLower.length; j++) {
-      const cost = aLower[j - 1] === bLower[i - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i - 1][j - 1] + cost, // substitution
-      );
-    }
-  }
-
-  return matrix[bLower.length][aLower.length];
-}
-
-function extractDomain(email: string | null): string {
-  if (!email) return "";
-  const parts = email.toLowerCase().split("@");
-  return parts.length > 1 ? parts[1] : "";
-}
-
-function calculateSimilarity(name1: string | null, name2: string | null): number {
-  if (!name1 || !name2) return 0;
-  const distance = levenshteinDistance(name1, name2);
-  const maxLength = Math.max(name1.length, name2.length);
-  return maxLength > 0 ? 1 - distance / maxLength : 0;
-}
+// P001-025 (batch F20-P0.2): la reimplementazione locale di levenshteinDistance /
+// extractDomain / calculateSimilarity è stata rimossa. Le funzioni vengono ora
+// importate dal modulo puro condiviso con src/hooks/useContactMerge.ts.
+import {
+  levenshteinDistance,
+  extractDomain,
+  calculateSimilarity,
+} from "@/lib/contactSimilarity";
 
 // ─── Test Data ──────────────────────────────────────────
 
