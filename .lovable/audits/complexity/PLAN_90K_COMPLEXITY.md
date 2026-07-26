@@ -196,18 +196,40 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
   - Merge additivo enrichment_data (`...existing`), match `ilike("company_name", "%..%")` limit 1, silent-false-on-error (`return !error` + `catch → false`) confermati per read + write.
 - **Punti**: non assegnati (compliance DAL, no delta bypass count fuori partition-001).
 
-## Batch F20-P0.2 (CANDIDATE — deterministico, non ancora eseguito)
+## Batch F20-P0.2 (VERIFIED_FIXED)
 
-**Micro-cluster selezionato**: 1 finding priorità (b) — test che reimplementa logica di produzione.
+**Micro-cluster**: test che reimplementa logica di produzione (priorità b).
 
-- **Finding trattato**: **P001-025** (medium sev, low risk).
-- **Path/range test**: `src/test/contact-merge-logic.test.ts` L1-L606 — funzione `levenshteinDistance` reimplementata in-test a L10-L46 (verificato: `grep -n "^function levenshteinDistance" src/test/contact-merge-logic.test.ts` → riga 10).
-- **Path/range produzione**: `src/hooks/useContactMerge.ts` L14-L~51 — funzione `levenshteinDistance` presente in produzione ma **non esportata** (`grep '^export' src/hooks/useContactMerge.ts` mostra solo `ContactForMerge`, `DuplicatePair`, `MergeFieldChoice`, `useFindDuplicates`, `useMergeContacts`, `useDuplicateCount`; nessun `levenshteinDistance` esportato).
-- **Prova reimplementazione (deterministica)**: due implementazioni sintatticamente distinte del medesimo algoritmo coabitano nel repo — copia in-test **non può divergere in modo rilevabile** dai test stessi (falsa sicurezza), esattamente il pattern descritto in `PARTITION_001_REVIEW.md`.
-- **P001-014 / P001-015 esclusi da P0.2**: sono size-only high-sev (rispettivamente 723 e 616 righe monolitiche) e richiedono **split multi-file** (`Recommendation`: 4 step components per HarmonizeSystemDialog; 4 helper `resolveSender`/`applyJournalist`/`persistIdempotency`/`sendSmtp` per send-email). Fuori dai vincoli gate P0 (max 3 file, no refactor monoliti). Verranno accorpati in un batch P1 dedicato ai monoliti.
-- **Azione P0.2 prevista** (non eseguita in questo job): esportare `levenshteinDistance` da `src/hooks/useContactMerge.ts` (o estrarla in `src/lib/levenshtein.ts` senza cambio comportamento) e sostituire in `src/test/contact-merge-logic.test.ts` la copia locale con `import`. Max 2 file runtime + 1 test.
-- **Gate atteso**: `tsgo` verde + test contact-merge-logic invariato per numero e nome dei casi + due suite complete 0 fail.
-- **Δpunteggio prudente**: **+30** (in linea con aumento fiducia test senza calo copertura).
+- **Finding trattato**: **P001-025** — VERIFIED_FIXED.
+- **Finding target originale del brief (P001-014, P001-015)**: DEFERRED — size-only high-sev che richiedono split multi-file (4 step components per HarmonizeSystemDialog / 4 helper per send-email). Fuori vincoli gate P0 (max 3 file, divieto refactor monoliti). Rimandati a batch P1 dedicato monoliti. Nel brief P0.2 il target coerente col cluster "reimplementazione Levenshtein / contact-merge-logic.test.ts" è **P001-025**, come già identificato nel gate P0.1V.
+- **File runtime/test modificati**: 3 (`src/lib/contactSimilarity.ts` nuovo helper puro 55 righe; `src/hooks/useContactMerge.ts` −42 / +5 righe; `src/test/contact-merge-logic.test.ts` −44 / +12 righe incluso 1 test-guard multi-@).
+- **File totali toccati**: 5 (i tre sopra + `fix-ledger.jsonl` + questo plan).
+- **Prove del problema pre-fix**: `levenshteinDistance`/`extractDomain`/`calculateSimilarity` duplicati byte-identici in `useContactMerge.ts` L14-L55 e in `contact-merge-logic.test.ts` L10-L51; produzione non li esportava — copia in-test avrebbe potuto divergere silenziosamente.
+- **Prove post-fix**: entrambi i consumer ora `import { … } from "@/lib/contactSimilarity"`; la produzione usa `calculateSimilarity` (che internamente chiama `levenshteinDistance` dal medesimo modulo del test). Qualsiasi modifica al modulo helper rompe simultaneamente produzione e test — non più falsa sicurezza.
+- **Test mirati**: `contact-merge-logic.test.ts` 39/39 pass (era 38 + 1 nuovo guard "legacy multi-@ split contract"); suite passata da 3059 → 3060 (+1 test, 0 skip nuovi).
+- **Typecheck**: `tsc -p tsconfig.app.json --noEmit` exit 0.
+- **Lint sui 3 file toccati**: `eslint --max-warnings 0` → 0 errors 0 warnings.
+- **Build**: `npm run build` exit 0.
+- **Vitest full suite ×2**: 384 files, 3060 pass / 2 skipped / 0 fail (nessuno skip nuovo).
+- **Contratti**: nessuna nuova API pubblica (le tre funzioni erano private in `useContactMerge` e restano usate solo internamente + dal test); nessuna migration/schema/RLS/dati/UX/auth.
+- **Commit gate**: `pending` (aggiornato dal successivo gate di verifica).
+- **Punti**: **+30** (fiducia test recuperata, zero regressione, +1 caso di guardia).
+
+---
+
+## Batch F20-P0.3 (CANDIDATE — deterministico, non ancora eseguito)
+
+**Micro-cluster candidato**: 1 finding priorità (d) — logging non strutturato in edge critico.
+
+- **Finding trattato**: **P001-016** (medium sev, low risk).
+- **Path/range**: `supabase/functions/send-email/index.ts` L606-L616 — `console.error("send-email error:", e)` in `catch` finale del handler.
+- **Violazione confermata**: memoria `Structured Logging Standard` richiede `createLogger` per ogni log di produzione; `console.*` bloccato da CI in `src/**` e in progressiva migrazione lato edge (vedi `docs/debt/LOGGER-MIGRATION.md`).
+- **Prova disponibilità helper**: `supabase/functions/_shared/logger.ts` (o equivalente `createLogger` edge-side, da verificare esistenza in job P0.3) — se assente, marcare DEFERRED e passare al prossimo candidato senza forzare estrazione.
+- **Azione P0.3 prevista** (non eseguita in questo job): sostituire l'unica `console.error` a L606-L616 con `logger.error({ err: e }, "send-email error")` mantenendo livello ERROR, campi identici, e nessun cambio al flow di risposta HTTP (500 body invariato). Max 1 runtime file + 0 test aggiunti (il flow è già coperto da e2e `direct-send-vs-queued-send-consistency.spec.ts`).
+- **Esclusioni**: gli altri 7 `console.*` di `send-email/index.ts` restano fuori scope P0.3 (finding P001-015 monolite, batch P1).
+- **Gate atteso**: `deno check supabase/functions/send-email/index.ts` verde + due suite vitest complete 0 fail + build verde. Nessun deploy.
+- **Δpunteggio prudente**: **+20** (compliance logging su 1 edge critico, effetto scala su singolo call site).
+- **Fallback**: se `createLogger` edge-side non esiste o richiede modifica di `_shared`, il finding viene DEFERRED e il prossimo candidato P0.3 diventa **P001-018** (typing `SupabaseClient = any` in `toolHandlersRead.ts`) — ma solo se estendibile senza toccare più di 2 file e senza cambiare firma pubblica.
 
 ---
 
