@@ -5,6 +5,7 @@ import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { loadSendingConfig, validateSendingWindow, validateSmtpConfig } from "../_shared/emailSendingConfig.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { resolveSharedMailbox } from "../_shared/resolveMailbox.ts";
@@ -609,7 +610,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (e: unknown) {
-    console.error("send-email error:", e);
+    createLogger("send-email").error("send-email error", e);
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }
 });
