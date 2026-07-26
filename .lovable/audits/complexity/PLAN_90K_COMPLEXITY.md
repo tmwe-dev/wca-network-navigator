@@ -217,19 +217,30 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
 
 ---
 
-## Batch F20-P0.3 (CANDIDATE — deterministico, non ancora eseguito)
+## Batch F20-P0.3 (VERIFIED_FIXED)
 
-**Micro-cluster candidato**: 1 finding priorità (d) — logging non strutturato in edge critico.
+- **Finding trattato**: **P001-016** (medium sev, low risk) — logging non strutturato in edge critico.
+- **Path/range**: `supabase/functions/send-email/index.ts` L614 (era 606-616 nel finding) — `console.error("send-email error:", e)` sostituito con `createLogger("send-email").error("send-email error", e)`.
+- **Helper usato**: `supabase/functions/_shared/structuredLogger.ts` — `createLogger(fnName).error(message, err, context?)` produce line JSON single-line searchable in Supabase logs; `errorToContext` estrae `name`/`message`/`stack` (primi 8 frame).
+- **Contratto invariato**: HTTP response `edgeError("INTERNAL_ERROR", ...)` con status/body/headers identici; nessun `await` aggiunto (fire-and-forget come `console.error`); ordine di esecuzione preservato.
+- **File modificati**: 1 runtime (`send-email/index.ts` — 2 righe: 1 import + 1 sostituzione).
+- **Prove F20-P0.3**:
+  - `deno check send-email/index.ts`: 5 errori TS **pre-esistenti** (TS2589 SupabaseClient deep instantiation, TS2345 SmtpSendOptions/ErrorCode) su range non toccati dal patch — appartengono al monolite P001-015 (batch P1).
+  - `eslint` sul file: 0 errors.
+  - `vitest` full suite ×2 consecutive: 384 files, 3060 pass / 2 skipped / 0 fail (nessuno skip nuovo).
+  - `npm run build`: exit 0.
+- **Esclusioni**: gli altri 7 `console.*` di `send-email/index.ts` restano fuori scope (P001-015 monolite → batch P1).
+- **Δpunteggio prudente**: **+20**.
 
-- **Finding trattato**: **P001-016** (medium sev, low risk).
-- **Path/range**: `supabase/functions/send-email/index.ts` L606-L616 — `console.error("send-email error:", e)` in `catch` finale del handler.
-- **Violazione confermata**: memoria `Structured Logging Standard` richiede `createLogger` per ogni log di produzione; `console.*` bloccato da CI in `src/**` e in progressiva migrazione lato edge (vedi `docs/debt/LOGGER-MIGRATION.md`).
-- **Prova disponibilità helper**: `supabase/functions/_shared/logger.ts` (o equivalente `createLogger` edge-side, da verificare esistenza in job P0.3) — se assente, marcare DEFERRED e passare al prossimo candidato senza forzare estrazione.
-- **Azione P0.3 prevista** (non eseguita in questo job): sostituire l'unica `console.error` a L606-L616 con `logger.error({ err: e }, "send-email error")` mantenendo livello ERROR, campi identici, e nessun cambio al flow di risposta HTTP (500 body invariato). Max 1 runtime file + 0 test aggiunti (il flow è già coperto da e2e `direct-send-vs-queued-send-consistency.spec.ts`).
-- **Esclusioni**: gli altri 7 `console.*` di `send-email/index.ts` restano fuori scope P0.3 (finding P001-015 monolite, batch P1).
-- **Gate atteso**: `deno check supabase/functions/send-email/index.ts` verde + due suite vitest complete 0 fail + build verde. Nessun deploy.
-- **Δpunteggio prudente**: **+20** (compliance logging su 1 edge critico, effetto scala su singolo call site).
-- **Fallback**: se `createLogger` edge-side non esiste o richiede modifica di `_shared`, il finding viene DEFERRED e il prossimo candidato P0.3 diventa **P001-018** (typing `SupabaseClient = any` in `toolHandlersRead.ts`) — ma solo se estendibile senza toccare più di 2 file e senza cambiare firma pubblica.
+---
+
+## Batch F20-P0.4 (CANDIDATE — deterministico, non ancora eseguito)
+
+- **Finding trattato**: **P001-018** (medium sev — typing `SupabaseClient = any` in `supabase/functions/_shared/toolHandlersRead.ts` L8-L13).
+- **Prova**: cast `any` esplicito con `deno-lint disabled` motivato ma propaga perdita di safety a 15 handler `.from/.rpc`.
+- **Azione prevista**: introdurre alias `type SupabaseClientLike = SupabaseClient<Database>` importando `Database` dallo shared types generato, oppure lasciare `any` documentato se il generic `Database` non è importabile lato edge senza pulling di `src/integrations/supabase/types.ts` (rischio cross-boundary). Max 2 runtime file (`toolHandlersRead.ts`, `toolHandlersWrite.ts`).
+- **Fallback**: se `Database` non riutilizzabile lato edge senza copia, marcare P001-018 DEFERRED e passare al successivo FACT low-risk del ledger partition001 (candidato **P001-011** — DAL bypass residuo o **P001-004** — silent catch).
+- **Nessuna implementazione in questo job.**
 
 ---
 
