@@ -54,8 +54,14 @@ export function LinkedInTest() {
     try {
       const raw = localStorage.getItem(LI_FIXED_RECIPIENT_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw) as StoredLiTestRecipient;
-      const fixedUrl = saved?.url?.trim();
+      // P001-002 fix: JSON.parse può restituire qualunque tipo (string, number,
+      // array, null, oggetto con `url` non-stringa). Guard runtime minima prima
+      // di qualsiasi uso stringa: accetta solo object non-null con `url` string.
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return;
+      const candidate = parsed as StoredLiTestRecipient;
+      if (typeof candidate.url !== "string") return;
+      const fixedUrl = candidate.url.trim();
       if (fixedUrl && isValidLinkedInTestUrl(fixedUrl)) {
         setSendUrl(fixedUrl);
         setProfileUrl(fixedUrl.includes("/in/") ? fixedUrl : "https://www.linkedin.com/in/");
