@@ -314,7 +314,7 @@ function _slugifyGroup(value: string): string {
 /** Carica intel Scout per un dominio (best-effort, non throwa). */
 export async function getSenderIntelByDomain(domain: string): Promise<SenderIntelRow | null> {
   if (!domain) return null;
-  const { data } = await untypedFrom("funnemail_sender_intel")
+  const { data } = await supabase.from("funnemail_sender_intel")
     .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
     .eq("email_domain", domain.toLowerCase())
     .maybeSingle();
@@ -323,7 +323,7 @@ export async function getSenderIntelByDomain(domain: string): Promise<SenderInte
 
 /** Lista cartelle attive ordinate per sezione e sort_order. */
 export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
-  const { data, error } = await untypedFrom("funnemail_folders")
+  const { data, error } = await supabase.from("funnemail_folders")
     .select("slug,label,description,icon,section,sort_order,accept_into_agenda,prompt_hint")
     .eq("is_active", true)
     .order("section", { ascending: true })
@@ -335,7 +335,7 @@ export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
 /** Conteggio decisioni per slug negli ultimi 30 giorni. */
 export async function countFunnemailByFolder(): Promise<Record<string, number>> {
   const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-  const { data, error } = await untypedFrom("funnemail_decisions")
+  const { data, error } = await supabase.from("funnemail_decisions")
     .select("folder_slug")
     .gte("created_at", since)
     .limit(5000);
@@ -356,7 +356,7 @@ export async function listMailsByFolder(
   folderSlug: string,
   limit = 50,
 ): Promise<FunnemailMailRow[]> {
-  const { data: decisions, error: dErr } = await untypedFrom("funnemail_decisions")
+  const { data: decisions, error: dErr } = await supabase.from("funnemail_decisions")
     .select("*")
     .eq("folder_slug", folderSlug)
     .order("created_at", { ascending: false })
@@ -414,7 +414,7 @@ export async function listMailsByFolder(
 export async function getFunnemailDecision(
   messageId: string,
 ): Promise<FunnemailDecisionRow | null> {
-  const { data, error } = await untypedFrom("funnemail_decisions")
+  const { data, error } = await supabase.from("funnemail_decisions")
     .select("*")
     .eq("message_id", messageId)
     .maybeSingle();
@@ -427,7 +427,7 @@ export async function overrideFunnemailFolder(
   messageId: string,
   newFolderSlug: string,
 ): Promise<void> {
-  const { error } = await untypedFrom("funnemail_decisions")
+  const { error } = await supabase.from("funnemail_decisions")
     .update({
       override_folder_slug: newFolderSlug,
       override_at: new Date().toISOString(),
@@ -440,7 +440,7 @@ export async function markFunnemailMessagesRead(messageIds: string[]): Promise<v
   if (messageIds.length === 0) return;
   // NOTA B4.6b: SCRITTURA — resta su `channel_messages` (la view canonica è
   // read-only). Non tentare mai `.update()` su `message_intelligence_v`.
-  const { error } = await untypedFrom("channel_messages")
+  const { error } = await supabase.from("channel_messages")
     .update({ read_at: new Date().toISOString() })
     .in("id", messageIds);
   if (error) throw error;
@@ -490,18 +490,18 @@ export async function listFunnemailGroupedInbox(
     ),
     listFunnemailFolders(),
     fetchAllPages<FunnemailDecisionRow>(
-      (from, to) => untypedFrom("funnemail_decisions")
+      (from, to) => supabase.from("funnemail_decisions")
         .select("id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at")
         .order("created_at", { ascending: false })
         .range(from, to),
       MAX_MESSAGES,
     ),
-    fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
+    fetchAllPages<EmailSenderGroupRow>((from, to) => supabase.from("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
       .range(from, to), MAX_RULES_OR_GROUPS),
-    fetchAllPages<EmailAddressRuleRow>((from, to) => untypedFrom("email_address_rules")
+    fetchAllPages<EmailAddressRuleRow>((from, to) => supabase.from("email_address_rules")
       .select("email_address,group_name,category")
       .eq("user_id", userId)
       .range(from, to), MAX_RULES_OR_GROUPS),
