@@ -286,10 +286,24 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002.
 
 ---
 
-## Batch F20-P0.6 (CANDIDATE — deterministico, non ancora eseguito)
+## Batch F20-P0.6 (ESEGUITO)
 
-**Candidato primario**: **P001-013** (typing — `src/data/funnemailInbox.ts` L1-L20): `untypedFrom()` bypassa i tipi generati; sostituzione con client tipizzato dove i call site reggono senza cambi di contratto. Nessuna migration/schema/RLS/auth, nessun dato, nessuna UX.
-- **Verifica preliminare richiesta**: confermare che il tipo generato copre le tabelle usate; se manca anche una sola tabella nei types auto-gen → DEFERRED immediato (non si toccano i types generati).
+### Finding trattato: **P001-013 — VERIFIED_FIXED**
+- **File**: `src/data/funnemailInbox.ts` (unico runtime file toccato).
+- **Verifica preliminare superata**: tutte e 8 le relazioni usate sono presenti nei types generati.
+- **Fix**: 8 call site su tabella letterale migrati da `untypedFrom()` (`any`) al client tipizzato `supabase.from()`. Query, colonne, filtri, ordinamenti e contratti invariati: cambia solo il tipo statico del builder.
+- **Non migrati (motivazione inline nel file)**: `untypedFrom(source)` ×2 (sorgente dinamica view|tabella, il client tipizzato non accetta unione di nomi tabella) e 4 query dentro `fetchAllPages<T>` / con `.then()` tipizzato a mano, dove il Row generato diverge dal tipo applicativo (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape). Provato empiricamente: 2 errori TS2322 → rollback mirato di quelle righe.
+- **Gate verde**: `tsgo` 0 errori · `eslint` file toccato 0/0 · `npm run build` exit 0 · `vitest` ×2: 384 files, **3060 pass / 2 skipped / 0 fail**.
+- **Δpunteggio prudente**: **+14**.
+
+### Cumulativo P0 finding chiusi: **6 / 33** partition001
+P001-007 · P001-025 · P001-016 · P001-004 · P001-002 · P001-013.
+
+---
+
+## Batch F20-P0.7 (CANDIDATE)
+
+**Candidato primario**: allineamento tipi applicativi `FunnemailDecisionRow.suggested_action` / `EmailSenderGroupRow.funnemail_policy` ai Row generati, per chiudere i 4 `untypedFrom` residui di `funnemailInbox.ts`. Solo tipi, nessuna migration/RLS/auth/dati.
 
 **Candidato secondario**: prossimo finding di logging non strutturato / guard runtime a basso rischio nella partition001, con lo stesso profilo di P001-016 (max 1 runtime file).
 
