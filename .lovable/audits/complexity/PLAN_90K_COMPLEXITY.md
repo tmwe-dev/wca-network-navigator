@@ -262,16 +262,38 @@ P001-007 (DAL bypass) · P001-025 (Levenshtein reimpl) · P001-016 (logging non 
 
 ---
 
-## Batch F20-P0.5 (CANDIDATE — deterministico, non ancora eseguito)
+## Batch F20-P0.5 (ESEGUITO)
 
-**Candidato primario**: **P001-002** (low storage — `src/components/test-extensions/LinkedInTest.tsx` L40-L52).
-- **Prova**: `localStorage.getItem(LI_FIXED_RECIPIENT_KEY)` → `JSON.parse` diretto castato a `StoredLiTestRecipient` senza validazione forte. `try/catch` esiste ma cattura solo errori di parse, non payload malformati (es. `{url: 42}` passerebbe).
-- **Azione prevista**: aggiungere validazione runtime — `typeof saved?.url === "string"` prima di chiamare `.trim()` (già chiamato → crash se `url` non stringa). Nessun cambio API, nessun test dedicato necessario (guard puro).
-- **Max 1 runtime file**.
+**Base**: `d6b6770451505ac261c49d6699a005005a88c0a0`. Nessun deploy, nessuna migration.
 
-**Candidato secondario (se P001-002 blocca)**: **P001-013** (info typing — `funnemailInbox.ts` L1-L20) — sostituzione `untypedFrom()` con client tipizzato, se il typing centralizzato permette il cambio senza rompere call sites.
+### 0. Riparazione documentale ledger (pre-requisito del brief)
+- Riga P001-004 (P0.4) era **JSONL invalido**: `cumulative_p0_fixed` / `cumulative_findings_closed` erano finiti dentro l'array `tests`. Spostati a campi top-level (`cumulative_p0_fixed` corretto a **4**).
+- Campi `commit` allineati ai commit effettivi: P0.3 → `39147d50e92f9c63f750b7378ded5d19739c5eb4`, P0.4 → `d6b6770451505ac261c49d6699a005005a88c0a0` (erano base/`post-P0.3`).
+- **Gate**: `JSON.parse` su **tutte** le righe → 15/15 valide (pre-fix 1 invalida). Evidenze sostanziali non alterate.
 
-**Fallback ultimo**: **P001-011** — DEFERRED (evidence dichiara che RPC target `apply_lead_status_rpc` non esiste; fix richiede migration = fuori scope P0).
+### 1. Finding trattato: **P001-002 — VERIFIED_FIXED**
+- **File**: `src/components/test-extensions/LinkedInTest.tsx` (unico runtime file toccato).
+- **Problema provato**: `JSON.parse(raw) as StoredLiTestRecipient` seguito da `saved?.url?.trim()`. Il cast non valida nulla: `"stringa"`, `42`, `[1,2]`, `{"url":123}` sono JSON validi e `.trim()` su non-stringa lancia `TypeError`, mascherato dal `try/catch`.
+- **Fix minimo (8 righe)**: parse in `unknown` → early-return se non object / `null` / array → early-return se `typeof candidate.url !== "string"` → `.trim()` su stringa certa.
+- **Invarianza**: per payload validi il comportamento è identico (stesso trim, stessa `isValidLinkedInTestUrl`, stessi `setSendUrl`/`setProfileUrl`/`log`). Payload malformato: nessun throw, **state non popolato**. Chiave storage, UX e altri flussi invariati.
+- **Gate verde**: `tsgo --noEmit` 0 errori · `eslint` file toccato 0/0 · `npm run build` exit 0 · `vitest` full suite ×2: 384 files, **3060 pass / 2 skipped / 0 fail** (nessun nuovo skip).
+- **Nessun test dedicato**: l'effect è inline in un componente da ~690 righe che al mount istanzia extensionBridge/optimus/syncGuard; verificare la guard richiederebbe estrarla in modulo (refactor) o montare il componente con mock pesanti — entrambi oltre il limite "max 1 runtime file" del gate. Prove: diff statico + typecheck strict + suite completa ×2.
+- **Rischio residuo**: il `try/catch` esterno resta e continua a mascherare errori imprevisti; non rimosso per non cambiare comportamento osservabile.
+- **Δpunteggio prudente**: **+12**.
+
+### Cumulativo P0 finding chiusi: **5 / 33** partition001
+P001-007 · P001-025 · P001-016 · P001-004 · P001-002.
+
+---
+
+## Batch F20-P0.6 (CANDIDATE — deterministico, non ancora eseguito)
+
+**Candidato primario**: **P001-013** (typing — `src/data/funnemailInbox.ts` L1-L20): `untypedFrom()` bypassa i tipi generati; sostituzione con client tipizzato dove i call site reggono senza cambi di contratto. Nessuna migration/schema/RLS/auth, nessun dato, nessuna UX.
+- **Verifica preliminare richiesta**: confermare che il tipo generato copre le tabelle usate; se manca anche una sola tabella nei types auto-gen → DEFERRED immediato (non si toccano i types generati).
+
+**Candidato secondario**: prossimo finding di logging non strutturato / guard runtime a basso rischio nella partition001, con lo stesso profilo di P001-016 (max 1 runtime file).
+
+**Esclusi per policy P0**: P001-014/015 e P001-001 (split monoliti → P1), P001-018 (cross-boundary types edge), P001-011 (richiede migration RPC).
 
 ---
 
