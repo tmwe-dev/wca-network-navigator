@@ -12,6 +12,16 @@
  */
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import { supabase } from "@/integrations/supabase/client";
+/**
+ * P001-013 (batch F20-P0.6): le letture/scritture su tabella LETTERALE usano il
+ * client tipizzato (`supabase.from`). Restano volutamente su `untypedFrom`:
+ *  - `untypedFrom(source)` — la sorgente è dinamica (`message_intelligence_v` |
+ *    `channel_messages`) e il client tipizzato non accetta un'unione di tabelle;
+ *  - le query passate a `fetchAllPages<T>()` e quelle con `.then()` tipizzato a
+ *    mano, dove il Row generato è più largo/stretto del tipo applicativo
+ *    (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape):
+ *    tiparle richiederebbe cambiare i tipi applicativi = fuori scope P0.
+ */
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { createLogger } from "@/lib/log";
 import { isViewSchemaError } from "@/data/_shared/viewFallbackPredicate";
