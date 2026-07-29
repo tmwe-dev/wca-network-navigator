@@ -491,13 +491,13 @@ export async function listFunnemailGroupedInbox(
     ),
     listFunnemailFolders(),
     fetchAllPages<FunnemailDecisionRow>(
-      (from, to) => supabase.from("funnemail_decisions")
+      (from, to) => untypedFrom("funnemail_decisions")
         .select("id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at")
         .order("created_at", { ascending: false })
         .range(from, to),
       MAX_MESSAGES,
     ),
-    fetchAllPages<EmailSenderGroupRow>((from, to) => supabase.from("email_sender_groups")
+    fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
