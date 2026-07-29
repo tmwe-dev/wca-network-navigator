@@ -11,6 +11,17 @@
  * NESSUNA logica: solo SELECT.
  */
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
+/**
+ * P001-013 (batch F20-P0.6): le letture/scritture su tabella LETTERALE usano il
+ * client tipizzato (`supabase.from`). Restano volutamente su `untypedFrom`:
+ *  - `untypedFrom(source)` — la sorgente è dinamica (`message_intelligence_v` |
+ *    `channel_messages`) e il client tipizzato non accetta un'unione di tabelle;
+ *  - le query passate a `fetchAllPages<T>()` e quelle con `.then()` tipizzato a
+ *    mano, dove il Row generato è più largo/stretto del tipo applicativo
+ *    (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape):
+ *    tiparle richiederebbe cambiare i tipi applicativi = fuori scope P0.
+ */
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { createLogger } from "@/lib/log";
 import { isViewSchemaError } from "@/data/_shared/viewFallbackPredicate";
@@ -314,7 +325,7 @@ function _slugifyGroup(value: string): string {
 /** Carica intel Scout per un dominio (best-effort, non throwa). */
 export async function getSenderIntelByDomain(domain: string): Promise<SenderIntelRow | null> {
   if (!domain) return null;
-  const { data } = await untypedFrom("funnemail_sender_intel")
+  const { data } = await supabase.from("funnemail_sender_intel")
     .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
     .eq("email_domain", domain.toLowerCase())
     .maybeSingle();
@@ -323,7 +334,7 @@ export async function getSenderIntelByDomain(domain: string): Promise<SenderInte
 
 /** Lista cartelle attive ordinate per sezione e sort_order. */
 export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
-  const { data, error } = await untypedFrom("funnemail_folders")
+  const { data, error } = await supabase.from("funnemail_folders")
     .select("slug,label,description,icon,section,sort_order,accept_into_agenda,prompt_hint")
     .eq("is_active", true)
     .order("section", { ascending: true })
@@ -335,7 +346,7 @@ export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
 /** Conteggio decisioni per slug negli ultimi 30 giorni. */
 export async function countFunnemailByFolder(): Promise<Record<string, number>> {
   const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-  const { data, error } = await untypedFrom("funnemail_decisions")
+  const { data, error } = await supabase.from("funnemail_decisions")
     .select("folder_slug")
     .gte("created_at", since)
     .limit(5000);
@@ -356,7 +367,7 @@ export async function listMailsByFolder(
   folderSlug: string,
   limit = 50,
 ): Promise<FunnemailMailRow[]> {
-  const { data: decisions, error: dErr } = await untypedFrom("funnemail_decisions")
+  const { data: decisions, error: dErr } = await supabase.from("funnemail_decisions")
     .select("*")
     .eq("folder_slug", folderSlug)
     .order("created_at", { ascending: false })
@@ -414,7 +425,7 @@ export async function listMailsByFolder(
 export async function getFunnemailDecision(
   messageId: string,
 ): Promise<FunnemailDecisionRow | null> {
-  const { data, error } = await untypedFrom("funnemail_decisions")
+  const { data, error } = await supabase.from("funnemail_decisions")
     .select("*")
     .eq("message_id", messageId)
     .maybeSingle();
@@ -427,7 +438,7 @@ export async function overrideFunnemailFolder(
   messageId: string,
   newFolderSlug: string,
 ): Promise<void> {
-  const { error } = await untypedFrom("funnemail_decisions")
+  const { error } = await supabase.from("funnemail_decisions")
     .update({
       override_folder_slug: newFolderSlug,
       override_at: new Date().toISOString(),
@@ -440,7 +451,7 @@ export async function markFunnemailMessagesRead(messageIds: string[]): Promise<v
   if (messageIds.length === 0) return;
   // NOTA B4.6b: SCRITTURA — resta su `channel_messages` (la view canonica è
   // read-only). Non tentare mai `.update()` su `message_intelligence_v`.
-  const { error } = await untypedFrom("channel_messages")
+  const { error } = await supabase.from("channel_messages")
     .update({ read_at: new Date().toISOString() })
     .in("id", messageIds);
   if (error) throw error;
@@ -501,7 +512,7 @@ export async function listFunnemailGroupedInbox(
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
       .range(from, to), MAX_RULES_OR_GROUPS),
-    fetchAllPages<EmailAddressRuleRow>((from, to) => untypedFrom("email_address_rules")
+    fetchAllPages<EmailAddressRuleRow>((from, to) => supabase.from("email_address_rules")
       .select("email_address,group_name,category")
       .eq("user_id", userId)
       .range(from, to), MAX_RULES_OR_GROUPS),
