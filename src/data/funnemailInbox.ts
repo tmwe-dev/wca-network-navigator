@@ -11,6 +11,7 @@
  * NESSUNA logica: solo SELECT.
  */
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { createLogger } from "@/lib/log";
 import { isViewSchemaError } from "@/data/_shared/viewFallbackPredicate";
