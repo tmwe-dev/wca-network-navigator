@@ -52,10 +52,7 @@ export function EmailIntelligencePage(): React.ReactElement {
       if (!allowlist || allowlist.size === 0) return 0;
       // Carichiamo solo l'email_address (paginato) per intersecare client-side
       // con l'allowlist mailbox-scoped. Le regole restano shared.
-      const { data } = await supabase
-        .from("email_address_rules")
-        .select("email_address")
-        .is("group_id", null);
+      const data = await findUncategorizedAddresses();
       const seen = new Set<string>();
       for (const r of (data ?? []) as Array<{ email_address: string }>) {
         const k = (r.email_address || "").toLowerCase();
@@ -71,12 +68,7 @@ export function EmailIntelligencePage(): React.ReactElement {
     enabled: !!allowlist,
     queryFn: async () => {
       if (!allowlist || allowlist.size === 0) return 0;
-      const { data } = await supabase
-        .from("email_address_rules")
-        .select("email_address")
-        .is("group_id", null)
-        .not("ai_suggested_group", "is", null)
-        .is("ai_suggestion_accepted", null);
+      const data = await findPendingAiSuggestionAddresses();
       const seen = new Set<string>();
       for (const r of (data ?? []) as Array<{ email_address: string }>) {
         const k = (r.email_address || "").toLowerCase();
@@ -94,17 +86,7 @@ export function EmailIntelligencePage(): React.ReactElement {
       // Conta sia la pipeline legacy (email_classifications) sia quella nuova
       // Funnemail (funnemail_decisions) per dare un totale coerente con quanto
       // l'AI ha effettivamente classificato oggi.
-      const [legacy, funnemail] = await Promise.all([
-        supabase
-          .from("email_classifications")
-          .select("id", { count: "exact", head: true })
-          .gte("classified_at", today),
-        supabase
-          .from("funnemail_decisions" as unknown as never)
-          .select("id", { count: "exact", head: true })
-          .gte("created_at", today),
-      ]);
-      return (legacy.count ?? 0) + (funnemail.count ?? 0);
+      return countClassificationsSince(today);
     },
     staleTime: 60_000,
   });
@@ -112,11 +94,7 @@ export function EmailIntelligencePage(): React.ReactElement {
   const { data: activeRulesCount = 0 } = useQuery({
     queryKey: queryKeys.emailIntel.activeRules,
     queryFn: async () => {
-      const { count } = await supabase
-        .from("email_address_rules")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true);
-      return count ?? 0;
+      return countActiveAddressRules();
     },
     staleTime: 60_000,
   });
