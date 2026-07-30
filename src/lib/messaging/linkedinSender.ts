@@ -13,6 +13,7 @@
  * (`no-direct-extension-send`) lo blocca.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { insertPendingAction } from "@/data/aiPendingActions";
 import { sendLinkedIn as sendLinkedInUnified, type SendResult, type LinkedInBridgeSender } from "@/lib/inbox/sendMessage";
 import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { createLogger } from "@/lib/log";
@@ -93,8 +94,7 @@ export async function queueLinkedInForApproval(args: QueueLinkedInArgs): Promise
       .replace(/\{\{company\}\}/gi, t.companyName || "")
       .slice(0, 300);
 
-    // eslint-disable-next-line no-restricted-syntax
-    const { error } = await supabase.from("ai_pending_actions").insert({
+    const { error } = await insertPendingAction({
       user_id: userId,
       partner_id: t.partnerId || null,
       action_type: "send_linkedin",

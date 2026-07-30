@@ -2,7 +2,9 @@
  * Directory scanning logic — extracted from useAcquisitionPipeline.tsx
  * Pure async function that returns scan results without managing React state.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findPartnerWcaIdsByCountry, findPartnerIdsByWcaIds } from "@/data/partners";
+import { findDirectoryCacheByCountryNetwork } from "@/data/directoryCache";
+import { findPartnerNetworksByPartnerIds } from "@/data/partnerNetworks";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { isApiError } from "@/lib/api/apiError";
 import { createLogger } from "@/lib/log";
@@ -29,11 +31,7 @@ export async function scanDirectory(
 
   // Gather existing partner WCA IDs
   for (const code of selectedCountries) {
-    const { data: partners } = await supabase
-      .from("partners")
-      .select("wca_id")
-      .eq("country_code", code)
-      .not("wca_id", "is", null);
+    const partners = await findPartnerWcaIdsByCountry(code);
     partners?.forEach((p) => {
       if (p.wca_id) existingWcaIds.add(p.wca_id);
     });
@@ -44,11 +42,7 @@ export async function scanDirectory(
     const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [""];
 
     for (const net of networkFilter) {
-      const { data: cached } = await supabase
-        .from("directory_cache")
-        .select("*")
-        .eq("country_code", code)
-        .eq("network_name", net);
+      const cached = await findDirectoryCacheByCountryNetwork(code, net);
 
       if (cached && cached.length > 0) {
         for (const entry of cached) {
@@ -136,18 +130,12 @@ export async function enrichQueueWithNetworks(
   if (wcaIdsInDb.length === 0) return {};
 
   try {
-    const { data: partnersWithIds } = await supabase
-      .from("partners")
-      .select("id, wca_id")
-      .in("wca_id", wcaIdsInDb);
+    const partnersWithIds = await findPartnerIdsByWcaIds(wcaIdsInDb);
 
     if (!partnersWithIds || partnersWithIds.length === 0) return {};
 
     const partnerIds = partnersWithIds.map(p => p.id);
-    const { data: networkRows } = await supabase
-      .from("partner_networks")
-      .select("partner_id, network_name")
-      .in("partner_id", partnerIds);
+    const networkRows = await findPartnerNetworksByPartnerIds(partnerIds);
 
     if (!networkRows) return {};
 

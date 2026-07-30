@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getJobTerminalLog, setJobTerminalLog } from "@/data/downloadJobs";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("terminalLog");
@@ -48,17 +48,9 @@ async function flushBuffer(): Promise<void> {
   }
 
   try {
-    const { data } = await supabase
-      .from("download_jobs")
-      .select("terminal_log")
-      .eq("id", jobId)
-      .single();
-    const current = (data?.terminal_log as unknown as LogEntry[] || []);
+    const current = (await getJobTerminalLog(jobId)) as LogEntry[];
     const updated = [...current, ...toFlush].slice(-150);
-    await supabase
-      .from("download_jobs")
-      .update({ terminal_log: updated as unknown as import("@/integrations/supabase/types").Json })
-      .eq("id", jobId);
+    await setJobTerminalLog(jobId, updated);
   } catch (e) {
     log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // Silently fail — terminal log is non-critical

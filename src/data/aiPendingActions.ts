@@ -61,3 +61,11 @@ export async function findActiveAgentPrompts(userId: string) {
 export async function updateAgentSystemPrompt(agentId: string, systemPrompt: string): Promise<void> {
   await supabase.from("agents").update({ system_prompt: systemPrompt }).eq("id", agentId);
 }
+
+/**
+ * Insert di una pending action senza throw: ritorna `{ error }` come i caller
+ * legacy (`whatsappSender` / `linkedinSender`), che loggano e contano i fallimenti.
+ */
+export async function insertPendingAction(payload: Record<string, unknown>) {
+  return await supabase.from("ai_pending_actions").insert(payload as never);
+}

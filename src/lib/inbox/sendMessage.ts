@@ -12,6 +12,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { insertChannelMessageReturningId } from "@/data/channelMessages";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { withRateLimit, RateLimitedError, CircuitOpenError } from "@/lib/api/rateLimiter";
 import { createLogger } from "@/lib/log";
@@ -76,10 +77,7 @@ async function persistOutbound(params: {
     return null;
   }
 
-  // eslint-disable-next-line no-restricted-syntax
-  const { data, error } = await supabase
-    .from("channel_messages")
-    .insert({
+  const { data, error } = await insertChannelMessageReturningId({
       user_id,
       channel: params.channel,
       direction: "outbound",
@@ -92,9 +90,7 @@ async function persistOutbound(params: {
       thread_id: params.thread_id ?? null,
       partner_id: params.partner_id ?? null,
       created_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
+  });
 
   if (error) {
     log.error("send.persist_failed", {

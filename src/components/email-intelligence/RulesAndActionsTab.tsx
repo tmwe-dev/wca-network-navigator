@@ -5,9 +5,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findAddressRulesForUi, updateAddressRuleUnfiltered, insertAddressRule, setAddressRuleActive, deleteAddressRule, countAddressRulesByGroup } from "@/data/emailAddressRules";
+import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule, countAddressRulesByGroup } from "@/data/emailAddressRules";
 import { fetchSenderGroupsOrdered, updateSenderGroupAutoAction } from "@/data/emailGrouping";
-import { findAllEmailPrompts, updateEmailPromptUnfiltered, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt } from "@/data/emailPrompts";
+import { findAllEmailPrompts, updateEmailPromptById, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt } from "@/data/emailPrompts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -111,7 +111,8 @@ function AddressRulesSection() {
     mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
-        await updateAddressRuleUnfiltered(payload);
+        if (typeof id !== "string" || !id) throw new Error("ID regola mancante: aggiornamento annullato");
+        await updateAddressRuleById(id, payload);
       } else {
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         await insertAddressRule(payload, user!.id);
@@ -301,7 +302,8 @@ function PromptManagerSection() {
     mutationFn: async (prompt: Record<string, unknown>) => {
       const { id, ...payload } = prompt;
       if (id) {
-        await updateEmailPromptUnfiltered(payload);
+        if (typeof id !== "string" || !id) throw new Error("ID prompt mancante: aggiornamento annullato");
+        await updateEmailPromptById(id, payload);
       } else {
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         await insertEmailPrompt(payload, user!.id);

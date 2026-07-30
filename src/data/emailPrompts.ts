@@ -54,10 +54,15 @@ export async function findAllEmailPrompts(): Promise<EmailPromptRow[]> {
 }
 
 /**
- * Update SENZA filtro id — semantica legacy di RulesAndActionsTab (errore non propagato).
+ * Update by id (Prompt Manager). Filtro obbligatorio: mai write globali.
  */
-export async function updateEmailPromptUnfiltered(payload: Record<string, unknown>): Promise<void> {
-  await supabase.from("email_prompts").update(payload as never);
+export async function updateEmailPromptById(id: string, payload: Record<string, unknown>): Promise<void> {
+  if (!id) throw new Error("updateEmailPromptById: id obbligatorio");
+  const { error } = await supabase
+    .from("email_prompts")
+    .update(payload as Database["public"]["Tables"]["email_prompts"]["Update"])
+    .eq("id", id);
+  if (error) throw error;
 }
 
 /** Insert nuovo prompt con user_id esplicito (errore non propagato, come il legacy). */

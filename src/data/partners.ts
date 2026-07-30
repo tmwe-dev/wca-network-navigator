@@ -725,3 +725,22 @@ export async function persistLinkedInProfileForCompany(
     return false;
   }
 }
+
+/** wca_id non nulli dei partner di un paese (scan directory). */
+export async function findPartnerWcaIdsByCountry(countryCode: string) {
+  const { data } = await supabase
+    .from("partners")
+    .select("wca_id")
+    .eq("country_code", countryCode)
+    .not("wca_id", "is", null);
+  return data;
+}
+
+/** Coppie id/wca_id per un elenco di wca_id (scan directory). */
+export async function findPartnerIdsByWcaIds(wcaIds: number[]) {
+  const { data } = await supabase
+    .from("partners")
+    .select("id, wca_id")
+    .in("wca_id", wcaIds);
+  return data;
+}
