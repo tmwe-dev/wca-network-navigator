@@ -2,7 +2,12 @@
  * DashboardCharts — 4 Recharts graphs for SuperHome3D
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  findActivitiesSince,
+  findActivityTypes,
+  findTopResponsePatterns,
+  findLeadScores,
+} from "@/data/dashboardCharts";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -26,10 +31,7 @@ function useActivityTrend() {
     queryKey: queryKeys.dashboard.activityTrend(),
     queryFn: async () => {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-      const { data } = await supabase
-        .from("activities")
-        .select("created_at, activity_type")
-        .gte("created_at", thirtyDaysAgo);
+      const data = await findActivitiesSince(thirtyDaysAgo);
 
       const dayMap = new Map<string, { email: number; phone: number; whatsapp: number; total: number }>();
       for (let i = 0; i < 30; i++) {
@@ -58,10 +60,7 @@ function useChannelDistribution() {
   return useQuery({
     queryKey: queryKeys.dashboard.channelDist,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("activities")
-        .select("activity_type")
-        .limit(1000);
+      const data = await findActivityTypes();
 
       const counts: Record<string, number> = {};
       for (const a of data || []) {
@@ -83,13 +82,7 @@ function useResponseByCountry() {
   return useQuery({
     queryKey: queryKeys.dashboard.responseCountry(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("response_patterns")
-        .select("country_code, response_rate, total_sent")
-        .not("country_code", "is", null)
-        .gt("total_sent", 0)
-        .order("total_sent", { ascending: false })
-        .limit(10);
+      const data = await findTopResponsePatterns();
 
       return (data || []).map(r => ({
         country: r.country_code || "??",
@@ -105,10 +98,7 @@ function useLeadScoreDist() {
   return useQuery({
     queryKey: queryKeys.dashboard.leadScoreDist,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("imported_contacts")
-        .select("lead_score")
-        .not("lead_score", "is", null);
+      const data = await findLeadScores();
 
       const buckets = [
         { range: "0-25", min: 0, max: 25, count: 0 },

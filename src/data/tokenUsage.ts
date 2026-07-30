@@ -156,3 +156,17 @@ export async function updateTokenSetting(userId: string, key: string, value: str
 // Pure formatting helpers spostati in @/lib/tokenFormat per rispettare la
 // regola layer. Re-export per retrocompatibilità con gli import esistenti.
 export { formatTokenCount, getFunctionDisplayName } from "@/lib/tokenFormat";
+
+/**
+ * Token loggati in una finestra temporale (`ai_prompt_log`).
+ * Estratto da `TokenTrendCard`: stesso select e stessi filtri.
+ */
+export async function findPromptLogTokens(params: {
+  since: string;
+  before?: string;
+}): Promise<Array<{ tokens_total: number | null }>> {
+  let q = supabase.from("ai_prompt_log").select("tokens_total").gte("created_at", params.since);
+  if (params.before) q = q.lt("created_at", params.before);
+  const { data } = await q;
+  return data ?? [];
+}

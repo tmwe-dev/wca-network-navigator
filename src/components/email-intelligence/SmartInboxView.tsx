@@ -4,6 +4,13 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  findEmailClassifications,
+  findEmailClassificationCategories,
+  findConversationContextByEmail,
+  insertClassificationApproval,
+  updateClassificationCategory,
+} from "@/data/emailClassifications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,15 +53,7 @@ export function SmartInboxView() {
   const { data: classifications = [], isLoading } = useQuery({
     queryKey: queryKeys.email.classifications,
     queryFn: async () => {
-      let q = supabase
-        .from("email_classifications")
-        .select("*, partners(company_name)")
-        .order("classified_at", { ascending: false })
-        .limit(100);
-      if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return findEmailClassifications(categoryFilter);
     },
   });
 
@@ -62,9 +61,7 @@ export function SmartInboxView() {
   const { data: allCats = [] } = useQuery({
     queryKey: queryKeys.email.classificationsCatCounts,
     queryFn: async () => {
-      const { data, error } = await supabase.from("email_classifications").select("category");
-      if (error) throw error;
-      return data ?? [];
+      return findEmailClassificationCategories();
     },
   });
 
@@ -79,24 +76,17 @@ export function SmartInboxView() {
     queryKey: queryKeys.convContext.byEmail(selected?.email_address),
     enabled: !!selected?.email_address,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("contact_conversation_context")
-        .select("*")
-        .eq("email_address", selected!.email_address)
-        .maybeSingle();
-      return data;
+      return findConversationContextByEmail(selected!.email_address);
     },
   });
 
   const handleApprove = async (id: string) => {
     const item = classifications.find(c => c.id === id);
     if (!item) return;
-    const { error } = await supabase.from("ai_decision_log").insert({
-      decision_type: "classify_email",
-      email_address: item.email_address,
-      user_review: "approved",
+    const { error } = await insertClassificationApproval({
+      emailAddress: item.email_address,
       confidence: item.confidence,
-      user_id: (await supabase.auth.getSession()).data.session?.user?.id ?? "",
+      userId: (await supabase.auth.getSession()).data.session?.user?.id ?? "",
     });
     if (!error) { toast.success("Classificazione approvata"); qc.invalidateQueries({ queryKey: queryKeys.email.classifications }); }
     else toast.error("Errore");
@@ -104,7 +94,7 @@ export function SmartInboxView() {
 
   const handleCorrectCategory = async (id: string, newCategory: string) => {
     const item = classifications.find(c => c.id === id);
-    const { error } = await supabase.from("email_classifications").update({ category: newCategory }).eq("id", id);
+    const { error } = await updateClassificationCategory(id, newCategory);
     if (!error) {
       toast.success(`Categoria corretta: ${CATEGORIES[newCategory]?.label ?? newCategory}`);
       qc.invalidateQueries({ queryKey: queryKeys.email.classifications });

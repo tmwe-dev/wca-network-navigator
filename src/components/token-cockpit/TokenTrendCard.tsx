@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findPromptLogTokens } from "@/data/tokenUsage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTokenCount } from "@/lib/tokenFormat";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -91,30 +92,22 @@ export function TokenTrendCard() {
       endOfLastWeek.setDate(endOfLastWeek.getDate() + 7);
 
       const [todayRes, yesterdayRes, thisWeekRes, lastWeekRes] = await Promise.all([
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfToday.toISOString()),
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfYesterday.toISOString())
-          .lt("created_at", endOfYesterday.toISOString()),
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfThisWeek.toISOString()),
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfLastWeek.toISOString())
-          .lt("created_at", endOfLastWeek.toISOString()),
+        findPromptLogTokens({ since: startOfToday.toISOString() }),
+        findPromptLogTokens({
+          since: startOfYesterday.toISOString(),
+          before: endOfYesterday.toISOString(),
+        }),
+        findPromptLogTokens({ since: startOfThisWeek.toISOString() }),
+        findPromptLogTokens({
+          since: startOfLastWeek.toISOString(),
+          before: endOfLastWeek.toISOString(),
+        }),
       ]);
 
-      const today = (todayRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const yesterday = (yesterdayRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const thisWeek = (thisWeekRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const lastWeek = (lastWeekRes.data || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const today = todayRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const yesterday = yesterdayRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const thisWeek = thisWeekRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const lastWeek = lastWeekRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
 
       return { today, yesterday, thisWeek, lastWeek };
     },

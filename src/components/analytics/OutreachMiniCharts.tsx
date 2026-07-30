@@ -2,7 +2,11 @@
  * OutreachMiniCharts — Sparklines and donut for Outreach stats header
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  findOutreachActivityDates,
+  findActivityStatuses,
+  countResponsesReceived,
+} from "@/data/dashboardCharts";
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,11 +28,7 @@ export function OutreachMiniCharts() {
       const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000).toISOString();
 
       // Sparkline last 7 days
-      const { data: recent } = await supabase
-        .from("activities")
-        .select("created_at")
-        .gte("created_at", sevenDaysAgo)
-        .in("activity_type", ["send_email", "follow_up"]);
+      const recent = await findOutreachActivityDates(sevenDaysAgo);
 
       const dayMap = new Map<string, number>();
       for (let i = 0; i < 7; i++) {
@@ -44,10 +44,7 @@ export function OutreachMiniCharts() {
         .reverse();
 
       // Status donut
-      const { data: statusData } = await supabase
-        .from("activities")
-        .select("status")
-        .gte("created_at", sevenDaysAgo);
+      const statusData = await findActivityStatuses(sevenDaysAgo);
 
       const statusCounts = new Map<string, number>();
       for (const a of statusData || []) {
@@ -57,18 +54,12 @@ export function OutreachMiniCharts() {
       const donut = Array.from(statusCounts.entries()).map(([name, value]) => ({ name, value }));
 
       // Response trend: this week vs last week
-      const { count: thisWeek } = await supabase
-        .from("activities")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", sevenDaysAgo)
-        .eq("response_received", true);
+      const thisWeek = await countResponsesReceived({ since: sevenDaysAgo });
 
-      const { count: lastWeek } = await supabase
-        .from("activities")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", fourteenDaysAgo)
-        .lt("created_at", sevenDaysAgo)
-        .eq("response_received", true);
+      const lastWeek = await countResponsesReceived({
+        since: fourteenDaysAgo,
+        before: sevenDaysAgo,
+      });
 
       const thisW = thisWeek || 0;
       const lastW = lastWeek || 0;

@@ -7,7 +7,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Activity, AlertTriangle, Pause, Play, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchSystemDiagnostics,
+  fetchSystemPaused,
+  fetchInboundActivityCounts,
+  setSystemPaused,
+  purgeInboundActivities,
+  type DiagnosticsPayload,
+} from "@/data/systemDiagnostics";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -25,38 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 
-import { createLogger } from "@/lib/log";
-const log = createLogger("SystemDiagnosticsBadge");
-interface DiagnosticsPayload {
-  agent_tasks_pending: number;
-  email_queue_pending: number;
-  extension_pending: number;
-  cron_active: number;
-  last_email_sync: string | null;
-  generated_at: string;
-}
-
-async function fetchDiagnostics(): Promise<DiagnosticsPayload | null> {
-  const { data, error } = await supabase.rpc("get_system_diagnostics" as never);
-  if (error) {
-    log.warn("[SystemDiagnosticsBadge] rpc error:", { error: error.message });
-    return null;
-  }
-  return data as unknown as DiagnosticsPayload;
-}
-
-async function fetchPaused(): Promise<boolean> {
-  const { data, error } = await supabase.rpc("get_system_paused" as never);
-  if (error) return false;
-  return Boolean(data);
-}
-
-async function fetchInboundCounts(): Promise<{ total: number; orphans: number }> {
-  const { data, error } = await supabase.rpc("count_inbound_activities" as never);
-  if (error || !data) return { total: 0, orphans: 0 };
-  const d = data as { total: number; orphans: number };
-  return { total: d.total ?? 0, orphans: d.orphans ?? 0 };
-}
+type Diagnostics = DiagnosticsPayload;
 
 function formatRelative(ts: string | null): string {
   if (!ts) return "mai";
@@ -83,7 +59,7 @@ export function SystemDiagnosticsBadge() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["system-diagnostics"],
-    queryFn: fetchDiagnostics,
+    queryFn: (): Promise<Diagnostics | null> => fetchSystemDiagnostics(),
     enabled: isAdmin,
     staleTime: 60_000,
     refetchOnWindowFocus: true,
@@ -92,21 +68,20 @@ export function SystemDiagnosticsBadge() {
 
   const { data: paused = false } = useQuery({
     queryKey: ["system-paused"],
-    queryFn: fetchPaused,
+    queryFn: fetchSystemPaused,
     enabled: isAdmin,
     refetchInterval: 30_000,
   });
 
   const { data: inboundCounts } = useQuery({
     queryKey: ["inbound-activity-counts"],
-    queryFn: fetchInboundCounts,
+    queryFn: fetchInboundActivityCounts,
     enabled: isAdmin && pauseDialogOpen,
   });
 
   const togglePause = useMutation({
     mutationFn: async (next: boolean) => {
-      const { error } = await supabase.rpc("set_system_paused" as never, { p_paused: next } as never);
-      if (error) throw error;
+      await setSystemPaused(next);
     },
     onSuccess: (_, next) => {
       qc.invalidateQueries({ queryKey: ["system-paused"] });
@@ -118,9 +93,7 @@ export function SystemDiagnosticsBadge() {
 
   const purge = useMutation({
     mutationFn: async (onlyOrphans: boolean) => {
-      const { data: res, error } = await supabase.rpc("purge_inbound_activities" as never, { p_only_orphans: onlyOrphans } as never);
-      if (error) throw error;
-      return res as { deleted: number };
+      return purgeInboundActivities(onlyOrphans);
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["inbound-activity-counts"] });
