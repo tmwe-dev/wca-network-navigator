@@ -44,3 +44,17 @@ export async function deleteOperator(id: string): Promise<void> {
   const { error } = await supabase.from("operators").delete().eq("id", id);
   if (error) throw error;
 }
+
+/**
+ * Flag amministratore dell'operatore collegato a un utente auth.
+ * Semantica preservata dai chiamanti originali (AdminUsers*): errore
+ * Supabase ignorato, `null` quando non esiste un record operatore.
+ */
+export async function findOperatorAdminFlag(userId: string): Promise<{ is_admin: boolean } | null> {
+  const { data } = await supabase
+    .from("operators")
+    .select("is_admin")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data ?? null;
+}
