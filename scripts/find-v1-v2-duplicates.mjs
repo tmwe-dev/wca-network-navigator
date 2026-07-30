@@ -38,5 +38,7 @@ const out = [
   "|------|-------------|--------------|",
   ...dups.map((d) => `| \`${d.base}\` | \`${d.v1}\` | \`${d.v2}\` |`),
 ];
-writeFileSync("docs/audit/v1-v2-duplicates.md", out.join("\n"));
+// NB: output su file *generato*. `docs/audit/v1-v2-duplicates.md` contiene
+// l'audit manuale e NON deve essere sovrascritto da questo script.
+writeFileSync("docs/audit/v1-v2-duplicates.generated.md", out.join("\n"));
 console.log(`v1 files: ${v1.length}, v2 files: ${v2.length}, candidate duplicates: ${dups.length}`);
