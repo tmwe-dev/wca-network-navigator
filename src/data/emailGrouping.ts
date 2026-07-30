@@ -20,6 +20,32 @@ export interface AssignedAddressRuleRow {
   domain: string | null;
 }
 
+/** Riga "regola indirizzo non classificata" così come letta dal DB. */
+export interface UncategorizedAddressRuleRow {
+  id: string;
+  email_address: string;
+  display_name: string | null;
+  email_count: number | null;
+  last_email_at: string | null;
+  domain: string | null;
+  company_name: string | null;
+  ai_suggested_group: string | null;
+  ai_suggestion_confidence: number | null;
+  ai_suggestion_accepted: boolean | null;
+  is_blocked: boolean | null;
+}
+
+/** Riga "regola indirizzo classificata" (group_id OPPURE group_name valorizzato). */
+export interface ClassifiedAddressRuleRow extends UncategorizedAddressRuleRow {
+  group_id: string | null;
+  group_name: string | null;
+}
+
+const UNCATEGORIZED_COLUMNS =
+  "id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked";
+
+const CLASSIFIED_COLUMNS = `${UNCATEGORIZED_COLUMNS}, group_id, group_name`;
+
 /**
  * Paginazione a blocchi di 1000 righe per aggirare il limite di default
  * di Supabase. Errori propagati (throw), come nel hook originale.
