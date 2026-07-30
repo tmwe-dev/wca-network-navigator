@@ -48,8 +48,8 @@ export async function findSuggestionAddressRules(params: {
 export interface SuggestionGroupAssignment {
   group_id: string;
   group_name: string;
-  group_color: string | null;
-  group_icon: string | null;
+  group_color?: string | null;
+  group_icon?: string | null;
   ai_suggestion_accepted: boolean;
 }
 
