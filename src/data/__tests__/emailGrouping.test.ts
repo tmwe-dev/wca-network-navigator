@@ -12,6 +12,7 @@ import {
   fetchUncategorizedAddressRules,
   fetchClassifiedAddressRules,
   fetchInboundEmailSenderAddresses,
+  updateAddressRuleEmailCount,
 } from "@/data/emailGrouping";
 
 type Terminal = { data?: unknown; error?: unknown };
@@ -20,7 +21,7 @@ function chain(terminals: Terminal[]) {
   const calls: Record<string, unknown[][]> = {};
   let i = 0;
   const c: Record<string, unknown> = {};
-  for (const m of ["select", "order", "not", "is", "or", "range", "eq"]) {
+  for (const m of ["select", "order", "not", "is", "or", "range", "eq", "update"]) {
     c[m] = vi.fn((...args: unknown[]) => {
       (calls[m] ||= []).push(args);
       return c;
@@ -209,5 +210,29 @@ describe("DAL — fetchInboundEmailSenderAddresses", () => {
     await expect(
       fetchInboundEmailSenderAddresses({ userId: "u1", mailbox: null }),
     ).rejects.toEqual({ message: "boom-m" });
+  });
+});
+
+describe("updateAddressRuleEmailCount", () => {
+  it("updates email_address_rules with exact payload and eq id", async () => {
+    const { c, calls } = chain([{ error: null }]);
+    mockFrom.mockReturnValue(c);
+    await updateAddressRuleEmailCount("r1", 42);
+    expect(mockFrom).toHaveBeenCalledWith("email_address_rules");
+    expect(calls.update[0]).toEqual([{ email_count: 42 }]);
+    expect(calls.eq[0]).toEqual(["id", "r1"]);
+  });
+
+  it("resolves on success", async () => {
+    const { c } = chain([{ error: null }]);
+    mockFrom.mockReturnValue(c);
+    await expect(updateAddressRuleEmailCount("r2", 0)).resolves.toBeUndefined();
+  });
+
+  it("propagates the supabase error unchanged", async () => {
+    const err = { message: "boom-u", code: "42501" };
+    const { c } = chain([{ error: err }]);
+    mockFrom.mockReturnValue(c);
+    await expect(updateAddressRuleEmailCount("r3", 7)).rejects.toEqual(err);
   });
 });
