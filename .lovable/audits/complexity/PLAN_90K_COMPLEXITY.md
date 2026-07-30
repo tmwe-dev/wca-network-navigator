@@ -435,9 +435,22 @@ Prima **write** estratta: **#10 update `email_count`** → `updateAddressRuleEma
 
 **Gate**: 21 test DAL pass (3 nuovi: contratto select/order/range/tabella; paginazione 1000+1; errore propagato); `tsgo -p tsconfig.app.json --noEmit` 0 errori; eslint file toccati 0 errori (1 warning preesistente `no-restricted-imports`); `npm run build` exit 0; due suite complete consecutive **386 file, 3084 pass / 2 skipped / 0 fail** (baseline 3081 + 3, nessun nuovo skip).
 
-### Batch F20-P1.3F (PREPARATO)
+### Batch F20-P1.3F (ESEGUITO)
 
-Tra le due write residue si sceglie **#11: upsert batch `email_address_rules` con `onConflict: "user_id,email_address"` e chunk 100** → estrazione in DAL come pura traslazione di chiamata: non consuma alcuna shape di ritorno (nessun `.select()`, nessun fallback re-read) e propaga l'errore con `throw`. Chunking, toast e ordine restano nel hook. La **#4** (upsert `email_sender_groups` con `onConflict` su nome gruppo + `ignoreDuplicates` + `.select()` e fallback re-read del record creato) resta ultima: il valore di ritorno è consumato dal flusso e richiede modellare due percorsi. Atteso `.from()` **2 → 1**.
+**Base**: `9a4ea9935c2d01c6906d56124a1c6d774fbd2d8d`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
+
+**Runtime**: write #11 estratta da `populateAddressRules` in `upsertAddressRules(rows)` dentro `src/data/emailGrouping.ts`. Contratto 1:1 — tabella `email_address_rules`, payload = esattamente l'array `newRules.slice(i, i + 100)`, opzione `{ onConflict: "user_id,email_address" }`, **nessun `.select()`**, nessun valore di ritorno inventato (`Promise<void>`), semantica errore invariata (`if (error) throw error`). Tipo input `NewAddressRuleRow` strutturale ed esatto, limitato alle sole colonne realmente presenti nel batch (`user_id`, `email_address`, `domain`, `email_count`, `is_active`, `company_name`): contratto non allargato.
+
+**Invarianti preservate**: chunking a 100 e `await` sequenziale nel hook, ordine delle righe e dei chunk, costruzione `newRules` e normalizzazioni, auth `getSession`, toast (`nuovi address aggiunti` / `già presenti` / conteggio stale), invalidazioni query, realtime, stato React, UX e API pubblica del hook.
+
+**Prova diff**: `.from()` Supabase diretti nel hook **2 → 1** esatti (residuo: upsert `email_sender_groups` #4 a riga 87; `Array.from` righe 125/168 escluso). Zero `any`/`unknown as`/`untypedFrom`/`@ts-ignore`. Nessuna modifica a schema/RLS/dati produttivi.
+
+**Gate**: 25 test DAL pass (4 nuovi: tabella/payload/onConflict esatti e assenza `.select()`; ordine multi-riga preservato; successo `void`; errore propagato invariato); `tsgo -p tsconfig.app.json --noEmit` 0 errori; eslint file toccati 0 errori (1 warning preesistente `no-restricted-imports`); `npm run build` exit 0; due suite complete consecutive **386 file, 3088 pass / 2 skipped / 0 fail** (baseline 3084 + 4, nessun nuovo skip).
+
+### Batch F20-P1.3G (PREPARATO)
+
+Ultimo bypass residuo **#4**: upsert `email_sender_groups` con `onConflict` sul nome gruppo, `ignoreDuplicates` e `.select()` con fallback re-read del record creato. Va modellato in DAL con **due percorsi espliciti** (record restituito dall'upsert vs re-read su conflitto), preservando la shape consumata dal hook. Atteso `.from()` **1 → 0**, che chiude P001-027 come `VERIFIED_FIXED`.
+
 ---
 
 ## Regole trasversali su ogni batch
