@@ -41,11 +41,6 @@ export interface ClassifiedAddressRuleRow extends UncategorizedAddressRuleRow {
   group_name: string | null;
 }
 
-const UNCATEGORIZED_COLUMNS =
-  "id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked";
-
-const CLASSIFIED_COLUMNS = `${UNCATEGORIZED_COLUMNS}, group_id, group_name`;
-
 /**
  * Paginazione a blocchi di 1000 righe per aggirare il limite di default
  * di Supabase. Errori propagati (throw), come nel hook originale.
