@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries, updateBlacklistEntry, insertBlacklistSyncLog } from "@/data/blacklist";
-import { getBlacklistedPartnerIds, getBlacklistedCompanyNames } from "@/data/blacklist";
+import { getBlacklistedPartnerIds, getBlacklistedCompanyNames, findBlacklistSyncLogs, getBlacklistStats, findBlacklistEntriesForPartner } from "@/data/blacklist";
+import { findPartnersForBlacklistMatch } from "@/data/partners";
 import { queryKeys } from "@/lib/queryKeys";
 
 type BlacklistEntryRow = Database["public"]["Tables"]["blacklist_entries"]["Row"];
@@ -17,13 +17,7 @@ export function useBlacklistSyncLog() {
   return useQuery({
     queryKey: queryKeys.blacklist.syncLog,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blacklist_sync_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data ?? [];
+      return findBlacklistSyncLogs();
     },
   });
 }
@@ -32,21 +26,7 @@ export function useBlacklistStats() {
   return useQuery({
     queryKey: queryKeys.blacklist.stats,
     queryFn: async () => {
-      const { data: entries, error: e1 } = await supabase
-        .from("blacklist_entries")
-        .select("id, matched_partner_id");
-      if (e1) throw e1;
-      const total = entries?.length || 0;
-      const matched = entries?.filter(e => e.matched_partner_id).length || 0;
-
-      const { data: logs } = await supabase
-        .from("blacklist_sync_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const lastUpdated = logs?.[0]?.created_at ?? null;
-
-      return { total, matched, lastUpdated };
+      return getBlacklistStats();
     },
   });
 }
@@ -56,12 +36,7 @@ export function useBlacklistForPartner(partnerId: string | undefined) {
     queryKey: queryKeys.blacklist.partner(partnerId),
     enabled: !!partnerId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blacklist_entries")
-        .select("*")
-        .eq("matched_partner_id", partnerId!);
-      if (error) throw error;
-      return data ?? [];
+      return findBlacklistEntriesForPartner(partnerId!);
     },
   });
 }
@@ -100,9 +75,7 @@ export function useImportBlacklist() {
 
       // Match with partners
       const allEntries = await findAllBlacklistEntries() as unknown as Record<string, unknown>[];
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id, company_name, country_name");
+      const partners = await findPartnersForBlacklistMatch();
 
       let matchCount = 0;
       if (allEntries && partners) {
