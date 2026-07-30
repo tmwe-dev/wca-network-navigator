@@ -9,6 +9,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { EmailSenderGroup } from "@/types/email-management";
 
+/**
+ * Filtro mailbox per le letture su `channel_messages`.
+ * Rappresenta esattamente i due casi correnti del hook:
+ *  - personal → `mailbox_id IS NULL`
+ *  - shared   → `mailbox_id = <mailboxId>`
+ * `null` (nessun filtro) quando la mailbox attiva non è ancora risolta.
+ */
+export type MailboxFilter =
+  | { kind: "personal" }
+  | { kind: "shared"; mailboxId: string };
+
 /** Riga "regola assegnata a un gruppo" così come letta dal DB. */
 export interface AssignedAddressRuleRow {
   id: string;
@@ -122,4 +133,34 @@ export async function fetchClassifiedAddressRules(): Promise<ClassifiedAddressRu
       .order("email_count", { ascending: false })
       .range(from, to),
   );
+}
+
+/**
+ * Legge tutti gli indirizzi mittente delle email inbound dell'utente,
+ * limitatamente alla mailbox indicata. Nessun dedup/conteggio qui: la
+ * funzione ritorna le righe grezze `{ from_address }`, esattamente come
+ * la query originale nel hook. Errori propagati (throw).
+ */
+export async function fetchInboundEmailSenderAddresses(params: {
+  userId: string;
+  mailbox: MailboxFilter | null;
+}): Promise<Array<{ from_address: string | null }>> {
+  const { userId, mailbox } = params;
+  return fetchAllRows<{ from_address: string | null }>((from, to) => {
+    let q = supabase
+      .from("channel_messages")
+      .select("from_address")
+      .eq("channel", "email")
+      .eq("direction", "inbound")
+      .eq("user_id", userId)
+      .not("from_address", "is", null)
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (mailbox?.kind === "personal") {
+      q = q.is("mailbox_id", null);
+    } else if (mailbox?.kind === "shared") {
+      q = q.eq("mailbox_id", mailbox.mailboxId);
+    }
+    return q;
+  });
 }

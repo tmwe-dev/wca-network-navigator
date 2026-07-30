@@ -16,6 +16,8 @@ import {
   fetchAssignedAddressRules,
   fetchUncategorizedAddressRules,
   fetchClassifiedAddressRules,
+  fetchInboundEmailSenderAddresses,
+  type MailboxFilter,
 } from "@/data/emailGrouping";
 
 export function useGroupingData() {
@@ -221,28 +223,18 @@ export function useGroupingData() {
       if (!user) return;
 
       // Get only THIS user's inbound email senders
-      const messages = await fetchAllRows<{ from_address: string | null }>(
-        (from, to) =>
-          (() => {
-            let q = supabase
-              .from("channel_messages")
-              .select("from_address")
-              .eq("channel", "email")
-              .eq("direction", "inbound")
-              .eq("user_id", user.id)
-              .not("from_address", "is", null)
-              .order("id", { ascending: true })
-              .range(from, to);
-            // Limita la popolazione regole alla mailbox attiva, così
-            // "Popola" non importa indirizzi appartenenti ad altre caselle.
-            if (activeMailbox?.kind === "personal") {
-              q = q.is("mailbox_id", null);
-            } else if (activeMailbox?.kind === "shared") {
-              q = q.eq("mailbox_id", activeMailbox.mailbox_id);
-            }
-            return q;
-          })(),
-      );
+      // Limita la popolazione regole alla mailbox attiva, così
+      // "Popola" non importa indirizzi appartenenti ad altre caselle.
+      const mailboxFilter: MailboxFilter | null =
+        activeMailbox?.kind === "personal"
+          ? { kind: "personal" }
+          : activeMailbox?.kind === "shared"
+            ? { kind: "shared", mailboxId: activeMailbox.mailbox_id }
+            : null;
+      const messages = await fetchInboundEmailSenderAddresses({
+        userId: user.id,
+        mailbox: mailboxFilter,
+      });
 
       // Count per address
       const addressMap = new Map<string, number>();
