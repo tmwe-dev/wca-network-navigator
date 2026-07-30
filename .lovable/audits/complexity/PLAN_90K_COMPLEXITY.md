@@ -350,19 +350,3 @@ A0 completato al 100%. A1 completato per **regole strutturali su 3.445 file sema
 4. **Strumentazione runtime per orfani** (P2.2).
 
 Ogni item ha input deterministico già in `.lovable/audits/complexity/analysis.json` → il prossimo turno può ripartire senza rifare A0.
-
-## Batch F20-P0.6b (base a1272065d52adcff3f48b0ff1278f3904fd6eb08)
-
-### Preflight ledger
-Corretti esclusivamente i due campi `commit` delle righe `F20-P0.5` (da `d6b677...` al commit effettivo `a1272065...`). Nessuna riformattazione: tutte le altre righe preservate byte-per-byte. `JSON.parse` valido su 16/16 righe.
-
-### Finding trattato: **P001-013 — VERIFIED_FIXED (residui chiusi)**
-- Pre: 6 call site `untypedFrom()` residui in `src/data/funnemailInbox.ts`.
-- Post: migrati a `supabase.from()` tipizzato i due su tabella letterale coperta dai tipi generati (`funnemail_sender_intel`, `partners`). Nessun `any` / `unknown as` / `@ts-ignore`, nessun cambio di firme, export, error semantics o ordering.
-- Residui documentati (4): 2 su sorgente dinamica `message_intelligence_v | channel_messages`; 2 su `fetchAllPages<T>` con divergenza Row generato vs tipo applicativo (`suggested_action`, `funnemail_policy`).
-
-### Gate
-tsgo 0 errori · eslint 0/0 · build exit 0 · test mirati 9 pass · vitest ×2 → 3060 pass / 2 skipped / 0 fail.
-
-### Prossimo batch P0.7
-Verificare **P001-027** (`useGroupingData.ts`): il grep non trova più `.from()` diretti → probabile FALSE_POSITIVE da certificare. Fallback: **P001-003** (documentazione ordine di priorità in `resolveThreadTarget`). Esclusi per policy P0: P001-005/014/015/017/019/020/022/026/030 (monoliti), P001-011 (RPC/migration), P001-018 (cross-boundary types).
