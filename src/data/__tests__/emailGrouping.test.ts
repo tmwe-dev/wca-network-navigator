@@ -11,6 +11,7 @@ import {
   fetchAssignedAddressRules,
   fetchUncategorizedAddressRules,
   fetchClassifiedAddressRules,
+  fetchInboundEmailSenderAddresses,
 } from "@/data/emailGrouping";
 
 type Terminal = { data?: unknown; error?: unknown };
@@ -19,7 +20,7 @@ function chain(terminals: Terminal[]) {
   const calls: Record<string, unknown[][]> = {};
   let i = 0;
   const c: Record<string, unknown> = {};
-  for (const m of ["select", "order", "not", "is", "or", "range"]) {
+  for (const m of ["select", "order", "not", "is", "or", "range", "eq"]) {
     c[m] = vi.fn((...args: unknown[]) => {
       (calls[m] ||= []).push(args);
       return c;
@@ -138,5 +139,75 @@ describe("DAL — emailGrouping", () => {
       mockFrom.mockReturnValue(c);
       await expect(fetchClassifiedAddressRules()).rejects.toEqual({ message: "boom-c" });
     });
+  });
+});
+
+describe("DAL — fetchInboundEmailSenderAddresses", () => {
+  const BASE_EQ = [
+    ["channel", "email"],
+    ["direction", "inbound"],
+    ["user_id", "u1"],
+  ];
+
+  it("personal mailbox uses .is('mailbox_id', null) and never .eq on mailbox_id", async () => {
+    const { c, calls } = chain([{ data: [{ from_address: "a@b.c" }], error: null }]);
+    mockFrom.mockReturnValue(c);
+    const res = await fetchInboundEmailSenderAddresses({
+      userId: "u1",
+      mailbox: { kind: "personal" },
+    });
+    expect(mockFrom).toHaveBeenCalledWith("channel_messages");
+    expect(calls.select[0]).toEqual(["from_address"]);
+    expect(calls.eq).toEqual(BASE_EQ);
+    expect(calls.is).toEqual([["mailbox_id", null]]);
+    expect(calls.not[0]).toEqual(["from_address", "is", null]);
+    expect(calls.order[0]).toEqual(["id", { ascending: true }]);
+    expect(calls.range[0]).toEqual([0, 999]);
+    expect(res).toEqual([{ from_address: "a@b.c" }]);
+  });
+
+  it("shared mailbox uses .eq('mailbox_id', id) and never .is on mailbox_id", async () => {
+    const { c, calls } = chain([{ data: [], error: null }]);
+    mockFrom.mockReturnValue(c);
+    await fetchInboundEmailSenderAddresses({
+      userId: "u1",
+      mailbox: { kind: "shared", mailboxId: "mb-9" },
+    });
+    expect(calls.eq).toEqual([...BASE_EQ, ["mailbox_id", "mb-9"]]);
+    expect(calls.is).toBeUndefined();
+    expect(calls.select[0]).toEqual(["from_address"]);
+    expect(calls.not[0]).toEqual(["from_address", "is", null]);
+    expect(calls.order[0]).toEqual(["id", { ascending: true }]);
+  });
+
+  it("no mailbox → no mailbox_id filter at all", async () => {
+    const { c, calls } = chain([{ data: [], error: null }]);
+    mockFrom.mockReturnValue(c);
+    await fetchInboundEmailSenderAddresses({ userId: "u1", mailbox: null });
+    expect(calls.eq).toEqual(BASE_EQ);
+    expect(calls.is).toBeUndefined();
+  });
+
+  it("paginates until a partial page is returned", async () => {
+    const full = Array.from({ length: 1000 }, (_, i) => ({ from_address: `x${i}@y.z` }));
+    const { c, calls } = chain([
+      { data: full, error: null },
+      { data: [{ from_address: "tail@y.z" }], error: null },
+    ]);
+    mockFrom.mockReturnValue(c);
+    const res = await fetchInboundEmailSenderAddresses({
+      userId: "u1",
+      mailbox: { kind: "personal" },
+    });
+    expect(calls.range).toEqual([[0, 999], [1000, 1999]]);
+    expect(res).toHaveLength(1001);
+  });
+
+  it("throws on query error", async () => {
+    const { c } = chain([{ data: null, error: { message: "boom-m" } }]);
+    mockFrom.mockReturnValue(c);
+    await expect(
+      fetchInboundEmailSenderAddresses({ userId: "u1", mailbox: null }),
+    ).rejects.toEqual({ message: "boom-m" });
   });
 });
