@@ -11,6 +11,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { DEFAULT_GROUPS as PREDEFINED_GROUPS } from "@/types/email-management";
 import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
+import { fetchSenderGroupsOrdered, fetchAssignedAddressRules } from "@/data/emailGrouping";
 
 export function useGroupingData() {
   const qc = useQueryClient();
@@ -54,11 +55,7 @@ export function useGroupingData() {
   const loadGroups = async () => {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
-    const { data } = await supabase
-      .from("email_sender_groups")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    setGroups((data || []) as EmailSenderGroup[]);
+    setGroups(await fetchSenderGroupsOrdered());
   };
 
   /**
@@ -66,23 +63,7 @@ export function useGroupingData() {
    * Replaces the per-GroupDropZone query that ran N times.
    */
   const loadAssignedRules = async () => {
-    const rows = await fetchAllRows<{
-      id: string;
-      email_address: string;
-      display_name: string | null;
-      group_name: string | null;
-      created_at: string | null;
-      company_name: string | null;
-      domain: string | null;
-    }>(
-      (from, to) =>
-        supabase
-          .from("email_address_rules")
-          .select("id, email_address, display_name, group_name, created_at, company_name, domain")
-          .not("group_name", "is", null)
-          .order("created_at", { ascending: false })
-          .range(from, to),
-    );
+    const rows = await fetchAssignedAddressRules();
     const map = new Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>();
     for (const r of rows) {
       if (!r.group_name) continue;
@@ -100,12 +81,7 @@ export function useGroupingData() {
       if (!user) throw new Error("Non autenticato");
 
       // Load groups
-      const { data: groupsData } = await supabase
-        .from("email_sender_groups")
-        .select("*")
-        .order("sort_order", { ascending: true });
-
-      const loadedGroups = (groupsData || []) as EmailSenderGroup[];
+      const loadedGroups = await fetchSenderGroupsOrdered();
 
       if (loadedGroups.length === 0) {
         // Seed predefined groups only when the table is globally empty.
@@ -128,11 +104,7 @@ export function useGroupingData() {
           toast.success(`${created.length} gruppi predefiniti creati`);
         } else {
           // Fallback re-read in case upsert returned nothing
-          const { data: reread } = await supabase
-            .from("email_sender_groups")
-            .select("*")
-            .order("sort_order", { ascending: true });
-          setGroups((reread || []) as EmailSenderGroup[]);
+          setGroups(await fetchSenderGroupsOrdered());
         }
       } else {
         setGroups(loadedGroups);
