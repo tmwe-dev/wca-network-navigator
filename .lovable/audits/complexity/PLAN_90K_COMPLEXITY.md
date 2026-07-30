@@ -286,28 +286,36 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002.
 
 ---
 
-## Batch F20-P0.6 (ESEGUITO)
+## Batch F20-P0.6 + P0.6b (ESEGUITI — sezione consolidata)
 
 ### Finding trattato: **P001-013 — VERIFIED_FIXED**
-- **File**: `src/data/funnemailInbox.ts` (unico runtime file toccato).
-- **Verifica preliminare superata**: tutte e 8 le relazioni usate sono presenti nei types generati.
-- **Fix**: 8 call site su tabella letterale migrati da `untypedFrom()` (`any`) al client tipizzato `supabase.from()`. Query, colonne, filtri, ordinamenti e contratti invariati: cambia solo il tipo statico del builder.
-- **Non migrati (motivazione inline nel file)**: `untypedFrom(source)` ×2 (sorgente dinamica view|tabella, il client tipizzato non accetta unione di nomi tabella) e 4 query dentro `fetchAllPages<T>` / con `.then()` tipizzato a mano, dove il Row generato diverge dal tipo applicativo (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape). Provato empiricamente: 2 errori TS2322 → rollback mirato di quelle righe.
-- **Gate verde**: `tsgo` 0 errori · `eslint` file toccato 0/0 · `npm run build` exit 0 · `vitest` ×2: 384 files, **3060 pass / 2 skipped / 0 fail**.
-- **Δpunteggio prudente**: **+14**.
+- **File runtime**: `src/data/funnemailInbox.ts` (unico file runtime toccato nei due sotto-batch).
+- **Totale migrato**: **10 call site** da `untypedFrom()` (`any`) al client tipizzato `supabase.from()` — 8 in P0.6, 2 in P0.6b (`funnemail_sender_intel`, `partners`). Query, colonne, filtri, ordinamenti, firme, export ed error semantics invariati: cambia solo il tipo statico del builder.
+- **Residui motivati (4)**: 2 su sorgente dinamica `message_intelligence_v | channel_messages` (il client tipizzato non accetta un'unione di nomi tabella); 2 dentro `fetchAllPages<T>` dove il Row generato diverge dal tipo applicativo (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape). Provato empiricamente: 2 errori TS2322 → rollback mirato. Motivazione documentata inline nel file.
+- **Gate reali**: `tsgo` 0 errori · `eslint` file toccato 0/0 · build exit 0 · test mirati 9 pass · `vitest` ×2: 384 files, **3060 pass / 2 skipped / 0 fail** (nessun nuovo skip).
+- **Ledger**: righe F20-P0.6 / F20-P0.6b allineate al commit effettivo `d79ecd00b4711cf3ce644058d3ff4373dd2234c7`.
 
 ### Cumulativo P0 finding chiusi: **6 / 33** partition001
 P001-007 · P001-025 · P001-016 · P001-004 · P001-002 · P001-013.
 
+### Prossimo candidato unico: **P001-027**
+
 ---
 
-## Batch F20-P0.7 (CANDIDATE)
+## Batch F20-P0.7 (ESEGUITO)
 
-**Candidato primario**: allineamento tipi applicativi `FunnemailDecisionRow.suggested_action` / `EmailSenderGroupRow.funnemail_policy` ai Row generati, per chiudere i 4 `untypedFrom` residui di `funnemailInbox.ts`. Solo tipi, nessuna migration/RLS/auth/dati.
+### Finding trattato: **P001-027 — CONFIRMED_FACT / DEFERRED (nessun runtime edit)**
+- **Rettifica dell'evidenza originale**: il finding dichiarava «0 `.from()` diretti». **Falso**. La verifica sul file attuale `src/components/email-intelligence/manual-grouping/useGroupingData.ts` (447 righe) mostra `import { supabase } from "@/integrations/supabase/client"` e **12 accessi diretti**: 10 `supabase.from()` su `email_sender_groups`, `email_address_rules`, `channel_messages`; 3 `supabase.auth.getSession()`; 1 `supabase.channel()` realtime + `removeChannel`. Nessun alias/wrapper (`untypedFrom`, `tFrom`, `rpc`, `functions.invoke`, `fetch`) presente. Coerente con P001-033 che elenca `useGroupingData` tra i DAL bypass.
+- **Quindi NON è un falso positivo**: il bypass DAL esiste.
+- **Perché DEFERRED e non corretto qui**: la correzione richiede un nuovo modulo DAL (`src/data/emailGrouping.ts`) + riscrittura del hook = **2 runtime file**, che sommati a ledger e plan superano il tetto di **3 file totali** del batch. Inoltre coinvolge query condizionali dinamiche e una subscription realtime: fuori dal profilo micro-cluster P0 a rischio nullo.
+- **Esito**: DEFERRED → **P1.3 (DAL bypass residui)**, con perimetro già definito (12 accessi, 3 tabelle, 1 canale realtime, 3 caller noti).
+- **Nessun file runtime modificato in questo batch.**
 
-**Candidato secondario**: prossimo finding di logging non strutturato / guard runtime a basso rischio nella partition001, con lo stesso profilo di P001-016 (max 1 runtime file).
+### Batch F20-P0.8 (CANDIDATE)
 
-**Esclusi per policy P0**: P001-014/015 e P001-001 (split monoliti → P1), P001-018 (cross-boundary types edge), P001-011 (richiede migration RPC).
+**Candidato unico**: **P001-008** — `executeAIActions` in `src/hooks/useCockpitLogic.ts` usa `(c as unknown as Record<string, unknown>)[field!]` con `field!` non verificato: guard runtime su `field` prima dell'accesso, 1 solo runtime file, nessun cambio di contratto, query, UX o schema. FACT confermato, profilo identico a P001-002.
+
+**Esclusi per policy P0**: P001-001/005/014/015/017/019/020/022/026/030 (split monoliti → P1), P001-011 (migration RPC), P001-018 (cross-boundary types edge), P001-003 (documentale, nessun beneficio runtime), P001-027 (deferito a P1.3).
 
 ---
 
@@ -342,19 +350,3 @@ A0 completato al 100%. A1 completato per **regole strutturali su 3.445 file sema
 4. **Strumentazione runtime per orfani** (P2.2).
 
 Ogni item ha input deterministico già in `.lovable/audits/complexity/analysis.json` → il prossimo turno può ripartire senza rifare A0.
-
-## Batch F20-P0.6b (base a1272065d52adcff3f48b0ff1278f3904fd6eb08)
-
-### Preflight ledger
-Corretti esclusivamente i due campi `commit` delle righe `F20-P0.5` (da `d6b677...` al commit effettivo `a1272065...`). Nessuna riformattazione: tutte le altre righe preservate byte-per-byte. `JSON.parse` valido su 16/16 righe.
-
-### Finding trattato: **P001-013 — VERIFIED_FIXED (residui chiusi)**
-- Pre: 6 call site `untypedFrom()` residui in `src/data/funnemailInbox.ts`.
-- Post: migrati a `supabase.from()` tipizzato i due su tabella letterale coperta dai tipi generati (`funnemail_sender_intel`, `partners`). Nessun `any` / `unknown as` / `@ts-ignore`, nessun cambio di firme, export, error semantics o ordering.
-- Residui documentati (4): 2 su sorgente dinamica `message_intelligence_v | channel_messages`; 2 su `fetchAllPages<T>` con divergenza Row generato vs tipo applicativo (`suggested_action`, `funnemail_policy`).
-
-### Gate
-tsgo 0 errori · eslint 0/0 · build exit 0 · test mirati 9 pass · vitest ×2 → 3060 pass / 2 skipped / 0 fail.
-
-### Prossimo batch P0.7
-Verificare **P001-027** (`useGroupingData.ts`): il grep non trova più `.from()` diretti → probabile FALSE_POSITIVE da certificare. Fallback: **P001-003** (documentazione ordine di priorità in `resolveThreadTarget`). Esclusi per policy P0: P001-005/014/015/017/019/020/022/026/030 (monoliti), P001-011 (RPC/migration), P001-018 (cross-boundary types).
