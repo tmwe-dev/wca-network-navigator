@@ -56,3 +56,38 @@ export async function getBlacklistedCompanyNames(): Promise<Set<string>> {
   }
   return out;
 }
+
+/** Ultimi log di sincronizzazione blacklist. */
+export async function findBlacklistSyncLogs(limit = 10) {
+  const { data, error } = await supabase
+    .from("blacklist_sync_log")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Statistiche blacklist: totale voci e voci matchate + data ultimo sync. */
+export async function getBlacklistStats(): Promise<{ total: number; matched: number; lastUpdated: string | null }> {
+  const { data: entries, error } = await supabase
+    .from("blacklist_entries")
+    .select("id, matched_partner_id");
+  if (error) throw error;
+  const logs = await findBlacklistSyncLogs(1);
+  return {
+    total: entries?.length ?? 0,
+    matched: entries?.filter((e) => e.matched_partner_id).length ?? 0,
+    lastUpdated: (logs[0] as { created_at?: string } | undefined)?.created_at ?? null,
+  };
+}
+
+/** Voci blacklist collegate a un partner. */
+export async function findBlacklistEntriesForPartner(partnerId: string) {
+  const { data, error } = await supabase
+    .from("blacklist_entries")
+    .select("*")
+    .eq("matched_partner_id", partnerId);
+  if (error) throw error;
+  return data ?? [];
+}

@@ -753,3 +753,9 @@ export async function createPartnerSafe(
   if (error) return { partner: null, error: error.message };
   return { partner: data as PartnerRow, error: null };
 }
+
+/** Elenco minimale per matching blacklist (nome + paese). */
+export async function findPartnersForBlacklistMatch(): Promise<Array<{ id: string; company_name: string; country_name: string | null }>> {
+  const { data } = await supabase.from("partners").select("id, company_name, country_name");
+  return (data ?? []) as Array<{ id: string; company_name: string; country_name: string | null }>;
+}

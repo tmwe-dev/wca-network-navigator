@@ -24,3 +24,13 @@ export async function deleteEmailTemplate(id: string) {
   const { error } = await supabase.from("email_templates").delete().eq("id", id);
   if (error) throw error;
 }
+
+/** Tutti i template email, più recenti prima. */
+export async function findAllEmailTemplates() {
+  const { data, error } = await supabase
+    .from("email_templates")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
