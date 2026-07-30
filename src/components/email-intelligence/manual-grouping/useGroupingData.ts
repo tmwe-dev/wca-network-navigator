@@ -17,6 +17,7 @@ import {
   fetchUncategorizedAddressRules,
   fetchClassifiedAddressRules,
   fetchInboundEmailSenderAddresses,
+  updateAddressRuleEmailCount,
   type MailboxFilter,
 } from "@/data/emailGrouping";
 
@@ -284,11 +285,7 @@ export function useGroupingData() {
           const batch = staleUpdates.slice(i, i + 20);
           await Promise.all(
             batch.map(async ({ id, count }) => {
-              const { error } = await supabase
-                .from("email_address_rules")
-                .update({ email_count: count })
-                .eq("id", id);
-              if (error) throw error;
+              await updateAddressRuleEmailCount(id, count);
             }),
           );
         }
