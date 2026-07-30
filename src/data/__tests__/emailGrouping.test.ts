@@ -15,7 +15,9 @@ import {
   updateAddressRuleEmailCount,
   fetchAddressRuleCounts,
   upsertAddressRules,
+  seedDefaultSenderGroups,
   type NewAddressRuleRow,
+  type NewSenderGroupRow,
 } from "@/data/emailGrouping";
 
 type Terminal = { data?: unknown; error?: unknown };
@@ -305,6 +307,55 @@ describe("fetchAddressRuleCounts", () => {
       const { c } = chain([{ error: err }]);
       mockFrom.mockReturnValue(c);
       await expect(upsertAddressRules(rows)).rejects.toEqual(err);
+    });
+  });
+
+  describe("seedDefaultSenderGroups", () => {
+    const rows: NewSenderGroupRow[] = [
+      { nome_gruppo: "Clienti", descrizione: "d1", colore: "#111", icon: "i1", user_id: "u1", sort_order: 0 },
+      { nome_gruppo: "Fornitori", descrizione: "d2", colore: "#222", icon: "i2", user_id: "u1", sort_order: 1 },
+    ];
+
+    it("upserts email_sender_groups with exact payload, onConflict and select", async () => {
+      const { c, calls } = chain([{ data: [{ id: "g1" }], error: null }]);
+      mockFrom.mockReturnValue(c);
+      const res = await seedDefaultSenderGroups(rows);
+      expect(mockFrom).toHaveBeenCalledWith("email_sender_groups");
+      expect(calls.upsert[0]).toEqual([rows, { onConflict: "nome_gruppo", ignoreDuplicates: true }]);
+      expect(calls.select[0]).toEqual([]);
+      expect(res).toEqual({ kind: "created", groups: [{ id: "g1" }] });
+    });
+
+    it("preserves row order in the payload", async () => {
+      const { c, calls } = chain([{ data: [{ id: "g1" }], error: null }]);
+      mockFrom.mockReturnValue(c);
+      await seedDefaultSenderGroups(rows);
+      const sent = calls.upsert[0][0] as NewSenderGroupRow[];
+      expect(sent.map((r) => r.nome_gruppo)).toEqual(["Clienti", "Fornitori"]);
+    });
+
+    it("falls back to the ordered re-read when upsert returns no rows", async () => {
+      const { c, calls } = chain([
+        { data: [], error: null },
+        { data: [{ id: "gA" }, { id: "gB" }], error: null },
+      ]);
+      mockFrom.mockReturnValue(c);
+      const res = await seedDefaultSenderGroups(rows);
+      expect(res).toEqual({ kind: "fallback", groups: [{ id: "gA" }, { id: "gB" }] });
+      expect(calls.select[1]).toEqual(["*"]);
+      expect(calls.order[0]).toEqual(["sort_order", { ascending: true }]);
+    });
+
+    it("falls back (never throws) when the upsert reports an error, legacy semantics", async () => {
+      const { c } = chain([
+        { data: null, error: { message: "conflict" } },
+        { data: [{ id: "gA" }], error: null },
+      ]);
+      mockFrom.mockReturnValue(c);
+      await expect(seedDefaultSenderGroups(rows)).resolves.toEqual({
+        kind: "fallback",
+        groups: [{ id: "gA" }],
+      });
     });
   });
 

@@ -447,9 +447,15 @@ Prima **write** estratta: **#10 update `email_count`** → `updateAddressRuleEma
 
 **Gate**: 25 test DAL pass (4 nuovi: tabella/payload/onConflict esatti e assenza `.select()`; ordine multi-riga preservato; successo `void`; errore propagato invariato); `tsgo -p tsconfig.app.json --noEmit` 0 errori; eslint file toccati 0 errori (1 warning preesistente `no-restricted-imports`); `npm run build` exit 0; due suite complete consecutive **386 file, 3088 pass / 2 skipped / 0 fail** (baseline 3084 + 4, nessun nuovo skip).
 
-### Batch F20-P1.3G (PREPARATO)
+### Batch F20-P1.3G (ESEGUITO — chiude P001-027)
 
-Ultimo bypass residuo **#4**: upsert `email_sender_groups` con `onConflict` sul nome gruppo, `ignoreDuplicates` e `.select()` con fallback re-read del record creato. Va modellato in DAL con **due percorsi espliciti** (record restituito dall'upsert vs re-read su conflitto), preservando la shape consumata dal hook. Atteso `.from()` **1 → 0**, che chiude P001-027 come `VERIFIED_FIXED`.
+Base `b215c791c8d9c40da8dedf2b2abf54fce92d3862`. Estratto l'ultimo bypass residuo **#4** (upsert `email_sender_groups`) da `loadData` in `seedDefaultSenderGroups(rows)` dentro `src/data/emailGrouping.ts`.
+
+Equivalenza 1:1: tabella, payload `inserts` invariato, opzioni `{ onConflict: "nome_gruppo", ignoreDuplicates: true }`, `.select()` senza argomenti, errore dell'upsert ignorato come nel hook (nessun throw introdotto), fallback re-read ordinato via `fetchSenderGroupsOrdered()`. I due percorsi sono resi espliciti dal discriminated union `SeedSenderGroupsResult = { kind: "created" | "fallback"; groups }` — nessuna semantica nuova. Nel hook restano `setGroups(seeded.groups)` su entrambi i rami e il `toast.success` con conteggio **solo** sul ramo `created`. Nuovo tipo `NewSenderGroupRow` limitato alle sole colonne inviate.
+
+`.from()` diretti nel hook **1 → 0** (residui solo `Array.from`, `supabase.auth.getSession()` e `supabase.channel/removeChannel`, non bypass DAL di query). **P001-027 → VERIFIED_FIXED**.
+
+**Gate**: 29 test DAL pass (4 nuovi: contratto upsert con esito `created`; ordine multi-riga; percorso `fallback` con re-read `select("*")` + `order("sort_order", asc)`; fallback anche con errore upsert); `tsgo` 0 errori; eslint file toccati 0 errori (1 warning preesistente); `bun run build` exit 0; due suite complete consecutive **386 file, 3092 pass / 2 skipped / 0 fail** (baseline 3088 + 4, nessun nuovo skip).
 
 ---
 
