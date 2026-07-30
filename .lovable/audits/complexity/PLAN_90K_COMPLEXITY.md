@@ -407,6 +407,8 @@ Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 estratte in 
 
 **Gate**: 15 test DAL pass (5 nuovi); `tsgo` 0 errori; eslint delta 0 errori (1 warning preesistente invariato); build exit 0; due suite complete **386 file, 3078 pass / 2 skipped / 0 fail** (baseline 3073 + 5, nessun nuovo skip).
 
+**Verifica idempotenza (F20-P1.3CV)**: controllo anti-duplicazione su richiesta di riesecuzione — `fetchInboundEmailSenderAddresses`/`MailboxFilter` presenti una sola volta nel DAL, un solo punto di uso nel hook, un solo blocco test, una sola riga ledger e una sola sezione plan. Nessun edit riapplicato. Gate rieseguiti integralmente: 15 test DAL, `tsgo` 0 errori, eslint delta 0 errori, build exit 0, due suite complete 386 file / 3078 pass / 2 skipped / 0 fail.
+
 ### Batch F20-P1.3D (PREPARATO)
 
 Prima **write** estratta, scelta come la più sicura: **#10 update `email_count`** (`update({ email_count }).eq("id", id)`) → `updateAddressRuleEmailCount(id, count)` nel DAL, lasciando nel hook il batching a 20 e il `Promise.all`. Preferita a #4 (upsert gruppi con `onConflict: nome_gruppo` + `ignoreDuplicates` + `select` e fallback re-read) e a #11 (upsert batch con `onConflict: user_id,email_address`) perché ha superficie minima, nessun conflict target e nessuna shape di ritorno consumata. Atteso `.from()` **4 → 3**.
