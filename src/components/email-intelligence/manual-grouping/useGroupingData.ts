@@ -20,6 +20,7 @@ import {
   updateAddressRuleEmailCount,
   fetchAddressRuleCounts,
   upsertAddressRules,
+  seedDefaultSenderGroups,
   type MailboxFilter,
 } from "@/data/emailGrouping";
 
@@ -83,16 +84,10 @@ export function useGroupingData() {
           user_id: user.id,
           sort_order: i,
         }));
-        const { data: created } = await supabase
-          .from("email_sender_groups")
-          .upsert(inserts, { onConflict: "nome_gruppo", ignoreDuplicates: true })
-          .select();
-        if (created && created.length > 0) {
-          setGroups(created as EmailSenderGroup[]);
-          toast.success(`${created.length} gruppi predefiniti creati`);
-        } else {
-          // Fallback re-read in case upsert returned nothing
-          setGroups(await fetchSenderGroupsOrdered());
+        const seeded = await seedDefaultSenderGroups(inserts);
+        setGroups(seeded.groups);
+        if (seeded.kind === "created") {
+          toast.success(`${seeded.groups.length} gruppi predefiniti creati`);
         }
       } else {
         setGroups(loadedGroups);

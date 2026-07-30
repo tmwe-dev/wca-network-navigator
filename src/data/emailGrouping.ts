@@ -229,3 +229,48 @@ export async function upsertAddressRules(rows: NewAddressRuleRow[]): Promise<voi
     .upsert(rows, { onConflict: "user_id,email_address" });
   if (error) throw error;
 }
+
+/**
+ * Riga di seed per `email_sender_groups` così come costruita da `loadData`
+ * a partire da `DEFAULT_GROUPS`. Contratto limitato alle sole colonne
+ * realmente inviate: nessun allargamento.
+ */
+export interface NewSenderGroupRow {
+  nome_gruppo: string;
+  descrizione: string;
+  colore: string;
+  icon: string;
+  user_id: string;
+  sort_order: number;
+}
+
+/**
+ * Esito del seed dei gruppi predefiniti (write #4, batch F20-P1.3G).
+ * Modella esplicitamente i due percorsi già presenti nel hook:
+ *  - `created`  → l'upsert ha restituito righe (`.select()` non vuoto)
+ *  - `fallback` → l'upsert non ha restituito nulla, quindi re-read ordinato
+ */
+export type SeedSenderGroupsResult =
+  | { kind: "created"; groups: EmailSenderGroup[] }
+  | { kind: "fallback"; groups: EmailSenderGroup[] };
+
+/**
+ * Seed idempotente dei gruppi predefiniti (write #4, batch F20-P1.3G).
+ * Estratto 1:1 dal hook: stessa tabella, stesso payload, stesse opzioni
+ * `onConflict: "nome_gruppo"` + `ignoreDuplicates: true`, stesso `.select()`,
+ * stessa semantica errori (l'errore dell'upsert era ignorato dal hook) e
+ * stesso fallback re-read ordinato via `fetchSenderGroupsOrdered`.
+ * Toast e set di stato restano nel hook.
+ */
+export async function seedDefaultSenderGroups(
+  rows: NewSenderGroupRow[],
+): Promise<SeedSenderGroupsResult> {
+  const { data: created } = await supabase
+    .from("email_sender_groups")
+    .upsert(rows, { onConflict: "nome_gruppo", ignoreDuplicates: true })
+    .select();
+  if (created && created.length > 0) {
+    return { kind: "created", groups: created as EmailSenderGroup[] };
+  }
+  return { kind: "fallback", groups: await fetchSenderGroupsOrdered() };
+}
