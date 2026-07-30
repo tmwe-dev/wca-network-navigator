@@ -14,6 +14,8 @@ import {
   fetchInboundEmailSenderAddresses,
   updateAddressRuleEmailCount,
   fetchAddressRuleCounts,
+  upsertAddressRules,
+  type NewAddressRuleRow,
 } from "@/data/emailGrouping";
 
 type Terminal = { data?: unknown; error?: unknown };
@@ -22,7 +24,7 @@ function chain(terminals: Terminal[]) {
   const calls: Record<string, unknown[][]> = {};
   let i = 0;
   const c: Record<string, unknown> = {};
-  for (const m of ["select", "order", "not", "is", "or", "range", "eq", "update"]) {
+  for (const m of ["select", "order", "not", "is", "or", "range", "eq", "update", "upsert"]) {
     c[m] = vi.fn((...args: unknown[]) => {
       (calls[m] ||= []).push(args);
       return c;
@@ -268,4 +270,42 @@ describe("fetchAddressRuleCounts", () => {
     mockFrom.mockReturnValue(c);
     await expect(fetchAddressRuleCounts()).rejects.toEqual(err);
   });
+
+  describe("upsertAddressRules", () => {
+    const rows: NewAddressRuleRow[] = [
+      { user_id: "u1", email_address: "a@x.com", domain: "x.com", email_count: 2, is_active: true, company_name: "X" },
+      { user_id: "u1", email_address: "b@y.com", domain: "y.com", email_count: 5, is_active: true, company_name: "Y" },
+    ];
+
+    it("upserts email_address_rules with exact payload and onConflict", async () => {
+      const { c, calls } = chain([{ error: null }]);
+      mockFrom.mockReturnValue(c);
+      await upsertAddressRules(rows);
+      expect(mockFrom).toHaveBeenCalledWith("email_address_rules");
+      expect(calls.upsert[0]).toEqual([rows, { onConflict: "user_id,email_address" }]);
+      expect(calls.select).toBeUndefined();
+    });
+
+    it("preserves multi-row order", async () => {
+      const { c, calls } = chain([{ error: null }]);
+      mockFrom.mockReturnValue(c);
+      await upsertAddressRules(rows);
+      const sent = calls.upsert[0][0] as NewAddressRuleRow[];
+      expect(sent.map((r) => r.email_address)).toEqual(["a@x.com", "b@y.com"]);
+    });
+
+    it("resolves void on success", async () => {
+      const { c } = chain([{ error: null }]);
+      mockFrom.mockReturnValue(c);
+      await expect(upsertAddressRules(rows)).resolves.toBeUndefined();
+    });
+
+    it("propagates the supabase error unchanged", async () => {
+      const err = { message: "conflict" };
+      const { c } = chain([{ error: err }]);
+      mockFrom.mockReturnValue(c);
+      await expect(upsertAddressRules(rows)).rejects.toEqual(err);
+    });
+  });
+
 });

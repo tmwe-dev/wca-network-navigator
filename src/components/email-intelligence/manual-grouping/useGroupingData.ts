@@ -19,6 +19,7 @@ import {
   fetchInboundEmailSenderAddresses,
   updateAddressRuleEmailCount,
   fetchAddressRuleCounts,
+  upsertAddressRules,
   type MailboxFilter,
 } from "@/data/emailGrouping";
 
@@ -272,10 +273,7 @@ export function useGroupingData() {
 
       if (newRules.length > 0) {
         for (let i = 0; i < newRules.length; i += 100) {
-          const { error } = await supabase
-            .from("email_address_rules")
-            .upsert(newRules.slice(i, i + 100), { onConflict: "user_id,email_address" });
-          if (error) throw error;
+          await upsertAddressRules(newRules.slice(i, i + 100));
         }
         toast.success(`${newRules.length} nuovi address aggiunti`);
       } else {
