@@ -310,3 +310,16 @@ export async function getUnifiedInboxStats(channel?: string): Promise<{ unread: 
     total: messages.length,
   };
 }
+
+/**
+ * Insert outbound e ritorno dell'id creato, senza throw:
+ * espone `{ data, error }` come il caller legacy (`src/lib/inbox/sendMessage.ts`),
+ * che logga e ritorna null in caso di errore.
+ */
+export async function insertChannelMessageReturningId(msg: ChannelMessageInsert) {
+  return await supabase
+    .from("channel_messages")
+    .insert(msg)
+    .select("id")
+    .single();
+}

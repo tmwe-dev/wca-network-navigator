@@ -47,3 +47,16 @@ export async function setAiAutomationsPaused(userId: string, paused: boolean, re
     await upsertAppSetting(userId, "ai_automations_paused_at", new Date().toISOString());
   }
 }
+
+/**
+ * Legge il solo `value` di una app_setting per chiave (senza filtro user_id).
+ * Estratta dal bypass DAL diretto di `src/lib/inbox/sessionTracker.ts`:
+ * stessa select/eq/maybeSingle e stesso ritorno `{ data, error }` non-throw.
+ */
+export async function getAppSettingValueByKey(key: string) {
+  return await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+}

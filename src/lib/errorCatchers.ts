@@ -3,6 +3,7 @@
  * Called once from main.tsx.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { insertAppErrorLog } from "@/data/appErrorLogs";
 
 async function logGlobalError(entry: {
   error_type: string;
@@ -12,7 +13,7 @@ async function logGlobalError(entry: {
   try {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
-    await supabase.from("app_error_logs").insert({
+    await insertAppErrorLog({
       user_id: user.id,
       error_type: entry.error_type,
       error_message: entry.error_message,

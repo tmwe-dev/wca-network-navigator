@@ -142,15 +142,6 @@ export async function updateAddressRuleById(id: string, payload: Record<string, 
   if (error) throw error;
 }
 
-/**
- * Update SENZA filtro id — semantica legacy di RulesAndActionsTab.
- * Mantenuta identica per non alterare il comportamento corrente.
- */
-export async function updateAddressRuleUnfiltered(payload: Record<string, unknown>): Promise<void> {
-  const { error } = await untypedFrom("email_address_rules").update(payload);
-  if (error) throw error;
-}
-
 /** Insert nuova regola con user_id esplicito. */
 export async function insertAddressRule(payload: Record<string, unknown>, userId: string): Promise<void> {
   const { error } = await untypedFrom("email_address_rules").insert({ ...payload, user_id: userId });

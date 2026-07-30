@@ -16,3 +16,13 @@ export async function findDirectoryCache(countryCodes: string[], networks?: stri
   if (error) throw error;
   return data ?? [];
 }
+
+/** Righe cache directory per singolo paese + network (network "" = nessun filtro). */
+export async function findDirectoryCacheByCountryNetwork(countryCode: string, networkName: string) {
+  const { data } = await supabase
+    .from("directory_cache")
+    .select("*")
+    .eq("country_code", countryCode)
+    .eq("network_name", networkName);
+  return data;
+}

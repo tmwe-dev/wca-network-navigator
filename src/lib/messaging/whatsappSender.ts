@@ -10,6 +10,7 @@
  *   - queueWhatsAppForApproval() → bulk / AI / cadenze / autopilot
  */
 import { supabase } from "@/integrations/supabase/client";
+import { insertPendingAction } from "@/data/aiPendingActions";
 import { sendWhatsApp as sendWhatsAppUnified, type SendResult, type WhatsAppBridgeSender } from "@/lib/inbox/sendMessage";
 import { createLogger } from "@/lib/log";
 
@@ -84,8 +85,7 @@ export async function queueWhatsAppForApproval(args: QueueWhatsAppArgs): Promise
       .replace(/\{\{name\}\}/gi, t.contactName || "")
       .replace(/\{\{company\}\}/gi, t.companyName || "");
 
-    // eslint-disable-next-line no-restricted-syntax
-    const { error } = await supabase.from("ai_pending_actions").insert({
+    const { error } = await insertPendingAction({
       user_id: userId,
       partner_id: t.partnerId || null,
       action_type: "send_whatsapp",

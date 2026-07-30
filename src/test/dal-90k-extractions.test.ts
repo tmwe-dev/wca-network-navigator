@@ -15,7 +15,7 @@ describe("DAL 90K — email_address_rules", () => {
   it("espone le funzioni CRUD estratte dai componenti", () => {
     expect(typeof addressRules.findAddressRulesForUi).toBe("function");
     expect(typeof addressRules.updateAddressRuleById).toBe("function");
-    expect(typeof addressRules.updateAddressRuleUnfiltered).toBe("function");
+    expect(addressRules).not.toHaveProperty("updateAddressRuleUnfiltered");
     expect(typeof addressRules.insertAddressRule).toBe("function");
     expect(typeof addressRules.setAddressRuleActive).toBe("function");
     expect(typeof addressRules.deleteAddressRule).toBe("function");
@@ -30,7 +30,8 @@ describe("DAL 90K — email_address_rules", () => {
 describe("DAL 90K — email_prompts", () => {
   it("espone le funzioni CRUD estratte", () => {
     expect(typeof prompts.findAllEmailPrompts).toBe("function");
-    expect(typeof prompts.updateEmailPromptUnfiltered).toBe("function");
+    expect(typeof prompts.updateEmailPromptById).toBe("function");
+    expect(prompts).not.toHaveProperty("updateEmailPromptUnfiltered");
     expect(typeof prompts.insertEmailPrompt).toBe("function");
     expect(typeof prompts.setEmailPromptActive).toBe("function");
     expect(typeof prompts.deleteEmailPrompt).toBe("function");

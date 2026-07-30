@@ -25,6 +25,12 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 vi.mock("@/data/appSettings", () => ({
   upsertAppSetting: (...args: any[]) => mockUpsertAppSetting(...args),
+  // La lettura passa ora dal DAL: stessa select/eq/maybeSingle, stessi spy.
+  getAppSettingValueByKey: (key: string) => {
+    mockSelect("value");
+    mockEq("key", key);
+    return mockMaybeSingle();
+  },
 }));
 
 vi.mock("@/lib/log", () => ({

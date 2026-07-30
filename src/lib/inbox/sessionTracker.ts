@@ -12,6 +12,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getAppSettingValueByKey } from "@/data/appSettings";
 import { createLogger } from "@/lib/log";
 import type { ChannelKind, ChannelSession, SessionStatus } from "./types";
 
@@ -24,11 +25,7 @@ function keyFor(channel: ChannelKind): string {
 }
 
 export async function getSessionStatus(channel: ChannelKind): Promise<ChannelSession> {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", keyFor(channel))
-    .maybeSingle();
+  const { data, error } = await getAppSettingValueByKey(keyFor(channel));
 
   if (error) {
     log.warn("session.read_failed", { channel, error: error.message });

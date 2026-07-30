@@ -236,3 +236,25 @@ export async function findDeadPartnerIds(wcaIds: number[]) {
 export function invalidateDownloadJobs(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: queryKeys.downloads.jobs });
 }
+
+/* ── Terminal log (buffer flush di src/lib/download/terminalLog.ts) ──
+ * Estratte da bypass DAL diretti. Semantica identica: read single + update by id.
+ */
+
+/** Legge il terminal_log corrente di un job (throw sulla `single()` mancante). */
+export async function getJobTerminalLog(jobId: string): Promise<unknown[]> {
+  const { data } = await supabase
+    .from("download_jobs")
+    .select("terminal_log")
+    .eq("id", jobId)
+    .single();
+  return (data?.terminal_log as unknown[] | null) ?? [];
+}
+
+/** Sostituisce il terminal_log di un job. */
+export async function setJobTerminalLog(jobId: string, entries: unknown[]): Promise<void> {
+  await supabase
+    .from("download_jobs")
+    .update({ terminal_log: entries as Json })
+    .eq("id", jobId);
+}
