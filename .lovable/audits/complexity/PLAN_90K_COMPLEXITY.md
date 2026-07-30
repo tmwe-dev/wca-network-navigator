@@ -381,7 +381,7 @@ Alla richiesta di riesecuzione del batch su base `42bbf5c3d54c336bc7b790c98b942a
 
 ### Batch F20-P1.3B (ESEGUITO)
 
-**Base**: `ddcd1a08ba9216d5beb74f6cf66110e7a5523a43`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
+**Base**: `8df125a0b1d4ea902095ad265b1b49c3444b51cd`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
 
 Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 estratte in `src/data/emailGrouping.ts` come `fetchUncategorizedAddressRules()` e `fetchClassifiedAddressRules()`, con i tipi riga `UncategorizedAddressRuleRow` e `ClassifiedAddressRuleRow` (extends).
 
@@ -393,9 +393,23 @@ Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 estratte in 
 
 **Gate**: 10 test DAL pass (5 nuovi); `tsgo` 0 errori; eslint delta 0 errori (1 warning preesistente invariato); build exit 0; due suite complete **386 file, 3073 pass / 2 skipped / 0 fail** (baseline 3068 + 5, nessun nuovo skip).
 
-### Batch F20-P1.3C (PREPARATO)
+### Batch F20-P1.3C (ESEGUITO)
 
-Cluster successivo più sicuro: **query READ dinamica #8** (`channel_messages` in `populateAddressRules`) → `fetchInboundEmailSenderAddresses({ userId, mailbox })`, con i filtri condizionali `activeMailbox` (personal → `mailbox_id is null`; shared → `mailbox_id eq`) passati come parametro esplicito e l'auth mantenuta nel hook (`userId` come argomento). Preferita alle write #4/#10/#11 perché resta READ e non tocca `upsert`/`onConflict` né il batching. Atteso `.from()` **5 → 4**.
+**Base**: `8df125a0b1d4ea902095ad265b1b49c3444b51cd`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
+
+**Query READ dinamica #8** (`channel_messages` in `populateAddressRules`) estratta in `src/data/emailGrouping.ts` come `fetchInboundEmailSenderAddresses({ userId, mailbox })`. Nuovo tipo discriminato `MailboxFilter = { kind: "personal" } | { kind: "shared"; mailboxId: string }`, più `null` quando la mailbox attiva non è ancora risolta: i tre casi corrispondono esattamente ai rami già presenti nel hook, nessun comportamento inventato.
+
+**Equivalenza provata**: stesso `select("from_address")`, stessi `.eq("channel","email")` / `.eq("direction","inbound")` / `.eq("user_id", user.id)`, stesso `.not("from_address","is",null)`, stesso `.order("id", { ascending: true })`, stessa paginazione `.range` a 1000 (helper `fetchAllRows` del DAL identico a quello locale), stessa semantica errori (throw). Personal → `.is("mailbox_id", null)`; shared → `.eq("mailbox_id", id)`; nessuna mailbox → nessun filtro.
+
+**Restano nel hook**: `supabase.auth.getSession()` (auth non spostata, `userId` passato esplicitamente), conteggio per indirizzo, normalizzazione lowercase/trim con skip senza `@`, dedup, batching update 20 / upsert 100, toast, invalidazioni query, ordine di esecuzione. Write #4/#10/#11, realtime, stato React, UX, schema/RLS/dati non toccati.
+
+**Prova diff**: `.from()` diretti nel hook **5 → 4** esatti (residui: 106 upsert `email_sender_groups`, 255/288/311 `email_address_rules`; le occorrenze `Array.from` a 144/187 non sono query). Zero `untypedFrom`/`as any`/`@ts-ignore`; API hook e caller invariati.
+
+**Gate**: 15 test DAL pass (5 nuovi); `tsgo` 0 errori; eslint delta 0 errori (1 warning preesistente invariato); build exit 0; due suite complete **386 file, 3078 pass / 2 skipped / 0 fail** (baseline 3073 + 5, nessun nuovo skip).
+
+### Batch F20-P1.3D (PREPARATO)
+
+Prima **write** estratta, scelta come la più sicura: **#10 update `email_count`** (`update({ email_count }).eq("id", id)`) → `updateAddressRuleEmailCount(id, count)` nel DAL, lasciando nel hook il batching a 20 e il `Promise.all`. Preferita a #4 (upsert gruppi con `onConflict: nome_gruppo` + `ignoreDuplicates` + `select` e fallback re-read) e a #11 (upsert batch con `onConflict: user_id,email_address`) perché ha superficie minima, nessun conflict target e nessuna shape di ritorno consumata. Atteso `.from()` **4 → 3**.
 
 ---
 
