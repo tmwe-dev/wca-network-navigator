@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { updatePartner } from "@/data/partners";
+import {
+  findPartnerRecord,
+  findImportedContactRecord,
+  findProspectRecord,
+  findBusinessCardRecord,
+} from "@/data/contactRecord";
 import { updateContact } from "@/data/contacts";
 import { updateProspect } from "@/data/prospects";
 import { updateBusinessCard } from "@/data/businessCards";
@@ -42,12 +47,8 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
       if (!sourceType || !sourceId) return null;
 
       if (sourceType === "partner") {
-        const { data: p, error } = await supabase
-          .from("partners")
-          .select("*, partner_contacts(*), partner_social_links(*)")
-          .eq("id", sourceId)
-          .single();
-        if (error || !p) return null;
+        const p = await findPartnerRecord(sourceId);
+        if (!p) return null;
         const contacts = (p as Record<string, unknown>).partner_contacts as Array<Record<string, unknown>> | undefined;
         const socialLinks = (p as Record<string, unknown>).partner_social_links as Array<Record<string, unknown>> | undefined;
         const primary = contacts?.find(c => c.is_primary) || contacts?.[0];
@@ -75,12 +76,8 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
       }
 
       if (sourceType === "contact") {
-        const { data: c, error } = await supabase
-          .from("imported_contacts")
-          .select("*")
-          .eq("id", sourceId)
-          .single();
-        if (error || !c) return null;
+        const c = await findImportedContactRecord(sourceId);
+        if (!c) return null;
         const ed = (c.enrichment_data as Record<string, unknown>) || {};
         return {
           sourceType: "contact", sourceId,
@@ -101,13 +98,9 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
       }
 
       if (sourceType === "prospect") {
-        const { data: pr, error } = await supabase
-          .from("prospects")
-          .select("*, prospect_contacts(*)")
-          .eq("id", sourceId)
-          .single();
-        if (error || !pr) return null;
-        const p = pr as Record<string, unknown>;
+        const pr = await findProspectRecord(sourceId);
+        if (!pr) return null;
+        const p = pr;
         const pc = (p.prospect_contacts as Array<Record<string, unknown>>)?.[0];
         return {
           sourceType: "prospect", sourceId,
@@ -129,12 +122,8 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
       }
 
       if (sourceType === "bca") {
-        const { data: bc, error } = await supabase
-          .from("business_cards")
-          .select("*")
-          .eq("id", sourceId)
-          .single();
-        if (error || !bc) return null;
+        const bc = await findBusinessCardRecord(sourceId);
+        if (!bc) return null;
         return {
           sourceType: "bca", sourceId,
           companyName: bc.company_name || "", contactName: bc.contact_name || "",

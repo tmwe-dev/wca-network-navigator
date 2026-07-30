@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  findEmailDrafts,
+  updateEmailDraft,
+  insertEmailDraftReturningRow,
+} from "@/data/emailDrafts";
 
 type DraftInsert = Database["public"]["Tables"]["email_drafts"]["Insert"];
 type DraftUpdate = Database["public"]["Tables"]["email_drafts"]["Update"];
@@ -26,12 +30,8 @@ export function useEmailDrafts() {
   return useQuery({
     queryKey: queryKeys.email.drafts(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_drafts")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as unknown as EmailDraft[];
+      const data = await findEmailDrafts();
+      return data as unknown as EmailDraft[];
     },
   });
 }
@@ -41,19 +41,9 @@ export function useSaveEmailDraft() {
   return useMutation({
     mutationFn: async (draft: Partial<EmailDraft> & { id?: string }) => {
       if (draft.id) {
-        const { error } = await supabase
-          .from("email_drafts")
-          .update(draft as DraftUpdate)
-          .eq("id", draft.id);
-        if (error) throw error;
+        await updateEmailDraft(draft.id, draft as DraftUpdate);
       } else {
-        const { data, error } = await supabase
-          .from("email_drafts")
-          .insert(draft as DraftInsert)
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
+        return await insertEmailDraftReturningRow(draft as DraftInsert);
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.drafts() }),

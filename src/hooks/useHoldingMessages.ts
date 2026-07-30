@@ -6,7 +6,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByLeadStatusFromView } from "@/data/partners";
-import { getUnifiedInboxStats } from "@/data/channelMessages";
+import {
+  getUnifiedInboxStats,
+  findHoldingMessagesByPartnerIds,
+  findHoldingMessagesByFromAddresses,
+} from "@/data/channelMessages";
+import { findHoldingImportedContactsForUser } from "@/data/holdingPattern";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -36,57 +41,27 @@ export function useHoldingMessages(channel: HoldingChannel) {
 
       // Step 1: Get partners AND imported_contacts in holding pattern
       // Use v_pipeline_lead view for partner queries (faster, pre-computed)
-      const [holdingPartners, holdingContactsRes] = await Promise.all([
+      const [holdingPartners, holdingContacts] = await Promise.all([
         getPartnersByLeadStatusFromView(HOLDING_STATUSES, "partner_id, company_name, email, lead_status"),
-        supabase
-          .from("imported_contacts")
-          .select("id, name, email, lead_status, company_name")
-          .eq("user_id", userId)
-          .in("lead_status", HOLDING_STATUSES),
+        findHoldingImportedContactsForUser(userId, HOLDING_STATUSES),
       ]);
 
       const partnerMap = new Map((holdingPartners || []).map((p) => [p.partner_id, p]));
       const partnerIds = (holdingPartners || []).map((p) => p.partner_id);
 
-      const holdingContacts = holdingContactsRes.data || [];
       const contactEmails = holdingContacts
         .map(c => c.email?.toLowerCase())
         .filter(Boolean) as string[];
 
       // Step 2: Get messages for these partners AND contacts on the specified channel
-      const selectCols = "id, user_id, channel, direction, source_type, source_id, partner_id, from_address, to_address, cc_addresses, bcc_addresses, subject, body_text, message_id_external, in_reply_to, read_at, created_at, email_date, raw_storage_path, raw_sha256, raw_size_bytes, imap_uid, uidvalidity, imap_flags, internal_date, parse_status, parse_warnings, thread_id, references_header";
-
       const [partnerMsgs, contactMsgs] = await Promise.all([
-        partnerIds.length > 0
-          ? supabase
-              .from("channel_messages")
-              .select(selectCols)
-              .eq("channel", channel)
-              .in("partner_id", partnerIds)
-              .order("email_date", { ascending: false, nullsFirst: false })
-              .order("created_at", { ascending: false })
-              .limit(200)
-          : Promise.resolve({ data: [] as unknown[], error: null }),
-
-        contactEmails.length > 0
-          ? supabase
-              .from("channel_messages")
-              .select(selectCols)
-              .eq("channel", channel)
-              .eq("user_id", userId)
-              .eq("direction", "inbound")
-              .is("partner_id", null)
-              .in("from_address", contactEmails)
-              .order("created_at", { ascending: false })
-              .limit(100)
-          : Promise.resolve({ data: [] as unknown[], error: null }),
+        findHoldingMessagesByPartnerIds(channel, partnerIds, 200),
+        findHoldingMessagesByFromAddresses(channel, userId, contactEmails, 100),
       ]);
 
-      if (partnerMsgs.error) throw partnerMsgs.error;
-
       const allMessages = [
-        ...(partnerMsgs.data || []),
-        ...(contactMsgs.data || []),
+        ...partnerMsgs,
+        ...contactMsgs,
       ];
 
       // Step 3: Deduplicate

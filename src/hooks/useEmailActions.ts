@@ -6,6 +6,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  countUnreadInbound,
+  markChannelMessageRead,
+  findAttachmentsByMessage,
+} from "@/data/channelMessages";
 
 const log = createLogger("useEmailActions");
 
@@ -32,12 +37,7 @@ export function useMessageAttachments(messageId: string | null) {
     queryKey: queryKeys.email.attachments(messageId),
     queryFn: async () => {
       if (!messageId) return [];
-      const { data, error } = await supabase
-        .from("email_attachments")
-        .select("id, message_id, filename, content_type, size_bytes, storage_path, content_id, is_inline")
-        .eq("message_id", messageId);
-      if (error) throw error;
-      return (data || []) as EmailAttachment[];
+      return (await findAttachmentsByMessage(messageId)) as EmailAttachment[];
     },
     enabled: !!messageId,
   });
@@ -59,18 +59,7 @@ export function useUnreadCount(channel?: string, mailboxFilter?: MailboxFilter) 
   return useQuery({
     queryKey: queryKeys.channelMessages.unread(channel, undefined, mailboxKey),
     queryFn: async () => {
-      let q = supabase
-        .from("channel_messages")
-        .select("id", { count: "planned", head: true })
-        .eq("direction", "inbound")
-        .is("read_at", null)
-        .not("hidden_by_rule", "is", true);
-      if (channel) q = q.eq("channel", channel);
-      if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
-      else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
-      const { count, error } = await q;
-      if (error) throw error;
-      return count || 0;
+      return await countUnreadInbound({ channel, mailbox: mailboxFilter ?? null });
     },
     refetchInterval: 30000,
   });
@@ -86,14 +75,7 @@ export function useMarkAsRead() {
       const messageUserId = typeof input === "string" ? null : (input.user_id ?? null);
       const messageMailboxId = typeof input === "string" ? null : (input.mailbox_id ?? null);
 
-      const { data: updatedMessage, error } = await supabase
-        .from("channel_messages")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", messageId)
-        .select("id, channel, user_id, mailbox_id")
-        .maybeSingle();
-
-      if (error) throw error;
+      const updatedMessage = await markChannelMessageRead(messageId);
       if (!updatedMessage) {
         log.warn("mark-as-read skipped: message not writable", {
           messageId,

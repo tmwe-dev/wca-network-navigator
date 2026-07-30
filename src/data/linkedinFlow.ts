@@ -44,3 +44,23 @@ export async function insertLinkedInFlowItems(items: FlowItemInsert[]) {
   const { error } = await supabase.from("linkedin_flow_items").insert(items);
   if (error) throw error;
 }
+
+/** Conteggio item di un job già processati (completed | error). */
+export async function countProcessedFlowItems(jobId: string): Promise<number> {
+  const { count } = await supabase
+    .from("linkedin_flow_items")
+    .select("*", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .in("status", ["completed", "error"]);
+  return count || 0;
+}
+
+/** Conteggio item di un job in uno specifico stato. */
+export async function countFlowItemsByStatus(jobId: string, status: string): Promise<number> {
+  const { count } = await supabase
+    .from("linkedin_flow_items")
+    .select("*", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .eq("status", status);
+  return count || 0;
+}

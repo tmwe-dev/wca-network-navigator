@@ -268,6 +268,64 @@ export async function updateActivityDepartment(id: string, department: ActivityD
   if (error) throw error;
 }
 
+/** Attività pending di un utente per una specifica data (cockpit). */
+export async function findPendingActivitiesForDate(
+  userId: string,
+  dueDate: string,
+  limit = 100,
+) {
+  const { data } = await supabase
+    .from("activities")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .eq("due_date", dueDate)
+    .is("deleted_at", null)
+    .limit(limit);
+  return data || [];
+}
+
+export interface ActivitySiblingRef {
+  id: string;
+  user_id: string | null;
+  source_type: string | null;
+  source_id: string | null;
+  due_date: string | null;
+  status: string;
+}
+
+/** Attività selezionate (per calcolo sibling da rimuovere). */
+export async function findActivitiesByIds(ids: string[]): Promise<ActivitySiblingRef[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("id, user_id, source_type, source_id, due_date, status")
+    .in("id", ids)
+    .is("deleted_at", null);
+  if (error) throw error;
+  return (data ?? []) as ActivitySiblingRef[];
+}
+
+/** Attività "sorelle": stesso utente/sorgente/data ancora pending. */
+export async function findSiblingPendingActivityIds(ref: {
+  user_id: string;
+  source_id: string;
+  due_date: string;
+  source_type?: string | null;
+}): Promise<string[]> {
+  let q = supabase
+    .from("activities")
+    .select("id")
+    .eq("user_id", ref.user_id)
+    .eq("source_id", ref.source_id)
+    .eq("due_date", ref.due_date)
+    .eq("status", "pending")
+    .is("deleted_at", null);
+  if (ref.source_type) q = q.eq("source_type", ref.source_type);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []).map((r) => r.id);
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidateActivityCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: activityKeys.all });

@@ -3,7 +3,11 @@
  * Usato dai badge inline e dal pannello Optimus.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  findOptimusMemory,
+  findOptimusMemoryOverview,
+  findOptimusLogs,
+} from "@/data/optimusAgent";
 
 export type OptimusChannel = "whatsapp" | "linkedin";
 export type OptimusPageType = "sidebar" | "thread" | "inbox" | "messaging";
@@ -27,14 +31,8 @@ export function useOptimusStatus(channel: OptimusChannel, pageType: OptimusPageT
   return useQuery<OptimusStatusRow | null>({
     queryKey: ["optimus-status", channel, pageType],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scraper_agent_memory")
-        .select("id, channel, page_type, plan_version, consecutive_failures, consecutive_successes, total_invocations, total_ai_calls, last_success_at, last_failure_at, extraction_plan, updated_at")
-        .eq("channel", channel)
-        .eq("page_type", pageType)
-        .maybeSingle();
-
-      if (error || !data) return null;
+      const data = await findOptimusMemory(channel, pageType);
+      if (!data) return null;
 
       const plan = (data.extraction_plan ?? {}) as { confidence?: number };
       const confidence = typeof plan.confidence === "number" ? plan.confidence : 0;
@@ -65,13 +63,7 @@ export function useOptimusOverview() {
   return useQuery<OptimusOverviewRow[]>({
     queryKey: ["optimus-overview"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scraper_agent_memory")
-        .select("id, channel, page_type, plan_version, consecutive_failures, consecutive_successes, total_invocations, total_ai_calls, last_success_at, last_failure_at, extraction_plan, updated_at")
-        .order("channel", { ascending: true })
-        .order("page_type", { ascending: true });
-
-      if (error || !data) return [];
+      const data = await findOptimusMemoryOverview();
       return data.map((d) => {
         const plan = (d.extraction_plan ?? {}) as { confidence?: number };
         return {
@@ -112,18 +104,7 @@ export function useOptimusLogs(filters?: { channel?: string; result?: string; li
   return useQuery<OptimusLogRow[]>({
     queryKey: ["optimus-logs", filters?.channel ?? "all", filters?.result ?? "all", filters?.limit ?? 50],
     queryFn: async () => {
-      let q = supabase
-        .from("scraper_agent_log")
-        .select("id, channel, page_type, used_cached_plan, execution_result, items_found, items_extracted, ai_latency_ms, ai_model, error_message, created_at")
-        .order("created_at", { ascending: false })
-        .limit(filters?.limit ?? 50);
-
-      if (filters?.channel && filters.channel !== "all") q = q.eq("channel", filters.channel);
-      if (filters?.result && filters.result !== "all") q = q.eq("execution_result", filters.result);
-
-      const { data, error } = await q;
-      if (error || !data) return [];
-      return data as OptimusLogRow[];
+      return (await findOptimusLogs(filters)) as OptimusLogRow[];
     },
     refetchInterval: 20_000,
   });

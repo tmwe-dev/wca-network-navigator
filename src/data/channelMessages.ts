@@ -323,3 +323,97 @@ export async function insertChannelMessageReturningId(msg: ChannelMessageInsert)
     .select("id")
     .single();
 }
+
+/** Conteggio inbound non letti, filtrabile per canale e mailbox. */
+export async function countUnreadInbound(opts: {
+  channel?: string;
+  mailbox?: { kind: "personal" } | { kind: "shared"; id: string } | null;
+}): Promise<number> {
+  let q = supabase
+    .from("channel_messages")
+    .select("id", { count: "planned", head: true })
+    .eq("direction", "inbound")
+    .is("read_at", null)
+    .not("hidden_by_rule", "is", true);
+  if (opts.channel) q = q.eq("channel", opts.channel);
+  if (opts.mailbox?.kind === "personal") q = q.is("mailbox_id", null);
+  else if (opts.mailbox?.kind === "shared") q = q.eq("mailbox_id", opts.mailbox.id);
+  const { count, error } = await q;
+  if (error) throw error;
+  return count || 0;
+}
+
+/** Marca letto un messaggio; ritorna la riga aggiornata (null se non scrivibile via RLS). */
+export async function markChannelMessageRead(messageId: string) {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", messageId)
+    .select("id, channel, user_id, mailbox_id")
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export interface EmailAttachmentRow {
+  id: string;
+  message_id: string;
+  filename: string;
+  content_type: string | null;
+  size_bytes: number | null;
+  storage_path: string;
+  content_id: string | null;
+  is_inline: boolean;
+}
+
+export async function findAttachmentsByMessage(messageId: string): Promise<EmailAttachmentRow[]> {
+  const { data, error } = await supabase
+    .from("email_attachments")
+    .select("id, message_id, filename, content_type, size_bytes, storage_path, content_id, is_inline")
+    .eq("message_id", messageId);
+  if (error) throw error;
+  return (data || []) as EmailAttachmentRow[];
+}
+
+const HOLDING_SELECT_COLS =
+  "id, user_id, channel, direction, source_type, source_id, partner_id, from_address, to_address, cc_addresses, bcc_addresses, subject, body_text, message_id_external, in_reply_to, read_at, created_at, email_date, raw_storage_path, raw_sha256, raw_size_bytes, imap_uid, uidvalidity, imap_flags, internal_date, parse_status, parse_warnings, thread_id, references_header";
+
+/** Messaggi di un canale per un set di partner in holding. */
+export async function findHoldingMessagesByPartnerIds(
+  channel: string,
+  partnerIds: string[],
+  limit = 200,
+): Promise<unknown[]> {
+  if (partnerIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select(HOLDING_SELECT_COLS)
+    .eq("channel", channel)
+    .in("partner_id", partnerIds)
+    .order("email_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Messaggi inbound senza partner, provenienti da indirizzi di contatti in holding. */
+export async function findHoldingMessagesByFromAddresses(
+  channel: string,
+  userId: string,
+  fromAddresses: string[],
+  limit = 100,
+): Promise<unknown[]> {
+  if (fromAddresses.length === 0) return [];
+  const { data } = await supabase
+    .from("channel_messages")
+    .select(HOLDING_SELECT_COLS)
+    .eq("channel", channel)
+    .eq("user_id", userId)
+    .eq("direction", "inbound")
+    .is("partner_id", null)
+    .in("from_address", fromAddresses)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}

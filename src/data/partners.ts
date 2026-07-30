@@ -699,6 +699,26 @@ export async function persistLinkedInProfileForCompany(
   linkedinUrl: string,
   method: string,
 ): Promise<boolean> {
+  return await __persistLinkedInProfileForCompany(companyName, linkedinUrl, method);
+}
+
+/** Lookup fuzzy per nome azienda: id + enrichment_data della prima corrispondenza. */
+export async function findPartnerEnrichmentByCompanyName(
+  companyName: string,
+): Promise<{ id: string; enrichment_data: unknown } | null> {
+  const { data } = await supabase
+    .from("partners")
+    .select("id, enrichment_data")
+    .ilike("company_name", `%${companyName}%`)
+    .limit(1);
+  return data?.[0] ?? null;
+}
+
+async function __persistLinkedInProfileForCompany(
+  companyName: string,
+  linkedinUrl: string,
+  method: string,
+): Promise<boolean> {
   if (!companyName || !linkedinUrl) return false;
   try {
     const { data: partnerRows } = await supabase

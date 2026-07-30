@@ -126,6 +126,27 @@ export async function findProspectInteractionsTimeline(prospectId: string, limit
   return (data ?? []) as TimelineInteractionRow[];
 }
 
+export interface HoldingImportedContactRow {
+  id: string;
+  name: string | null;
+  email: string | null;
+  lead_status: string | null;
+  company_name: string | null;
+}
+
+/** Imported contacts dell'utente con lead_status nel set holding (vista messaggi). */
+export async function findHoldingImportedContactsForUser(
+  userId: string,
+  statuses: string[],
+): Promise<HoldingImportedContactRow[]> {
+  const { data } = await supabase
+    .from("imported_contacts")
+    .select("id, name, email, lead_status, company_name")
+    .eq("user_id", userId)
+    .in("lead_status", statuses);
+  return (data ?? []) as HoldingImportedContactRow[];
+}
+
 export async function findContactInteractionsTimeline(contactId: string, limit = 50): Promise<TimelineInteractionRow[]> {
   const { data } = await supabase
     .from("contact_interactions")
