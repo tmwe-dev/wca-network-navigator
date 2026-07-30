@@ -11,6 +11,21 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchDbFolderCounts,
+  hideChannelMessagesByIds,
+  setChannelMessagesFolderByIds,
+  setChannelMessagesFolderByUids,
+  findInboundMessageIdsByAddress,
+  findInboundMessageIdsByDomain,
+} from "@/data/emailFolders";
+import { fetchOperatorIdForUser } from "@/data/emailGrouping";
+import {
+  findAddressRuleIdByAddressAndOperator,
+  updateAddressRuleById,
+  insertAddressRuleReturningId,
+  getAddressRuleMatchTargets,
+} from "@/data/emailAddressRules";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
@@ -46,22 +61,7 @@ export function useDbFolders() {
   return useQuery({
     queryKey: ["db-email-folders"],
     queryFn: async (): Promise<Array<{ folder: string; count: number }>> => {
-      // RPC-less: select + group lato client
-      const { data, error } = await supabase
-        .from("channel_messages")
-        .select("folder")
-        .eq("channel", "email")
-        .eq("direction", "inbound")
-        .eq("hidden_by_rule", false);
-      if (error) throw error;
-      const counts = new Map<string, number>();
-      (data ?? []).forEach((row: { folder: string | null }) => {
-        const f = row.folder || "INBOX";
-        counts.set(f, (counts.get(f) ?? 0) + 1);
-      });
-      return Array.from(counts.entries())
-        .map(([folder, count]) => ({ folder, count }))
-        .sort((a, b) => a.folder.localeCompare(b.folder));
+      return fetchDbFolderCounts();
     },
     staleTime: 60_000,
   });
@@ -77,11 +77,7 @@ export function useBulkEmailAction() {
       // HIDE: solo DB
       if (action === "hide") {
         const ids = messages.map(m => m.id);
-        const { error } = await supabase
-          .from("channel_messages")
-          .update({ hidden_by_rule: true })
-          .in("id", ids);
-        if (error) throw error;
+        await hideChannelMessagesByIds(ids);
         return { hidden: ids.length };
       }
 
@@ -93,14 +89,11 @@ export function useBulkEmailAction() {
           action === "spam" ? "Junk" :
           action === "delete" ? "Trash" :
           (targetFolder || "Archive");
-        const { error } = await supabase
-          .from("channel_messages")
-          .update({
-            folder,
-            ...(action === "delete" ? { hidden_by_rule: true } : {}),
-          })
-          .in("id", messages.map(m => m.id));
-        if (error) throw error;
+        await setChannelMessagesFolderByIds(
+          messages.map(m => m.id),
+          folder,
+          action === "delete",
+        );
         return { dbOnly: messages.length };
       }
 
@@ -121,13 +114,7 @@ export function useBulkEmailAction() {
          action === "spam" ? "Junk" :
          action === "delete" ? "Trash" :
          targetFolder!);
-      await supabase
-        .from("channel_messages")
-        .update({
-          folder,
-          ...(action === "delete" ? { hidden_by_rule: true } : {}),
-        })
-        .in("imap_uid", uids);
+      await setChannelMessagesFolderByUids(uids, folder, action === "delete");
 
       return { moved: result?.moved ?? 0, folder };
     },
@@ -161,63 +148,42 @@ export function useCreateRuleFromSender() {
     mutationFn: async (input: CreateRuleFromMessageInput) => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
-      const { data: opRow } = await supabase
-        .from("operators").select("id").eq("user_id", user.id).maybeSingle();
-      const operator_id = opRow?.id;
+      const operator_id = await fetchOperatorIdForUser(user.id);
 
       // Upsert regola (per email_address univoca per operator)
       const params = input.target_folder ? { target_folder: input.target_folder } : {};
-      const { data: existing } = await supabase
-        .from("email_address_rules")
-        .select("id")
-        .eq("email_address", input.email_address)
-        .eq("operator_id", operator_id ?? "")
-        .maybeSingle();
+      const existingId = await findAddressRuleIdByAddressAndOperator(
+        input.email_address,
+        operator_id ?? "",
+      );
 
       let ruleId: string;
-      if (existing?.id) {
-        const { error } = await supabase
-          .from("email_address_rules")
-          .update({
-            auto_action: input.auto_action,
-            auto_action_params: params,
-            auto_execute: input.auto_execute,
-            display_name: input.display_name,
-            is_active: true,
-          })
-          .eq("id", existing.id);
-        if (error) throw error;
-        ruleId = existing.id;
+      if (existingId) {
+        await updateAddressRuleById(existingId, {
+          auto_action: input.auto_action,
+          auto_action_params: params,
+          auto_execute: input.auto_execute,
+          display_name: input.display_name,
+          is_active: true,
+        });
+        ruleId = existingId;
       } else {
-        const { data: ins, error } = await supabase
-          .from("email_address_rules")
-          .insert({
-            user_id: user.id,
-            operator_id,
-            email_address: input.email_address,
-            address: input.email_address,
-            display_name: input.display_name,
-            auto_action: input.auto_action,
-            auto_action_params: params,
-            auto_execute: input.auto_execute,
-            is_active: true,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        ruleId = ins.id;
+        ruleId = await insertAddressRuleReturningId({
+          user_id: user.id,
+          operator_id,
+          email_address: input.email_address,
+          address: input.email_address,
+          display_name: input.display_name,
+          auto_action: input.auto_action,
+          auto_action_params: params,
+          auto_execute: input.auto_execute,
+          is_active: true,
+        });
       }
 
       // Applica retroattivamente
       if (input.apply_to_history && operator_id) {
-        const { data: msgs } = await supabase
-          .from("channel_messages")
-          .select("id")
-          .eq("from_address", input.email_address)
-          .eq("channel", "email")
-          .eq("direction", "inbound")
-          .limit(500);
-        const ids = (msgs ?? []).map((m: { id: string }) => m.id);
+        const ids = await findInboundMessageIdsByAddress(input.email_address);
         if (ids.length > 0) {
           await invokeEdge("apply-email-rules", {
             body: { operator_id, message_ids: ids },
@@ -246,36 +212,23 @@ function useApplyRulesToHistory() {
     mutationFn: async (ruleId: string) => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
-      const { data: opRow } = await supabase
-        .from("operators").select("id").eq("user_id", user.id).maybeSingle();
-      const operator_id = opRow?.id;
+      const operator_id = await fetchOperatorIdForUser(user.id);
       if (!operator_id) throw new Error("Operatore non trovato");
 
-      const { data: rule } = await supabase
-        .from("email_address_rules")
-        .select("email_address, domain, address, domain_pattern")
-        .eq("id", ruleId)
-        .maybeSingle();
+      const rule = await getAddressRuleMatchTargets(ruleId);
       if (!rule) throw new Error("Regola non trovata");
 
       const target = (rule.address || rule.email_address || "").toLowerCase();
       const dom = (rule.domain_pattern || rule.domain || "").toLowerCase();
 
-      let q = supabase
-        .from("channel_messages")
-        .select("id")
-        .eq("channel", "email")
-        .eq("direction", "inbound")
-        .limit(500);
+      let ids: string[];
       if (target) {
-        q = q.eq("from_address", target);
+        ids = await findInboundMessageIdsByAddress(target);
       } else if (dom) {
-        q = q.ilike("from_address", `%@${dom}`);
+        ids = await findInboundMessageIdsByDomain(dom);
       } else {
         throw new Error("Regola senza address né domain");
       }
-      const { data: msgs } = await q;
-      const ids = (msgs ?? []).map((m: { id: string }) => m.id);
       if (ids.length === 0) return { applied: 0 };
       const result = await invokeEdge<{ applied?: number }>("apply-email-rules", {
         body: { operator_id, message_ids: ids },

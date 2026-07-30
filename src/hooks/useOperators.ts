@@ -4,10 +4,15 @@ import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
+import {
+  findAllOperators,
+  findOperatorByUserId,
+  updateOperator,
+  insertOperator,
+  deleteOperator,
+} from "@/data/operators";
 
 type OperatorRow = Database["public"]["Tables"]["operators"]["Row"];
-type OperatorInsert = Database["public"]["Tables"]["operators"]["Insert"];
-type OperatorUpdate = Database["public"]["Tables"]["operators"]["Update"];
 
 export type Operator = OperatorRow;
 
@@ -20,12 +25,7 @@ export function useOperators() {
     // per un altro account loggato sullo stesso browser.
     queryKey: [...queryKeys.operators.all, userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("operators")
-        .select("*")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      return findAllOperators();
     },
     enabled: status === "authenticated" && !!userId,
   });
@@ -41,13 +41,7 @@ export function useCurrentOperator() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return null;
-      const { data, error } = await supabase
-        .from("operators")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      return findOperatorByUserId(user.id);
     },
     enabled: status === "authenticated" && !!userId,
   });
@@ -59,16 +53,9 @@ export function useUpsertOperator() {
     mutationFn: async (op: Partial<Operator> & { id?: string }) => {
       if (op.id) {
         const { id, ...rest } = op;
-        const { error } = await supabase
-          .from("operators")
-          .update(rest as OperatorUpdate)
-          .eq("id", id);
-        if (error) throw error;
+        await updateOperator(id, rest);
       } else {
-        const { error } = await supabase
-          .from("operators")
-          .insert(op as OperatorInsert);
-        if (error) throw error;
+        await insertOperator(op);
       }
     },
     onSuccess: () => {
@@ -84,11 +71,7 @@ export function useDeleteOperator() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("operators")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
+      await deleteOperator(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.operators.all });

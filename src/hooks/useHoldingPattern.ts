@@ -1,7 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { HOLDING_STATUSES } from "@/constants/holdingPattern";
-import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByLeadStatus } from "@/data/partners";
+import {
+  findHoldingProspects,
+  findHoldingImportedContacts,
+  findRecentActivityRefs,
+  findProfileNames,
+  findAgentBadges,
+  findPartnerTimeline,
+  findProspectInteractionsTimeline,
+  findContactInteractionsTimeline,
+} from "@/data/holdingPattern";
 import { queryKeys } from "@/lib/queryKeys";
 
 export type HoldingSource = "partner" | "prospect" | "contact";
@@ -63,12 +72,7 @@ export function useHoldingPatternList() {
       );
 
       // Prospects
-      const { data: prospects } = await supabase
-        .from("prospects")
-        .select("id, company_name, city, email, lead_status, last_interaction_at, interaction_count")
-        .in("lead_status", ACTIVE_STATUSES)
-        .order("last_interaction_at", { ascending: false, nullsFirst: false })
-        .limit(200);
+      const prospects = await findHoldingProspects(ACTIVE_STATUSES);
 
       (prospects || []).forEach((p) =>
         items.push({
@@ -84,12 +88,7 @@ export function useHoldingPatternList() {
       );
 
       // Imported contacts
-      const { data: contacts } = await supabase
-        .from("imported_contacts")
-        .select("id, company_name, name, city, email, lead_status, last_interaction_at, interaction_count, country")
-        .in("lead_status", ACTIVE_STATUSES)
-        .order("last_interaction_at", { ascending: false, nullsFirst: false })
-        .limit(200);
+      const contacts = await findHoldingImportedContacts(ACTIVE_STATUSES);
 
       (contacts || []).forEach((c) =>
         items.push({
@@ -109,12 +108,7 @@ export function useHoldingPatternList() {
       if (items.length > 0) {
         const allIds = items.map((i) => i.id);
         // Fetch most recent activity per source_id with user and agent info
-        const { data: activities } = await supabase
-          .from("activities")
-          .select("source_id, user_id, executed_by_agent_id")
-          .in("source_id", allIds)
-          .order("created_at", { ascending: false })
-          .limit(200);
+        const activities = await findRecentActivityRefs(allIds);
 
         if (activities && activities.length > 0) {
           // Build map: source_id → first (most recent) activity
@@ -127,25 +121,11 @@ export function useHoldingPatternList() {
 
           // Fetch unique user profiles
           const userIds = [...new Set([...actMap.values()].map((v) => v.userId).filter(Boolean))] as string[];
-          const profileMap = new Map<string, string>();
-          if (userIds.length > 0) {
-            const { data: profiles } = await supabase
-              .from("profiles")
-              .select("user_id, display_name")
-              .in("user_id", userIds);
-            (profiles || []).forEach((p) => profileMap.set(p.user_id, p.display_name || "Operatore"));
-          }
+          const profileMap = await findProfileNames(userIds);
 
           // Fetch unique agents
           const agentIds = [...new Set([...actMap.values()].map((v) => v.agentId).filter(Boolean))] as string[];
-          const agentMap = new Map<string, { emoji: string; name: string }>();
-          if (agentIds.length > 0) {
-            const { data: agents } = await supabase
-              .from("agents")
-              .select("id, avatar_emoji, name")
-              .in("id", agentIds);
-            (agents || []).forEach((a) => agentMap.set(a.id, { emoji: a.avatar_emoji, name: a.name }));
-          }
+          const agentMap = await findAgentBadges(agentIds);
 
           // Assign to items
           for (const item of items) {
@@ -178,14 +158,8 @@ export function useHoldingTimeline(item: HoldingItem | null) {
       const entries: TimelineEntry[] = [];
 
       if (item.source === "partner") {
-        // Activities
-        const { data: acts } = await supabase
-          .from("activities")
-          .select("id, created_at, activity_type, title, description, status")
-          .or(`partner_id.eq.${item.id},source_id.eq.${item.id}`)
-          .order("created_at", { ascending: false })
-          .limit(50);
-        (acts || []).forEach((a) =>
+        const { activities: acts, interactions: ints, emails } = await findPartnerTimeline(item.id);
+        acts.forEach((a) =>
           entries.push({
             id: a.id,
             date: a.created_at,
@@ -196,15 +170,7 @@ export function useHoldingTimeline(item: HoldingItem | null) {
             status: a.status,
           })
         );
-
-        // Interactions
-        const { data: ints } = await supabase
-          .from("interactions")
-          .select("id, created_at, interaction_type, subject, notes")
-          .eq("partner_id", item.id)
-          .order("created_at", { ascending: false })
-          .limit(50);
-        (ints || []).forEach((i) =>
+        ints.forEach((i) =>
           entries.push({
             id: i.id,
             date: i.created_at!,
@@ -214,16 +180,7 @@ export function useHoldingTimeline(item: HoldingItem | null) {
             description: i.notes,
           })
         );
-
-        // Sent emails
-        const { data: emails } = await supabase
-          .from("email_campaign_queue")
-          .select("id, sent_at, subject, recipient_email, status")
-          .eq("partner_id", item.id)
-          .eq("status", "sent")
-          .order("sent_at", { ascending: false })
-          .limit(50);
-        (emails || []).forEach((e) =>
+        emails.forEach((e) =>
           entries.push({
             id: e.id,
             date: e.sent_at!,
@@ -233,32 +190,11 @@ export function useHoldingTimeline(item: HoldingItem | null) {
             description: `→ ${e.recipient_email}`,
           })
         );
-      } else if (item.source === "prospect") {
-        const { data: pInts } = await supabase
-          .from("prospect_interactions")
-          .select("id, created_at, interaction_type, title, description, outcome")
-          .eq("prospect_id", item.id)
-          .order("created_at", { ascending: false })
-          .limit(50);
-        (pInts || []).forEach((i) =>
-          entries.push({
-            id: i.id,
-            date: i.created_at,
-            type: "interaction",
-            subType: i.interaction_type,
-            title: i.title,
-            description: i.description,
-            outcome: i.outcome,
-          })
-        );
       } else {
-        const { data: cInts } = await supabase
-          .from("contact_interactions")
-          .select("id, created_at, interaction_type, title, description, outcome")
-          .eq("contact_id", item.id)
-          .order("created_at", { ascending: false })
-          .limit(50);
-        (cInts || []).forEach((i) =>
+        const rows = item.source === "prospect"
+          ? await findProspectInteractionsTimeline(item.id)
+          : await findContactInteractionsTimeline(item.id);
+        rows.forEach((i) =>
           entries.push({
             id: i.id,
             date: i.created_at,

@@ -74,7 +74,7 @@ describe("Guard DAL — ratchet bypass", () => {
    * sottostimavano di ~4x, perché `supabase\n  .from(...)` non veniva contato).
    * Può solo scendere.
    */
-  const BASELINE = 630;
+  const BASELINE = 548;
 
   it("il numero di bypass non cresce rispetto alla baseline", () => {
     const files = walk(path.join(ROOT, "src")).filter((f) => {

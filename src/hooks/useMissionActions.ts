@@ -5,13 +5,20 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCallback, useRef } from "react";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  findMissionActions,
+  missionPlanExists,
+  insertMissionActions,
+  approvePlannedMissionActions,
+  cancelMissionActions,
+  findActiveMissionActions,
+} from "@/data/missionActions";
 
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("useMissionActions");
 type MissionActionRow = Database["public"]["Tables"]["mission_actions"]["Row"];
 type MissionActionInsert = Database["public"]["Tables"]["mission_actions"]["Insert"];
-type MissionActionUpdate = Database["public"]["Tables"]["mission_actions"]["Update"];
 
 export type MissionAction = MissionActionRow;
 
@@ -55,13 +62,7 @@ export function useMissionActions(missionId?: string) {
     queryKey: key,
     queryFn: async () => {
       if (!missionId) return [];
-      const { data, error } = await supabase
-        .from("mission_actions")
-        .select("*")
-        .eq("mission_id", missionId)
-        .order("position", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      return findMissionActions(missionId);
     },
     enabled: !!missionId,
   });
@@ -74,14 +75,7 @@ export function useMissionActions(missionId?: string) {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
-      const { data: existing } = await supabase
-        .from("mission_actions")
-        .select("id")
-        .eq("idempotency_key", input.plan.idempotencyKey)
-        .eq("user_id", user.id)
-        .limit(1);
-
-      if (existing && existing.length > 0) {
+      if (await missionPlanExists(input.plan.idempotencyKey, user.id)) {
         throw new Error("Questa missione è già stata pianificata");
       }
 
@@ -98,12 +92,7 @@ export function useMissionActions(missionId?: string) {
         recovery_log: [],
       }));
 
-      const { data, error } = await supabase
-        .from("mission_actions")
-        .insert(rows)
-        .select();
-      if (error) throw error;
-      return data;
+      return insertMissionActions(rows);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
     onError: (e: Error) => toast.error(e.message),
@@ -111,12 +100,7 @@ export function useMissionActions(missionId?: string) {
 
   const approveAll = useMutation({
     mutationFn: async (actionMissionId: string) => {
-      const { error } = await supabase
-        .from("mission_actions")
-        .update({ status: "approved" } satisfies MissionActionUpdate)
-        .eq("mission_id", actionMissionId)
-        .eq("status", "planned");
-      if (error) throw error;
+      await approvePlannedMissionActions(actionMissionId);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Piano approvato"); },
     onError: (e: Error) => toast.error(e.message),
@@ -124,12 +108,7 @@ export function useMissionActions(missionId?: string) {
 
   const cancelAll = useMutation({
     mutationFn: async (actionMissionId: string) => {
-      const { error } = await supabase
-        .from("mission_actions")
-        .update({ status: "cancelled" } satisfies MissionActionUpdate)
-        .eq("mission_id", actionMissionId)
-        .in("status", ["planned", "approved"]);
-      if (error) throw error;
+      await cancelMissionActions(actionMissionId);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.info("Piano annullato"); },
     onError: (e: Error) => toast.error(e.message),
@@ -221,15 +200,7 @@ export function useActiveMissions() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("mission_actions")
-        .select("*")
-        .eq("user_id", user.id)
-        .in("status", ["planned", "approved", "executing"])
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data ?? [];
+      return findActiveMissionActions(user.id);
     },
     refetchInterval: 10000,
   });

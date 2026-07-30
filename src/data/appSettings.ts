@@ -60,3 +60,36 @@ export async function getAppSettingValueByKey(key: string) {
     .eq("key", key)
     .maybeSingle();
 }
+
+/** Tutte le impostazioni di un utente come mappa chiave→valore. */
+export async function findAppSettingsMapForUser(userId: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .eq("user_id", userId);
+  if (error) throw error;
+  const map: Record<string, string> = {};
+  (data ?? []).forEach((row) => { map[row.key] = row.value ?? ""; });
+  return map;
+}
+
+/** Upsert manuale (key,user_id) — la tabella non ha vincolo unico affidabile. */
+export async function saveAppSettingForUser(userId: string, key: string, value: string): Promise<void> {
+  const { data: existing } = await supabase
+    .from("app_settings")
+    .select("id")
+    .eq("key", key)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing) {
+    const { error } = await supabase
+      .from("app_settings")
+      .update({ value })
+      .eq("key", key)
+      .eq("user_id", userId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("app_settings").insert({ key, value, user_id: userId });
+    if (error) throw error;
+  }
+}

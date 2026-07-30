@@ -51,3 +51,28 @@ export async function findOrCreateManualImportLog(userId: string): Promise<strin
   if (error || !newLog) throw error || new Error("Failed to create import log");
   return newLog.id;
 }
+
+/** Upload del file sorgente su storage + signed URL annuale. */
+export async function uploadImportFile(
+  userId: string,
+  file: File,
+): Promise<{ path: string; signedUrl: string | null }> {
+  const filePath = `${userId}/${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabase.storage.from("import-files").upload(filePath, file);
+  if (uploadError) throw uploadError;
+  const { data: urlData } = await supabase.storage
+    .from("import-files")
+    .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+  return { path: filePath, signedUrl: urlData?.signedUrl ?? null };
+}
+
+/** Crea una riga import_logs e la restituisce. */
+export async function createImportLog(row: Record<string, unknown>) {
+  const { data, error } = await supabase
+    .from("import_logs")
+    .insert(row as Database["public"]["Tables"]["import_logs"]["Insert"])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}

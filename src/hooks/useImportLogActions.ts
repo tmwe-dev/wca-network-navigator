@@ -3,7 +3,6 @@
  * Split from the original 619-LOC monolith.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
@@ -11,7 +10,8 @@ import { createLogger } from "@/lib/log";
 import type { ImportLog, ImportedContact } from "./useImportLogQueries";
 import { insertPartnerContact } from "@/data/partnerRelations";
 import { insertActivity } from "@/data/activities";
-import { updateImportLog } from "@/data/importLogs";
+import { updateImportLog, uploadImportFile, createImportLog } from "@/data/importLogs";
+import { createPartnerSafe } from "@/data/partners";
 import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useImportLogActions");
@@ -48,18 +48,9 @@ export function useCreateImport() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ file, rows, userId }: { file: File; rows: Array<Record<string, unknown>>; userId: string }) => {
-      const filePath = `${userId}/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await supabase.storage.from("import-files").upload(filePath, file);
-      if (uploadError) throw uploadError;
+      const { path: filePath, signedUrl } = await uploadImportFile(userId, file);
 
-      const { data: urlData } = await supabase.storage.from("import-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
-
-      const { data: importLog, error: logError } = await supabase
-        .from("import_logs")
-        .insert({ user_id: userId, file_name: file.name, file_url: urlData?.signedUrl || filePath, file_size: file.size, total_rows: rows.length, status: "pending" })
-        .select()
-        .single();
-      if (logError) throw logError;
+      const importLog = await createImportLog({ user_id: userId, file_name: file.name, file_url: signedUrl || filePath, file_size: file.size, total_rows: rows.length, status: "pending" });
 
       const contacts = rows.map((row, index) => ({
         import_log_id: importLog.id,
@@ -123,24 +114,20 @@ export function useTransferToPartners() {
     mutationFn: async (contacts: ImportedContact[]) => {
       let successCount = 0;
       for (const c of contacts) {
-        const { data: partner, error: pError } = await supabase
-          .from("partners")
-          .insert({
-            company_name: c.company_name || "Unknown",
-            country_code: resolveCountryCode(c.country || "") || "XX",
-            country_name: c.country || "Unknown",
-            city: c.city || "Unknown",
-            address: c.address,
-            phone: c.phone,
-            mobile: c.mobile,
-            email: c.email,
-            company_alias: c.company_alias,
-            is_active: true,
-          })
-          .select()
-          .single();
+        const { partner, error: pError } = await createPartnerSafe({
+          company_name: c.company_name || "Unknown",
+          country_code: resolveCountryCode(c.country || "") || "XX",
+          country_name: c.country || "Unknown",
+          city: c.city || "Unknown",
+          address: c.address,
+          phone: c.phone,
+          mobile: c.mobile,
+          email: c.email,
+          company_alias: c.company_alias,
+          is_active: true,
+        });
 
-        if (pError) { log.error("transfer failed", { message: pError.message }); continue; }
+        if (pError || !partner) { log.error("transfer failed", { message: pError ?? "insert failed" }); continue; }
 
         if (c.name) {
           await insertPartnerContact({
@@ -170,27 +157,19 @@ export function useCreateActivitiesFromImport() {
     mutationFn: async ({ contacts, activityType, campaignBatchId }: { contacts: ImportedContact[]; activityType: "send_email" | "phone_call"; campaignBatchId?: string }) => {
       let count = 0;
       for (const c of contacts) {
-        const { data: partner, error: pError } = await supabase
-          .from("partners")
-          .insert({
-            company_name: c.company_name || "Unknown",
-            country_code: resolveCountryCode(c.country || "") || "XX",
-            country_name: c.country || "Unknown",
-            city: c.city || "Unknown",
-            phone: c.phone, email: c.email, company_alias: c.company_alias, is_active: true,
-          })
-          .select()
-          .single();
-        if (pError) continue;
+        const { partner, error: pError } = await createPartnerSafe({
+          company_name: c.company_name || "Unknown",
+          country_code: resolveCountryCode(c.country || "") || "XX",
+          country_name: c.country || "Unknown",
+          city: c.city || "Unknown",
+          phone: c.phone, email: c.email, company_alias: c.company_alias, is_active: true,
+        });
+        if (pError || !partner) continue;
 
         let contactId: string | null = null;
         if (c.name) {
-          const { data: contact } = await supabase
-            .from("partner_contacts")
-            .insert({ partner_id: partner.id, name: c.name, email: c.email, direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias, is_primary: true })
-            .select()
-            .single();
-          contactId = contact?.id || null;
+          const contact = await insertPartnerContact({ partner_id: partner.id, name: c.name, email: c.email, direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias, is_primary: true });
+          contactId = (contact as { id?: string } | null)?.id || null;
         }
 
         await insertActivity({
@@ -255,12 +234,7 @@ export function useCreateImportFromParsedRows() {
       const normalizedGroupName = groupName?.trim() || null;
       const businessCardOrigin = normalizedGroupName ? `business_card:${normalizedGroupName}` : "business_card";
 
-      const { data: importLog, error: logError } = await supabase
-        .from("import_logs")
-        .insert({ user_id: userId, file_name: fileName, file_size: 0, total_rows: rows.length, status: "pending", normalization_method: "ai", group_name: normalizedGroupName })
-        .select()
-        .single();
-      if (logError) throw logError;
+      const importLog = await createImportLog({ user_id: userId, file_name: fileName, file_size: 0, total_rows: rows.length, status: "pending", normalization_method: "ai", group_name: normalizedGroupName });
 
       const contacts = rows.map((row, index) => {
         const rawData = row._raw || row;

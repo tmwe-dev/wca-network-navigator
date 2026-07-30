@@ -1,10 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 import { queryKeys } from "@/lib/queryKeys";
+import { findCampaignJobsByBatch, updateCampaignJobById, deleteCampaignJobsByIds } from "@/data/campaignJobs";
+import { findAllEmailTemplates } from "@/data/emailTemplates";
 
-type CJInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
-type CJUpdate = Database["public"]["Tables"]["campaign_jobs"]["Update"];
 
 export interface CampaignJob {
   id: string;
@@ -35,13 +33,7 @@ export function useCampaignJobs(batchId?: string | null) {
     queryKey: queryKeys.campaigns.jobs(batchId),
     queryFn: async () => {
       if (!batchId) return [] as CampaignJob[];
-      const { data, error } = await supabase
-        .from("campaign_jobs")
-        .select("*")
-        .eq("batch_id", batchId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data || []) as CampaignJob[];
+      return findCampaignJobsByBatch<CampaignJob>(batchId);
     },
     enabled: !!batchId,
     staleTime: 5_000,
@@ -53,12 +45,7 @@ export function useEmailTemplates() {
   return useQuery({
     queryKey: queryKeys.email.templates,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_templates")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
+      return findAllEmailTemplates();
     },
   });
 }
@@ -67,11 +54,7 @@ export function useUpdateCampaignJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<CampaignJob> & { id: string }) => {
-      const { error } = await supabase
-        .from("campaign_jobs")
-        .update(updates as CJUpdate)
-        .eq("id", id);
-      if (error) throw error;
+      await updateCampaignJobById(id, updates);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() }),
   });
@@ -81,11 +64,7 @@ export function useDeleteCampaignJobs() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from("campaign_jobs")
-        .delete()
-        .in("id", ids);
-      if (error) throw error;
+      await deleteCampaignJobsByIds(ids);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() });
