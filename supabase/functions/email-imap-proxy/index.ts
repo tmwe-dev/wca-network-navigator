@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { setDynCors, jsonResponse } from "./response.ts";
 import { resolveMailbox } from "../_shared/resolveMailbox.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import {
   handleVerify,
   handleTest,
@@ -16,24 +17,13 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   setDynCors(getCorsHeaders(origin));
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return jsonResponse({ error: "AUTH_REQUIRED" }, 401);
-  }
-
+  // Auth check — contratto invariato: { error: "AUTH_REQUIRED" | "AUTH_INVALID" }, 401.
+  // Il fallback legacy su eccezione (getClaims che lancia) resta AUTH_INVALID.
   try {
-    const anonClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      {
-        global: { headers: { Authorization: authHeader } },
-      }
-    );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } =
-      await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return jsonResponse({ error: "AUTH_INVALID" }, 401);
+    const auth = await requireAuth(req, getCorsHeaders(origin), { errorFormat: "terse" });
+    if (isAuthError(auth)) {
+      const body = await auth.json();
+      return jsonResponse(body, 401);
     }
   } catch {
     return jsonResponse({ error: "AUTH_INVALID" }, 401);
