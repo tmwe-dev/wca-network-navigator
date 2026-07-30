@@ -202,3 +202,30 @@ export async function fetchAddressRuleCounts(): Promise<AddressRuleCountRow[]> {
       .range(from, to),
   );
 }
+
+/**
+ * Riga di upsert per `email_address_rules` così come costruita da
+ * `populateAddressRules` (write #11). Contratto limitato alle sole
+ * colonne realmente presenti nel batch: nessun allargamento.
+ */
+export interface NewAddressRuleRow {
+  user_id: string;
+  email_address: string;
+  domain: string;
+  email_count: number;
+  is_active: boolean;
+  company_name: string;
+}
+
+/**
+ * Upsert di un chunk di nuove regole indirizzo (write #11, batch F20-P1.3F).
+ * Estratto 1:1 dal hook: stessa tabella, stesso payload, stessa opzione
+ * `onConflict: "user_id,email_address"`, nessun `.select()`, stessa
+ * semantica errori (throw). Chunking (100) e await sequenziale restano nel hook.
+ */
+export async function upsertAddressRules(rows: NewAddressRuleRow[]): Promise<void> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .upsert(rows, { onConflict: "user_id,email_address" });
+  if (error) throw error;
+}
