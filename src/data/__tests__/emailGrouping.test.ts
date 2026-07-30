@@ -6,7 +6,12 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (table: string) => mockFrom(table) },
 }));
 
-import { fetchSenderGroupsOrdered, fetchAssignedAddressRules } from "@/data/emailGrouping";
+import {
+  fetchSenderGroupsOrdered,
+  fetchAssignedAddressRules,
+  fetchUncategorizedAddressRules,
+  fetchClassifiedAddressRules,
+} from "@/data/emailGrouping";
 
 type Terminal = { data?: unknown; error?: unknown };
 
@@ -14,7 +19,7 @@ function chain(terminals: Terminal[]) {
   const calls: Record<string, unknown[][]> = {};
   let i = 0;
   const c: Record<string, unknown> = {};
-  for (const m of ["select", "order", "not", "range"]) {
+  for (const m of ["select", "order", "not", "is", "or", "range"]) {
     c[m] = vi.fn((...args: unknown[]) => {
       (calls[m] ||= []).push(args);
       return c;
@@ -76,6 +81,62 @@ describe("DAL — emailGrouping", () => {
       const { c } = chain([{ data: null, error: { message: "boom" } }]);
       mockFrom.mockReturnValue(c);
       await expect(fetchAssignedAddressRules()).rejects.toEqual({ message: "boom" });
+    });
+  });
+
+  const UNCATEGORIZED_COLS =
+    "id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked";
+
+  describe("fetchUncategorizedAddressRules", () => {
+    it("filters on group_id/group_name null, orders by email_count desc, paged range", async () => {
+      const { c, calls } = chain([{ data: [{ id: "u1" }], error: null }]);
+      mockFrom.mockReturnValue(c);
+      const res = await fetchUncategorizedAddressRules();
+      expect(mockFrom).toHaveBeenCalledWith("email_address_rules");
+      expect(calls.select[0]).toEqual([UNCATEGORIZED_COLS]);
+      expect(calls.is).toEqual([["group_id", null], ["group_name", null]]);
+      expect(calls.order[0]).toEqual(["email_count", { ascending: false }]);
+      expect(calls.range[0]).toEqual([0, 999]);
+      expect(res).toEqual([{ id: "u1" }]);
+    });
+
+    it("throws on query error", async () => {
+      const { c } = chain([{ data: null, error: { message: "boom-u" } }]);
+      mockFrom.mockReturnValue(c);
+      await expect(fetchUncategorizedAddressRules()).rejects.toEqual({ message: "boom-u" });
+    });
+  });
+
+  describe("fetchClassifiedAddressRules", () => {
+    it("filters with or(group_id/group_name not null), orders by email_count desc, paged range", async () => {
+      const { c, calls } = chain([{ data: [{ id: "c1" }], error: null }]);
+      mockFrom.mockReturnValue(c);
+      const res = await fetchClassifiedAddressRules();
+      expect(mockFrom).toHaveBeenCalledWith("email_address_rules");
+      expect(calls.select[0]).toEqual([`${UNCATEGORIZED_COLS}, group_id, group_name`]);
+      expect(calls.or[0]).toEqual(["group_id.not.is.null,group_name.not.is.null"]);
+      expect(calls.is).toBeUndefined();
+      expect(calls.order[0]).toEqual(["email_count", { ascending: false }]);
+      expect(calls.range[0]).toEqual([0, 999]);
+      expect(res).toEqual([{ id: "c1" }]);
+    });
+
+    it("paginates until a partial page is returned", async () => {
+      const full = Array.from({ length: 1000 }, (_, i) => ({ id: `c${i}` }));
+      const { c, calls } = chain([
+        { data: full, error: null },
+        { data: [{ id: "tail" }], error: null },
+      ]);
+      mockFrom.mockReturnValue(c);
+      const res = await fetchClassifiedAddressRules();
+      expect(calls.range).toEqual([[0, 999], [1000, 1999]]);
+      expect(res).toHaveLength(1001);
+    });
+
+    it("throws on query error", async () => {
+      const { c } = chain([{ data: null, error: { message: "boom-c" } }]);
+      mockFrom.mockReturnValue(c);
+      await expect(fetchClassifiedAddressRules()).rejects.toEqual({ message: "boom-c" });
     });
   });
 });
