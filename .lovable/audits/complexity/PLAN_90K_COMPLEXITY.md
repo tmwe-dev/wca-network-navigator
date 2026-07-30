@@ -421,10 +421,23 @@ Prima **write** estratta: **#10 update `email_count`** → `updateAddressRuleEma
 
 **Gate**: 18 test DAL pass (3 nuovi: contratto tabella/payload/eq id, successo, errore propagato invariato); `tsgo -p tsconfig.app.json --noEmit` 0 errori; eslint file toccati 0 errori (1 warning preesistente `no-restricted-imports`); `npm run build` exit 0; due suite complete consecutive **386 file, 3081 pass / 2 skipped / 0 fail** (baseline 3078 + 3, nessun nuovo skip).
 
-### Batch F20-P1.3E (PREPARATO)
+### Batch F20-P1.3E (ESEGUITO)
 
-Tra i 3 bypass residui si sceglie **#9, la READ paginata `email_address_rules` (`select id,email_address,email_count`, `order id asc`, `range`) dentro `populateAddressRules`** → `fetchAddressRuleCounts()`. È la più sicura: read-only, nessun payload, nessun conflict target, helper `fetchAllRows` già usato e testato nel DAL, semantica errori identica (throw). Rischio: minimo — l'unica attenzione è preservare la paginazione a 1000 e l'ordinamento per `id` per non alterare l'ordine di costruzione di `existingByAddress`. Le due write residue (#4 upsert gruppi con `select`+fallback, #11 upsert batch con `onConflict: user_id,email_address` e chunk 100) restano dopo, perché toccano conflict target e valori di ritorno consumati dal flusso.
+**Base**: `a2fb04499dc682cc5933ba1959dd550b273ee706`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
 
+**Riparazione documentale prioritaria**: il diff del batch D aveva troncato questo PLAN dopo la sezione P1.3E, eliminando le sezioni preesistenti `## Regole trasversali su ogni batch`, `## Copertura audit (dichiarazione onesta)` e `## Checkpoint per turno successivo (se A1 non chiuso)`. Sono state ripristinate **byte-per-byte** dal commit base `0a767ee92a344b9f968e0f561842972a166d1534` (righe 415-448), collocate dopo le sezioni P1.3D/P1.3E. Prova: `sha1` del blocco estratto dal base == `sha1` delle ultime 34 righe del file corrente = `a9f4fb5a4074048c69e5c07313484b3de6772a6d`. Diff verificato: nessun'altra parte preesistente rimossa.
+
+**Runtime**: read #9 estratta da `populateAddressRules` in `fetchAddressRuleCounts()` dentro `src/data/emailGrouping.ts`. Contratto 1:1 — tabella `email_address_rules`, select esatto `id, email_address, email_count`, `order("id", { ascending: true })`, paginazione `range` a 1000 tramite l'helper DAL esistente `fetchAllRows`, errore propagato identico (`throw`). Nuovo tipo `AddressRuleCountRow` identico alla shape inline precedente. Nel hook sostituita **solo** la query; rimosso l'helper locale `fetchAllRows` rimasto senza call site (era identico a quello del DAL).
+
+**Invarianti preservate**: costruzione `existingByAddress`, `existingSet`, normalizzazione lowercase, calcolo `staleUpdates`/`newRules`, ordine, batching 20 (update) e 100 (upsert), `Promise.all`, auth `getSession`, toast, invalidazioni query, realtime, stato React, UX e API pubblica.
+
+**Prova diff**: `.from()` Supabase diretti nel hook **3 → 2** esatti (residui: riga 86 upsert `email_sender_groups` #4, riga 276 upsert `email_address_rules` #11; `Array.from` escluso). Zero `any`/`unknown as`/`untypedFrom`/`@ts-ignore`.
+
+**Gate**: 21 test DAL pass (3 nuovi: contratto select/order/range/tabella; paginazione 1000+1; errore propagato); `tsgo -p tsconfig.app.json --noEmit` 0 errori; eslint file toccati 0 errori (1 warning preesistente `no-restricted-imports`); `npm run build` exit 0; due suite complete consecutive **386 file, 3084 pass / 2 skipped / 0 fail** (baseline 3081 + 3, nessun nuovo skip).
+
+### Batch F20-P1.3F (PREPARATO)
+
+Tra le due write residue si sceglie **#11: upsert batch `email_address_rules` con `onConflict: "user_id,email_address"` e chunk 100** → estrazione in DAL come pura traslazione di chiamata: non consuma alcuna shape di ritorno (nessun `.select()`, nessun fallback re-read) e propaga l'errore con `throw`. Chunking, toast e ordine restano nel hook. La **#4** (upsert `email_sender_groups` con `onConflict` su nome gruppo + `ignoreDuplicates` + `.select()` e fallback re-read del record creato) resta ultima: il valore di ritorno è consumato dal flusso e richiede modellare due percorsi. Atteso `.from()` **2 → 1**.
 ---
 
 ## Regole trasversali su ogni batch
