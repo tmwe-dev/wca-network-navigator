@@ -381,7 +381,7 @@ Alla richiesta di riesecuzione del batch su base `42bbf5c3d54c336bc7b790c98b942a
 
 ### Batch F20-P1.3B (ESEGUITO)
 
-**Base**: `8df125a0b1d4ea902095ad265b1b49c3444b51cd`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
+**Base**: `ddcd1a08ba9216d5beb74f6cf66110e7a5523a43`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
 
 Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 estratte in `src/data/emailGrouping.ts` come `fetchUncategorizedAddressRules()` e `fetchClassifiedAddressRules()`, con i tipi riga `UncategorizedAddressRuleRow` e `ClassifiedAddressRuleRow` (extends).
 
@@ -409,40 +409,18 @@ Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 estratte in 
 
 **Verifica idempotenza (F20-P1.3CV)**: controllo anti-duplicazione su richiesta di riesecuzione — `fetchInboundEmailSenderAddresses`/`MailboxFilter` presenti una sola volta nel DAL, un solo punto di uso nel hook, un solo blocco test, una sola riga ledger e una sola sezione plan. Nessun edit riapplicato. Gate rieseguiti integralmente: 15 test DAL, `tsgo` 0 errori, eslint delta 0 errori, build exit 0, due suite complete 386 file / 3078 pass / 2 skipped / 0 fail.
 
-### Batch F20-P1.3D (PREPARATO)
+### Batch F20-P1.3D (ESEGUITO)
 
-Prima **write** estratta, scelta come la più sicura: **#10 update `email_count`** (`update({ email_count }).eq("id", id)`) → `updateAddressRuleEmailCount(id, count)` nel DAL, lasciando nel hook il batching a 20 e il `Promise.all`. Preferita a #4 (upsert gruppi con `onConflict: nome_gruppo` + `ignoreDuplicates` + `select` e fallback re-read) e a #11 (upsert batch con `onConflict: user_id,email_address`) perché ha superficie minima, nessun conflict target e nessuna shape di ritorno consumata. Atteso `.from()` **4 → 3**.
+**Base**: `0a767ee92a344b9f968e0f561842972a166d1534`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
 
----
+Prima **write** estratta: **#10 update `email_count`** → `updateAddressRuleEmailCount(id, count)` in `src/data/emailGrouping.ts`. Scelta come la più sicura tra le tre write: superficie minima, nessun conflict target, nessuna shape di ritorno consumata (a differenza di #4 upsert gruppi con `onConflict`/`ignoreDuplicates`/`select` + fallback re-read, e #11 upsert batch `onConflict: user_id,email_address`).
 
-## Regole trasversali su ogni batch
-1. **Un file per commit** dove possibile.
-2. **Test unit di regressione** aggiunto o esistente **prima** dello split.
-3. **Screenshot Playwright** della route toccata (before/after) per UI.
-4. **Nessun cambio di firma pubblica** senza migrazione contestuale dei call site.
-5. **Rollback**: singolo `git revert`.
-6. **Gate CI**: `tsgo`, vitest, `deno check` su tutte le edge toccate, ESLint, build.
+**Equivalenza provata**: stessa tabella `email_address_rules`, stesso payload `{ email_count: count }`, stesso filtro `.eq("id", id)`, stesso `if (error) throw error` senza alterazione. Restano invariati nel hook: batching a 20, `Promise.all` sul batch, ordine e `await` sequenziale dei batch, `try/catch/finally`, toast (`${staleUpdates.length} address aggiornati…`), invalidazioni query, `supabase.auth.getSession()`, realtime, stato React, UX e API pubblica.
 
----
+**Prova diff**: `.from()` Supabase diretti nel hook **4 → 3** esatti (residui: 107 upsert `email_sender_groups`, 256 read `email_address_rules`, 308 upsert `email_address_rules`; le occorrenze `Array.from` a 145/188 sono escluse). Zero `any`/`unknown as`/`untypedFrom`/`@ts-ignore` nei file toccati.
 
-## Copertura audit (dichiarazione onesta)
+**Gate**: 18 test DAL pass (3 nuovi: contratto tabella/payload/eq id, successo, errore propagato invariato); `tsgo -p tsconfig.app.json --noEmit` 0 errori; eslint file toccati 0 errori (1 warning preesistente `no-restricted-imports`); `npm run build` exit 0; due suite complete consecutive **386 file, 3081 pass / 2 skipped / 0 fail** (baseline 3078 + 3, nessun nuovo skip).
 
-- **File inventariati / totali**: 4130 / 4130 = **100.00%** [FATTO].
-- **Righe totali inventariate**: 545.596 [FATTO].
-- **Righe classificate semanticamente** (regole strutturali applicate): 426.729 / 545.596 = **78.21%** [FATTO]. Il gap 21.79% è **esclusione intenzionale** (asset binari, generated, archive, docs/memory, JSON/lockfile) elencata in `AUDIT_METHOD.md`.
-- **File classificati semanticamente**: 3.445 / 4.130 = **83.41%** [FATTO].
-- **Righe non analizzate riga-per-riga per contenuto**: 100% dei file testuali ha ricevuto metriche aggregate (LOC, cyclo, marker, access). L'ispezione **riga-per-riga letterale** (una entry finding per ogni riga) è **intenzionalmente non prodotta**: sarebbe rumore statistico di ~426k entry senza valore azionabile. I finding sono generati per **regole strutturali** (14 codici) su intervalli line-anchored.
-- **Verifica multi-metodo**: import graph (AST-like via regex) + rg-style pattern + fingerprint SHA1/normalizzato — applicati **contemporaneamente** su ogni file per ridurre falsi positivi.
-- **Non dichiaro 100% di "profondità"**: la ciclomatica è stima regex; gli orfani sono candidati non conferme; RLS/SQL sono coperti solo come LOC.
+### Batch F20-P1.3E (PREPARATO)
 
----
-
-## Checkpoint per turno successivo (se A1 non chiuso)
-
-A0 completato al 100%. A1 completato per **regole strutturali su 3.445 file semantici**. Restano fuori dal presente turno:
-1. **Ispezione manuale riga-per-riga** dei top 20 file per righe (LinkedInTest, useCockpitLogic, partners.ts, funnemailInbox.ts, HarmonizeSystemDialog, send-email/index, toolHandlersRead, toolHandlersWrite, PromptCopilotPanel, PromptTestsTab, ComposerCanvas, SenderActionsDialog, calendar-flow.spec, contact-merge-logic.test, useEmailComposerState, useGroupingData, useGlobalPromptImprover, useDeepSearchLocal, WhatsAppTest, RulesAndActionsTab).
-2. **Verifica applicazione DB migrations duplicate** (P0.3 gate).
-3. **Triage 1-a-1 delle 45 coppie v1/v2** (P2.1).
-4. **Strumentazione runtime per orfani** (P2.2).
-
-Ogni item ha input deterministico già in `.lovable/audits/complexity/analysis.json` → il prossimo turno può ripartire senza rifare A0.
+Tra i 3 bypass residui si sceglie **#9, la READ paginata `email_address_rules` (`select id,email_address,email_count`, `order id asc`, `range`) dentro `populateAddressRules`** → `fetchAddressRuleCounts()`. È la più sicura: read-only, nessun payload, nessun conflict target, helper `fetchAllRows` già usato e testato nel DAL, semantica errori identica (throw). Rischio: minimo — l'unica attenzione è preservare la paginazione a 1000 e l'ordinamento per `id` per non alterare l'ordine di costruzione di `existingByAddress`. Le due write residue (#4 upsert gruppi con `select`+fallback, #11 upsert batch con `onConflict: user_id,email_address` e chunk 100) restano dopo, perché toccano conflict target e valori di ritorno consumati dal flusso.
