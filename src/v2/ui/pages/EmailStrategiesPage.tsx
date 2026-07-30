@@ -254,37 +254,25 @@ function WakeUpSection(): React.ReactElement {
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.emailStrategies.wakeUpRules,
-    queryFn: async (): Promise<WakeRule[]> => {
-      const { data, error } = await supabase
-        .from("wake_up_rules")
-        .select("id, name, group_name, min_score, days_dormant, channel, max_per_day, is_active, notes")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as WakeRule[];
-    },
+    queryFn: async (): Promise<WakeRule[]> => (await listWakeUpRules()) as WakeRule[],
   });
 
   const save = useMutation({
     mutationFn: async (r: Partial<WakeRule> & { id?: string }) => {
       if (r.id) {
-        const { error } = await supabase
-          .from("wake_up_rules")
-          .update({
-            name: r.name,
-            group_name: r.group_name ?? null,
-            min_score: r.min_score,
-            days_dormant: r.days_dormant,
-            channel: r.channel,
-            max_per_day: r.max_per_day,
-            is_active: r.is_active,
-            notes: r.notes ?? null,
-          })
-          .eq("id", r.id);
-        if (error) throw error;
+        await updateWakeUpRule(r.id, {
+          name: r.name,
+          group_name: r.group_name ?? null,
+          min_score: r.min_score,
+          days_dormant: r.days_dormant,
+          channel: r.channel,
+          max_per_day: r.max_per_day,
+          is_active: r.is_active,
+          notes: r.notes ?? null,
+        });
       } else {
         if (!user?.id) throw new Error("Utente non autenticato");
-        const { error } = await supabase.from("wake_up_rules").insert({
+        await insertWakeUpRule({
           user_id: user.id,
           name: r.name ?? "Nuova regola",
           group_name: r.group_name ?? null,
@@ -295,7 +283,6 @@ function WakeUpSection(): React.ReactElement {
           is_active: r.is_active ?? false,
           notes: r.notes ?? null,
         });
-        if (error) throw error;
       }
     },
     onSuccess: () => {
@@ -307,11 +294,7 @@ function WakeUpSection(): React.ReactElement {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("wake_up_rules")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
+      await softDeleteWakeUpRule(id);
     },
     onSuccess: () => {
       toast.success("Regola eliminata");
