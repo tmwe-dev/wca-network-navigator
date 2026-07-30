@@ -1,44 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  findNetworkConfigs,
+  updateNetworkConfig,
+  insertNetworkConfig,
+  type NetworkConfigRow,
+} from "@/data/networkConfigs";
 
-export interface NetworkConfig {
-  id: string;
-  network_name: string;
-  is_member: boolean;
-  has_contact_emails: boolean;
-  has_contact_names: boolean;
-  has_contact_phones: boolean;
-  sample_tested_at: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type NetworkConfig = NetworkConfigRow;
 
 export function useNetworkConfigs() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: queryKeys.networkConfigs.all,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("network_configs")
-        .select("*")
-        .order("network_name");
-      if (error) throw error;
-      return data as NetworkConfig[];
-    },
+    queryFn: () => findNetworkConfigs(),
   });
 
   const updateConfig = useMutation({
-    mutationFn: async (config: Partial<NetworkConfig> & { id: string }) => {
-      const { error } = await supabase
-        .from("network_configs")
-        .update(config)
-        .eq("id", config.id);
-      if (error) throw error;
-    },
+    mutationFn: (config: Partial<NetworkConfig> & { id: string }) => updateNetworkConfig(config),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.networkConfigs.all });
     },
@@ -48,12 +29,7 @@ export function useNetworkConfigs() {
   });
 
   const addNetwork = useMutation({
-    mutationFn: async (networkName: string) => {
-      const { error } = await supabase
-        .from("network_configs")
-        .insert({ network_name: networkName, is_member: true });
-      if (error) throw error;
-    },
+    mutationFn: (networkName: string) => insertNetworkConfig(networkName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.networkConfigs.all });
       toast({ title: "Network aggiunto" });

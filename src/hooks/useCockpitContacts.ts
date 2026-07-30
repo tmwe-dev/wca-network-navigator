@@ -10,7 +10,12 @@ import type { ContactOrigin } from "@/types/cockpit";
 import { createLogger } from "@/lib/log";
 import { getContactsByIds } from "@/data/contacts";
 import { findBusinessCards } from "@/data/businessCards";
-import { deleteActivities } from "@/data/activities";
+import {
+  deleteActivities,
+  findActivitiesByIds,
+  findSiblingPendingActivityIds,
+  findPendingActivitiesForDate,
+} from "@/data/activities";
 import { addCockpitPreselection } from "@/lib/cockpitPreselection";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -225,14 +230,7 @@ export function useCockpitContacts() {
 
       // Fetch today's scheduled activities
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data: scheduledActivities } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "pending")
-        .eq("due_date", today)
-        .is("deleted_at", null)
-        .limit(100);
+      const scheduledActivities = await findPendingActivitiesForDate(user.id, today, 100);
 
       return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [], socialLinksMap, contactSocialMap };
     },
@@ -400,28 +398,17 @@ export function useDeleteCockpitContacts() {
       }
       if (activityIds.length > 0) {
         const idsToDelete = new Set(activityIds);
-        const { data: selectedActivities, error: selectedActivitiesError } = await supabase
-          .from("activities")
-          .select("id, user_id, source_type, source_id, due_date, status")
-          .in("id", activityIds)
-          .is("deleted_at", null);
-        if (selectedActivitiesError) throw selectedActivitiesError;
+        const selectedActivities = await findActivitiesByIds(activityIds);
 
         for (const act of selectedActivities ?? []) {
           if (!act.user_id || !act.source_id || !act.due_date || act.status !== "pending") continue;
-          let siblingsQuery = supabase
-            .from("activities")
-            .select("id")
-            .eq("user_id", act.user_id)
-            .eq("source_id", act.source_id)
-            .eq("due_date", act.due_date)
-            .eq("status", "pending")
-            .is("deleted_at", null);
-
-          if (act.source_type) siblingsQuery = siblingsQuery.eq("source_type", act.source_type);
-          const { data: siblings, error: siblingsError } = await siblingsQuery;
-          if (siblingsError) throw siblingsError;
-          for (const sibling of siblings ?? []) idsToDelete.add(sibling.id);
+          const siblingIds = await findSiblingPendingActivityIds({
+            user_id: act.user_id,
+            source_id: act.source_id,
+            due_date: act.due_date,
+            source_type: act.source_type,
+          });
+          for (const sid of siblingIds) idsToDelete.add(sid);
         }
 
         deleted += await deleteActivities([...idsToDelete]);

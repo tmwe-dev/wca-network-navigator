@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-
-type WorkspacePresetRow = Database["public"]["Tables"]["workspace_presets"]["Row"];
+import {
+  findWorkspacePresets,
+  updateWorkspacePreset,
+  insertWorkspacePreset,
+  deleteWorkspacePreset,
+  type WorkspacePresetRow,
+} from "@/data/workspacePresets";
 
 export type WorkspacePreset = WorkspacePresetRow;
 
@@ -15,13 +19,7 @@ export function useWorkspacePresets() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("workspace_presets")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      return await findWorkspacePresets(user.id);
     },
     staleTime: 5 * 60_000,
   });
@@ -32,43 +30,28 @@ export function useWorkspacePresets() {
       if (!user) throw new Error("Not authenticated");
 
       if (preset.id) {
-        const { error } = await supabase
-          .from("workspace_presets")
-          .update({
-            name: preset.name,
-            goal: preset.goal,
-            base_proposal: preset.base_proposal,
-            document_ids: preset.document_ids,
-            reference_links: preset.reference_links,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", preset.id);
-        if (error) throw error;
+        await updateWorkspacePreset(preset.id, {
+          name: preset.name,
+          goal: preset.goal,
+          base_proposal: preset.base_proposal,
+          document_ids: preset.document_ids,
+          reference_links: preset.reference_links,
+        });
       } else {
-        const { error } = await supabase
-          .from("workspace_presets")
-          .insert({
-            user_id: user.id,
-            name: preset.name,
-            goal: preset.goal,
-            base_proposal: preset.base_proposal,
-            document_ids: preset.document_ids,
-            reference_links: preset.reference_links,
-          });
-        if (error) throw error;
+        await insertWorkspacePreset(user.id, {
+          name: preset.name,
+          goal: preset.goal,
+          base_proposal: preset.base_proposal,
+          document_ids: preset.document_ids,
+          reference_links: preset.reference_links,
+        });
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("workspace_presets")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => deleteWorkspacePreset(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 

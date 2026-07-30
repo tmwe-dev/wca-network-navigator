@@ -2,9 +2,9 @@
  * LinkedIn Flow — Pure helper functions extracted from useLinkedInFlow.
  * Zero React dependencies.
  */
-import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
-import { updatePartner } from "@/data/partners";
+import { updatePartner, findPartnerEnrichmentByCompanyName } from "@/data/partners";
+import { countProcessedFlowItems, countFlowItemsByStatus } from "@/data/linkedinFlow";
 
 const log = createLogger("useLinkedInFlowHelpers");
 
@@ -13,33 +13,19 @@ export function sleep(ms: number) {
 }
 
 export async function getProcessedCount(jobId: string): Promise<number> {
-  const { count } = await supabase
-    .from("linkedin_flow_items")
-    .select("*", { count: "exact", head: true })
-    .eq("job_id", jobId)
-    .in("status", ["completed", "error"]);
-  return count || 0;
+  return await countProcessedFlowItems(jobId);
 }
 
 export async function getCountByStatus(jobId: string, status: string): Promise<number> {
-  const { count } = await supabase
-    .from("linkedin_flow_items")
-    .select("*", { count: "exact", head: true })
-    .eq("job_id", jobId)
-    .eq("status", status);
-  return count || 0;
+  return await countFlowItemsByStatus(jobId, status);
 }
 
 export async function saveEnrichmentToPartner(companyName: string, enrichment: Record<string, unknown>) {
   try {
-    const { data: partners } = await supabase
-      .from("partners")
-      .select("id, enrichment_data")
-      .ilike("company_name", `%${companyName}%`)
-      .limit(1);
+    const partner = await findPartnerEnrichmentByCompanyName(companyName);
 
-    if (partners?.[0]) {
-      const existing = (partners[0].enrichment_data as Record<string, unknown>) || {};
+    if (partner) {
+      const existing = (partner.enrichment_data as Record<string, unknown>) || {};
       const update: Record<string, unknown> = { ...existing };
 
       const li = enrichment.linkedin as Record<string, string> | undefined;
@@ -80,7 +66,7 @@ export async function saveEnrichmentToPartner(companyName: string, enrichment: R
         update.linkedin_connection_skip_reason = enrichment.connection_skip_reason;
       }
 
-      await updatePartner(partners[0].id, {
+      await updatePartner(partner.id, {
         enrichment_data: update as Record<string, string | number | boolean | null>,
       });
     }
