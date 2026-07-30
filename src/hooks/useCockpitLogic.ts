@@ -15,6 +15,30 @@ import { createLogger } from "@/lib/log";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
 const log = createLogger("useCockpitLogic");
+
+/**
+ * Predicato puro per l'action AI `select_where`.
+ * Le action arrivano da una edge function come JSON non validato
+ * (`data?.actions as unknown[]`), quindi `field` puo' essere undefined,
+ * null o non-stringa: in quel caso l'action e' malformata e non deve
+ * selezionare nulla (stessa semantica "skip silenzioso" degli altri rami).
+ * Ritorna `null` se l'action e' malformata, altrimenti il predicato.
+ */
+export function buildSelectWherePredicate(
+  field: unknown,
+  operator: unknown,
+  value: unknown,
+): ((c: CockpitContact) => boolean) | null {
+  if (typeof field !== "string" || field.length === 0) return null;
+  const key = field;
+  return (c: CockpitContact) => {
+    const fieldVal = (c as unknown as Record<string, unknown>)[key];
+    if (operator === ">=") return (fieldVal as number) >= (value as number);
+    if (operator === "==") return fieldVal === value;
+    if (operator === "includes" && Array.isArray(fieldVal)) return fieldVal.includes(value as string);
+    return false;
+  };
+}
 import { useClientAssignments, useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
 import { toast } from "sonner";
@@ -158,13 +182,12 @@ export function useCockpitLogic() {
         case "clear_selection": selection.clear(); break;
         case "select_where": {
           const { field, operator, value } = action;
-          selection.selectWhere((c: CockpitContact) => {
-            const fieldVal = (c as unknown as Record<string, unknown>)[field!];
-            if (operator === ">=") return (fieldVal as number) >= (value as number);
-            if (operator === "==") return fieldVal === value;
-            if (operator === "includes" && Array.isArray(fieldVal)) return fieldVal.includes(value as string);
-            return false;
-          });
+          const predicate = buildSelectWherePredicate(field, operator, value);
+          if (!predicate) {
+            log.debug("select_where ignorata: campo mancante o non valido", { field: String(field) });
+            break;
+          }
+          selection.selectWhere(predicate);
           break;
         }
         case "bulk_action":
