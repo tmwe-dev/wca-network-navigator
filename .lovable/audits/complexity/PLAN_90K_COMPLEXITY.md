@@ -349,6 +349,42 @@ Alla richiesta di riesecuzione del batch su base `42bbf5c3d54c336bc7b790c98b942a
 
 ---
 
+### Batch F20-P1.3A (ESEGUITO — avvio fase strutturale DAL)
+
+**Base**: `1585524fdb4a63563c22cda1b15ed7008532f49c`. **Finding**: P001-027 → `PARTIALLY_FIXED`. P0.9 documentale **non** eseguito su richiesta.
+
+**Classificazione integrale delle 11 query `supabase.from()` di `useGroupingData.ts`**
+
+| # | Funzione | Tabella | Tipo | Dettaglio |
+|---|---|---|---|---|
+| 1 | `loadGroups` | email_sender_groups | READ | `select *`, order `sort_order` asc, error ignorato |
+| 2 | `loadAssignedRules` | email_address_rules | READ | 7 col, `not group_name is null`, order `created_at` desc, range paginato 1000, throw |
+| 3 | `loadData` | email_sender_groups | READ | identica a #1 |
+| 4 | `loadData` | email_sender_groups | WRITE | `upsert` onConflict `nome_gruppo`, ignoreDuplicates, `.select()` |
+| 5 | `loadData` (fallback) | email_sender_groups | READ | identica a #1 |
+| 6 | `loadData` | email_address_rules | READ | uncategorized: `is group_id null` + `is group_name null`, order `email_count` desc, range |
+| 7 | `loadData` | email_address_rules | READ | classified: `or(group_id.not.is.null,group_name.not.is.null)`, order `email_count` desc, range |
+| 8 | `populateAddressRules` | channel_messages | READ dinamico | filtri condizionali su `activeMailbox` (personal/shared) |
+| 9 | `populateAddressRules` | email_address_rules | READ | `id,email_address,email_count`, order `id` asc, range |
+| 10 | `populateAddressRules` | email_address_rules | WRITE | `update email_count` eq id (batch 20) |
+| 11 | `populateAddressRules` | email_address_rules | WRITE | `upsert` onConflict `user_id,email_address` (batch 100) |
+
+**Cluster estratto (4 query READ-ONLY)** → nuovo modulo `src/data/emailGrouping.ts`:
+- `fetchSenderGroupsOrdered()` ← query #1, #3, #5 (tre letture identiche unificate);
+- `fetchAssignedAddressRules()` ← query #2 (con paginazione a 1000 interna al DAL).
+
+**Invarianti preservate**: colonne, filtri, order, range/paginazione, semantica errori (groups: error ignorato → `[]`; assigned rules: throw), shape restituita. **Non spostati**: auth (`getSession`), realtime (`channel`/`removeChannel`), write, stato React, dedup, filtro allowlist mailbox, costruzione `assignedByGroup`. Sequencing `loadData`/`loadGroups`/`loadAssignedRules` e blocchi `try/catch/finally` invariati; API pubblica del hook invariata → caller (`ManualGroupingTab.tsx` e sotto-componenti) non toccati.
+
+**Prova diff**: `.from()` diretti nel hook **11 → 7** (esattamente −4, righe residue 99/129/204/266/301/334/357). Zero `untypedFrom`, `as any`, `@ts-ignore` nei file toccati → nessun bypass equivalente introdotto.
+
+**Gate**: 5 test mirati pass; `tsgo` 0 errori; eslint file toccati 0 errori (1 warning preesistente di pattern `no-restricted-imports`, già presente in 4 file sorelle della cartella); build exit 0; due suite complete consecutive **386 file, 3068 pass / 2 skipped / 0 fail** (baseline 3063 + 5 nuovi, nessun nuovo skip).
+
+### Batch F20-P1.3B (PREPARATO)
+
+Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 → `fetchUncategorizedAddressRules()` / `fetchClassifiedAddressRules()` in `src/data/emailGrouping.ts`, lasciando dedup, mapping `SenderAnalysis` e filtro allowlist nel hook. Atteso `.from()` **7 → 5**. Restano fuori (P1.3C+): query #8 (filtri condizionali mailbox), #4/#10/#11 (write), auth e realtime.
+
+---
+
 ## Regole trasversali su ogni batch
 1. **Un file per commit** dove possibile.
 2. **Test unit di regressione** aggiunto o esistente **prima** dello split.
