@@ -164,3 +164,18 @@ export async function fetchInboundEmailSenderAddresses(params: {
     return q;
   });
 }
+
+/**
+ * Aggiorna `email_count` di una singola regola indirizzo (write #10,
+ * batch F20-P1.3D). Estratta 1:1 dal hook `useGroupingData`: stessa
+ * tabella, stesso payload, stesso filtro `eq("id", id)` e stessa
+ * semantica errori (throw dell'errore Supabase senza alterazione).
+ * Batching (20) e `Promise.all` restano nel hook.
+ */
+export async function updateAddressRuleEmailCount(id: string, count: number): Promise<void> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .update({ email_count: count })
+    .eq("id", id);
+  if (error) throw error;
+}
