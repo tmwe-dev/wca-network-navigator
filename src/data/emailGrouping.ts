@@ -91,3 +91,35 @@ export async function fetchAssignedAddressRules(): Promise<AssignedAddressRuleRo
       .range(from, to),
   );
 }
+
+/**
+ * Legge tutte le regole indirizzo NON classificate: una riga è tale solo se
+ * NESSUNO dei due campi (`group_id` legacy + `group_name`) è valorizzato.
+ * Ordinamento per `email_count` decrescente. Errori propagati (throw).
+ */
+export async function fetchUncategorizedAddressRules(): Promise<UncategorizedAddressRuleRow[]> {
+  return fetchAllRows<UncategorizedAddressRuleRow>((from, to) =>
+    supabase
+      .from("email_address_rules")
+      .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked")
+      .is("group_id", null)
+      .is("group_name", null)
+      .order("email_count", { ascending: false })
+      .range(from, to),
+  );
+}
+
+/**
+ * Legge tutte le regole indirizzo classificate (`group_id` OPPURE `group_name`
+ * valorizzato), ordinate per `email_count` decrescente. Errori propagati (throw).
+ */
+export async function fetchClassifiedAddressRules(): Promise<ClassifiedAddressRuleRow[]> {
+  return fetchAllRows<ClassifiedAddressRuleRow>((from, to) =>
+    supabase
+      .from("email_address_rules")
+      .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked, group_id, group_name")
+      .or("group_id.not.is.null,group_name.not.is.null")
+      .order("email_count", { ascending: false })
+      .range(from, to),
+  );
+}
