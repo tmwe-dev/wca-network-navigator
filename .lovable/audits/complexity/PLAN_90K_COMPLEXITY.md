@@ -328,12 +328,22 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002 · P001-013.
 - **Test**: `src/hooks/__tests__/useCockpitLogic.selectWhere.test.ts` (3 test) copre field valido (`>=`, `==`, `includes`), field mancante/non valido (`undefined`, `null`, `""`, `42`, oggetto) e operatore sconosciuto.
 - **Gate**: tsgo 0 errori · eslint delta 0 · build exit 0 · 2 suite complete consecutive 385 file / **3063 pass / 2 skipped / 0 fail** (baseline 3060 + 3 nuovi, nessun nuovo skip).
 
+### Verifica idempotenza (F20-P0.8V)
+
+Alla richiesta di riesecuzione del batch su base `42bbf5c3d54c336bc7b790c98b942a382e655203` è stato eseguito il **controllo anti-duplicazione prima di ogni edit**: guard `buildSelectWherePredicate` già presente (definizione riga 27, uso riga 185), **zero occorrenze residue di `field!`**, test file già presente, righe ledger F20-P0.7/F20-P0.8 già allineate al commit corretto, sezione «Batch F20-P0.8 (ESEGUITO)» presente **una sola volta**. **Nessun edit riapplicato.** Gate rieseguiti integralmente e verdi: tsgo 0 errori · eslint delta 0 · build exit 0 · test mirato 3 pass · 2 suite complete consecutive 385 file / 3063 pass / 2 skipped / 0 fail.
+
 ### Chiusura P0
 
 **P0 chiuso**: non restano micro-fix runtime sicuri in partition001 entro il profilo del gate. I FACT residui richiedono tutti interventi strutturali → **P1**:
 - P001-027 (bypass DAL `useGroupingData`) → nuovo modulo `src/data/emailGrouping.ts` + riscrittura hook → **P1.3**;
 - residui untyped in `src/data/funnemailInbox.ts` → richiedono allineare i tipi applicativi (`suggested_action`, `funnemail_policy`) → **P1**;
+- P001-024 (615 righe `e2e/calendar-flow.spec.ts`, selettori CSS fragili) → sostituzione con `data-testid` + split in 3 spec → **P1**;
+- P001-009/010/012/021/023/028/029/031 (categoria `size`) → split monoliti, vietato dal gate P0 → **P1**;
 - P001-003 (ordine priorità `resolveThreadTarget`) → puramente documentale, nessun beneficio runtime.
+
+### Batch F20-P0.9 (CANDIDATE — ultimo micro-batch, rischio zero)
+
+**Candidato unico**: **P001-003** — JSDoc sull'ordine di priorità di `resolveThreadTarget` (`src/components/test-extensions/LinkedInTest.tsx:82-87`, `kind=inference`, `severity=info`). Intervento **solo documentale**: nessuna riga eseguibile toccata, nessun cambio di comportamento, 1 runtime file. È l'unico residuo di partition001 sotto il profilo di rischio P0; tutto il resto è strutturale → P1.
 
 **Esclusi per policy P0**: P001-001/005/014/015/017/019/020/022/026/030 (split monoliti → P1), P001-011 (migration RPC), P001-018 (cross-boundary types edge), P001-003 (documentale, nessun beneficio runtime), P001-027 (deferito a P1.3).
 
