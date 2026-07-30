@@ -5,7 +5,12 @@ import * as React from "react";
 import { Suspense, lazy, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  findUncategorizedAddresses,
+  findPendingAiSuggestionAddresses,
+  countClassificationsSince,
+  countActiveAddressRules,
+} from "@/data/emailIntelCounts";
 import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
