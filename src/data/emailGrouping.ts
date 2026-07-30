@@ -20,6 +20,27 @@ export interface AssignedAddressRuleRow {
   domain: string | null;
 }
 
+/** Riga "regola indirizzo non classificata" così come letta dal DB. */
+export interface UncategorizedAddressRuleRow {
+  id: string;
+  email_address: string;
+  display_name: string | null;
+  email_count: number | null;
+  last_email_at: string | null;
+  domain: string | null;
+  company_name: string | null;
+  ai_suggested_group: string | null;
+  ai_suggestion_confidence: number | null;
+  ai_suggestion_accepted: boolean | null;
+  is_blocked: boolean | null;
+}
+
+/** Riga "regola indirizzo classificata" (group_id OPPURE group_name valorizzato). */
+export interface ClassifiedAddressRuleRow extends UncategorizedAddressRuleRow {
+  group_id: string | null;
+  group_name: string | null;
+}
+
 /**
  * Paginazione a blocchi di 1000 righe per aggirare il limite di default
  * di Supabase. Errori propagati (throw), come nel hook originale.
@@ -67,6 +88,38 @@ export async function fetchAssignedAddressRules(): Promise<AssignedAddressRuleRo
       .select("id, email_address, display_name, group_name, created_at, company_name, domain")
       .not("group_name", "is", null)
       .order("created_at", { ascending: false })
+      .range(from, to),
+  );
+}
+
+/**
+ * Legge tutte le regole indirizzo NON classificate: una riga è tale solo se
+ * NESSUNO dei due campi (`group_id` legacy + `group_name`) è valorizzato.
+ * Ordinamento per `email_count` decrescente. Errori propagati (throw).
+ */
+export async function fetchUncategorizedAddressRules(): Promise<UncategorizedAddressRuleRow[]> {
+  return fetchAllRows<UncategorizedAddressRuleRow>((from, to) =>
+    supabase
+      .from("email_address_rules")
+      .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked")
+      .is("group_id", null)
+      .is("group_name", null)
+      .order("email_count", { ascending: false })
+      .range(from, to),
+  );
+}
+
+/**
+ * Legge tutte le regole indirizzo classificate (`group_id` OPPURE `group_name`
+ * valorizzato), ordinate per `email_count` decrescente. Errori propagati (throw).
+ */
+export async function fetchClassifiedAddressRules(): Promise<ClassifiedAddressRuleRow[]> {
+  return fetchAllRows<ClassifiedAddressRuleRow>((from, to) =>
+    supabase
+      .from("email_address_rules")
+      .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked, group_id, group_name")
+      .or("group_id.not.is.null,group_name.not.is.null")
+      .order("email_count", { ascending: false })
       .range(from, to),
   );
 }

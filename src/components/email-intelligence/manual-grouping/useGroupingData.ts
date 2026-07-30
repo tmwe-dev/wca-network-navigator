@@ -11,7 +11,12 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { DEFAULT_GROUPS as PREDEFINED_GROUPS } from "@/types/email-management";
 import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
-import { fetchSenderGroupsOrdered, fetchAssignedAddressRules } from "@/data/emailGrouping";
+import {
+  fetchSenderGroupsOrdered,
+  fetchAssignedAddressRules,
+  fetchUncategorizedAddressRules,
+  fetchClassifiedAddressRules,
+} from "@/data/emailGrouping";
 
 export function useGroupingData() {
   const qc = useQueryClient();
@@ -111,30 +116,9 @@ export function useGroupingData() {
       }
 
       // Load all visible uncategorized address rules
-      const rules = await fetchAllRows<{
-        id: string;
-        email_address: string;
-        display_name: string | null;
-        email_count: number | null;
-        last_email_at: string | null;
-        domain: string | null;
-        company_name: string | null;
-        ai_suggested_group: string | null;
-        ai_suggestion_confidence: number | null;
-        ai_suggestion_accepted: boolean | null;
-        is_blocked: boolean | null;
-      }>(
-        (from, to) =>
-          supabase
-            .from("email_address_rules")
-            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked")
-            // Coerenza: una riga è "non classificata" solo se NESSUNO dei due
-            // campi (group_id legacy + group_name) è valorizzato.
-            .is("group_id", null)
-            .is("group_name", null)
-            .order("email_count", { ascending: false })
-            .range(from, to),
-      );
+      // Coerenza: una riga è "non classificata" solo se NESSUNO dei due
+      // campi (group_id legacy + group_name) è valorizzato.
+      const rules = await fetchUncategorizedAddressRules();
 
       // Dedup by email_address: rules can exist per-user (shared visibility),
       // so the same address may appear N times. Keep the row with the
@@ -184,29 +168,7 @@ export function useGroupingData() {
       setSenders(filteredSenders);
 
       // Load classified senders (have group_id OR group_name) → mostrati nel rail con opacità ridotta.
-      const classifiedRules = await fetchAllRows<{
-        id: string;
-        email_address: string;
-        display_name: string | null;
-        email_count: number | null;
-        last_email_at: string | null;
-        domain: string | null;
-        company_name: string | null;
-        ai_suggested_group: string | null;
-        ai_suggestion_confidence: number | null;
-        ai_suggestion_accepted: boolean | null;
-        is_blocked: boolean | null;
-        group_id: string | null;
-        group_name: string | null;
-      }>(
-        (from, to) =>
-          supabase
-            .from("email_address_rules")
-            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked, group_id, group_name")
-            .or("group_id.not.is.null,group_name.not.is.null")
-            .order("email_count", { ascending: false })
-            .range(from, to),
-      );
+      const classifiedRules = await fetchClassifiedAddressRules();
       const classifiedDedup = new Map<string, typeof classifiedRules[number] & { _summed: number }>();
       for (const r of classifiedRules) {
         const key = r.email_address.toLowerCase();

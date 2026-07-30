@@ -379,9 +379,23 @@ Alla richiesta di riesecuzione del batch su base `42bbf5c3d54c336bc7b790c98b942a
 
 **Gate**: 5 test mirati pass; `tsgo` 0 errori; eslint file toccati 0 errori (1 warning preesistente di pattern `no-restricted-imports`, già presente in 4 file sorelle della cartella); build exit 0; due suite complete consecutive **386 file, 3068 pass / 2 skipped / 0 fail** (baseline 3063 + 5 nuovi, nessun nuovo skip).
 
-### Batch F20-P1.3B (PREPARATO)
+### Batch F20-P1.3B (ESEGUITO)
 
-Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 → `fetchUncategorizedAddressRules()` / `fetchClassifiedAddressRules()` in `src/data/emailGrouping.ts`, lasciando dedup, mapping `SenderAnalysis` e filtro allowlist nel hook. Atteso `.from()` **7 → 5**. Restano fuori (P1.3C+): query #8 (filtri condizionali mailbox), #4/#10/#11 (write), auth e realtime.
+**Base**: `ddcd1a08ba9216d5beb74f6cf66110e7a5523a43`. **Finding**: P001-027 → resta `PARTIALLY_FIXED`.
+
+Secondo micro-cluster READ-ONLY di `useGroupingData`: query #6 e #7 estratte in `src/data/emailGrouping.ts` come `fetchUncategorizedAddressRules()` e `fetchClassifiedAddressRules()`, con i tipi riga `UncategorizedAddressRuleRow` e `ClassifiedAddressRuleRow` (extends).
+
+**Equivalenza provata**: #6 → stesso select 11 colonne, `is group_id null` + `is group_name null`, order `email_count` desc, range paginato 1000, throw su errore; #7 → stesso select + `group_id, group_name`, `or(group_id.not.is.null,group_name.not.is.null)`, order `email_count` desc, range paginato, throw.
+
+**Restano nel hook** (non toccati): dedup con somma `_summed` e id canonico, mapping `SenderAnalysis`, filtro allowlist mailbox, `setSenders`/`setClassifiedSenders`, ordine sequenziale degli await, `try/catch/finally` con toast e `setIsLoading`. Nessuna auth/realtime/write/schema/RLS/UX.
+
+**Prova diff**: `.from()` diretti nel hook **7 → 5** esatti (residui: 104 upsert `email_sender_groups`, 228 `channel_messages`, 263/296/319 `email_address_rules`). Zero `untypedFrom`/`as any`/`@ts-ignore`; API pubblica del hook invariata → caller non modificati.
+
+**Gate**: 10 test DAL pass (5 nuovi); `tsgo` 0 errori; eslint delta 0 errori (1 warning preesistente invariato); build exit 0; due suite complete **386 file, 3073 pass / 2 skipped / 0 fail** (baseline 3068 + 5, nessun nuovo skip).
+
+### Batch F20-P1.3C (PREPARATO)
+
+Cluster successivo più sicuro: **query READ dinamica #8** (`channel_messages` in `populateAddressRules`) → `fetchInboundEmailSenderAddresses({ userId, mailbox })`, con i filtri condizionali `activeMailbox` (personal → `mailbox_id is null`; shared → `mailbox_id eq`) passati come parametro esplicito e l'auth mantenuta nel hook (`userId` come argomento). Preferita alle write #4/#10/#11 perché resta READ e non tocca `upsert`/`onConflict` né il batching. Atteso `.from()` **5 → 4**.
 
 ---
 
