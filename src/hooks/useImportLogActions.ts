@@ -3,7 +3,6 @@
  * Split from the original 619-LOC monolith.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
