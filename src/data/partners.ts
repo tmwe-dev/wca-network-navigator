@@ -744,3 +744,12 @@ export async function findPartnerIdsByWcaIds(wcaIds: number[]) {
     .in("wca_id", wcaIds);
   return data;
 }
+
+/** Insert partner senza throw: ritorna il partner creato o l'errore testuale. */
+export async function createPartnerSafe(
+  partner: PartnerInsert,
+): Promise<{ partner: PartnerRow | null; error: string | null }> {
+  const { data, error } = await supabase.from("partners").insert(partner).select().single();
+  if (error) return { partner: null, error: error.message };
+  return { partner: data as PartnerRow, error: null };
+}
