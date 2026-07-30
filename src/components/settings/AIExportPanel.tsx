@@ -10,7 +10,7 @@
  */
 import { useState } from "react";
 import JSZip from "jszip";
-import { fetchAiExportBundle } from "@/data/aiExport";
+import { useAiExportBundle } from "@/hooks/useAiExportBundle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileDown, Package } from "lucide-react";
@@ -39,6 +39,7 @@ import {
 
 export function AIExportPanel({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
+  const fetchAiExportBundle = useAiExportBundle();
 
   const exportAll = async () => {
     setBusy(true);
