@@ -17,8 +17,10 @@ import { supabase } from "@/integrations/supabase/client";
  * client tipizzato (`supabase.from`). Restano volutamente su `untypedFrom`:
  *  - `untypedFrom(source)` — la sorgente è dinamica (`message_intelligence_v` |
  *    `channel_messages`) e il client tipizzato non accetta un'unione di tabelle;
- *  - le query passate a `fetchAllPages<T>()` e quelle con `.then()` tipizzato a
- *    mano, dove il Row generato è più largo/stretto del tipo applicativo
+ * P0.6b: migrati anche i due call site `funnemail_sender_intel` / `partners`
+ * (Row generato compatibile con SenderIntelRow / FunnemailPartnerSnapshot).
+ * Restano untyped solo le query passate a `fetchAllPages<T>()`,
+ *    dove il Row generato è più largo/stretto del tipo applicativo
  *    (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape):
  *    tiparle richiederebbe cambiare i tipi applicativi = fuori scope P0.
  */
