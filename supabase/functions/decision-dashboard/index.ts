@@ -13,7 +13,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { edgeError } from "../_shared/handleEdgeError.ts";
+import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { evaluatePartner } from "../_shared/decisionEngine.ts";
 import {
   processAllDecisionActions,
@@ -24,7 +24,8 @@ import {
 import type { AutonomyLevel } from "../_shared/decisionEngine.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return corsPreflight(req);
+  const preflight = corsPreflight(req);
+  if (preflight) return preflight;
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
   try {
@@ -178,6 +179,6 @@ Deno.serve(async (req) => {
         });
     }
   } catch (err) {
-    return edgeError(err, corsHeaders);
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, corsHeaders);
   }
 });
