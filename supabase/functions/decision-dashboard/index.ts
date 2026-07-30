@@ -25,7 +25,7 @@ import type { AutonomyLevel } from "../_shared/decisionEngine.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsPreflight(req);
-  const corsHeaders = getCorsHeaders(req);
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
   try {
     const authHeader = req.headers.get("authorization") ?? "";
