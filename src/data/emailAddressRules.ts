@@ -170,3 +170,86 @@ export async function countAddressRulesByGroup(): Promise<Record<string, number>
   });
   return counts;
 }
+
+/** Id regola per (email_address, operator_id). */
+export async function findAddressRuleIdByAddressAndOperator(
+  emailAddress: string,
+  operatorId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("email_address_rules")
+    .select("id")
+    .eq("email_address", emailAddress)
+    .eq("operator_id", operatorId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+/** Insert regola completa restituendo l'id creato. */
+export async function insertAddressRuleReturningId(
+  payload: Record<string, unknown>,
+): Promise<string> {
+  const { data, error } = await untypedFrom("email_address_rules")
+    .insert(payload)
+    .select("id")
+    .single();
+  if (error) throw error;
+  return (data as { id: string }).id;
+}
+
+export interface AddressRuleMatchTargets {
+  email_address: string | null;
+  address: string | null;
+  domain: string | null;
+  domain_pattern: string | null;
+}
+
+/** Campi di matching (address/domain) di una regola. */
+export async function getAddressRuleMatchTargets(
+  ruleId: string,
+): Promise<AddressRuleMatchTargets | null> {
+  const { data } = await supabase
+    .from("email_address_rules")
+    .select("email_address, domain, address, domain_pattern")
+    .eq("id", ruleId)
+    .maybeSingle();
+  return (data as AddressRuleMatchTargets | null) ?? null;
+}
+
+/** Agente esclusivo eventualmente bloccato su un indirizzo. */
+export async function findExclusiveAgentForAddress(
+  emailAddress: string,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("email_address_rules")
+    .select("exclusive_agent_id")
+    .eq("email_address", emailAddress)
+    .eq("user_id", userId)
+    .not("exclusive_agent_id", "is", null)
+    .maybeSingle();
+  return data?.exclusive_agent_id ?? null;
+}
+
+/** Regola (id + exclusive_agent_id) per indirizzo/utente. */
+export async function findAddressRuleForUser(
+  emailAddress: string,
+  userId: string,
+): Promise<{ id: string; exclusive_agent_id: string | null } | null> {
+  const { data } = await supabase
+    .from("email_address_rules")
+    .select("id, exclusive_agent_id")
+    .eq("email_address", emailAddress)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+/** Imposta l'agente esclusivo su una regola esistente. */
+export async function setAddressRuleExclusiveAgent(ruleId: string, agentId: string): Promise<void> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .update({ exclusive_agent_id: agentId })
+    .eq("id", ruleId);
+  if (error) throw error;
+}

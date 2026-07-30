@@ -104,3 +104,21 @@ export async function findAgentByUserAndName(userId: string, name: string) {
 export function invalidateAgents(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: QUERY_KEY });
 }
+
+export interface AssignableAgent {
+  id: string;
+  role: string;
+  territory_codes: string[] | null;
+}
+
+/** Agenti attivi (non cancellati) di un utente, ordinati per creazione. */
+export async function findAssignableAgents(userId: string): Promise<AssignableAgent[]> {
+  const { data } = await supabase
+    .from("agents")
+    .select("id, role, territory_codes")
+    .is("deleted_at", null)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true });
+  return (data ?? []) as AssignableAgent[];
+}
