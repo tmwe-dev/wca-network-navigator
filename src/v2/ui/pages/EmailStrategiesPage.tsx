@@ -14,7 +14,16 @@ import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Mail, Bell, Plus, Trash2, Save, MailCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  listAutoresponderTemplates,
+  updateAutoresponderTemplate,
+  insertAutoresponderTemplate,
+  deleteAutoresponderTemplate,
+  listWakeUpRules,
+  updateWakeUpRule,
+  insertWakeUpRule,
+  softDeleteWakeUpRule,
+} from "@/v2/io/supabase/queries/email-strategies";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { queryKeys } from "@/lib/queryKeys";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
@@ -96,33 +105,23 @@ function AutorespondersSection(): React.ReactElement {
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.emailStrategies.autoresponders,
-    queryFn: async (): Promise<AutoTemplate[]> => {
-      const { data, error } = await supabase
-        .from("funnemail_autoresponder_templates")
-        .select("id, name, language, subject_template, body_template, enabled, notes")
-        .order("name", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as AutoTemplate[];
-    },
+    queryFn: async (): Promise<AutoTemplate[]> =>
+      (await listAutoresponderTemplates()) as AutoTemplate[],
   });
 
   const save = useMutation({
     mutationFn: async (t: Partial<AutoTemplate> & { id?: string }) => {
       if (t.id) {
-        const { error } = await supabase
-          .from("funnemail_autoresponder_templates")
-          .update({
-            name: t.name,
-            language: t.language,
-            subject_template: t.subject_template,
-            body_template: t.body_template,
-            enabled: t.enabled,
-            notes: t.notes ?? null,
-          })
-          .eq("id", t.id);
-        if (error) throw error;
+        await updateAutoresponderTemplate(t.id, {
+          name: t.name,
+          language: t.language,
+          subject_template: t.subject_template,
+          body_template: t.body_template,
+          enabled: t.enabled,
+          notes: t.notes ?? null,
+        });
       } else {
-        const { error } = await supabase.from("funnemail_autoresponder_templates").insert({
+        await insertAutoresponderTemplate({
           name: t.name ?? "Nuovo template",
           language: t.language ?? "it",
           subject_template: t.subject_template ?? "",
@@ -130,7 +129,6 @@ function AutorespondersSection(): React.ReactElement {
           enabled: t.enabled ?? false,
           notes: t.notes ?? null,
         });
-        if (error) throw error;
       }
     },
     onSuccess: () => {
@@ -142,8 +140,7 @@ function AutorespondersSection(): React.ReactElement {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("funnemail_autoresponder_templates").delete().eq("id", id);
-      if (error) throw error;
+      await deleteAutoresponderTemplate(id);
     },
     onSuccess: () => {
       toast.success("Template eliminato");
