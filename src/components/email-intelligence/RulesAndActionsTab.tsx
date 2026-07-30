@@ -5,6 +5,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findAddressRulesForUi, updateAddressRuleUnfiltered, insertAddressRule, setAddressRuleActive, deleteAddressRule, countAddressRulesByGroup } from "@/data/emailAddressRules";
+import { fetchSenderGroupsOrdered, updateSenderGroupAutoAction } from "@/data/emailGrouping";
+import { findAllEmailPrompts, updateEmailPromptUnfiltered, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt } from "@/data/emailPrompts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,19 +96,14 @@ function AddressRulesSection() {
   const { data: groups = [] } = useQuery({
     queryKey: queryKeys.email.senderGroups,
     queryFn: async () => {
-      const { data } = await supabase.from("email_sender_groups").select("*").order("sort_order");
-      return (data || []) as EmailSenderGroup[];
+      return (await fetchSenderGroupsOrdered()) as EmailSenderGroup[];
     },
   });
 
   const { data: rules = [], isLoading } = useQuery({
     queryKey: queryKeys.email.addressRulesTab4,
     queryFn: async () => {
-      let q = supabase.from("email_address_rules").select("*").order("email_count", { ascending: false });
-      if (search.trim()) q = q.ilike("email_address", `%${search.trim()}%`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return await findAddressRulesForUi(search, "email_count_desc");
     },
   });
 
@@ -113,12 +111,10 @@ function AddressRulesSection() {
     mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
-        const { error } = await supabase.from("email_address_rules").update(payload as never);
-        if (error) throw error;
+        await updateAddressRuleUnfiltered(payload);
       } else {
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-        const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id } as never);
-        if (error) throw error;
+        await insertAddressRule(payload, user!.id);
       }
     },
     onSuccess: () => { toast.success("Regola salvata"); qc.invalidateQueries({ queryKey: queryKeys.email.addressRulesTab4 }); setSheetOpen(false); },
@@ -127,15 +123,14 @@ function AddressRulesSection() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("email_address_rules").delete().eq("id", id);
-      if (error) throw error;
+      await deleteAddressRule(id);
     },
     onSuccess: () => { toast.success("Eliminata"); qc.invalidateQueries({ queryKey: queryKeys.email.addressRulesTab4 }); },
   });
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      await supabase.from("email_address_rules").update({ is_active }).eq("id", id);
+      await setAddressRuleActive(id, is_active);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.addressRulesTab4 }),
   });
@@ -248,24 +243,20 @@ function GroupRulesSection() {
   const { data: groups = [], isLoading } = useQuery({
     queryKey: queryKeys.email.senderGroupsRules,
     queryFn: async () => {
-      const { data } = await supabase.from("email_sender_groups").select("*").order("sort_order");
-      return (data || []) as (EmailSenderGroup & { auto_action?: string; is_default?: boolean })[];
+      return (await fetchSenderGroupsOrdered()) as (EmailSenderGroup & { auto_action?: string; is_default?: boolean })[];
     },
   });
 
   const { data: groupCounts = {} } = useQuery({
     queryKey: queryKeys.groupAddressCounts(),
     queryFn: async () => {
-      const { data } = await supabase.from("email_address_rules").select("group_name");
-      const counts: Record<string, number> = {};
-      (data || []).forEach((r) => { if (r.group_name) counts[r.group_name] = (counts[r.group_name] || 0) + 1; });
-      return counts;
+      return await countAddressRulesByGroup();
     },
   });
 
   const updateGroup = useMutation({
     mutationFn: async ({ id, auto_action }: { id: string; auto_action: string }) => {
-      await supabase.from("email_sender_groups").update({ auto_action }).eq("id", id);
+      await updateSenderGroupAutoAction(id, auto_action);
     },
     onSuccess: () => { toast.success("Aggiornato"); qc.invalidateQueries({ queryKey: queryKeys.email.senderGroupsRules }); },
   });
@@ -302,9 +293,7 @@ function PromptManagerSection() {
   const { data: prompts = [], isLoading } = useQuery({
     queryKey: queryKeys.email.promptsTab4,
     queryFn: async () => {
-      const { data, error } = await supabase.from("email_prompts").select("*").order("priority", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      return await findAllEmailPrompts();
     },
   });
 
@@ -312,10 +301,10 @@ function PromptManagerSection() {
     mutationFn: async (prompt: Record<string, unknown>) => {
       const { id, ...payload } = prompt;
       if (id) {
-        await supabase.from("email_prompts").update(payload as never);
+        await updateEmailPromptUnfiltered(payload);
       } else {
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-        await supabase.from("email_prompts").insert({ ...payload, user_id: user!.id } as never);
+        await insertEmailPrompt(payload, user!.id);
       }
     },
     onSuccess: () => { toast.success("Prompt salvato"); qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }); setSheetOpen(false); },
@@ -324,14 +313,14 @@ function PromptManagerSection() {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      await supabase.from("email_prompts").update({ is_active }).eq("id", id);
+      await setEmailPromptActive(id, is_active);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("email_prompts").delete().eq("id", id);
+      await deleteEmailPrompt(id);
     },
     onSuccess: () => { toast.success("Eliminato"); qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }); },
   });

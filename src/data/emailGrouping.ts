@@ -8,6 +8,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { EmailSenderGroup } from "@/types/email-management";
+import type { Database } from "@/integrations/supabase/types";
 
 /**
  * Filtro mailbox per le letture su `channel_messages`.
@@ -273,4 +274,68 @@ export async function seedDefaultSenderGroups(
     return { kind: "created", groups: created as EmailSenderGroup[] };
   }
   return { kind: "fallback", groups: await fetchSenderGroupsOrdered() };
+}
+
+/**
+ * Aggiorna l'azione automatica di un gruppo mittente.
+ * Semantica errori preservata: il caller originale ignorava `error`.
+ */
+export async function updateSenderGroupAutoAction(id: string, autoAction: string): Promise<void> {
+  await supabase.from("email_sender_groups").update({ auto_action: autoAction }).eq("id", id);
+}
+
+/* ── Write path: assegnazione manuale a gruppo (useGroupAssignment) ──
+ * Estratte da bypass DAL diretti. Payload, filtri e semantica errori
+ * (errori ignorati, come nel hook originale) invariati.
+ */
+
+type AddressRuleInsert = Database["public"]["Tables"]["email_address_rules"]["Insert"];
+type AiDecisionLogInsert = Database["public"]["Tables"]["ai_decision_log"]["Insert"];
+type KbEntryInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
+
+export interface GroupAssignmentPatch {
+  group_id: string;
+  group_name: string;
+  group_color?: string | null;
+  group_icon?: string | null;
+}
+
+/** operator_id opzionale: alcuni utenti non hanno record in `operators`. */
+export async function fetchOperatorIdForUser(userId: string): Promise<string | null> {
+  const { data } = await supabase.from("operators").select("id").eq("user_id", userId).maybeSingle();
+  return data?.id ?? null;
+}
+
+/** Aggiorna il gruppo di una regola indirizzo esistente. */
+export async function updateAddressRuleGroupAssignment(
+  ruleId: string,
+  patch: GroupAssignmentPatch,
+): Promise<void> {
+  await supabase.from("email_address_rules").update(patch).eq("id", ruleId);
+}
+
+/** Crea una nuova regola indirizzo per un mittente appena assegnato. */
+export async function insertAddressRuleForSender(row: AddressRuleInsert): Promise<void> {
+  await supabase.from("email_address_rules").insert(row);
+}
+
+/** Traccia la decisione di assegnazione gruppo per il learning loop. */
+export async function insertGroupAssignmentDecision(row: AiDecisionLogInsert): Promise<void> {
+  await supabase.from("ai_decision_log").insert(row);
+}
+
+/** Ritorna l'id della KB entry di pattern dominio, se già presente. */
+export async function findDomainPatternKbEntryId(userId: string, domain: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("id")
+    .eq("user_id", userId)
+    .contains("tags", ["domain_pattern", domain])
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+/** Crea la KB entry di pattern dominio. */
+export async function insertKbEntry(row: KbEntryInsert): Promise<void> {
+  await supabase.from("kb_entries").insert(row);
 }

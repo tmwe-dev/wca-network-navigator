@@ -3,6 +3,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface EmailAddressRule {
   id: string;
@@ -110,4 +111,71 @@ export async function upsertEmailAddressRule(
       .insert([{ user_id: userId, email_address: addr, ...patch }]);
     if (error) throw error;
   }
+}
+/* ── UI CRUD (Email Intelligence: AddressRulesManager / RulesAndActionsTab) ──
+ * Estratte da bypass DAL diretti nei componenti. Query, filtri, select, order
+ * ed error semantics identici all'implementazione inline precedente.
+ */
+
+export type AddressRuleRow = Database["public"]["Tables"]["email_address_rules"]["Row"];
+
+export type AddressRuleOrder = "email_address" | "email_count_desc";
+
+/** Lista completa regole con ricerca opzionale su email_address (ilike). */
+export async function findAddressRulesForUi(
+  search: string,
+  order: AddressRuleOrder,
+): Promise<AddressRuleRow[]> {
+  let q = order === "email_address"
+    ? supabase.from("email_address_rules").select("*").order("email_address")
+    : supabase.from("email_address_rules").select("*").order("email_count", { ascending: false });
+  const term = search.trim();
+  if (term) q = q.ilike("email_address", `%${term}%`);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as AddressRuleRow[];
+}
+
+/** Update by id (semantica AddressRulesManager). */
+export async function updateAddressRuleById(id: string, payload: Record<string, unknown>): Promise<void> {
+  const { error } = await untypedFrom("email_address_rules").update(payload).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Update SENZA filtro id — semantica legacy di RulesAndActionsTab.
+ * Mantenuta identica per non alterare il comportamento corrente.
+ */
+export async function updateAddressRuleUnfiltered(payload: Record<string, unknown>): Promise<void> {
+  const { error } = await untypedFrom("email_address_rules").update(payload);
+  if (error) throw error;
+}
+
+/** Insert nuova regola con user_id esplicito. */
+export async function insertAddressRule(payload: Record<string, unknown>, userId: string): Promise<void> {
+  const { error } = await untypedFrom("email_address_rules").insert({ ...payload, user_id: userId });
+  if (error) throw error;
+}
+
+/** Toggle is_active. */
+export async function setAddressRuleActive(id: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.from("email_address_rules").update({ is_active: isActive }).eq("id", id);
+  if (error) throw error;
+}
+
+/** Delete hard (intercettato dal soft-delete trigger lato DB). */
+export async function deleteAddressRule(id: string): Promise<void> {
+  const { error } = await supabase.from("email_address_rules").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Conteggio regole per group_name (aggregazione client-side, come il legacy). */
+export async function countAddressRulesByGroup(): Promise<Record<string, number>> {
+  const { data } = await supabase.from("email_address_rules").select("group_name");
+  const counts: Record<string, number> = {};
+  (data ?? []).forEach((r) => {
+    const g = (r as { group_name: string | null }).group_name;
+    if (g) counts[g] = (counts[g] || 0) + 1;
+  });
+  return counts;
 }

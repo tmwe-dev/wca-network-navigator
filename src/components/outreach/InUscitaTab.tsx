@@ -10,7 +10,7 @@ import { DaInviareSubTab } from "./DaInviareSubTab";
 import { InviatiSubTab } from "./InviatiSubTab";
 import { ProgrammatiSubTab } from "./ProgrammatiSubTab";
 import { FallitiSubTab } from "./FallitiSubTab";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchOutreachSubCounts } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface InUscitaTabProps {
@@ -22,25 +22,7 @@ export function InUscitaTab(_props: InUscitaTabProps = {}) {
 
   const { data: counts } = useQuery({
     queryKey: queryKeys.outreach.subCounts(),
-    queryFn: async () => {
-      const [pending, sent, scheduled, failed, bulkPending, bulkSent, bulkScheduled, bulkFailed, sentLog] = await Promise.all([
-        supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "completed").eq("activity_type", "send_email"),
-        supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
-        supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "failed"),
-        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
-        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).in("status", ["scheduled"]).not("scheduled_at", "is", null),
-        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "failed"),
-        supabase.from("email_send_log").select("id", { count: "exact", head: true }).eq("status", "sent").eq("send_method", "direct"),
-      ]);
-      return {
-        pending: (pending.count || 0) + (bulkPending.count || 0),
-        sent: (sent.count || 0) + (bulkSent.count || 0) + (sentLog.count || 0),
-        scheduled: (scheduled.count || 0) + (bulkScheduled.count || 0),
-        failed: (failed.count || 0) + (bulkFailed.count || 0),
-      };
-    },
+    queryFn: fetchOutreachSubCounts,
     refetchInterval: 30000,
   });
 

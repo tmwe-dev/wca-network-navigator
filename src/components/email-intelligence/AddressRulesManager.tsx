@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule } from "@/data/emailAddressRules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,11 +62,7 @@ export function AddressRulesManager() {
   const { data: rules = [], isLoading } = useQuery({
     queryKey: queryKeys.email.addressRules,
     queryFn: async () => {
-      let q = supabase.from("email_address_rules").select("*").order("email_address");
-      if (search.trim()) q = q.ilike("email_address", `%${search.trim()}%`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return await findAddressRulesForUi(search, "email_address");
     },
   });
 
@@ -73,12 +70,10 @@ export function AddressRulesManager() {
     mutationFn: async (rule: Record<string, unknown>) => {
       const { id, ...payload } = rule;
       if (id) {
-        const { error } = await supabase.from("email_address_rules").update(payload as never).eq("id", String(id));
-        if (error) throw error;
+        await updateAddressRuleById(String(id), payload);
       } else {
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-        const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id } as never);
-        if (error) throw error;
+        await insertAddressRule(payload, user!.id);
       }
     },
     onSuccess: () => {
@@ -92,16 +87,14 @@ export function AddressRulesManager() {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase.from("email_address_rules").update({ is_active }).eq("id", id);
-      if (error) throw error;
+      await setAddressRuleActive(id, is_active);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.email.addressRules }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("email_address_rules").delete().eq("id", id);
-      if (error) throw error;
+      await deleteAddressRule(id);
     },
     onSuccess: () => { toast.success("Regola eliminata"); qc.invalidateQueries({ queryKey: queryKeys.email.addressRules }); },
     onError: () => toast.error("Errore nell'eliminazione"),
