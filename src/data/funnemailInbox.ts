@@ -17,8 +17,10 @@ import { supabase } from "@/integrations/supabase/client";
  * client tipizzato (`supabase.from`). Restano volutamente su `untypedFrom`:
  *  - `untypedFrom(source)` — la sorgente è dinamica (`message_intelligence_v` |
  *    `channel_messages`) e il client tipizzato non accetta un'unione di tabelle;
- *  - le query passate a `fetchAllPages<T>()` e quelle con `.then()` tipizzato a
- *    mano, dove il Row generato è più largo/stretto del tipo applicativo
+ * P0.6b: migrati anche i due call site `funnemail_sender_intel` / `partners`
+ * (Row generato compatibile con SenderIntelRow / FunnemailPartnerSnapshot).
+ * Restano untyped solo le query passate a `fetchAllPages<T>()`,
+ *    dove il Row generato è più largo/stretto del tipo applicativo
  *    (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape):
  *    tiparle richiederebbe cambiare i tipi applicativi = fuori scope P0.
  */
@@ -592,16 +594,22 @@ export async function listFunnemailGroupedInbox(
     ...decisions.map((d) => d.partner_id),
   ].filter((id): id is string => Boolean(id))));
   const intelPromise: Promise<SenderIntelRow[]> = domains.length > 0
-    ? untypedFrom("funnemail_sender_intel")
-      .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
-      .in("email_domain", domains)
-      .then(({ data, error }: { data: SenderIntelRow[] | null; error: Error | null }) => { if (error) throw error; return data ?? []; })
+    ? (async () => {
+      const { data, error } = await supabase.from("funnemail_sender_intel")
+        .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
+        .in("email_domain", domains);
+      if (error) throw error;
+      return data ?? [];
+    })()
     : Promise.resolve([]);
   const partnerPromise: Promise<FunnemailPartnerSnapshot[]> = partnerIds.length > 0
-    ? untypedFrom("partners")
-      .select("id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website")
-      .in("id", partnerIds)
-      .then(({ data, error }: { data: FunnemailPartnerSnapshot[] | null; error: Error | null }) => { if (error) throw error; return data ?? []; })
+    ? (async () => {
+      const { data, error } = await supabase.from("partners")
+        .select("id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website")
+        .in("id", partnerIds);
+      if (error) throw error;
+      return data ?? [];
+    })()
     : Promise.resolve([]);
   const [intelRows, partnerRows] = await Promise.all([
     intelPromise,
