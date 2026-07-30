@@ -13,6 +13,7 @@ import {
   fetchClassifiedAddressRules,
   fetchInboundEmailSenderAddresses,
   updateAddressRuleEmailCount,
+  fetchAddressRuleCounts,
 } from "@/data/emailGrouping";
 
 type Terminal = { data?: unknown; error?: unknown };
@@ -234,5 +235,37 @@ describe("updateAddressRuleEmailCount", () => {
     const { c } = chain([{ error: err }]);
     mockFrom.mockReturnValue(c);
     await expect(updateAddressRuleEmailCount("r3", 7)).rejects.toEqual(err);
+  });
+});
+
+describe("fetchAddressRuleCounts", () => {
+  it("uses exact table, select, order and range contract", async () => {
+    const { c, calls } = chain([{ data: [{ id: "r1", email_address: "a@b.com", email_count: 3 }], error: null }]);
+    mockFrom.mockReturnValue(c);
+    const res = await fetchAddressRuleCounts();
+    expect(mockFrom).toHaveBeenCalledWith("email_address_rules");
+    expect(calls.select[0]).toEqual(["id, email_address, email_count"]);
+    expect(calls.order[0]).toEqual(["id", { ascending: true }]);
+    expect(calls.range[0]).toEqual([0, 999]);
+    expect(res).toEqual([{ id: "r1", email_address: "a@b.com", email_count: 3 }]);
+  });
+
+  it("paginates at 1000 and returns 1001 rows", async () => {
+    const full = Array.from({ length: 1000 }, (_, i) => ({ id: `r${i}`, email_address: `x${i}@y.z`, email_count: i }));
+    const { c, calls } = chain([
+      { data: full, error: null },
+      { data: [{ id: "tail", email_address: "tail@y.z", email_count: 1 }], error: null },
+    ]);
+    mockFrom.mockReturnValue(c);
+    const res = await fetchAddressRuleCounts();
+    expect(calls.range).toEqual([[0, 999], [1000, 1999]]);
+    expect(res).toHaveLength(1001);
+  });
+
+  it("propagates the supabase error unchanged", async () => {
+    const err = { message: "boom-c", code: "42501" };
+    const { c } = chain([{ data: null, error: err }]);
+    mockFrom.mockReturnValue(c);
+    await expect(fetchAddressRuleCounts()).rejects.toEqual(err);
   });
 });

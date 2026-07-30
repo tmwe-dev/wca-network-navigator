@@ -424,3 +424,37 @@ Prima **write** estratta: **#10 update `email_count`** → `updateAddressRuleEma
 ### Batch F20-P1.3E (PREPARATO)
 
 Tra i 3 bypass residui si sceglie **#9, la READ paginata `email_address_rules` (`select id,email_address,email_count`, `order id asc`, `range`) dentro `populateAddressRules`** → `fetchAddressRuleCounts()`. È la più sicura: read-only, nessun payload, nessun conflict target, helper `fetchAllRows` già usato e testato nel DAL, semantica errori identica (throw). Rischio: minimo — l'unica attenzione è preservare la paginazione a 1000 e l'ordinamento per `id` per non alterare l'ordine di costruzione di `existingByAddress`. Le due write residue (#4 upsert gruppi con `select`+fallback, #11 upsert batch con `onConflict: user_id,email_address` e chunk 100) restano dopo, perché toccano conflict target e valori di ritorno consumati dal flusso.
+
+---
+
+## Regole trasversali su ogni batch
+1. **Un file per commit** dove possibile.
+2. **Test unit di regressione** aggiunto o esistente **prima** dello split.
+3. **Screenshot Playwright** della route toccata (before/after) per UI.
+4. **Nessun cambio di firma pubblica** senza migrazione contestuale dei call site.
+5. **Rollback**: singolo `git revert`.
+6. **Gate CI**: `tsgo`, vitest, `deno check` su tutte le edge toccate, ESLint, build.
+
+---
+
+## Copertura audit (dichiarazione onesta)
+
+- **File inventariati / totali**: 4130 / 4130 = **100.00%** [FATTO].
+- **Righe totali inventariate**: 545.596 [FATTO].
+- **Righe classificate semanticamente** (regole strutturali applicate): 426.729 / 545.596 = **78.21%** [FATTO]. Il gap 21.79% è **esclusione intenzionale** (asset binari, generated, archive, docs/memory, JSON/lockfile) elencata in `AUDIT_METHOD.md`.
+- **File classificati semanticamente**: 3.445 / 4.130 = **83.41%** [FATTO].
+- **Righe non analizzate riga-per-riga per contenuto**: 100% dei file testuali ha ricevuto metriche aggregate (LOC, cyclo, marker, access). L'ispezione **riga-per-riga letterale** (una entry finding per ogni riga) è **intenzionalmente non prodotta**: sarebbe rumore statistico di ~426k entry senza valore azionabile. I finding sono generati per **regole strutturali** (14 codici) su intervalli line-anchored.
+- **Verifica multi-metodo**: import graph (AST-like via regex) + rg-style pattern + fingerprint SHA1/normalizzato — applicati **contemporaneamente** su ogni file per ridurre falsi positivi.
+- **Non dichiaro 100% di "profondità"**: la ciclomatica è stima regex; gli orfani sono candidati non conferme; RLS/SQL sono coperti solo come LOC.
+
+---
+
+## Checkpoint per turno successivo (se A1 non chiuso)
+
+A0 completato al 100%. A1 completato per **regole strutturali su 3.445 file semantici**. Restano fuori dal presente turno:
+1. **Ispezione manuale riga-per-riga** dei top 20 file per righe (LinkedInTest, useCockpitLogic, partners.ts, funnemailInbox.ts, HarmonizeSystemDialog, send-email/index, toolHandlersRead, toolHandlersWrite, PromptCopilotPanel, PromptTestsTab, ComposerCanvas, SenderActionsDialog, calendar-flow.spec, contact-merge-logic.test, useEmailComposerState, useGroupingData, useGlobalPromptImprover, useDeepSearchLocal, WhatsAppTest, RulesAndActionsTab).
+2. **Verifica applicazione DB migrations duplicate** (P0.3 gate).
+3. **Triage 1-a-1 delle 45 coppie v1/v2** (P2.1).
+4. **Strumentazione runtime per orfani** (P2.2).
+
+Ogni item ha input deterministico già in `.lovable/audits/complexity/analysis.json` → il prossimo turno può ripartire senza rifare A0.

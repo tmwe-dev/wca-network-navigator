@@ -18,6 +18,7 @@ import {
   fetchClassifiedAddressRules,
   fetchInboundEmailSenderAddresses,
   updateAddressRuleEmailCount,
+  fetchAddressRuleCounts,
   type MailboxFilter,
 } from "@/data/emailGrouping";
 
@@ -37,28 +38,6 @@ export function useGroupingData() {
   const [assignedByGroup, setAssignedByGroup] = useState<
     Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>
   >(new Map());
-
-  /**
-   * Fetch ALL rows from a query, paginating in chunks of 1000
-   * to bypass Supabase default limit.
-   */
-  const fetchAllRows = async <T,>(
-    buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  ): Promise<T[]> => {
-    const PAGE = 1000;
-    const all: T[] = [];
-    let offset = 0;
-    let done = false;
-    while (!done) {
-      const { data, error } = await buildQuery(offset, offset + PAGE - 1);
-      if (error) throw error;
-      const batch = data ?? [];
-      all.push(...batch);
-      if (batch.length < PAGE) done = true;
-      else offset += PAGE;
-    }
-    return all;
-  };
 
   const loadGroups = async () => {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
@@ -246,18 +225,7 @@ export function useGroupingData() {
       }
 
       // Check all visible existing rules
-      const existing = await fetchAllRows<{
-        id: string;
-        email_address: string;
-        email_count: number | null;
-      }>(
-        (from, to) =>
-          supabase
-            .from("email_address_rules")
-            .select("id, email_address, email_count")
-            .order("id", { ascending: true })
-            .range(from, to),
-      );
+      const existing = await fetchAddressRuleCounts();
 
       const existingByAddress = new Map<string, Array<{ id: string; email_count: number | null }>>();
       for (const rule of existing) {

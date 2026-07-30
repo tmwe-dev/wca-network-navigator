@@ -179,3 +179,26 @@ export async function updateAddressRuleEmailCount(id: string, count: number): Pr
     .eq("id", id);
   if (error) throw error;
 }
+
+/** Riga minimale usata per il ricalcolo di `email_count` in `populateAddressRules`. */
+export interface AddressRuleCountRow {
+  id: string;
+  email_address: string;
+  email_count: number | null;
+}
+
+/**
+ * Legge tutte le regole indirizzo visibili con il solo trio
+ * `id, email_address, email_count`, ordinate per `id` crescente
+ * (read #9, batch F20-P1.3E). Paginazione a 1000 righe tramite
+ * `fetchAllRows`; errori propagati (throw) come nel hook originale.
+ */
+export async function fetchAddressRuleCounts(): Promise<AddressRuleCountRow[]> {
+  return fetchAllRows<AddressRuleCountRow>((from, to) =>
+    supabase
+      .from("email_address_rules")
+      .select("id, email_address, email_count")
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+}
