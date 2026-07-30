@@ -305,15 +305,35 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002 · P001-013.
 ## Batch F20-P0.7 (ESEGUITO)
 
 ### Finding trattato: **P001-027 — CONFIRMED_FACT / DEFERRED (nessun runtime edit)**
-- **Rettifica dell'evidenza originale**: il finding dichiarava «0 `.from()` diretti». **Falso**. La verifica sul file attuale `src/components/email-intelligence/manual-grouping/useGroupingData.ts` (447 righe) mostra `import { supabase } from "@/integrations/supabase/client"` e **12 accessi diretti**: 10 `supabase.from()` su `email_sender_groups`, `email_address_rules`, `channel_messages`; 3 `supabase.auth.getSession()`; 1 `supabase.channel()` realtime + `removeChannel`. Nessun alias/wrapper (`untypedFrom`, `tFrom`, `rpc`, `functions.invoke`, `fetch`) presente. Coerente con P001-033 che elenca `useGroupingData` tra i DAL bypass.
+- **Rettifica dell'evidenza originale**: il finding dichiarava «0 `.from()` diretti». **Falso**. La verifica sul file attuale `src/components/email-intelligence/manual-grouping/useGroupingData.ts` (447 righe) mostra `import { supabase } from "@/integrations/supabase/client"` e accessi diretti multipli. **Conteggio rettificato in P0.8** (il precedente «12 accessi / 10 `.from()`» era errato e incoerente col dettaglio elencato). Conteggio reale su file, per categoria:
+  - **11 query DAL `supabase.from()`** — righe 58, 80, 104, 123, 132, 157, 232, 294, 329, 362, 385 su `email_sender_groups`, `email_address_rules`, `channel_messages` (escluse le 2 occorrenze di `Array.from` alle righe 186 e 251, non-Supabase);
+  - **3 chiamate auth `supabase.auth.getSession()`** — righe 55, 99, 286;
+  - **1 apertura canale realtime `supabase.channel()`** — riga 414;
+  - **1 rimozione canale `supabase.removeChannel()`** — riga 422.
+  - **Totale: 16 accessi diretti al client Supabase.** Nessun alias/wrapper (`untypedFrom`, `tFrom`, `rpc`, `functions.invoke`, `fetch`) presente. Coerente con P001-033 che elenca `useGroupingData` tra i DAL bypass.
 - **Quindi NON è un falso positivo**: il bypass DAL esiste.
 - **Perché DEFERRED e non corretto qui**: la correzione richiede un nuovo modulo DAL (`src/data/emailGrouping.ts`) + riscrittura del hook = **2 runtime file**, che sommati a ledger e plan superano il tetto di **3 file totali** del batch. Inoltre coinvolge query condizionali dinamiche e una subscription realtime: fuori dal profilo micro-cluster P0 a rischio nullo.
-- **Esito**: DEFERRED → **P1.3 (DAL bypass residui)**, con perimetro già definito (12 accessi, 3 tabelle, 1 canale realtime, 3 caller noti).
+- **Esito**: DEFERRED (status invariato) → **P1.3 (DAL bypass residui)**, con perimetro già definito (16 accessi: 11 query + 3 auth + 1 channel + 1 removeChannel, 3 tabelle, 1 canale realtime, 3 caller noti).
 - **Nessun file runtime modificato in questo batch.**
 
-### Batch F20-P0.8 (CANDIDATE)
+---
 
-**Candidato unico**: **P001-008** — `executeAIActions` in `src/hooks/useCockpitLogic.ts` usa `(c as unknown as Record<string, unknown>)[field!]` con `field!` non verificato: guard runtime su `field` prima dell'accesso, 1 solo runtime file, nessun cambio di contratto, query, UX o schema. FACT confermato, profilo identico a P001-002.
+## Batch F20-P0.8 (ESEGUITO)
+
+### Finding trattato: **P001-008 — CONFIRMED_FACT / VERIFIED_FIXED**
+- **Conferma del finding (non assunto)**: il contratto `CockpitAIAction` (`src/components/cockpit/TopCommandBar.tsx:12-23`) dichiara `field?: string` **opzionale**; il producer unico è `useIntelliFlowOverlay.ts:108` che fa `const actions = (data?.actions as unknown[]) || []` sul payload di una edge function e lo passa a `executeAIActions` **senza schema né validazione runtime**. Quindi `field` può essere `undefined`, `null`, numero o oggetto: il `field!` a `useCockpitLogic.ts:162` era una bugia di tipo.
+- **Impatto reale**: con `field` undefined l'indicizzazione usava la chiave letterale `"undefined"` e, con `operator === "=="` e `value` undefined, il predicato risultava **vero per tutti i contatti** → selezione di massa involontaria a monte delle bulk action.
+- **Fix minimo applicato**: la closure esistente è stata estratta in funzione pura esportata `buildSelectWherePredicate(field: unknown, operator: unknown, value: unknown)` **nello stesso file** (nessun nuovo modulo runtime, nessuna modifica all'oggetto ritornato dall'hook). Guard: `typeof field !== "string" || field.length === 0` → `null`; nel `case "select_where"` un predicato `null` produce `log.debug` + `break`, cioè la **stessa semantica di skip silenzioso** già usata da `case "filter"` (`if (action.filters)`) e `case "view_mode"` (`if (action.mode)`). Nessuna nuova UX/toast.
+- **Invarianti**: action valide identiche bit-per-bit (stessi 3 operatori, stesso ordine, stesso fallback `false`), contratti action, ordine di esecuzione, query, auth e dati invariati. Nessun `any`, nessun nuovo `unknown as` (l'unico cast è quello preesistente, spostato invariato), nessun `field!`, nessun `@ts-ignore`.
+- **Test**: `src/hooks/__tests__/useCockpitLogic.selectWhere.test.ts` (3 test) copre field valido (`>=`, `==`, `includes`), field mancante/non valido (`undefined`, `null`, `""`, `42`, oggetto) e operatore sconosciuto.
+- **Gate**: tsgo 0 errori · eslint delta 0 · build exit 0 · 2 suite complete consecutive 385 file / **3063 pass / 2 skipped / 0 fail** (baseline 3060 + 3 nuovi, nessun nuovo skip).
+
+### Chiusura P0
+
+**P0 chiuso**: non restano micro-fix runtime sicuri in partition001 entro il profilo del gate. I FACT residui richiedono tutti interventi strutturali → **P1**:
+- P001-027 (bypass DAL `useGroupingData`) → nuovo modulo `src/data/emailGrouping.ts` + riscrittura hook → **P1.3**;
+- residui untyped in `src/data/funnemailInbox.ts` → richiedono allineare i tipi applicativi (`suggested_action`, `funnemail_policy`) → **P1**;
+- P001-003 (ordine priorità `resolveThreadTarget`) → puramente documentale, nessun beneficio runtime.
 
 **Esclusi per policy P0**: P001-001/005/014/015/017/019/020/022/026/030 (split monoliti → P1), P001-011 (migration RPC), P001-018 (cross-boundary types edge), P001-003 (documentale, nessun beneficio runtime), P001-027 (deferito a P1.3).
 
