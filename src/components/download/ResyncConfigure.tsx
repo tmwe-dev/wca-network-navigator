@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   RefreshCw, Play, Users, Mail, AlertTriangle, Loader2
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   findPartnerNetworksWithWcaId,
   findPartnerContactEmails,
