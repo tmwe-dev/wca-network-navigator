@@ -3,7 +3,7 @@
  * Aggrega KPI reali del sistema per la pagina KPI dashboard.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSystemKpiCounts, fetchLeadStatusFunnel } from "@/v2/io/supabase/queries/system-kpis";
 
 export interface SystemKpis {
   enrichment: {
@@ -27,20 +27,10 @@ export interface SystemKpis {
   funnel: Record<string, number>;
 }
 
-async function safeCount(query: () => PromiseLike<{ count: number | null; error: unknown }>): Promise<number> {
-  try {
-    const { count, error } = await query();
-    if (error) return 0;
-    return count ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
 async function fetchKpis(): Promise<SystemKpis> {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [
+  const {
     partnerTotal,
     partnerEnriched,
     sent30d,
@@ -49,81 +39,9 @@ async function fetchKpis(): Promise<SystemKpis> {
     agentsCompleted,
     agentsFailed,
     agentsPending,
-  ] = await Promise.all([
-    safeCount(() =>
-      supabase
-        .from("partners")
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null)
-    ),
-    safeCount(() =>
-      supabase
-        .from("partners")
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null)
-        .not("enrichment_data", "is", null)
-    ),
-    safeCount(() =>
-      supabase
-        .from("email_send_log")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "sent")
-        .gte("sent_at", since)
-    ),
-    safeCount(() =>
-      supabase
-        .from("email_send_log")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["failed", "bounced", "rejected"])
-        .gte("sent_at", since)
-    ),
-    safeCount(() =>
-      supabase
-        .from("channel_messages")
-        .select("id", { count: "exact", head: true })
-        .eq("direction", "inbound")
-        .eq("channel", "email")
-        .gte("created_at", since)
-    ),
-    safeCount(() =>
-      supabase
-        .from("agent_tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "completed")
-        .gte("created_at", since)
-    ),
-    safeCount(() =>
-      supabase
-        .from("agent_tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "failed")
-        .gte("created_at", since)
-    ),
-    safeCount(() =>
-      supabase
-        .from("agent_tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending")
-    ),
-  ]);
+  } = await fetchSystemKpiCounts(since);
 
-  // Funnel lead_status
-  const funnel: Record<string, number> = {};
-  try {
-    const { data } = await supabase
-      .from("partners")
-      .select("lead_status")
-      .is("deleted_at", null)
-      .limit(20000);
-    if (data) {
-      for (const row of data as Array<{ lead_status: string | null }>) {
-        const k = row.lead_status ?? "unknown";
-        funnel[k] = (funnel[k] ?? 0) + 1;
-      }
-    }
-  } catch {
-    // ignore
-  }
+  const funnel = await fetchLeadStatusFunnel();
 
   const totalEmail = sent30d + failed30d;
   const totalAgents = agentsCompleted + agentsFailed;
