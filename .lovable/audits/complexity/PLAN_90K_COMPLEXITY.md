@@ -490,3 +490,19 @@ A0 completato al 100%. A1 completato per **regole strutturali su 3.445 file sema
 4. **Strumentazione runtime per orfani** (P2.2).
 
 Ogni item ha input deterministico già in `.lovable/audits/complexity/analysis.json` → il prossimo turno può ripartire senza rifare A0.
+
+---
+
+## F20-CAMPAGNA-FASI3-6 — ESEGUITO (base d33962de)
+
+- **FASE 3 Edge Functions**: 150 mappate, 3 migrate a `_shared/authGuard` terse
+  (`country-kb-generator`, `calculate-lead-scores`, `list-elevenlabs-voices`),
+  contratto invariato. DEFERRED motivati per le function `getUser` con messaggi custom.
+- **FASE 4 KB/memoria**: aggiunta guardia anti-drift `src/test/kb-source-index-integrity.test.ts`
+  (49 file vs 37 voci indice, esclusioni documentate). Contenuti KB invariati.
+- **FASE 5 Agenti/automazioni**: 26 cron attivi, **0 fallimenti su 24h**. Nessun intervento.
+- **FASE 6 DB/perf/E2E**: 274 lint DB → DEFERRED (richiedono migrazioni su viste/funzioni
+  condivise, vietate dal vincolo no-deploy); 76 spec E2E inventariate, non eseguite.
+- **Chiusura**: radar **85.500 / 100.000** — dettaglio in
+  `docs/audit/campagna-autonoma-fasi3-6-2026-07-30.md`.
+- Gate: tsgo 0 · eslint 0 · build OK · 2× vitest 3098 pass / 0 fail.

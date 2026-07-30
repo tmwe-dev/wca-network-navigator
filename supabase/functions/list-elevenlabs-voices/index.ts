@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 interface VoiceRaw {
   voice_id?: string;
@@ -17,25 +18,10 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
-  // Auth check
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-    });
-  }
+  // Auth check — _shared/authGuard (terse: { error: CODE }), contratto invariato
   try {
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "AUTH_INVALID" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (isAuthError(auth)) return auth;
   } catch {
     return new Response(JSON.stringify({ error: "AUTH_INVALID" }), {
       status: 401, headers: { ...dynCors, "Content-Type": "application/json" },

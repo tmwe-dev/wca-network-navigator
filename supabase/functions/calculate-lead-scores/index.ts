@@ -16,6 +16,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 Deno.serve(async (req: Request) => {
   const pre = corsPreflight(req);
@@ -25,24 +26,10 @@ Deno.serve(async (req: Request) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    // Auth check
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
-    const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "AUTH_INVALID" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
-    const userId = claimsData.claims.sub as string;
+    // Auth check — _shared/authGuard (terse: { error: CODE }), contratto invariato
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (isAuthError(auth)) return auth;
+    const userId = auth.userId;
 
     // Rate limit
     const rl = checkRateLimit(`lead-scores:${userId}`, { maxTokens: 10, refillRate: 0.2 });
