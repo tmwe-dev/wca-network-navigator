@@ -8,6 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RefreshCw, Loader2, Plus, Search, ArrowUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  findSenderGroupsByUser,
+  insertSenderGroups,
+  createSenderGroup,
+  findInboundSenderMessages,
+  findAssignedSenderAddresses,
+  findAddressRuleIdByAddressAndUser,
+  updateAddressRuleSenderGroup,
+  insertSenderAddressRule,
+} from '@/data/senderManagement';
 import { toast } from 'sonner';
 import { SenderCard } from './management/SenderCard';
 import { GroupDropZone } from './management/GroupDropZone';
@@ -61,12 +71,7 @@ export function SenderManagementTab() {
   const loadGroups = async () => {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
-    const { data } = await supabase
-      .from('email_sender_groups')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true });
-    setGroups((data || []) as EmailSenderGroup[]);
+    setGroups(await findSenderGroupsByUser(user.id));
   };
 
   const loadData = async () => {
@@ -76,13 +81,7 @@ export function SenderManagementTab() {
       if (!user) throw new Error('Non autenticato');
 
       // Load groups
-      const { data: groupsData } = await supabase
-        .from('email_sender_groups')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      const loadedGroups = (groupsData || []) as EmailSenderGroup[];
+      const loadedGroups = await findSenderGroupsByUser(user.id);
 
       // First load: create defaults if none
       if (loadedGroups.length === 0) {
@@ -90,9 +89,9 @@ export function SenderManagementTab() {
           nome_gruppo: g.name, descrizione: g.description,
           colore: g.color, icon: g.icon, user_id: user.id,
         }));
-        const { data: created } = await supabase.from('email_sender_groups').insert(inserts).select();
+        const created = await insertSenderGroups(inserts);
         if (created) {
-          setGroups(created as EmailSenderGroup[]);
+          setGroups(created);
           toast.success(`${created.length} gruppi predefiniti creati`);
         }
       } else {
@@ -100,15 +99,10 @@ export function SenderManagementTab() {
       }
 
       // Load senders from channel_messages
-      const { data: messages } = await supabase
-        .from('channel_messages')
-        .select('from_address, direction, created_at')
-        .eq('channel', 'email')
-        .eq('direction', 'inbound')
-        .not('from_address', 'is', null);
+      const messages = await findInboundSenderMessages();
 
       const senderMap = new Map<string, SenderAnalysis>();
-      for (const msg of messages || []) {
+      for (const msg of messages) {
         const email = (msg.from_address || '').toLowerCase().trim();
         if (!email || !email.includes('@')) continue;
         const domain = email.split('@')[1];
@@ -129,13 +123,7 @@ export function SenderManagementTab() {
       }
 
       // Check which are already assigned
-      const { data: rules } = await supabase
-        .from('email_address_rules')
-        .select('email_address, group_name')
-        .eq('user_id', user.id)
-        .not('group_name', 'is', null);
-
-      const assignedSet = new Set((rules || []).map(r => r.email_address.toLowerCase()));
+      const assignedSet = new Set(await findAssignedSenderAddresses(user.id));
       const allSenders = Array.from(senderMap.values());
       for (const s of allSenders) {
         s.isClassified = assignedSet.has(s.email);
@@ -153,13 +141,14 @@ export function SenderManagementTab() {
   const handleCreateCategory = async (data: { nome_gruppo: string; descrizione?: string; colore: string; icon: string }) => {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
-    const { data: created, error } = await supabase
-      .from('email_sender_groups')
-      .insert({ ...data, user_id: user.id })
-      .select()
-      .single();
-    if (error) { toast.error('Errore creazione categoria'); throw error; }
-    setGroups(prev => [...prev, created as EmailSenderGroup]);
+    let created: EmailSenderGroup;
+    try {
+      created = await createSenderGroup({ ...data, user_id: user.id });
+    } catch (error) {
+      toast.error('Errore creazione categoria');
+      throw error;
+    }
+    setGroups(prev => [...prev, created]);
     toast.success(`${data.nome_gruppo} creato`);
   };
 
@@ -193,19 +182,14 @@ export function SenderManagementTab() {
     const group = groups.find(g => g.nome_gruppo === groupName);
 
     // Upsert in email_address_rules
-    const { data: existing } = await supabase
-      .from('email_address_rules')
-      .select('id')
-      .eq('email_address', sender.email)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const existingRuleId = await findAddressRuleIdByAddressAndUser(sender.email, user.id);
 
-    if (existing) {
-      await supabase.from('email_address_rules')
-        .update({ group_name: groupName, group_color: group?.colore, group_icon: group?.icon })
-        .eq('id', existing.id);
+    if (existingRuleId) {
+      await updateAddressRuleSenderGroup(existingRuleId, {
+        group_name: groupName, group_color: group?.colore, group_icon: group?.icon,
+      });
     } else {
-      await supabase.from('email_address_rules').insert({
+      await insertSenderAddressRule({
         email_address: sender.email,
         user_id: user.id,
         group_name: groupName,

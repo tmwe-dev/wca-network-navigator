@@ -11,6 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import {
+  getOrCreateManualImportLog,
+  insertManualContact,
+  insertManualPartnerContact,
+} from "@/data/manualContacts";
 import { queryKeys } from "@/lib/queryKeys";
 
 type Destination = "contacts" | "network" | "cockpit";
@@ -62,57 +67,22 @@ export default function AddContactDialog({
 
       if (destination === "contacts") {
         // Get or create "manual" import log
-        const { data: existingLog } = await supabase
-          .from("import_logs")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("file_name", "__manual_entry__")
-          .limit(1)
-          .single();
+        const logId = await getOrCreateManualImportLog(user.id);
 
-        let logId: string;
-        if (existingLog) {
-          logId = existingLog.id;
-        } else {
-          const { data: newLog, error: logErr } = await supabase
-            .from("import_logs")
-            .insert({
-              user_id: user.id,
-              file_name: "__manual_entry__",
-              file_size: 0,
-              total_rows: 0,
-              imported_rows: 0,
-              status: "completed",
-              normalization_method: "manual",
-            })
-            .select("id")
-            .single();
-          if (logErr) throw logErr;
-          logId = newLog!.id;
-        }
-
-        const { data: contact, error } = await supabase
-          .from("imported_contacts")
-          .insert({
-            import_log_id: logId,
-            user_id: user.id,
-            company_name: form.company.trim() || null,
-            name: form.name.trim() || null,
-            email: form.email.trim() || null,
-            phone: form.phone.trim() || null,
-            mobile: form.mobile.trim() || null,
-            country: form.country.trim() || null,
-            city: form.city.trim() || null,
-            position: form.position.trim() || null,
-            note: form.notes.trim() || null,
-            origin: "Manuale",
-            lead_status: "new",
-            row_number: 0,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        sourceId = contact!.id;
+        const contactId = await insertManualContact({
+          importLogId: logId,
+          userId: user.id,
+          companyName: form.company.trim() || null,
+          name: form.name.trim() || null,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          mobile: form.mobile.trim() || null,
+          country: form.country.trim() || null,
+          city: form.city.trim() || null,
+          position: form.position.trim() || null,
+          note: form.notes.trim() || null,
+        });
+        sourceId = contactId;
         sourceType = "contact";
         queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
         queryClient.invalidateQueries({ queryKey: queryKeys.contacts.byGroup() });
@@ -123,21 +93,15 @@ export default function AddContactDialog({
           setSaving(false);
           return;
         }
-        const { data: pc, error } = await supabase
-          .from("partner_contacts")
-          .insert({
-            partner_id: partnerId,
-            user_id: user.id,
-            name: form.name.trim() || form.company.trim() || "—",
-            title: form.position.trim() || null,
-            email: form.email.trim() || null,
-            direct_phone: form.phone.trim() || null,
-            mobile: form.mobile.trim() || null,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        sourceId = pc!.id;
+        sourceId = await insertManualPartnerContact({
+          partnerId,
+          userId: user.id,
+          name: form.name.trim() || form.company.trim() || "—",
+          title: form.position.trim() || null,
+          email: form.email.trim() || null,
+          directPhone: form.phone.trim() || null,
+          mobile: form.mobile.trim() || null,
+        });
         sourceType = "partner_contact";
         queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       }
@@ -153,60 +117,25 @@ export default function AddContactDialog({
         queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
       } else if (destination === "cockpit" && !sourceId) {
         // Create as imported_contact first, then queue
-        const { data: existingLog } = await supabase
-          .from("import_logs")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("file_name", "__manual_entry__")
-          .limit(1)
-          .single();
+        const logId = await getOrCreateManualImportLog(user.id);
 
-        let logId: string;
-        if (existingLog) {
-          logId = existingLog.id;
-        } else {
-          const { data: newLog, error: logErr } = await supabase
-            .from("import_logs")
-            .insert({
-              user_id: user.id,
-              file_name: "__manual_entry__",
-              file_size: 0,
-              total_rows: 0,
-              imported_rows: 0,
-              status: "completed",
-              normalization_method: "manual",
-            })
-            .select("id")
-            .single();
-          if (logErr) throw logErr;
-          logId = newLog!.id;
-        }
-
-        const { data: contact, error } = await supabase
-          .from("imported_contacts")
-          .insert({
-            import_log_id: logId,
-            user_id: user.id,
-            company_name: form.company.trim() || null,
-            name: form.name.trim() || null,
-            email: form.email.trim() || null,
-            phone: form.phone.trim() || null,
-            mobile: form.mobile.trim() || null,
-            country: form.country.trim() || null,
-            city: form.city.trim() || null,
-            position: form.position.trim() || null,
-            note: form.notes.trim() || null,
-            origin: "Manuale",
-            lead_status: "new",
-            row_number: 0,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
+        const contactId = await insertManualContact({
+          importLogId: logId,
+          userId: user.id,
+          companyName: form.company.trim() || null,
+          name: form.name.trim() || null,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          mobile: form.mobile.trim() || null,
+          country: form.country.trim() || null,
+          city: form.city.trim() || null,
+          position: form.position.trim() || null,
+          note: form.notes.trim() || null,
+        });
 
         await insertCockpitQueueItems([{
           user_id: user.id,
-          source_id: contact!.id,
+          source_id: contactId,
           source_type: "contact",
         }]);
         queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });

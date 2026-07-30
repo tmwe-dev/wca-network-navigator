@@ -8,7 +8,13 @@ import { Progress } from "@/components/ui/progress";
 import {
   RefreshCw, Play, Users, Mail, AlertTriangle, Loader2
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  findPartnerNetworksWithWcaId,
+  findPartnerContactEmails,
+  findPartnerContactsWithEmail,
+  findPartnersByWcaIds,
+} from "@/data/resyncStats";
+import { createDownloadJob } from "@/data/downloadJobs";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("ResyncConfigure");
@@ -88,25 +94,20 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
   async function loadStats() {
     setLoading(true);
     try {
-      const { data: pnData } = await supabase
-        .from("partner_networks")
-        .select("network_name, partner_id, partners!inner(wca_id)");
-
-      const { data: contactsData } = await supabase
-        .from("partner_contacts")
-        .select("partner_id, email");
+      const pnData = await findPartnerNetworksWithWcaId();
+      const contactsData = await findPartnerContactEmails();
 
       const partnersWithEmail = new Set(
-        (contactsData || []).filter(c => c.email).map(c => c.partner_id)
+        contactsData.filter(c => c.email).map(c => c.partner_id)
       );
 
       const byNetwork = new Map<string, { partnerIds: Set<string>; wcaIds: Set<number> }>();
-      for (const pn of (pnData || [])) {
+      for (const pn of pnData) {
         const nn = pn.network_name;
         if (!byNetwork.has(nn)) byNetwork.set(nn, { partnerIds: new Set(), wcaIds: new Set() });
         const entry = byNetwork.get(nn)!;
         entry.partnerIds.add(pn.partner_id);
-        const wcaId = (pn as never)
+        const wcaId = pn.partners?.wca_id ?? null;
         if (wcaId) entry.wcaIds.add(wcaId);
       }
 
@@ -161,25 +162,17 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       allWcaIds = [...new Set(allWcaIds)];
 
       if (prioritizeMissing) {
-        const { data: partnersAll } = await supabase
-          .from("partners")
-          .select("id, wca_id")
-          .in("wca_id", allWcaIds)
-          .not("wca_id", "is", null);
-
-        const { data: contactsWithEmail } = await supabase
-          .from("partner_contacts")
-          .select("partner_id, email")
-          .not("email", "is", null);
+        const partnersAll = await findPartnersByWcaIds(allWcaIds);
+        const contactsWithEmail = await findPartnerContactsWithEmail();
 
         const partnerIdsWithEmail = new Set(
-          (contactsWithEmail || []).map(c => c.partner_id)
+          contactsWithEmail.map(c => c.partner_id)
         );
 
         const withEmailWcaIds = new Set<number>();
         const withoutEmailWcaIds: number[] = [];
 
-        for (const p of (partnersAll || [])) {
+        for (const p of partnersAll) {
           if (partnerIdsWithEmail.has(p.id)) {
             withEmailWcaIds.add(p.wca_id!);
           } else {
@@ -196,22 +189,16 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
 
       const networkNames = [...selected].join(", ");
 
-      const { data, error } = await supabase
-        .from("download_jobs")
-        .insert({
-          country_code: "ALL",
-          country_name: "Re-sync Contatti",
-          network_name: networkNames,
-          wca_ids: allWcaIds as never,
-          total_count: allWcaIds.length,
-          delay_seconds: delay,
-          status: "pending",
-          job_type: "resync",
-        })
-        .select("id")
-        .single();
-
-      if (error) throw error;
+      await createDownloadJob({
+        country_code: "ALL",
+        country_name: "Re-sync Contatti",
+        network_name: networkNames,
+        wca_ids: allWcaIds,
+        total_count: allWcaIds.length,
+        delay_seconds: delay,
+        status: "pending",
+        job_type: "resync",
+      });
 
       // 🤖 Claude Engine V8: il job viene processato dal motore V8 nella UI
       // Non serve più chiamare Edge Function process-download-job

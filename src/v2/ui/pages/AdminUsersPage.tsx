@@ -4,6 +4,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  findAuthorizedUsers,
+  insertAuthorizedUser,
+  setAuthorizedUserActive,
+  deleteAuthorizedUser,
+} from "@/data/authorizedUsers";
+import { findOperatorAdminFlag } from "@/data/operators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,16 +23,6 @@ import { format } from "date-fns";
 import { queryKeys } from "@/lib/queryKeys";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 
-type AuthorizedUser = {
-  id: string;
-  email: string;
-  display_name: string | null;
-  is_active: boolean;
-  last_login_at: string | null;
-  login_count: number;
-  created_at: string;
-};
-
 export function AdminUsersPage() {
   const qc = useQueryClient();
   const [newEmail, setNewEmail] = useState("");
@@ -36,8 +33,7 @@ export function AdminUsersPage() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return null;
-      const { data } = await supabase.from("operators").select("is_admin").eq("user_id", user.id).maybeSingle();
-      return data;
+      return await findOperatorAdminFlag(user.id);
     },
   });
 
@@ -47,22 +43,14 @@ export function AdminUsersPage() {
     enabled: isAdmin,
     queryKey: queryKeys.authorizedUsers.all,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("authorized_users")
-        .select("id, email, display_name, is_active, last_login_at, login_count, created_at")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data || []) as unknown as AuthorizedUser[];
+      return await findAuthorizedUsers();
     },
   });
 
   const addUser = useMutation({
     mutationFn: async () => {
       if (!newEmail.trim()) throw new Error("Email obbligatoria");
-      const { error } = await supabase
-        .from("authorized_users")
-        .insert([{ email: newEmail.trim().toLowerCase(), display_name: newName.trim() || null }]);
-      if (error) throw error;
+      await insertAuthorizedUser({ email: newEmail.trim().toLowerCase(), displayName: newName.trim() || null });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.authorizedUsers.all });
@@ -75,11 +63,7 @@ export function AdminUsersPage() {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from("authorized_users")
-        .update({ is_active })
-        .eq("id", id);
-      if (error) throw error;
+      await setAuthorizedUserActive(id, is_active);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.authorizedUsers.all });
@@ -90,11 +74,7 @@ export function AdminUsersPage() {
 
   const deleteUser = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("authorized_users")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
+      await deleteAuthorizedUser(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.authorizedUsers.all });
