@@ -2,11 +2,7 @@
 // POST without query: re-stores SERVICE_ROLE_KEY into Vault.
 // POST ?verify=1: returns whether Vault value matches the runtime env (byte-for-byte).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
