@@ -3,61 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 
-export interface UnreadCounts {
-  email: number;
-  whatsapp: number;
-  linkedin: number;
-  circuito: number;
-  todo: number;
-}
+import { fetchUnreadCounts, type UnreadCountsResult } from "@/data/unreadCounts";
 
-async function fetchUnreadCounts(): Promise<UnreadCounts> {
-  const [emailRes, waRes, liRes, circuitoRes, todoRes] = await Promise.all([
-    // Unread emails
-    supabase
-      .from("channel_messages")
-      .select("id", { count: "planned", head: true })
-      .eq("channel", "email")
-      .eq("direction", "inbound")
-      .is("read_at", null)
-      .not("hidden_by_rule", "is", true),
-    // Unread WhatsApp
-    supabase
-      .from("channel_messages")
-      .select("id", { count: "planned", head: true })
-      .eq("channel", "whatsapp")
-      .eq("direction", "inbound")
-      .is("read_at", null)
-      .not("hidden_by_rule", "is", true),
-    // Unread LinkedIn
-    supabase
-      .from("channel_messages")
-      .select("id", { count: "planned", head: true })
-      .eq("channel", "linkedin")
-      .eq("direction", "inbound")
-      .is("read_at", null)
-      .not("hidden_by_rule", "is", true),
-    // Holding pattern (circuito) — partner attivamente nel ciclo (post primo touch, pre conversione)
-    supabase
-      .from("partners")
-      .select("id", { count: "planned", head: true })
-      .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
-    // Pending activities
-    supabase
-      .from("activities")
-      .select("id", { count: "planned", head: true })
-      .is("deleted_at", null)
-      .in("status", ["pending", "in_progress"]),
-  ]);
-
-  return {
-    email: emailRes.count ?? 0,
-    whatsapp: waRes.count ?? 0,
-    linkedin: liRes.count ?? 0,
-    circuito: circuitoRes.count ?? 0,
-    todo: todoRes.count ?? 0,
-  };
-}
+export type UnreadCounts = UnreadCountsResult;
 
 export function useUnreadCounts() {
   const queryClient = useQueryClient();

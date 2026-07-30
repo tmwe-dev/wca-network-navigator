@@ -3,8 +3,15 @@ import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  findSortingJobs,
+  setActivityReviewed,
+  bulkReviewActivities,
+  cancelActivities,
+  updateActivityEmail,
+} from "@/data/sortingJobs";
+import { insertPendingAction } from "@/data/aiPendingActions";
 
-type ActivityUpdate = Database["public"]["Tables"]["activities"]["Update"];
 type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"];
 
 export interface SortingJob {
@@ -42,22 +49,7 @@ export function useSortingJobs() {
   return useQuery({
     queryKey: queryKeys.sorting.jobs,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("activities")
-        .select(`
-          id, partner_id, activity_type, title, description,
-          email_subject, email_body, scheduled_at, reviewed, sent_at,
-          status, created_at, selected_contact_id, campaign_batch_id,
-          partners(company_name, company_alias, country_code, country_name, city, logo_url),
-          selected_contact:partner_contacts!activities_selected_contact_id_fkey(id, name, email, contact_alias)
-        `)
-        .eq("status", "pending")
-        .is("deleted_at", null)
-        .not("email_body", "is", null)
-        .is("campaign_batch_id", null)
-        .order("scheduled_at", { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      return (data || []) as unknown as SortingJob[];
+      return findSortingJobs<SortingJob>();
     },
     staleTime: 5_000,
     refetchInterval: 10_000,
@@ -68,11 +60,7 @@ export function useReviewJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, reviewed }: { id: string; reviewed: boolean }) => {
-      const { error } = await supabase
-        .from("activities")
-        .update({ reviewed } satisfies ActivityUpdate)
-        .eq("id", id);
-      if (error) throw error;
+      await setActivityReviewed(id, reviewed);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs }),
   });
@@ -82,11 +70,7 @@ export function useBulkReview() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from("activities")
-        .update({ reviewed: true } satisfies ActivityUpdate)
-        .in("id", ids);
-      if (error) throw error;
+      await bulkReviewActivities(ids);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
@@ -99,11 +83,7 @@ export function useCancelJobs() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from("activities")
-        .update({ status: "cancelled" } satisfies ActivityUpdate)
-        .in("id", ids);
-      if (error) throw error;
+      await cancelActivities(ids);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
@@ -126,7 +106,7 @@ export function useSendJob() {
       const userId = session?.user?.id;
       if (!userId) throw new Error("Sessione non valida");
 
-      const { error } = await supabase.from("ai_pending_actions").insert({
+      const { error } = await insertPendingAction({
         user_id: userId,
         action_type: "send_email",
         action_payload: {
@@ -137,7 +117,7 @@ export function useSendJob() {
           partner_id: job.partner_id,
           contact_id: job.selected_contact_id,
           activity_id: job.id,
-        } as never,
+        },
         partner_id: job.partner_id,
         contact_id: job.selected_contact_id,
         email_address: email,
@@ -146,7 +126,7 @@ export function useSendJob() {
         confidence: 1.0,
         source: "useSortingJobs.useSendJob",
         status: "pending",
-      } as never);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -164,11 +144,7 @@ export function useUpdateJobEmail() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, email_subject, email_body }: { id: string; email_subject: string; email_body: string }) => {
-      const { error } = await supabase
-        .from("activities")
-        .update({ email_subject, email_body } satisfies ActivityUpdate)
-        .eq("id", id);
-      if (error) throw error;
+      await updateActivityEmail(id, email_subject, email_body);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.sorting.jobs });
