@@ -5,7 +5,12 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSenderGroupsOrdered } from "@/data/emailGrouping";
+import {
+  findSuggestionAddressRules,
+  assignSuggestionGroup,
+  clearAiSuggestion,
+} from "@/data/aiSuggestions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -92,11 +97,7 @@ export default function AISuggestionsTab() {
   const { data: groups = [] } = useQuery({
     queryKey: queryKeys.email.senderGroups,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("email_sender_groups")
-        .select("*")
-        .order("sort_order", { ascending: true });
-      const list = (data || []) as EmailSenderGroup[];
+      const list = (await fetchSenderGroupsOrdered()) as EmailSenderGroup[];
       return [...list].sort((a, b) =>
         a.nome_gruppo.localeCompare(b.nome_gruppo, "it", { sensitivity: "base", numeric: true }),
       );
@@ -112,21 +113,9 @@ export default function AISuggestionsTab() {
     queryKey: [...queryKeys.ai.suggestions, statusFilter, minEmailCount, mailboxKey],
     enabled: !!allowlist,
     queryFn: async () => {
-      let q = supabase
-        .from("email_address_rules")
-        .select("id, email_address, display_name, company_name, domain, email_count, group_id, group_name, group_color, group_icon, ai_suggested_group, ai_suggestion_confidence")
-        .gte("email_count", minEmailCount)
-        .order("email_count", { ascending: false })
-        .limit(500);
-
       // "uncategorized" esclude anche group_name legacy: nessun mittente
       // già messo in un gruppo deve riapparire fra i suggerimenti.
-      if (statusFilter === "uncategorized") q = q.is("group_id", null).is("group_name", null);
-      else if (statusFilter === "categorized") q = q.or("group_id.not.is.null,group_name.not.is.null");
-
-      const { data, error } = await q;
-      if (error) throw error;
-      const all = (data || []) as AddressRow[];
+      const all = (await findSuggestionAddressRules({ statusFilter, minEmailCount })) as AddressRow[];
       if (!allowlist) return [];
       return all.filter((r) => allowlist.has((r.email_address || "").toLowerCase()));
     },
@@ -152,13 +141,13 @@ export default function AISuggestionsTab() {
     mutationFn: async (row: AddressRow) => {
       const group = groups.find((g) => g.nome_gruppo === row.ai_suggested_group);
       if (!group) throw new Error("Gruppo non trovato");
-      await supabase.from("email_address_rules").update({
+      await assignSuggestionGroup(row.id, {
         group_id: group.id,
         group_name: group.nome_gruppo,
         group_color: group.colore,
         group_icon: group.icon,
         ai_suggestion_accepted: true,
-      }).eq("id", row.id);
+      });
       return row.id;
     },
     onSuccess: (id) => {
@@ -173,13 +162,13 @@ export default function AISuggestionsTab() {
     mutationFn: async ({ row, groupId }: { row: AddressRow; groupId: string }) => {
       const group = groups.find((g) => g.id === groupId);
       if (!group) return null;
-      await supabase.from("email_address_rules").update({
+      await assignSuggestionGroup(row.id, {
         group_id: group.id,
         group_name: group.nome_gruppo,
         group_color: group.colore,
         group_icon: group.icon,
         ai_suggestion_accepted: false,
-      }).eq("id", row.id);
+      });
       // Trigger Refiner se la scelta diverge dal suggerimento AI (best-effort)
       if (row.ai_suggested_group && row.ai_suggested_group !== group.nome_gruppo) {
         invokeEdge("refine-classification-rule", {
@@ -203,9 +192,7 @@ export default function AISuggestionsTab() {
 
   const ignoreMutation = useMutation({
     mutationFn: async (row: AddressRow) => {
-      await supabase.from("email_address_rules")
-        .update({ ai_suggestion_accepted: false, ai_suggested_group: null })
-        .eq("id", row.id);
+      await clearAiSuggestion(row.id);
       return row.id;
     },
     onSuccess: (id) => {
