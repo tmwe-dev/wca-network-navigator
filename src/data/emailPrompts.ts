@@ -2,6 +2,7 @@
  * DAL — email_prompts
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export async function findActiveEmailPrompts(select = "id, title, scope", limit = 20) {
   const { data, error } = await supabase.from("email_prompts").select(select).eq("is_active", true).order("priority", { ascending: false }).limit(limit);
@@ -34,4 +35,42 @@ export async function findEmailPromptsByScope(userId: string, scope: string): Pr
 export async function updateEmailPrompt(id: string, patch: Partial<EmailPromptFull>): Promise<void> {
   const { error } = await supabase.from("email_prompts").update(patch as never).eq("id", id);
   if (error) throw error;
+}
+
+/* ── UI CRUD (RulesAndActionsTab → Prompt Manager) ──
+ * Estratte da bypass DAL diretti. Ordinamento ed error semantics invariati.
+ */
+
+/** Tutti i prompt ordinati per priority DESC. */
+export type EmailPromptRow = Database["public"]["Tables"]["email_prompts"]["Row"];
+
+export async function findAllEmailPrompts(): Promise<EmailPromptRow[]> {
+  const { data, error } = await supabase
+    .from("email_prompts")
+    .select("*")
+    .order("priority", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as EmailPromptRow[];
+}
+
+/**
+ * Update SENZA filtro id — semantica legacy di RulesAndActionsTab (errore non propagato).
+ */
+export async function updateEmailPromptUnfiltered(payload: Record<string, unknown>): Promise<void> {
+  await supabase.from("email_prompts").update(payload as never);
+}
+
+/** Insert nuovo prompt con user_id esplicito (errore non propagato, come il legacy). */
+export async function insertEmailPrompt(payload: Record<string, unknown>, userId: string): Promise<void> {
+  await supabase.from("email_prompts").insert({ ...payload, user_id: userId } as never);
+}
+
+/** Toggle is_active. */
+export async function setEmailPromptActive(id: string, isActive: boolean): Promise<void> {
+  await supabase.from("email_prompts").update({ is_active: isActive }).eq("id", id);
+}
+
+/** Delete prompt. */
+export async function deleteEmailPrompt(id: string): Promise<void> {
+  await supabase.from("email_prompts").delete().eq("id", id);
 }

@@ -250,3 +250,35 @@ export async function logAuditEntry(entry: {
     created_at: new Date().toISOString(),
   }).then(() => {});
 }
+
+/* ── Sub-tab counts (InUscitaTab) ──
+ * Estratto dal bypass DAL inline: 9 count head query in parallelo, stesse
+ * tabelle, stessi filtri, stessa aggregazione.
+ */
+export interface OutreachSubCounts {
+  pending: number;
+  sent: number;
+  scheduled: number;
+  failed: number;
+}
+
+export async function fetchOutreachSubCounts(): Promise<OutreachSubCounts> {
+  const [pending, sent, scheduled, failed, bulkPending, bulkSent, bulkScheduled, bulkFailed, sentLog] =
+    await Promise.all([
+      supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "completed").eq("activity_type", "send_email"),
+      supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
+      supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "failed"),
+      supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
+      supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).in("status", ["scheduled"]).not("scheduled_at", "is", null),
+      supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "failed"),
+      supabase.from("email_send_log").select("id", { count: "exact", head: true }).eq("status", "sent").eq("send_method", "direct"),
+    ]);
+  return {
+    pending: (pending.count || 0) + (bulkPending.count || 0),
+    sent: (sent.count || 0) + (bulkSent.count || 0) + (sentLog.count || 0),
+    scheduled: (scheduled.count || 0) + (bulkScheduled.count || 0),
+    failed: (failed.count || 0) + (bulkFailed.count || 0),
+  };
+}

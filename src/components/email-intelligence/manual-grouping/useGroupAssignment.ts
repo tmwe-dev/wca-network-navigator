@@ -8,6 +8,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { invokeAi } from "@/lib/ai/invokeAi";
+import {
+  fetchOperatorIdForUser,
+  updateAddressRuleGroupAssignment,
+  insertAddressRuleForSender,
+  insertGroupAssignmentDecision,
+  findDomainPatternKbEntryId,
+  insertKbEntry,
+} from "@/data/emailGrouping";
 
 import { createLogger } from "@/lib/log";
 
@@ -26,26 +34,18 @@ export function useGroupAssignment(
 
       const group = groups.find((g) => g.id === groupId);
       // operator_id opzionale: alcuni utenti non hanno record in `operators`.
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const operatorId = opRow?.id ?? null;
+      const operatorId = await fetchOperatorIdForUser(user.id);
 
       // Update or insert rule
       if (sender.ruleId) {
-        await supabase
-          .from("email_address_rules")
-          .update({
-            group_id: groupId,
-            group_name: groupName,
-            group_color: group?.colore,
-            group_icon: group?.icon,
-          })
-          .eq("id", sender.ruleId);
+        await updateAddressRuleGroupAssignment(sender.ruleId, {
+          group_id: groupId,
+          group_name: groupName,
+          group_color: group?.colore,
+          group_icon: group?.icon,
+        });
       } else {
-        await supabase.from("email_address_rules").insert({
+        await insertAddressRuleForSender({
           email_address: sender.email,
           user_id: user.id,
           operator_id: operatorId,
@@ -61,7 +61,7 @@ export function useGroupAssignment(
       }
 
       // Log decision for learning
-      await supabase.from("ai_decision_log").insert({
+      await insertGroupAssignmentDecision({
         user_id: user.id,
         decision_type: "email_group_assignment",
         input_context: {
@@ -85,15 +85,10 @@ export function useGroupAssignment(
         if (pattern && pattern.length > 0) {
           const p = pattern[0];
           // Check if KB entry already exists
-          const { data: existingKb } = await supabase
-            .from("kb_entries")
-            .select("id")
-            .eq("user_id", user.id)
-            .contains("tags", ["domain_pattern", domain])
-            .maybeSingle();
+          const existingKb = await findDomainPatternKbEntryId(user.id, domain);
 
           if (!existingKb) {
-            await supabase.from("kb_entries").insert({
+            await insertKbEntry({
               user_id: user.id,
               category: "email_management",
               title: `Pattern dominio ${domain}`,
@@ -143,26 +138,18 @@ export function useGroupAssignment(
       if (!user) return;
 
       const group = groups.find((g) => g.id === groupId);
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const operatorId = opRow?.id ?? null;
+      const operatorId = await fetchOperatorIdForUser(user.id);
 
       for (const sender of senders) {
         if (sender.ruleId) {
-          await supabase
-            .from("email_address_rules")
-            .update({
-              group_id: groupId,
-              group_name: groupName,
-              group_color: group?.colore,
-              group_icon: group?.icon,
-            })
-            .eq("id", sender.ruleId);
+          await updateAddressRuleGroupAssignment(sender.ruleId, {
+            group_id: groupId,
+            group_name: groupName,
+            group_color: group?.colore,
+            group_icon: group?.icon,
+          });
         } else {
-          await supabase.from("email_address_rules").insert({
+          await insertAddressRuleForSender({
             email_address: sender.email,
             user_id: user.id,
             operator_id: operatorId,
@@ -178,7 +165,7 @@ export function useGroupAssignment(
         }
 
         // Log decision
-        await supabase.from("ai_decision_log").insert({
+        await insertGroupAssignmentDecision({
           user_id: user.id,
           decision_type: "email_group_assignment",
           input_context: {

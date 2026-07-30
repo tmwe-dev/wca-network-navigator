@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchGlobalDataCounts } from "@/data/dataCounts";
 import { StatCard } from "../../molecules/StatCard";
 import { Database, Users, FileText, Mail } from "lucide-react";
 import { queryKeys } from "@/lib/queryKeys";
@@ -11,20 +11,7 @@ import { queryKeys } from "@/lib/queryKeys";
 export function DataSettingsTab(): React.ReactElement {
   const { data: counts } = useQuery({
     queryKey: queryKeys.v2.dataCounts,
-    queryFn: async () => {
-      const [partners, contacts, activities, messages] = await Promise.all([
-        supabase.from("partners").select("id", { count: "exact", head: true }),
-        supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
-        supabase.from("activities").select("id", { count: "exact", head: true }),
-        supabase.from("channel_messages").select("id", { count: "exact", head: true }),
-      ]);
-      return {
-        partners: partners.count ?? 0,
-        contacts: contacts.count ?? 0,
-        activities: activities.count ?? 0,
-        messages: messages.count ?? 0,
-      };
-    },
+    queryFn: fetchGlobalDataCounts,
   });
 
   return (

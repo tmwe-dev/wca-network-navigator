@@ -21,6 +21,13 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  findPendingAiActions,
+  updatePendingAction,
+  setDecisionLogReview,
+  findActiveAgentPrompts,
+  updateAgentSystemPrompt,
+} from "@/data/aiPendingActions";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
@@ -48,17 +55,7 @@ export function PendingActionsPanel() {
   const { data: actions = [], isLoading } = useQuery({
     queryKey: queryKeys.ai.pendingActions,
     queryFn: async () => {
-      let q = supabase
-        .from("ai_pending_actions")
-        .select("*, partners(company_name)")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (typeFilter !== "all") q = q.eq("action_type", typeFilter);
-      if (sourceFilter !== "all") q = q.eq("source", sourceFilter);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return await findPendingAiActions({ actionType: typeFilter, source: sourceFilter });
     },
   });
 
@@ -76,20 +73,16 @@ export function PendingActionsPanel() {
         });
       }
 
-      const { error } = await supabase
-        .from("ai_pending_actions")
-        .update(updatePayload as never)
-        .eq("id", params.id);
-      if (error) throw error;
+      await updatePendingAction(params.id, updatePayload);
       if (action?.decision_log_id) {
-        await supabase.from("ai_decision_log").update({ user_review: "approved" }).eq("id", action.decision_log_id);
+        await setDecisionLogReview(action.decision_log_id, "approved");
       }
       // Handle prompt_refinement: apply suggestions to agent system_prompt
       if (action?.action_type === "prompt_refinement" && action.suggested_content) {
         try {
           const suggestions = JSON.parse(action.suggested_content);
-          const { data: agents } = await supabase.from("agents").select("id, system_prompt").is("deleted_at", null).eq("user_id", (await supabase.auth.getSession()).data.session?.user?.id || "").eq("is_active", true);
-          if (agents?.length) {
+          const agents = await findActiveAgentPrompts((await supabase.auth.getSession()).data.session?.user?.id || "");
+          if (agents.length) {
             const agent = agents[0];
             let updatedPrompt = agent.system_prompt || "";
             for (const s of suggestions) {
@@ -99,7 +92,7 @@ export function PendingActionsPanel() {
                 updatedPrompt += `\n\n${s.suggested_text}`;
               }
             }
-            await supabase.from("agents").update({ system_prompt: updatedPrompt }).eq("id", agent.id);
+            await updateAgentSystemPrompt(agent.id, updatedPrompt);
           }
         } catch (_e) { /* prompt refinement apply failed */ }
       }
@@ -132,10 +125,9 @@ export function PendingActionsPanel() {
   const rejectMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const action = actions.find(a => a.id === id);
-      const { error } = await supabase.from("ai_pending_actions").update({ status: "rejected" }).eq("id", id);
-      if (error) throw error;
+      await updatePendingAction(id, { status: "rejected" });
       if (action?.decision_log_id) {
-        await supabase.from("ai_decision_log").update({ user_review: "rejected", user_correction: reason || null }).eq("id", action.decision_log_id);
+        await setDecisionLogReview(action.decision_log_id, "rejected", reason || null);
       }
     },
     onSuccess: () => { toast.success("Azione rifiutata"); setRejectId(null); setRejectReason(""); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
