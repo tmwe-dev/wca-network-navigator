@@ -154,7 +154,7 @@ export async function createEvent(event: CalendarEventInsert): Promise<CalendarE
   const { metadata, ...rest } = event;
   const payload: DbInsert = metadata === undefined ? rest : { ...rest, metadata: toJson(metadata) };
   const { data, error } = await supabase.from("calendar_events")
-    .insert(event)
+    .insert(payload)
     .select()
     .single();
 
