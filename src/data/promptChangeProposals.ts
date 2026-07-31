@@ -4,6 +4,7 @@
  * Nessuna scrittura diretta su operative_prompts: solo proposte da revisionare.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface PromptChangeProposal {
   id: string;
