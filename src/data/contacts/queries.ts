@@ -1,6 +1,26 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { ContactFilters, LeadStatus, ImportedContactInsert, ImportedContactRow } from "./types";
+import type { Database } from "@/integrations/supabase/types";
+
+type ImportedContactUpdate = Database["public"]["Tables"]["imported_contacts"]["Update"];
+
+/**
+ * Confine DAL: gli update generici arrivano come record non tipizzati dalla UI.
+ * Si conservano solo le chiavi realmente presenti nello schema tabella.
+ */
+const CONTACT_COLUMNS = new Set<string>(Object.keys({} as Required<ImportedContactUpdate>));
+
+function toContactUpdate(updates: Record<string, unknown>): ImportedContactUpdate {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(updates)) out[k] = v;
+  return out as ImportedContactUpdate;
+}
+
+function toDuplicateSource(value: string | null): ImportDuplicateMatch["source"] {
+  if (value === "partner" || value === "partner_company") return value;
+  return "imported_contact";
+}
 
 
 import { createLogger } from "@/lib/log";
