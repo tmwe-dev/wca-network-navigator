@@ -34,3 +34,19 @@ export async function findAllEmailTemplates() {
   if (error) throw error;
   return data ?? [];
 }
+
+// ── Storage bucket "email-images" ──
+export interface EmailImageEntry { name: string; url: string }
+
+export async function listEmailImages(limit = 50): Promise<EmailImageEntry[]> {
+  const { data: files } = await supabase.storage
+    .from("email-images")
+    .list("", { limit, sortBy: { column: "created_at", order: "desc" } });
+  if (!files) return [];
+  return files
+    .filter((f) => f.name && !f.name.startsWith("."))
+    .map((f) => {
+      const { data: urlData } = supabase.storage.from("email-images").getPublicUrl(f.name);
+      return { name: f.name, url: urlData.publicUrl };
+    });
+}

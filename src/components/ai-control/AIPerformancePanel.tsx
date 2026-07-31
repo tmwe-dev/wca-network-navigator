@@ -2,7 +2,7 @@
  * AIPerformancePanel — KPIs, per-type stats, and critical contacts
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findDecisionLogKpiRows, findDecisionLogTypeRows, findDecisionLogCriticalRows } from "@/data/aiDecisionLog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Brain, Zap, CheckCircle, Target, AlertTriangle } from "lucide-react";
@@ -31,12 +31,7 @@ export function AIPerformancePanel() {
   const { data: kpi, isLoading: kpiLoading } = useQuery<KPI>({
     queryKey: queryKeys.ai.performance.kpi,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_decision_log")
-        .select("was_auto_executed, user_review")
-        .gte("created_at", thirtyDaysAgo);
-      if (error) throw error;
-      const rows = data ?? [];
+      const rows = await findDecisionLogKpiRows(thirtyDaysAgo);
       const total = rows.length;
       const autoExecuted = rows.filter(r => r.was_auto_executed).length;
       const approved = rows.filter(r => r.user_review === "approved").length;
@@ -49,13 +44,9 @@ export function AIPerformancePanel() {
   const { data: typeStats = [] } = useQuery<TypeStat[]>({
     queryKey: queryKeys.ai.performance.types,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_decision_log")
-        .select("decision_type, was_auto_executed, user_review")
-        .gte("created_at", thirtyDaysAgo);
-      if (error) throw error;
+      const rows = await findDecisionLogTypeRows(thirtyDaysAgo);
       const map = new Map<string, { total: number; auto: number; approved: number; rejected: number }>();
-      for (const r of data ?? []) {
+      for (const r of rows) {
         const s = map.get(r.decision_type) ?? { total: 0, auto: 0, approved: 0, rejected: 0 };
         s.total++;
         if (r.was_auto_executed) s.auto++;
@@ -74,16 +65,11 @@ export function AIPerformancePanel() {
   const { data: criticalContacts = [] } = useQuery({
     queryKey: queryKeys.ai.performance.critical,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_decision_log")
-        .select("email_address, user_review, partner_id, partners(company_name)")
-        .not("email_address", "is", null)
-        .gte("created_at", thirtyDaysAgo);
-      if (error) throw error;
+      const rows = await findDecisionLogCriticalRows(thirtyDaysAgo);
       const map = new Map<string, { email: string; partner: string | null; approved: number; rejected: number; total: number }>();
-      for (const r of data ?? []) {
+      for (const r of rows) {
         if (!r.email_address) continue;
-        const s = map.get(r.email_address) ?? { email: r.email_address, partner: (r as Record<string, unknown> & { partners?: { company_name?: string } }).partners?.company_name ?? null, approved: 0, rejected: 0, total: 0 };
+        const s = map.get(r.email_address) ?? { email: r.email_address, partner: r.partners?.company_name ?? null, approved: 0, rejected: 0, total: 0 };
         s.total++;
         if (r.user_review === "approved") s.approved++;
         if (r.user_review === "rejected") s.rejected++;

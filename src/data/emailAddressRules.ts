@@ -272,3 +272,36 @@ export async function findAddressRuleSummaries(): Promise<AddressRuleSummary[]> 
   if (error) throw error;
   return data ?? [];
 }
+
+export interface EmailRuleWithStats {
+  id: string;
+  email_address: string;
+  display_name: string | null;
+  category: string | null;
+  is_active: boolean;
+  auto_action: string | null;
+  auto_execute: boolean;
+  ai_confidence_threshold: number;
+  interaction_count: number;
+  success_rate: number | null;
+  last_interaction_at: string | null;
+  created_at: string;
+}
+
+/** Regole email con statistiche di esecuzione (per AIAutomationDashboard). */
+export async function findEmailAddressRulesWithStats(): Promise<EmailRuleWithStats[]> {
+  const { data, error } = await supabase
+    .from("email_address_rules")
+    .select("id, email_address, display_name, category, is_active, auto_action, auto_execute, ai_confidence_threshold, interaction_count, success_rate, last_interaction_at, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as EmailRuleWithStats[];
+}
+
+export async function setEmailAddressRuleActive(ruleId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .update({ is_active: isActive })
+    .eq("id", ruleId);
+  if (error) throw error;
+}
