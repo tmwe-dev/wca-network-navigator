@@ -1,6 +1,7 @@
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
 import { getCaCertsForHost } from "./caCerts.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -20,7 +21,9 @@ Deno.serve(async (req) => {
     const passTail = pass.slice(-2);
     const host = hostOverride || (which === "booking" ? "mx01.vmteca.net" : "imaps.aruba.it");
     const debug = { user, hasPass: !!pass, passLen, passHead, passTail, secretUsed: which === "booking" ? (useSmtpPwd ? "SMTP_PASSWORD_BOOKING" : "IMAP_PASSWORD_BOOKING") : "IMAP_PASSWORD", host };
-    if (!pass) return new Response(JSON.stringify({ error: "no_password", debug }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!pass) {
+      return edgeError("INTERNAL_ERROR", "no_password", undefined, corsHeaders, { debug });
+    }
     (globalThis as any).__lastDebug = debug;
 
     const client = new ImapClient({
@@ -44,9 +47,8 @@ Deno.serve(async (req) => {
     });
   } catch (err: any) {
     const dbg = (globalThis as any).__lastDebug || null;
-    return new Response(JSON.stringify({ error: String(err?.message || err), debug: dbg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, corsHeaders, {
+      debug: dbg,
     });
   }
 });
