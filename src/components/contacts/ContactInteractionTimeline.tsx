@@ -149,8 +149,7 @@ export function ContactInteractionTimeline({ contactId, contactEmail }: Props) {
   const toggleExpand = (id: string) => {
     setExpanded(prev => {
       const next = new Set(prev);
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };

@@ -55,8 +55,7 @@ export function CountryWorkbench({
   }, []);
 
   const toggleServiceFilter = useCallback((svc: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    setActiveServiceFilters((prev) => { const next = new Set(prev); next.has(svc) ? next.delete(svc) : next.add(svc); return next; });
+    setActiveServiceFilters((prev) => { const next = new Set(prev); if (next.has(svc)) next.delete(svc); else next.add(svc); return next; });
   }, []);
 
   const countryPartners = useMemo(

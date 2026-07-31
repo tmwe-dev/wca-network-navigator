@@ -315,8 +315,7 @@ export function useDiagnosticsRunner() {
   const toggleCat = useCallback((cat: string) => {
     setExpandedCats(prev => {
       const n = new Set(prev);
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      n.has(cat) ? n.delete(cat) : n.add(cat);
+      if (n.has(cat)) n.delete(cat); else n.add(cat);
       return n;
     });
   }, []);
