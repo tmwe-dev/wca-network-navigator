@@ -784,3 +784,24 @@ export async function getPartnerEnrichmentData(id: string): Promise<Record<strin
   const { data } = await supabase.from("partners").select("enrichment_data").eq("id", id).single();
   return (data?.enrichment_data as Record<string, unknown>) || {};
 }
+
+/** Statistiche paginate partner attivi (country/email) per mission builder. */
+export async function findActivePartnersCountryEmailStats(): Promise<{ country_code: string | null; country_name: string | null; email: string | null }[]> {
+  const all: { country_code: string | null; country_name: string | null; email: string | null }[] = [];
+  const BATCH = 2000;
+  let from = 0;
+  while (true) {
+    const { data: batch } = await supabase.from("partners").select("country_code, country_name, email").eq("is_active", true).range(from, from + BATCH - 1);
+    if (!batch || batch.length === 0) break;
+    all.push(...batch);
+    if (batch.length < BATCH) break;
+    from += BATCH;
+  }
+  return all;
+}
+
+/** Id partner attivi filtrati per country_code, limitati. */
+export async function findActivePartnerIdsByCountries(countryCodes: string[], limit: number): Promise<{ id: string }[]> {
+  const { data } = await supabase.from("partners").select("id").in("country_code", countryCodes).eq("is_active", true).limit(limit);
+  return data ?? [];
+}
