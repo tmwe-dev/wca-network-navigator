@@ -7,6 +7,7 @@ import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
+import { isRecord } from "@/lib/jsonGuards";
 
 type PartnerRow = Database["public"]["Tables"]["partners"]["Row"];
 type PartnerInsert = Database["public"]["Tables"]["partners"]["Insert"];
@@ -990,8 +991,9 @@ export async function findPartnerHeroSnapshot(id: string): Promise<PartnerHeroSn
     .eq("id", id)
     .maybeSingle();
   if (!data) return null;
-  const enrichment = isRecord(data.enrichment_data) ? data.enrichment_data : null;
-  const deepSearchAt = enrichment && typeof enrichment.deep_search_at === "string" ? enrichment.deep_search_at : undefined;
+  const enrichment: Record<string, unknown> | null = isRecord(data.enrichment_data) ? data.enrichment_data : null;
+  const rawDeepSearch = enrichment ? enrichment["deep_search_at"] : undefined;
+  const deepSearchAt = typeof rawDeepSearch === "string" ? rawDeepSearch : undefined;
   return {
     company_name: data.company_name ?? null,
     company_alias: data.company_alias ?? null,
