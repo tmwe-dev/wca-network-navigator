@@ -18,6 +18,7 @@ import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection } from "./shared";
 import { NETWORK_QUALITY_TOGGLES } from "./constants";
 import { createLogger } from "@/lib/log";
+import { searchNetworkPartners } from "@/data/uiShellQueries";
 
 const log = createLogger("NetworkFiltersSection");
 

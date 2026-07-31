@@ -11,12 +11,13 @@ import { useProspectStats } from "@/hooks/useProspectStats";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDailyBriefing } from "@/hooks/useDailyBriefing";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { countActivePartners } from "@/data/partners";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
 import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/data/uiShellQueries";
 
 const NAV_ITEMS = [
   { key: "home", icon: Home, label: "Home" },

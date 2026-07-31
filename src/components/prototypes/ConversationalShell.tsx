@@ -7,11 +7,12 @@ import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useAllActivities } from "@/hooks/useActivities";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/data/uiShellQueries";
 
 type PanelType = "none" | "contacts" | "outreach" | "agenda" | "email";
 

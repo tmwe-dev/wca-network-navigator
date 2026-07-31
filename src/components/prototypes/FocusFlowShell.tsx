@@ -13,8 +13,9 @@ import { QuickFilters, type FilterChip } from "./shared/QuickFilters";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { StatsBar } from "./shared/StatsBar";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/data/uiShellQueries";
 
 const TABS = [
   { key: "outreach", label: "Outreach", icon: Radar },

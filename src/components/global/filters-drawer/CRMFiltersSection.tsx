@@ -13,6 +13,7 @@ import { createLogger } from "@/lib/log";
 import { useQueryClient } from "@tanstack/react-query";
 import { bulkUpdateContactsByOrigins, contactKeys } from "@/data/contacts";
 import { BulkMergeOriginsDialog } from "@/v2/ui/organisms/BulkMergeOriginsDialog";
+import { findImportedContactsFacetPage, searchImportedContacts } from "@/data/uiShellQueries";
 
 const log = createLogger("CRMFiltersSection");
 

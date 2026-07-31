@@ -5,7 +5,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -23,6 +23,7 @@ import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { queryKeys } from "@/lib/queryKeys";
+import { getConversationContextByEmail, getAddressRuleByEmail } from "@/data/uiShellQueries";
 
 const CHANNEL_ICONS: Record<string, React.ReactNode> = {
   email: <Mail className="h-4 w-4 text-blue-400" />,

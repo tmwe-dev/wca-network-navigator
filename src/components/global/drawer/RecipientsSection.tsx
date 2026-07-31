@@ -2,8 +2,9 @@ import { Input } from "@/components/ui/input";
 import { Search, Building2, Mail, Users, Plus, X, Sparkles } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { queryKeys } from "@/lib/queryKeys";
+import { searchRecipientPartners } from "@/data/uiShellQueries";
 
 interface Props {
   search: string;
