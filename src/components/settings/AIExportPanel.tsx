@@ -9,7 +9,6 @@
  * Tutto compresso in un unico .zip scaricabile.
  */
 import { useState } from "react";
-import JSZip from "jszip";
 import { useAiExportBundle } from "@/hooks/useAiExportBundle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +55,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
       const settings = (settingsRes.data ?? []) as AppSettingRow[];
       const personas = (personasRes.data ?? []) as AgentPersonaRow[];
 
+      const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
 
       // Agents
