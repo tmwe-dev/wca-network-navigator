@@ -1,10 +1,21 @@
 /**
- * DAL — ai_memory
+ * DAL — ai_memory (entry point unico per la memoria AI).
+ *
+ * Le operazioni avanzate (dashboard memoria, feedback, promozione L3) vivono
+ * in `aiMemoryOps.ts` e sono ri-esportate qui per avere un solo import.
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type MemoryInsert = Database["public"]["Tables"]["ai_memory"]["Insert"];
+
+export {
+  findUserMemories,
+  promoteMemoryToL3,
+  rejectMemoryPromotion,
+  findRecentMemoriesForFeedback,
+  updateMemoryConfidence,
+} from "./aiMemoryOps";
 
 export async function createMemory(entry: MemoryInsert) {
   const { error } = await supabase.from("ai_memory").insert(entry);
