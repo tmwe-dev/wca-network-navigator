@@ -25,7 +25,8 @@ describe("DAL — funnemailJobs", () => {
     it("returns jobs list", async () => {
       mockFrom.mockReturnValue(chain({ data: [{ message_id: "m1" }], error: null }));
       const result = await listFunnemailJobs();
-      expect(result).toEqual([{ message_id: "m1" }]);
+      // normalizeJobRows applica i default del contratto tipizzato
+      expect(result).toEqual([{ message_id: "m1", user_id: "", status: "", has_active_claim: false, last_escalation_level: null }]);
     });
 
     it("returns empty on null data", async () => {
@@ -46,7 +47,7 @@ describe("DAL — funnemailJobs", () => {
       (c.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { message_id: "m1" }, error: null });
       mockFrom.mockReturnValue(c);
       const result = await getFunnemailJob("m1");
-      expect(result).toEqual({ message_id: "m1" });
+      expect(result).toEqual({ message_id: "m1", user_id: "", status: "", has_active_claim: false, last_escalation_level: null });
     });
 
     it("returns null when not found", async () => {

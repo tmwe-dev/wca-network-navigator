@@ -1,6 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { ContactFilters, LeadStatus, ImportedContactInsert, ImportedContactRow } from "./types";
+import type { Database } from "@/integrations/supabase/types";
+
+type ImportedContactUpdate = Database["public"]["Tables"]["imported_contacts"]["Update"];
+
+/**
+ * Confine DAL: gli update generici arrivano come record non tipizzati dalla UI.
+ * Si conservano solo le chiavi realmente presenti nello schema tabella.
+ */
+function toContactUpdate(updates: Record<string, unknown>): ImportedContactUpdate {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(updates)) out[k] = v;
+  return out as ImportedContactUpdate;
+}
+
+function toDuplicateSource(value: string | null): ImportDuplicateMatch["source"] {
+  if (value === "partner" || value === "partner_company") return value;
+  return "imported_contact";
+}
 
 
 import { createLogger } from "@/lib/log";
@@ -118,7 +136,7 @@ export async function updateContact(id: string, updates: Record<string, unknown>
   }
   const { error } = await supabase
     .from("imported_contacts")
-    .update(safeUpdates as never)
+    .update(toContactUpdate(safeUpdates))
     .eq("id", id);
   if (error) throw error;
 }
@@ -150,7 +168,7 @@ export async function updateContactStatus(id: string, status: string, extra?: Re
   if (extra && Object.keys(extra).length > 0) {
     const { error: updateError } = await supabase
       .from("imported_contacts")
-      .update(extra as never)
+      .update(toContactUpdate(extra))
       .eq("id", id);
     if (updateError) throw updateError;
   }
@@ -201,7 +219,7 @@ export async function linkContactToPartner(id: string, partnerId: string) {
       is_transferred: true,
       transferred_to_partner_id: partnerId,
       transferred_at: new Date().toISOString(),
-    } as never)
+    })
     .eq("id", id);
   if (error) throw error;
 }
@@ -222,13 +240,19 @@ export async function findImportDuplicates(
   emails: string[],
   companyNames: string[],
 ): Promise<ImportDuplicateMatch[]> {
-  const { data, error } = await supabase.rpc("find_import_duplicates" as never, {
+  const { data, error } = await supabase.rpc("find_import_duplicates", {
     p_user_id: userId,
     p_emails: emails,
     p_company_names: companyNames,
-  } as never);
+  });
   if (error) throw error;
-  return (data ?? []) as unknown as ImportDuplicateMatch[];
+  return (data ?? []).map((row) => ({
+    match_email: row.match_email ?? null,
+    match_company: row.match_company ?? null,
+    imported_contact_id: row.imported_contact_id ?? null,
+    partner_id: row.partner_id ?? null,
+    source: toDuplicateSource(row.source),
+  }));
 }
 
 export async function updateContactEnrichment(id: string, enrichmentPatch: Record<string, unknown>) {

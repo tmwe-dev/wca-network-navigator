@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 import {
   listAiInteractions, listFeedbackForInteractions, upsertFeedback, deleteFeedback,
+  toAiInteractionType, toFeedbackRating,
   type AiInteractionLogRow, type AiFeedbackRow, type AiInteractionType,
 } from "@/data/aiInteractionLog";
 
@@ -23,7 +24,7 @@ const TYPE_LABELS: Record<AiInteractionType, string> = {
   edge_ai: "Edge AI",
 };
 
-function typeIcon(t: AiInteractionType) {
+function typeIcon(t: AiInteractionType | null) {
   if (t === "chat_text") return <MessageSquare className="h-3 w-3" />;
   if (t === "voice_tts") return <Volume2 className="h-3 w-3" />;
   if (t === "voice_stt") return <Mic className="h-3 w-3" />;
@@ -129,7 +130,7 @@ export default function AiInteractionLogPage() {
     try {
       await upsertFeedback({
         interaction_id,
-        rating: existing?.rating ?? -1,
+        rating: toFeedbackRating(existing?.rating),
         note: noteDraft,
       });
       setOpenNoteFor(null);
@@ -207,7 +208,7 @@ export default function AiInteractionLogPage() {
             <Card key={r.id} className={r.role === "assistant" ? "border-primary/20" : ""}>
               <CardContent className="pt-4 space-y-2">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge variant="outline" className="gap-1">{typeIcon(r.interaction_type)} {TYPE_LABELS[r.interaction_type]}</Badge>
+                  <Badge variant="outline" className="gap-1">{typeIcon(toAiInteractionType(r.interaction_type))} {TYPE_LABELS[toAiInteractionType(r.interaction_type) ?? "chat_text"]}</Badge>
                   <Badge variant={r.role === "assistant" ? "default" : "secondary"}>{r.role}</Badge>
                   {r.surface && <Badge variant="outline">{r.surface}</Badge>}
                   {r.voice_id && <Badge variant="outline">voice: {r.voice_id.slice(0, 10)}…</Badge>}
