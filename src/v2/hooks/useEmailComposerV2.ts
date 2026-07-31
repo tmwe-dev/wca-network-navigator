@@ -10,6 +10,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { createCampaignDraftQueue, updateEmailDraft } from "@/data/emailCampaigns";
 import { pickDefaultEmailTypeId } from "@/data/pickDefaultEmailType";
+import { insertEmailDraft } from "@/data/emailDrafts";
 import { findActiveEmailPrompts } from "@/data/emailTemplates";
 
 export interface EmailRecipient {

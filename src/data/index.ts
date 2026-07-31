@@ -46,7 +46,15 @@ export {
   insertEmailDraftReturning,
 } from "./emailDrafts";
 export * from "./emailPrompts";
-export * from "./emailTemplates";
+export {
+  findEmailTemplates,
+  findAllEmailTemplates,
+  findEmailTemplatesShort,
+  createEmailTemplate,
+  deleteEmailTemplate,
+  type EmailTemplateRow,
+  type EmailTemplateInput,
+} from "./emailTemplates";
 export * from "./interactions";
 
 // ── AI & Memory ──

@@ -17,7 +17,7 @@ export interface AppErrorLogEntry {
 }
 
 export async function insertAppErrorLog(entry: AppErrorLogEntry): Promise<void> {
-  await supabase.from("app_error_logs").insert(entry);
+  await supabase.from("app_error_logs").insert({ ...entry });
 }
 
 export async function insertReactCrashLog(entry: {
