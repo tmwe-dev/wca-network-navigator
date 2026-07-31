@@ -103,3 +103,23 @@ export async function insertManualPartnerContact(input: ManualPartnerContactInpu
   if (error) throw error;
   return data.id;
 }
+
+export interface OnboardingContactInput {
+  user_id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  company_name: string | null;
+  country_code: string | null;
+  source: string;
+  lead_status: "new";
+}
+
+/** Import massivo di contatti CSV in onboarding, a batch. */
+export async function insertOnboardingContactsBatch(contacts: OnboardingContactInput[], batchSize = 50): Promise<void> {
+  for (let i = 0; i < contacts.length; i += batchSize) {
+    const batch = contacts.slice(i, i + batchSize);
+    const { error } = await supabase.from("imported_contacts").insert(batch);
+    if (error) throw error;
+  }
+}
