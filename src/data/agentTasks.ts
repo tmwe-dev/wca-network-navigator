@@ -14,7 +14,12 @@ export async function countCompletedAgentTasks() {
 }
 
 export async function findAgentTasksByUser(userId: string, statuses: string[], select = "agent_id, status") {
-  const { data, error } = await supabase.from("agent_tasks").select(select).eq("user_id", userId).in("status", statuses);
+  const { data, error } = await supabase
+    .from("agent_tasks")
+    .select(select)
+    .eq("user_id", userId)
+    .in("status", statuses)
+    .returns<Array<Record<string, unknown>>>();
   if (error) throw error;
   return data ?? [];
 }

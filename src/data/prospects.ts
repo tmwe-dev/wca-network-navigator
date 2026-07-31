@@ -12,10 +12,14 @@ const log = createLogger("prospects");
 
 type ProspectUpdate = Database["public"]["Tables"]["prospects"]["Update"];
 
-export type ProspectsQueryBuilder = ReturnType<ReturnType<typeof supabase.from<"prospects">>["select"]>;
+function buildProspectsBase() {
+  return supabase.from("prospects").select("*").order("company_name");
+}
+
+export type ProspectsQueryBuilder = ReturnType<typeof buildProspectsBase>;
 
 export async function queryProspects(builder: (q: ProspectsQueryBuilder) => ProspectsQueryBuilder) {
-  const base = supabase.from("prospects").select("*").order("company_name");
+  const base = buildProspectsBase();
   const { data, error } = await builder(base);
   if (error) throw error;
   return data ?? [];

@@ -4,7 +4,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function findClientAssignmentsByUser(userId: string, select = "agent_id") {
-  const { data, error } = await supabase.from("client_assignments").select(select).eq("user_id", userId);
+  const { data, error } = await supabase
+    .from("client_assignments")
+    .select(select)
+    .eq("user_id", userId)
+    .returns<Array<Record<string, unknown>>>();
   if (error) throw error;
   return data ?? [];
 }

@@ -51,9 +51,10 @@ export async function listAgentRoutingRules(): Promise<AgentRoutingRule[]> {
   const { data, error } = await supabase
     .from("agent_routing_rules")
     .select(COLS)
-    .order("priority", { ascending: true });
+    .order("priority", { ascending: true })
+    .returns<AgentRoutingRule[]>();
   if (error) throw error;
-  return (data ?? []) as AgentRoutingRule[];
+  return data ?? [];
 }
 
 export async function createAgentRoutingRule(
@@ -66,9 +67,10 @@ export async function createAgentRoutingRule(
     .from("agent_routing_rules")
     .insert(input satisfies Database["public"]["Tables"]["agent_routing_rules"]["Insert"])
     .select(COLS)
+    .returns<AgentRoutingRule[]>()
     .single();
   if (error) throw error;
-  return data as AgentRoutingRule;
+  return data;
 }
 
 export async function updateAgentRoutingRule(

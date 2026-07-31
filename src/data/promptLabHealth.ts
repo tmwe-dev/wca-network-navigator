@@ -103,10 +103,13 @@ export async function fetchPromptLabHealth(): Promise<PromptLabHealth> {
   const lastTestRun = runs.length > 0 ? runs[0].created_at : null;
 
   // Cron presence (best-effort, non blocca)
-  const cronRes = await supabase
-    .rpc("prompt_lab_cron_status")
-    .catch(() => ({ data: null, error: null }));
-  const cronRow = (cronRes.data?.[0] ?? {}) as Row;
+  let cronRow: Row = {};
+  try {
+    const cronRes = await supabase.rpc("prompt_lab_cron_status");
+    cronRow = (cronRes.data?.[0] ?? {}) as Row;
+  } catch {
+    cronRow = {};
+  }
   const cronTestRunner = Boolean(cronRow.cron_test_runner);
   const cronRefiner = Boolean(cronRow.cron_refiner);
 
