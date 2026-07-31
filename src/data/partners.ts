@@ -970,13 +970,40 @@ export async function findPartnerDeepSearchSnapshot(id: string) {
 }
 
 /** Snapshot compatto per l'hero card del destinatario in Compose. */
-export async function findPartnerHeroSnapshot(id: string) {
+export interface PartnerHeroSnapshot {
+  company_name: string | null;
+  company_alias: string | null;
+  country_name: string | null;
+  country_code: string | null;
+  city: string | null;
+  logo_url: string | null;
+  last_interaction_at: string | null;
+  interaction_count: number | null;
+  enrichment_data: { deep_search_at?: string } | null;
+  lead_status: string | null;
+}
+
+export async function findPartnerHeroSnapshot(id: string): Promise<PartnerHeroSnapshot | null> {
   const { data } = await supabase
     .from("partners")
     .select("company_name, company_alias, country_name, country_code, city, logo_url, last_interaction_at, interaction_count, enrichment_data, lead_status")
     .eq("id", id)
     .maybeSingle();
-  return data;
+  if (!data) return null;
+  const enrichment = isRecord(data.enrichment_data) ? data.enrichment_data : null;
+  const deepSearchAt = enrichment && typeof enrichment.deep_search_at === "string" ? enrichment.deep_search_at : undefined;
+  return {
+    company_name: data.company_name ?? null,
+    company_alias: data.company_alias ?? null,
+    country_name: data.country_name ?? null,
+    country_code: data.country_code ?? null,
+    city: data.city ?? null,
+    logo_url: data.logo_url ?? null,
+    last_interaction_at: data.last_interaction_at ?? null,
+    interaction_count: data.interaction_count ?? null,
+    enrichment_data: enrichment ? (deepSearchAt ? { deep_search_at: deepSearchAt } : {}) : null,
+    lead_status: data.lead_status ?? null,
+  };
 }
 
 export interface PartnersPaginatedFilters extends PartnerFilters {
