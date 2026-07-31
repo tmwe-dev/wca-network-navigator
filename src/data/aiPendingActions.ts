@@ -5,6 +5,7 @@
  * Query, filtri, select, order, limit e semantica errori sono preservati 1:1.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface PendingActionFilters {
   /** "all" = nessun filtro su action_type */
@@ -75,4 +76,33 @@ export async function insertPendingActionReturningId(
   payload: Record<string, unknown>,
 ): Promise<{ data: { id: string } | null; error: { message: string } | null }> {
   return await supabase.from("ai_pending_actions").insert(payload as never).select("id").maybeSingle();
+}
+
+type AiPendingActionInsert = Database["public"]["Tables"]["ai_pending_actions"]["Insert"];
+
+/**
+ * Insert generico su ai_pending_actions con id restituito. Estratto da
+ * `useEnqueueAction`: unico punto di enqueue di un'azione "send".
+ */
+export async function insertPendingActionReturningId(
+  row: AiPendingActionInsert,
+): Promise<{ id: string | null; error: { message: string } | null }> {
+  const { data, error } = await supabase
+    .from("ai_pending_actions")
+    .insert(row)
+    .select("id")
+    .maybeSingle();
+  if (error) return { id: null, error };
+  return { id: data?.id ?? null, error: null };
+}
+
+/**
+ * Insert su ai_pending_actions senza select, per trasferimento da
+ * `outreach_queue`. Estratto da `useOutreachQueue`.
+ */
+export async function insertPendingAction(
+  row: AiPendingActionInsert,
+): Promise<{ error: { message: string } | null }> {
+  const { error } = await supabase.from("ai_pending_actions").insert(row);
+  return { error };
 }
