@@ -20,6 +20,7 @@ import { createLogger } from "@/lib/log";
 
 import type { LiveStats } from "./useAcquisitionPipelineState";
 import { findPartnerNetworks, findPartnerServices, findPartnerContacts } from "@/data/partnerRelations";
+import { getDownloadJobProcessedIds } from "@/data/downloadJobs";
 
 const log = createLogger("useAcquisitionPipeline");
 

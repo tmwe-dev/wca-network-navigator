@@ -9,6 +9,7 @@ import { t } from "@/components/download/theme";
 import { SearchResultsTable, type SearchResult } from "./SearchResultsTable";
 import type { ProspectFilters } from "./ProspectAdvancedFilters";
 import { ImportWizard } from "./ImportWizard";
+import { findProspectDedupKeys } from "@/data/prospects";
 
 interface Props {
   isDark: boolean;

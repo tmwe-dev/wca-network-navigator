@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
+import { findSenderEmailsPage } from "@/data/channelMessages";
 
 interface SenderEmail {
   id: string;

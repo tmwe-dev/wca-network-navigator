@@ -12,6 +12,7 @@ import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
 import { getChannelBackfillCursor, upsertChannelMessageIgnoreDup, upsertChannelBackfillState } from "@/data/whatsappBackfillQueries";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
+import { fetchOperatorIdForUser } from "@/data/emailGrouping";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 type BackfillPhase = "idle" | "discovery" | "deep";

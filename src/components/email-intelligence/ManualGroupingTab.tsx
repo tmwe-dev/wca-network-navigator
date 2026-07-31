@@ -40,6 +40,7 @@ import { ActiveFiltersBar } from "./manual-grouping/ActiveFiltersBar";
 import { GroupGridPanel } from "./manual-grouping/GroupGridPanel";
 import { VirtualizedSenderList } from "./manual-grouping/VirtualizedSenderList";
 import { inLetterRange, type LetterRange } from "./manual-grouping/letterRange";
+import { createSenderGroup } from "@/data/senderManagement";
 
 interface SuggestEmailGroupsResponse {
   processed?: number;

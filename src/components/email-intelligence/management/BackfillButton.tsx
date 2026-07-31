@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { backfillForAddress, backfillForGroup } from "@/data/emailRulesBackfill";
 import type { BackfillReport } from "@/data/emailRulesBackfill";
+import { fetchOperatorIdForUser } from "@/data/emailGrouping";
 
 interface BackfillButtonProps {
   scope: "address" | "group";
