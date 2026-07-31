@@ -26,8 +26,8 @@ const mockLimit = vi.fn();
 const mockSingle = vi.fn();
 const mockFrom = vi.fn();
 
-vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: any[]) => mockFrom(...a),
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (...a: any[]) => mockFrom(...a) },
 }));
 
 vi.mock("@/lib/log", () => ({

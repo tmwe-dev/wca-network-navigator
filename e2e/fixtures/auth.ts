@@ -53,3 +53,20 @@ export const test = base.extend<AuthFixtures>({
 });
 
 export { expect };
+
+/**
+ * `protectedTest` — variante che sostituisce direttamente la fixture `page`.
+ *
+ * Serve alle spec già scritte contro `page` che navigano su rotte protette:
+ * cambiando la sola riga di import il test diventa BLOCKED esplicito (skip
+ * con causa) quando manca una sessione, invece di fallire per motivi
+ * ambientali. Con sessione presente il test gira identico, senza modifiche
+ * al corpo e senza indebolire alcuna assertion.
+ */
+export const protectedTest = base.extend({
+  page: async ({ page }, use) => {
+    protectedTest.skip(!hasTestSession, AUTH_BLOCKED_REASON);
+    await restoreSession(page);
+    await use(page);
+  },
+});

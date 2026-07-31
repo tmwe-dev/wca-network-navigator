@@ -4,36 +4,28 @@
  */
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-// Local type definitions for calendar_events table
-// (table exists in database but not in generated Database types)
-interface CalendarEventRow {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string | null;
-  event_type: "meeting" | "call" | "task" | "reminder" | "follow_up";
-  start_at: string;
-  end_at: string | null;
-  all_day: boolean;
-  partner_id: string | null;
-  contact_id: string | null;
-  deal_id: string | null;
-  location: string | null;
-  color: string;
-  recurrence: "daily" | "weekly" | "monthly" | "none" | null;
-  reminder_minutes: number;
-  status: "scheduled" | "completed" | "cancelled";
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string;
+type CalendarEventDbRow = Database["public"]["Tables"]["calendar_events"]["Row"];
+
+
+type Json = Database["public"]["Tables"]["calendar_events"]["Row"]["metadata"];
+type DbInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
+type DbUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
+
+/** Metadata è esposto come oggetto tipizzato all'esterno, serializzato a Json in scrittura. */
+export type CalendarEventInsert = Omit<DbInsert, "metadata"> & {
+  metadata?: Record<string, unknown> | null;
+};
+export type CalendarEventUpdate = Omit<DbUpdate, "metadata"> & {
+  metadata?: Record<string, unknown> | null;
+};
+
+function toJson(value: Record<string, unknown> | null | undefined): Json {
+  if (value === null || value === undefined) return null;
+  return JSON.parse(JSON.stringify(value));
 }
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface CalendarEventInsert extends Omit<CalendarEventRow, "id" | "created_at" | "updated_at"> {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface CalendarEventUpdate extends Partial<Omit<CalendarEventRow, "id" | "created_at" | "updated_at">> {}
 
 // ─── Types ──────────────────────────────────────────────
 export type EventType = "meeting" | "call" | "task" | "reminder" | "follow_up";
@@ -68,6 +60,53 @@ export interface CalendarEventWithRelations extends CalendarEvent {
   deal?: { title: string; stage: string } | null;
 }
 
+
+// ─── Row mapping (nessun cast: narrowing esplicito) ─────
+
+const EVENT_TYPES: readonly EventType[] = ["meeting", "call", "task", "reminder", "follow_up"];
+const EVENT_STATUSES: readonly EventStatus[] = ["scheduled", "completed", "cancelled"];
+const RECURRENCES: readonly RecurrenceType[] = ["daily", "weekly", "monthly", "none"];
+
+function toEventType(value: string): EventType {
+  return EVENT_TYPES.find((t) => t === value) ?? "task";
+}
+
+function toEventStatus(value: string | null): EventStatus {
+  return EVENT_STATUSES.find((s) => s === value) ?? "scheduled";
+}
+
+function toRecurrence(value: string | null): RecurrenceType | null {
+  return RECURRENCES.find((r) => r === value) ?? null;
+}
+
+function toMetadata(value: CalendarEventDbRow["metadata"]): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+
+function mapEvent(row: CalendarEventDbRow): CalendarEvent {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    description: row.description,
+    event_type: toEventType(row.event_type),
+    start_at: row.start_at,
+    end_at: row.end_at,
+    all_day: row.all_day ?? false,
+    partner_id: row.partner_id,
+    contact_id: row.contact_id,
+    deal_id: row.deal_id,
+    location: row.location,
+    color: row.color ?? "#3b82f6",
+    recurrence: toRecurrence(row.recurrence),
+    reminder_minutes: row.reminder_minutes ?? 0,
+    status: toEventStatus(row.status),
+    metadata: toMetadata(row.metadata),
+    created_at: row.created_at ?? new Date().toISOString(),
+    updated_at: row.updated_at ?? new Date().toISOString(),
+  };
+}
+
 // ─── Queries ────────────────────────────────────────────
 
 /**
@@ -78,7 +117,7 @@ export async function listEvents(
   from: string,
   to: string,
 ): Promise<CalendarEvent[]> {
-  const { data, error } = await untypedFrom("calendar_events")
+  const { data, error } = await supabase.from("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .gte("start_at", from)
@@ -86,14 +125,14 @@ export async function listEvents(
     .order("start_at", { ascending: true });
 
   if (error) throw error;
-  return data as CalendarEvent[];
+  return (data ?? []).map(mapEvent);
 }
 
 /**
  * Get a single event by ID
  */
 export async function getEvent(id: string): Promise<CalendarEvent | null> {
-  const { data, error } = await untypedFrom("calendar_events")
+  const { data, error } = await supabase.from("calendar_events")
     .select("*")
     .eq("id", id)
     .single();
@@ -105,41 +144,45 @@ export async function getEvent(id: string): Promise<CalendarEvent | null> {
     throw error;
   }
 
-  return data as CalendarEvent;
+  return mapEvent(data);
 }
 
 /**
  * Create a new event
  */
 export async function createEvent(event: CalendarEventInsert): Promise<CalendarEvent> {
-  const { data, error } = await untypedFrom("calendar_events")
-    .insert(event)
+  const { metadata, ...rest } = event;
+  const payload: DbInsert = metadata === undefined ? rest : { ...rest, metadata: toJson(metadata) };
+  const { data, error } = await supabase.from("calendar_events")
+    .insert(payload)
     .select()
     .single();
 
   if (error) throw error;
-  return data as CalendarEvent;
+  return mapEvent(data);
 }
 
 /**
  * Update an existing event
  */
 export async function updateEvent(id: string, updates: CalendarEventUpdate): Promise<CalendarEvent> {
-  const { data, error } = await untypedFrom("calendar_events")
-    .update({ ...updates, updated_at: new Date().toISOString() })
+  const { metadata, ...rest } = updates;
+  const patch: DbUpdate = metadata === undefined ? rest : { ...rest, metadata: toJson(metadata) };
+  const { data, error } = await supabase.from("calendar_events")
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();
 
   if (error) throw error;
-  return data as CalendarEvent;
+  return mapEvent(data);
 }
 
 /**
  * Delete an event
  */
 export async function deleteEvent(id: string): Promise<void> {
-  const { error } = await untypedFrom("calendar_events").delete().eq("id", id);
+  const { error } = await supabase.from("calendar_events").delete().eq("id", id);
 
   if (error) throw error;
 }
@@ -150,7 +193,7 @@ export async function deleteEvent(id: string): Promise<void> {
 export async function getUpcomingEvents(userId: string, limit = 5): Promise<CalendarEvent[]> {
   const now = new Date().toISOString();
 
-  const { data, error } = await untypedFrom("calendar_events")
+  const { data, error } = await supabase.from("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .eq("status", "scheduled")
@@ -159,47 +202,47 @@ export async function getUpcomingEvents(userId: string, limit = 5): Promise<Cale
     .limit(limit);
 
   if (error) throw error;
-  return data as CalendarEvent[];
+  return (data ?? []).map(mapEvent);
 }
 
 /**
  * Get events for a specific partner
  */
 export async function getEventsForPartner(partnerId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await untypedFrom("calendar_events")
+  const { data, error } = await supabase.from("calendar_events")
     .select("*")
     .eq("partner_id", partnerId)
     .eq("status", "scheduled")
     .order("start_at", { ascending: true });
 
   if (error) throw error;
-  return data as CalendarEvent[];
+  return (data ?? []).map(mapEvent);
 }
 
 /**
  * Get events for a specific deal
  */
 export async function getEventsForDeal(dealId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await untypedFrom("calendar_events")
+  const { data, error } = await supabase.from("calendar_events")
     .select("*")
     .eq("deal_id", dealId)
     .order("start_at", { ascending: true });
 
   if (error) throw error;
-  return data as CalendarEvent[];
+  return (data ?? []).map(mapEvent);
 }
 
 /**
  * Get events for a specific contact
  */
 export async function getEventsForContact(contactId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await untypedFrom("calendar_events")
+  const { data, error } = await supabase.from("calendar_events")
     .select("*")
     .eq("contact_id", contactId)
     .order("start_at", { ascending: true });
 
   if (error) throw error;
-  return data as CalendarEvent[];
+  return (data ?? []).map(mapEvent);
 }
 
 /**
@@ -209,7 +252,7 @@ export async function getEventsByType(
   userId: string,
   eventType: EventType,
 ): Promise<CalendarEvent[]> {
-  const { data, error } = await untypedFrom("calendar_events")
+  const { data, error } = await supabase.from("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .eq("event_type", eventType)
@@ -217,7 +260,7 @@ export async function getEventsByType(
     .order("start_at", { ascending: true });
 
   if (error) throw error;
-  return data as CalendarEvent[];
+  return (data ?? []).map(mapEvent);
 }
 
 // ─── Query Key Generators ──────────────────────────────

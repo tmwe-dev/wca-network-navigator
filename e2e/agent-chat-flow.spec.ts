@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("Agent Chat", () => {
   test("aprire la pagina agenti e verificare data-testid", async ({ page }) => {
@@ -58,7 +58,7 @@ deepTest.describe("Deep invariants: /v2/agent-chat", () => {
     deepExpect(res?.status() ?? 0).toBeLessThan(500);
     await page.waitForLoadState("networkidle").catch(() => {});
     const url = new URL(page.url());
-    const isAuthOr = url.pathname.includes("/auth") || url.pathname.startsWith("/v2/agent-chat".split("/").slice(0, 3).join("/"));
+    const isAuthOr = url.pathname.includes("/auth") || url.pathname.includes("/v2/login") || url.pathname.startsWith("/v2/agent-chat".split("/").slice(0, 3).join("/"));
     deepExpect(isAuthOr, `URL atteso /auth o sotto ramo, got ${url.pathname}`).toBeTruthy();
   });
 

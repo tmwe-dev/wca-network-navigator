@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("FiltersDrawer @regression", () => {
   test("partner page renderizza", async ({ page }) => {

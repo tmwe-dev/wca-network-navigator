@@ -9,7 +9,7 @@
  *  - selezione lingua persiste in localStorage `email.languageMode.v1`
  *  - bulk dialog espone checkbox "Traduci per destinatario" o equivalente
  */
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("P0 Email Language Picker", () => {
   test("composer mostra picker lingua", async ({ page }) => {

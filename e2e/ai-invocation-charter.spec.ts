@@ -10,7 +10,7 @@
  * mostri la tabella di log e (se ci sono righe) esponga le colonne scope
  * e source previste dal charter.
  */
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("P0 AI Invocation Charter", () => {
   test("pagina ai-interactions-log raggiungibile", async ({ page }) => {
