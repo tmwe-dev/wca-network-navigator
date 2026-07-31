@@ -25,10 +25,12 @@ describe("DAL — e2eRuns", () => {
 
   describe("listRecentE2ERuns", () => {
     it("returns recent runs", async () => {
-      const runs = [{ id: "r1", passed: 10 }];
+      const runs = [{ id: "r1", passed: 10, spec_results: [{ file: "a.spec.ts", status: "passed" }] }];
       mockLimit.mockResolvedValue({ data: runs, error: null });
       const result = await listRecentE2ERuns();
-      expect(result).toEqual(runs);
+      expect(result).toEqual([
+        { id: "r1", passed: 10, spec_results: [{ file: "a.spec.ts", title: undefined, status: "passed", duration_ms: undefined, error: undefined }] },
+      ]);
     });
 
     it("returns empty on null data", async () => {
@@ -46,9 +48,9 @@ describe("DAL — e2eRuns", () => {
   describe("getLatestE2ERun", () => {
     it("returns latest run", async () => {
       mockLimit.mockReturnValue({ maybeSingle: mockMaybeSingle });
-      mockMaybeSingle.mockResolvedValue({ data: { id: "r1" }, error: null });
+      mockMaybeSingle.mockResolvedValue({ data: { id: "r1", spec_results: null }, error: null });
       const result = await getLatestE2ERun();
-      expect(result).toEqual({ id: "r1" });
+      expect(result).toEqual({ id: "r1", spec_results: [] });
     });
 
     it("returns null when no runs", async () => {

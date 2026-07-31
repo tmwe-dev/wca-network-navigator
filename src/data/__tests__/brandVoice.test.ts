@@ -42,10 +42,28 @@ describe("DAL — brandVoice", () => {
 
   describe("fetchRecentBrandVoiceAudits", () => {
     it("returns audits", async () => {
-      const audits = [{ id: "a1", score: 80 }];
-      mockLimit.mockResolvedValue({ data: audits, error: null });
+      const rows = [{
+        id: "a1",
+        created_at: "2026-01-01T00:00:00Z",
+        channel: "email",
+        journalist_role: "editor",
+        brand_voice_score: 80,
+        deviations: ["tone"],
+        message_excerpt: "hello",
+        outreach_message_id: "m1",
+      }];
+      mockLimit.mockResolvedValue({ data: rows, error: null });
       const result = await fetchRecentBrandVoiceAudits();
-      expect(result).toEqual(audits);
+      expect(result).toEqual([{
+        id: "a1",
+        created_at: "2026-01-01T00:00:00Z",
+        channel: "email",
+        journalist_role: "editor",
+        score: 80,
+        deviations: ["tone"],
+        excerpt: "hello",
+        outreach_message_id: "m1",
+      }]);
     });
 
     it("throws on error", async () => {
