@@ -3,6 +3,8 @@
  * Centralized logging of all AI interactions (text & voice) and quality feedback.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 import { createLogger } from "@/lib/log";
 
@@ -34,12 +36,9 @@ export interface AiInteractionLogInput {
   page_context?: string | null;
 }
 
-export interface AiInteractionLogRow extends AiInteractionLogInput {
-  id: string;
-  user_id: string;
-  operator_id: string | null;
-  created_at: string;
-}
+type AiInteractionLogInsert = Database["public"]["Tables"]["ai_interaction_log"]["Insert"];
+/** Riga così com'è in DB (interaction_type/role restano `string`: sono colonne libere). */
+export type AiInteractionLogRow = Database["public"]["Tables"]["ai_interaction_log"]["Row"];
 
 /**
  * Best-effort: never throw. Logging must never break the user flow.
@@ -50,7 +49,7 @@ export async function logAiInteraction(input: AiInteractionLogInput): Promise<st
     const userId = userData.session?.user?.id;
     if (!userId) return null;
 
-    const payload = {
+    const payload: AiInteractionLogInsert = {
       user_id: userId,
       interaction_type: input.interaction_type,
       role: input.role,
@@ -64,7 +63,7 @@ export async function logAiInteraction(input: AiInteractionLogInput): Promise<st
       duration_ms: input.duration_ms ?? null,
       tokens_in: input.tokens_in ?? null,
       tokens_out: input.tokens_out ?? null,
-      metadata: input.metadata ?? {},
+      metadata: toJsonValue(input.metadata ?? {}),
       page_context: input.page_context ?? (typeof window !== "undefined" ? window.location.pathname : null),
     };
 
@@ -118,14 +117,7 @@ export async function listAiInteractions(filters: AiLogFilters = {}): Promise<Ai
   return data ?? [];
 }
 
-export interface AiFeedbackRow {
-  id: string;
-  interaction_id: string;
-  user_id: string;
-  rating: -1 | 1;
-  note: string | null;
-  created_at: string;
-}
+export type AiFeedbackRow = Database["public"]["Tables"]["ai_message_feedback"]["Row"];
 
 export async function listFeedbackForInteractions(ids: string[]): Promise<AiFeedbackRow[]> {
   if (ids.length === 0) return [];
