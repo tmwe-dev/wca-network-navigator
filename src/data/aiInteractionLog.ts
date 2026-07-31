@@ -69,8 +69,8 @@ export async function logAiInteraction(input: AiInteractionLogInput): Promise<st
     };
 
     const { data, error } = await supabase
-      .from("ai_interaction_log" as never)
-      .insert(payload as never)
+      .from("ai_interaction_log")
+      .insert(payload)
       .select("id")
       .maybeSingle();
     if (error) {
@@ -97,7 +97,7 @@ export interface AiLogFilters {
 export async function listAiInteractions(filters: AiLogFilters = {}): Promise<AiInteractionLogRow[]> {
   const limit = Math.min(filters.limit ?? 1000, 5000);
   let q = supabase
-    .from("ai_interaction_log" as never)
+    .from("ai_interaction_log")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -115,7 +115,7 @@ export async function listAiInteractions(filters: AiLogFilters = {}): Promise<Ai
   }
   const { data, error } = await q;
   if (error) throw error;
-  return (data as unknown as AiInteractionLogRow[]) ?? [];
+  return data ?? [];
 }
 
 export interface AiFeedbackRow {
@@ -130,11 +130,11 @@ export interface AiFeedbackRow {
 export async function listFeedbackForInteractions(ids: string[]): Promise<AiFeedbackRow[]> {
   if (ids.length === 0) return [];
   const { data, error } = await supabase
-    .from("ai_message_feedback" as never)
+    .from("ai_message_feedback")
     .select("*")
     .in("interaction_id", ids);
   if (error) throw error;
-  return (data as unknown as AiFeedbackRow[]) ?? [];
+  return data ?? [];
 }
 
 export async function upsertFeedback(params: {
@@ -147,15 +147,15 @@ export async function upsertFeedback(params: {
   if (!userId) throw new Error("not authenticated");
 
   const { error } = await supabase
-    .from("ai_message_feedback" as never)
+    .from("ai_message_feedback")
     .upsert(
       {
         interaction_id: params.interaction_id,
         user_id: userId,
         rating: params.rating,
         note: params.note ?? null,
-      } as never,
-      { onConflict: "interaction_id,user_id" } as never,
+      },
+      { onConflict: "interaction_id,user_id" },
     );
   if (error) throw error;
 }
@@ -165,7 +165,7 @@ export async function deleteFeedback(interactionId: string): Promise<void> {
   const userId = userData.session?.user?.id;
   if (!userId) return;
   const { error } = await supabase
-    .from("ai_message_feedback" as never)
+    .from("ai_message_feedback")
     .delete()
     .eq("interaction_id", interactionId)
     .eq("user_id", userId);
