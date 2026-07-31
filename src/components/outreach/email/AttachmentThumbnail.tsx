@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getImportFilePublicUrl } from "@/data/importLogs";
 import { formatBytes, getAttachmentIcon } from "./emailUtils";
 import type { EmailAttachment } from "@/hooks/useEmailActions";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
@@ -24,8 +24,8 @@ export function AttachmentThumbnail({ att, onDownload }: Props) {
       if (att.storage_path.startsWith("data:")) {
         setImgUrl(att.storage_path);
       } else {
-        const { data } = supabase.storage.from("import-files").getPublicUrl(att.storage_path);
-        if (data?.publicUrl) setImgUrl(data.publicUrl);
+        const publicUrl = getImportFilePublicUrl(att.storage_path);
+        if (publicUrl) setImgUrl(publicUrl);
       }
     }
   }, [att.storage_path, isImage]);

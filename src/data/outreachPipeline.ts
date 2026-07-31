@@ -282,3 +282,43 @@ export async function fetchOutreachSubCounts(): Promise<OutreachSubCounts> {
     failed: (failed.count || 0) + (bulkFailed.count || 0),
   };
 }
+
+// ── Recent activities (AttivitaTab) ──
+export async function findRecentActivities(limit = 200) {
+  const { data } = await supabase
+    .from("activities")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return data || [];
+}
+
+export async function completeActivity(id: string) {
+  const { error } = await supabase.from("activities")
+    .update({ status: "completed", completed_at: new Date().toISOString() } satisfies ActivityUpdate)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateActivityDescription(id: string, description: string) {
+  const { error } = await supabase.from("activities")
+    .update({ description } satisfies ActivityUpdate)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ── Bulk email queue (DaInviareSubTab) ──
+export async function findPendingBulkQueue(limit = 200) {
+  const { data } = await supabase
+    .from("email_campaign_queue")
+    .select("id, recipient_email, recipient_name, subject, html_body, status, scheduled_at, created_at, partner_id, draft_id")
+    .in("status", ["pending", "sending", "scheduled"])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
+
+export async function cancelBulkQueueItem(id: string) {
+  const { error } = await supabase.from("email_campaign_queue").update({ status: "cancelled" }).eq("id", id);
+  if (error) throw error;
+}

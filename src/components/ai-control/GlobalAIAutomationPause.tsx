@@ -5,6 +5,7 @@
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { findAiAutomationPauseSettings, upsertAiAutomationPauseSettings } from '@/data/appSettings';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -51,13 +52,10 @@ export function GlobalAIAutomationPause() {
         setUserId(data.user.id);
 
         // Fetch pause settings
-        const { data: settings, error } = await supabase
-          .from('app_settings')
-          .select('key, value')
-          .eq('user_id', data.user.id)
-          .in('key', ['ai_automations_paused', 'ai_automations_paused_at', 'ai_automations_paused_reason']);
-
-        if (error) {
+        let settings;
+        try {
+          settings = await findAiAutomationPauseSettings(data.user.id);
+        } catch (error) {
           log.error('Error loading pause state:', { error: error });
           return;
         }
@@ -96,41 +94,9 @@ export function GlobalAIAutomationPause() {
       setLoading(true);
 
       // Upsert pause setting
-      const updates = [
-        supabase
-          .from('app_settings')
-          .upsert(
-            { user_id: userId, key: 'ai_automations_paused', value: isPausedValue ? 'true' : 'false' },
-            { onConflict: 'user_id,key' }
-          ),
-      ];
+      const ok = await upsertAiAutomationPauseSettings(userId, isPausedValue, reason);
 
-      if (isPausedValue) {
-        updates.push(
-          supabase
-            .from('app_settings')
-            .upsert(
-              { user_id: userId, key: 'ai_automations_paused_at', value: new Date().toISOString() },
-              { onConflict: 'user_id,key' }
-            )
-        );
-
-        if (reason.trim()) {
-          updates.push(
-            supabase
-              .from('app_settings')
-              .upsert(
-                { user_id: userId, key: 'ai_automations_paused_reason', value: reason },
-                { onConflict: 'user_id,key' }
-              )
-          );
-        }
-      }
-
-      const results = await Promise.all(updates);
-      const hasError = results.some(r => r.error);
-
-      if (hasError) {
+      if (!ok) {
         toast.error('Errore aggiornamento stato di pausa');
         return;
       }

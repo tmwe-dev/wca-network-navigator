@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMessageAttachments, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
-import { supabase } from "@/integrations/supabase/client";
+import { getImportFilePublicUrl } from "@/data/importLogs";
 import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { decodeRfc2047, extractSenderBrand } from "./email/emailUtils";
@@ -115,8 +115,8 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
       return;
     }
 
-    const { data } = supabase.storage.from("import-files").getPublicUrl(attachment.storage_path);
-    if (data?.publicUrl) window.open(data.publicUrl, "_blank");
+    const publicUrl = getImportFilePublicUrl(attachment.storage_path);
+    if (publicUrl) window.open(publicUrl, "_blank");
   };
 
   const regularAttachments = attachments.filter((attachment) => !attachment.is_inline);
