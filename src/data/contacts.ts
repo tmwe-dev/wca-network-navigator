@@ -2,6 +2,8 @@
  * Contacts Data Access Layer
  * Backward-compatible re-export from organized modules
  */
+import { supabase } from "@/integrations/supabase/client";
+
 export {
   type LeadStatus,
   type ImportedContactRow,
