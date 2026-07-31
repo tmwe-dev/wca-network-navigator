@@ -11,6 +11,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
 const FAMILY_MAP: Record<string, string> = {
   // doctrine
@@ -117,9 +118,6 @@ Deno.serve(async (req) => {
       headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=600" },
     });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
-    );
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, cors);
   }
 });
