@@ -2,7 +2,7 @@
  * Tool: read-inbox — Read-only view of inbound messages (Funnemail/Inreach).
  * Queries channel_messages WHERE direction='inbound', most recent first.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult } from "./types";
 
 interface InboundRow {
@@ -25,7 +25,7 @@ export const readInboxTool: Tool = {
     /\b(posta\s+in\s+arrivo|inbox|messaggi\s+ricevut|email\s+ricevut|email\s+in\s+entrata|inbound|in\s+entrata|non\s+letti|da\s+leggere|risposte\s+ricevut)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const { data, error, count } = await untypedFrom("channel_messages")
+    const { data, error, count } = await supabase.from("channel_messages")
       .select(
         "id,channel,from_name,from_address,subject,email_date,created_at,read_at,category",
         { count: "exact" },

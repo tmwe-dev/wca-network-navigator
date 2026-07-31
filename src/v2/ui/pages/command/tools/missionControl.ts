@@ -2,7 +2,7 @@
  * Tool: mission-control — Pause / resume / stop an autopilot mission (requires approval).
  * Write tool: updates agent_missions.status. Does NOT run mission rounds (that's launch-mission).
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 type MissionAction = "paused" | "active" | "cancelled";
@@ -43,10 +43,10 @@ export const missionControlTool: Tool = {
       let missionName: string | null = ref;
       if (ref && /^[0-9a-f-]{36}$/i.test(ref)) {
         missionId = ref;
-        const { data } = await untypedFrom("agent_missions").select("title").eq("id", ref).maybeSingle();
+        const { data } = await supabase.from("agent_missions").select("title").eq("id", ref).maybeSingle();
         missionName = (data as { title?: string } | null)?.title ?? ref;
       } else if (ref) {
-        const { data } = await untypedFrom("agent_missions").select("id,title").ilike("title", `%${ref}%`).limit(1).maybeSingle();
+        const { data } = await supabase.from("agent_missions").select("id,title").ilike("title", `%${ref}%`).limit(1).maybeSingle();
         if (data) {
           const row = data as { id: string; title: string };
           missionId = row.id;
@@ -90,7 +90,7 @@ export const missionControlTool: Tool = {
       };
     }
 
-    const { error } = await untypedFrom("agent_missions").update({ status: action }).eq("id", missionId);
+    const { error } = await supabase.from("agent_missions").update({ status: action }).eq("id", missionId);
     if (error) {
       return {
         kind: "result",

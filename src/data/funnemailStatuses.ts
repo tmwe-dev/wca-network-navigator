@@ -2,10 +2,8 @@
  * DAL — Funnemail message status (stati job estesi).
  *
  * 6 stati: nuovo | in_lavorazione | in_attesa | da_smistare | risolto | archiviato.
- * Tabella creata dopo la rigenerazione dei tipi: cast espliciti.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export type FunnemailJobStatus =
   | "nuovo"
@@ -67,14 +65,29 @@ export interface FunnemailStatusHistoryRow {
 const TABLE = "funnemail_message_status" as const;
 const HISTORY_TABLE = "funnemail_message_status_history" as const;
 
+/** Narrowing runtime esplicito: valida che uno status generico appartenga alla union. */
+function toJobStatus(value: string): FunnemailJobStatus {
+  return (FUNNEMAIL_JOB_STATUSES as string[]).includes(value)
+    ? (value as FunnemailJobStatus)
+    : "nuovo";
+}
+
 export async function listStatusesForGroup(groupId?: string | null): Promise<FunnemailStatusRow[]> {
-  let q = untypedFrom(TABLE)
+  let q = supabase.from(TABLE)
     .select("message_id, group_id, status, status_reason, changed_by, changed_at, user_id")
     .is("deleted_at", null);
   if (groupId) q = q.eq("group_id", groupId);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as FunnemailStatusRow[];
+  return (data ?? []).map((row) => ({
+    message_id: row.message_id,
+    group_id: row.group_id,
+    status: toJobStatus(row.status),
+    status_reason: row.status_reason,
+    changed_by: row.changed_by,
+    changed_at: row.changed_at,
+    user_id: row.user_id,
+  }));
 }
 
 export async function setMessageStatus(args: {
@@ -87,7 +100,7 @@ export async function setMessageStatus(args: {
   const uid = userData.user?.id;
   if (!uid) throw new Error("not_authenticated");
 
-  const { error } = await untypedFrom(TABLE).upsert(
+  const { error } = await supabase.from(TABLE).upsert(
     {
       message_id: args.messageId,
       group_id: args.groupId ?? null,
@@ -103,24 +116,44 @@ export async function setMessageStatus(args: {
 }
 
 export async function listStatusHistory(messageId: string): Promise<FunnemailStatusHistoryRow[]> {
-  const { data, error } = await untypedFrom(HISTORY_TABLE)
+  const { data, error } = await supabase.from(HISTORY_TABLE)
     .select("*")
     .eq("message_id", messageId)
     .order("changed_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as FunnemailStatusHistoryRow[];
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    message_id: row.message_id,
+    group_id: row.group_id,
+    from_status: row.from_status == null ? null : toJobStatus(row.from_status),
+    to_status: toJobStatus(row.to_status),
+    reason: row.reason,
+    changed_by: row.changed_by,
+    changed_at: row.changed_at,
+  }));
 }
 
 export async function listSortingQueue(): Promise<FunnemailStatusRow[]> {
-  const { data, error } = await untypedFrom("funnemail_sorting_queue")
+  const { data, error } = await supabase.from("funnemail_sorting_queue")
     .select("*")
     .order("changed_at", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as FunnemailStatusRow[];
+  return (data ?? [])
+    .filter((row): row is typeof row & { message_id: string; changed_by: string; changed_at: string; status: string; user_id: string } =>
+      row.message_id != null && row.changed_by != null && row.changed_at != null && row.status != null && row.user_id != null)
+    .map((row) => ({
+      message_id: row.message_id,
+      group_id: row.group_id,
+      status: toJobStatus(row.status),
+      status_reason: row.status_reason,
+      changed_by: row.changed_by,
+      changed_at: row.changed_at,
+      user_id: row.user_id,
+    }));
 }
 
 export async function countSortingQueue(): Promise<number> {
-  const { count, error } = await untypedFrom("funnemail_sorting_queue")
+  const { count, error } = await supabase.from("funnemail_sorting_queue")
     .select("message_id", { count: "exact", head: true });
   if (error) throw error;
   return count ?? 0;

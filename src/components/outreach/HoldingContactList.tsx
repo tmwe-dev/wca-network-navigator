@@ -11,6 +11,18 @@ import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { getCountryFlag } from "@/lib/countries";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
+/**
+ * Estensione locale del gruppo per campi opzionali non presenti su
+ * `HoldingMessageGroup` ma popolabili a runtime (logo/paese/nome contatto).
+ * Nessun cast opaco: le proprietà sono opzionali, quindi l'assegnazione è
+ * strutturalmente sicura.
+ */
+type DisplayGroup = HoldingMessageGroup & {
+  logoUrl?: string;
+  countryCode?: string;
+  contactName?: string;
+};
+
 const CHANNEL_TABS: { key: HoldingChannel; label: string; icon: typeof Mail }[] = [
   { key: "email", label: "Email", icon: Mail },
   { key: "whatsapp", label: "WhatsApp", icon: Mail },
@@ -105,12 +117,12 @@ export function HoldingContactList({
           />
         ) : (
           <div className="p-2 space-y-2">
-            {displayGroups.map((group) => (
+            {displayGroups.map((group: DisplayGroup) => (
               <div key={group.partnerId} className="rounded-lg border border-border/30 overflow-hidden">
                 <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/20 border-b border-border/20">
                   <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary">
-                    {(group as unknown as Record<string, unknown>).logoUrl ? (
-                      <OptimizedImage src={String((group as unknown as Record<string, unknown>).logoUrl)} alt="" className="w-6 h-6 object-contain" />
+                    {group.logoUrl ? (
+                      <OptimizedImage src={group.logoUrl} alt="" className="w-6 h-6 object-contain" />
                     ) : (
                       group.companyName?.charAt(0)?.toUpperCase()
                     )}
@@ -118,16 +130,16 @@ export function HoldingContactList({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] font-bold text-foreground truncate uppercase">{group.companyName}</span>
-                      {"countryCode" in group && (group as unknown as Record<string, unknown>).countryCode ? (
-                        <span className="text-xs shrink-0">{getCountryFlag(String((group as unknown as Record<string, unknown>).countryCode))}</span>
+                      {group.countryCode ? (
+                        <span className="text-xs shrink-0">{getCountryFlag(group.countryCode)}</span>
                       ) : null}
-                      {"isImportedContact" in group && (group as unknown as Record<string, unknown>).isImportedContact ? (
+                      {group.isImportedContact ? (
                         <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">Imported</Badge>
                       ) : null}
                       {holdingSlaBadge(group.latestDate)}
                     </div>
-                    {"contactName" in group && (group as unknown as Record<string, unknown>).contactName ? (
-                      <p className="text-[10px] text-muted-foreground truncate">{String((group as unknown as Record<string, unknown>).contactName)}</p>
+                    {group.contactName ? (
+                      <p className="text-[10px] text-muted-foreground truncate">{group.contactName}</p>
                     ) : null}
                   </div>
                   {group.unreadCount > 0 && (

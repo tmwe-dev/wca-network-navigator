@@ -137,6 +137,53 @@ export interface HarmonizeRun {
   deleted_at: string | null;
 }
 
+type HarmonizeRunRow = Database["public"]["Tables"]["harmonize_runs"]["Row"];
+
+function asJsonObject<T extends object>(value: unknown): T | Record<string, never> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as unknown as T)
+    : {};
+}
+
+function asProposals(value: unknown): HarmonizeProposal[] {
+  return Array.isArray(value)
+    ? value.filter((p): p is HarmonizeProposal => p !== null && typeof p === "object" && !Array.isArray(p))
+    : [];
+}
+
+function asUploadedFiles(value: unknown): Array<{ name: string; size: number }> {
+  return Array.isArray(value)
+    ? value.filter((f): f is { name: string; size: number } =>
+        f !== null && typeof f === "object" && typeof (f as { name?: unknown }).name === "string")
+    : [];
+}
+
+function isHarmonizeStatus(value: unknown): value is HarmonizeStatus {
+  return typeof value === "string" &&
+    ["collecting", "analyzing", "review", "executing", "done", "cancelled", "failed"].includes(value);
+}
+
+function mapHarmonizeRun(row: HarmonizeRunRow): HarmonizeRun {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    goal: row.goal,
+    scope: row.scope,
+    status: isHarmonizeStatus(row.status) ? row.status : "collecting",
+    real_inventory_summary: asJsonObject<InventorySummary>(row.real_inventory_summary),
+    desired_inventory_summary: asJsonObject<InventorySummary>(row.desired_inventory_summary),
+    gap_classification: asJsonObject<GapClassification>(row.gap_classification),
+    proposals: asProposals(row.proposals),
+    uploaded_files: asUploadedFiles(row.uploaded_files),
+    executed_count: row.executed_count ?? 0,
+    failed_count: row.failed_count ?? 0,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    completed_at: row.completed_at,
+    deleted_at: row.deleted_at,
+  };
+}
+
 export async function createHarmonizeRun(userId: string, goal: string, scope = "all"): Promise<HarmonizeRun> {
   const { data, error } = await supabase
     .from("harmonize_runs")
@@ -144,7 +191,7 @@ export async function createHarmonizeRun(userId: string, goal: string, scope = "
     .select()
     .single();
   if (error) throw error;
-  return data as unknown as HarmonizeRun;
+  return mapHarmonizeRun(data);
 }
 
 export async function updateHarmonizeRun(runId: string, patch: Partial<HarmonizeRun>): Promise<void> {
@@ -171,7 +218,7 @@ export async function appendHarmonizeProposal(runId: string, proposal: Harmonize
     .eq("id", runId)
     .single();
   if (readErr) throw readErr;
-  const current = ((data as unknown as { proposals: HarmonizeProposal[] })?.proposals ?? []);
+  const current = asProposals(data?.proposals);
   const existingIndex = current.findIndex((p) => p.id === proposal.id);
   const next = existingIndex >= 0
     ? current.map((p, index) => (index === existingIndex ? proposal : p))
@@ -195,7 +242,7 @@ export async function updateHarmonizeProposal(
     .single();
   if (readErr) throw readErr;
 
-  const current = ((data as unknown as { proposals: HarmonizeProposal[] })?.proposals ?? []);
+  const current = asProposals(data?.proposals);
   let found = false;
   const next = current.map((proposal) => {
     if (proposal.id !== proposalId) return proposal;
@@ -225,8 +272,8 @@ export async function setProposalStatus(
     .eq("id", runId)
     .single();
   if (readErr) throw readErr;
-  const row = data as unknown as { proposals: HarmonizeProposal[]; executed_count: number; failed_count: number };
-  const proposals = (row.proposals ?? []).map((p) =>
+  const row = { proposals: asProposals(data?.proposals), executed_count: data?.executed_count ?? 0, failed_count: data?.failed_count ?? 0 };
+  const proposals = row.proposals.map((p) =>
     p.id === proposalId ? { ...p, status, ...(failureReason ? { failure_reason: failureReason } : {}) } : p,
   );
   const executedDelta = status === "executed" ? 1 : 0;
@@ -252,8 +299,8 @@ export async function findActiveHarmonizeRun(userId: string): Promise<HarmonizeR
     .order("updated_at", { ascending: false })
     .limit(1);
   if (error) throw error;
-  const rows = data as unknown as HarmonizeRun[] | null;
-  return rows && rows.length > 0 ? rows[0] : null;
+  const rows = (data ?? []).map(mapHarmonizeRun);
+  return rows.length > 0 ? rows[0] : null;
 }
 
 export async function cancelHarmonizeRun(runId: string): Promise<void> {
@@ -273,7 +320,7 @@ export async function findRecentHarmonizeRuns(userId: string, limit = 5): Promis
     .order("updated_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data as unknown as HarmonizeRun[]) ?? [];
+  return (data ?? []).map(mapHarmonizeRun);
 }
 
 /**
@@ -292,7 +339,7 @@ export async function appendProposalChat(
     .single();
   if (readErr) throw readErr;
 
-  const current = ((data as unknown as { proposals: HarmonizeProposal[] })?.proposals ?? []);
+  const current = asProposals(data?.proposals);
   const ts = new Date().toISOString();
   const stamped = messages.map((m) => ({ ...m, ts }));
   let found = false;

@@ -2,7 +2,7 @@
  * DAL — scrapePartner tool (partners + scrape_cache) della Command page.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { toJsonValue } from "@/lib/jsonGuards";
 import type { Database } from "@/integrations/supabase/types";
 
 type PartnerUpdate = Database["public"]["Tables"]["partners"]["Update"];
@@ -16,16 +16,19 @@ export interface ScrapePartnerRow {
 }
 
 export async function getCachedScrapePayload(url: string): Promise<{ payload: Record<string, unknown>; scraped_at: string } | null> {
-  const { data } = await untypedFrom("scrape_cache")
+  const { data } = await supabase
+    .from("scrape_cache")
     .select("payload, scraped_at")
     .eq("url", url)
     .maybeSingle();
-  return data as { payload: Record<string, unknown>; scraped_at: string } | null;
+  if (!data) return null;
+  return { payload: (data.payload ?? {}) as Record<string, unknown>, scraped_at: data.scraped_at };
 }
 
 export async function setCachedScrapePayload(url: string, payload: Record<string, unknown>): Promise<void> {
-  await untypedFrom("scrape_cache")
-    .upsert({ url, payload, scraped_at: new Date().toISOString() });
+  await supabase
+    .from("scrape_cache")
+    .upsert({ url, payload: toJsonValue(payload), scraped_at: new Date().toISOString() });
 }
 
 export async function updatePartnerFields(partnerId: string, updateData: PartnerUpdate): Promise<{ error: { message: string } | null }> {

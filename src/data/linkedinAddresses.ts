@@ -1,7 +1,7 @@
 /**
  * DAL — linkedin_addresses (Rubrica LinkedIn)
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface LinkedInAddressRow {
@@ -32,7 +32,8 @@ export async function listLinkedInAddresses(opts: {
   limit?: number;
 } = {}): Promise<LinkedInAddressRow[]> {
   const limit = opts.limit ?? 500;
-  let q = untypedFrom("linkedin_addresses")
+  let q = supabase
+    .from("linkedin_addresses")
     .select("*, linked_partner:partners(id,company_name)")
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(limit);
@@ -46,7 +47,7 @@ export async function listLinkedInAddresses(opts: {
 }
 
 export async function updateLinkedInAddressNotes(id: string, notes: string): Promise<void> {
-  const { error } = await untypedFrom("linkedin_addresses").update({ notes }).eq("id", id);
+  const { error } = await supabase.from("linkedin_addresses").update({ notes }).eq("id", id);
   if (error) throw error;
 }
 

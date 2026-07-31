@@ -3,6 +3,8 @@
  * SSOT per lo stato dei job bulk (registry + log eventi).
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 export type BulkJobStatus =
   | "pending"
@@ -42,21 +44,21 @@ export async function createBulkJob(input: {
       scope: input.scope,
       source_view: input.source_view ?? null,
       total: input.total,
-      payload: (input.payload ?? {}) as never,
+      payload: toJsonValue(input.payload ?? {}),
       created_by: input.created_by,
       status: "pending",
     })
     .select("*")
     .maybeSingle();
   if (error || !data) throw new Error(error?.message ?? "createBulkJob failed");
-  return data as unknown as BulkJobRow;
+  return data as unknown as BulkJobRow; // drift: payload is Json in DB vs Record<string, unknown> in domain type
 }
 
 export async function updateBulkJob(
   id: string,
   patch: Partial<Pick<BulkJobRow, "processed" | "success_count" | "error_count" | "status" | "error_message" | "completed_at">>,
 ): Promise<void> {
-  const { error } = await supabase.from("bulk_jobs").update(patch as never).eq("id", id);
+  const { error } = await supabase.from("bulk_jobs").update(patch as Database["public"]["Tables"]["bulk_jobs"]["Update"]).eq("id", id);
   if (error) throw new Error(error.message);
 }
 
@@ -67,12 +69,12 @@ export async function appendBulkJobEvent(
 ): Promise<void> {
   const { error } = await supabase
     .from("bulk_job_events")
-    .insert({ job_id: jobId, event_type: eventType, payload: payload as never });
+    .insert({ job_id: jobId, event_type: eventType, payload: toJsonValue(payload) });
   if (error) throw new Error(error.message);
 }
 
 export async function getBulkJob(id: string): Promise<BulkJobRow | null> {
   const { data, error } = await supabase.from("bulk_jobs").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as unknown as BulkJobRow) ?? null;
+  return (data as unknown as BulkJobRow) ?? null; // drift: payload is Json in DB vs Record<string, unknown> in domain type
 }

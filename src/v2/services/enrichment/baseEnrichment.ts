@@ -21,6 +21,7 @@
 import { updatePartner, getPartnerEnrichmentData } from "@/data/partners";
 import { updateContactEnrichment } from "@/data/contacts";
 import { updateBusinessCard, getBusinessCardRawData } from "@/data/businessCards";
+import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 
 
@@ -85,7 +86,7 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function checkCache(url: string): Promise<string | null> {
   try {
-    const { data } = await untypedFrom("scrape_cache")
+    const { data } = await supabase.from("scrape_cache")
       .select("payload, scraped_at")
       .eq("url", url)
       .maybeSingle();
@@ -102,6 +103,8 @@ async function checkCache(url: string): Promise<string | null> {
 
 async function persistScrape(url: string, markdown: string): Promise<void> {
   try {
+    // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
+    // `.upsert()` overload cannot be resolved even though all columns are real.
     await untypedFrom("scrape_cache").upsert({
       url,
       mode: "static",

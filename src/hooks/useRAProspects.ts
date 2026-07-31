@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// DRIFT: ra_* tables are not present in generated Supabase types — left untyped.
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { RAContact, RAInteraction } from "@/types/ra";
 import type { RAProspect, RAProspectFilters, RALeadStatus } from "@/types/ra";

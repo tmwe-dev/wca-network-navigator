@@ -26,6 +26,8 @@ export const launchMissionTool: Tool = {
       let missionId: string | null = null;
       let missionName: string | null = null;
       if (ref) {
+        // DRIFT: agent_missions has no `name` column in the generated schema (only `title`).
+        // Left on untypedFrom until this query is corrected to use the real column.
         if (/^[0-9a-f-]{36}$/i.test(ref)) {
           missionId = ref;
           const { data } = await untypedFrom("agent_missions").select("name").eq("id", ref).maybeSingle();

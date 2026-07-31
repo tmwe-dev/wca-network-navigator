@@ -8,7 +8,7 @@
  * La vista è derivata in lettura, quindi rimuovere la riga di coda
  * fa rientrare automaticamente il partner tra i "free".
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 
 export type BusyPartnerSource = "outreach" | "campaign" | "cockpit" | "draft";
 
@@ -21,14 +21,14 @@ export interface BusyPartnerRow {
 export async function findBusyPartnerIds(
   partnerIds?: string[]
 ): Promise<Set<string>> {
-  let q = untypedFrom("v_partner_busy").select("partner_id");
+  let q = supabase.from("v_partner_busy").select("partner_id");
   if (partnerIds && partnerIds.length > 0) {
     q = q.in("partner_id", partnerIds);
   }
   const { data, error } = await q;
   if (error) throw error;
   const out = new Set<string>();
-  for (const row of (data as Array<{ partner_id: string | null }> | null) ?? []) {
+  for (const row of data ?? []) {
     if (row.partner_id) out.add(row.partner_id);
   }
   return out;
@@ -37,11 +37,11 @@ export async function findBusyPartnerIds(
 export async function findBusyPartnerRows(
   partnerIds?: string[]
 ): Promise<BusyPartnerRow[]> {
-  let q = untypedFrom("v_partner_busy").select("partner_id, source, since");
+  let q = supabase.from("v_partner_busy").select("partner_id, source, since");
   if (partnerIds && partnerIds.length > 0) {
     q = q.in("partner_id", partnerIds);
   }
   const { data, error } = await q;
   if (error) throw error;
-  return ((data as BusyPartnerRow[] | null) ?? []).filter((r) => !!r.partner_id);
+  return ((data ?? []) as BusyPartnerRow[]).filter((r) => !!r.partner_id);
 }

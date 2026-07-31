@@ -11,6 +11,7 @@ import { isRecord } from "@/lib/jsonGuards";
 
 type PartnerRow = Database["public"]["Tables"]["partners"]["Row"];
 type PartnerInsert = Database["public"]["Tables"]["partners"]["Insert"];
+type PartnerType = Database["public"]["Enums"]["partner_type"];
 
 // ─── Types ──────────────────────────────────────────────
 export interface Partner {
@@ -108,7 +109,7 @@ interface SupabaseQueryResult<T> {
 }
 
 /** Fetch all rows by iterating with .range() in blocks of 1000 */
-async function fetchAllRows<T>(buildQuery: (from: number, to: number) => Promise<SupabaseQueryResult<T>>): Promise<T[]> {
+async function fetchAllRows<T>(buildQuery: (from: number, to: number) => PromiseLike<SupabaseQueryResult<T>>): Promise<T[]> {
   const all: T[] = [];
   let offset = 0;
   while (true) {
@@ -137,11 +138,11 @@ export async function findPartners(filters?: PartnerFilters): Promise<PartnerWit
     if (filters?.countries?.length) query = query.in("country_code", filters.countries);
     if (filters?.cities?.length) query = query.in("city", filters.cities);
     if (filters?.partnerTypes?.length) {
-      query = query.in("partner_type", filters.partnerTypes as never);
+      query = query.in("partner_type", filters.partnerTypes as PartnerType[]);
     }
     if (filters?.favorites) query = query.eq("is_favorite", true);
 
-    return query.order("company_name").range(from, to) as unknown as Promise<SupabaseQueryResult<PartnerWithRelations>>;
+    return query.order("company_name").range(from, to).returns<PartnerWithRelations[]>();
   });
 }
 
@@ -152,7 +153,8 @@ export async function findPartnersByCountry(countryCode: string): Promise<Partne
       .select(`*, partner_services (service_category), partner_certifications (certification)`)
       .eq("country_code", countryCode)
       .order("company_name")
-      .range(from, to) as unknown as Promise<SupabaseQueryResult<PartnerWithRelations>>
+      .range(from, to)
+      .returns<PartnerWithRelations[]>()
   );
 }
 
@@ -167,7 +169,7 @@ export async function findPartnersPreview(limit = 50): Promise<PartnerWithRelati
     .order("company_name", { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PartnerWithRelations[];
+  return (data ?? []) as PartnerWithRelations[];
 }
 
 export async function getPartner(id: string) {
@@ -303,7 +305,7 @@ export async function persistSherlockFindings(
 
   const { error } = await supabase
     .from("partners")
-    .update(updates as never)
+    .update(updates as Database["public"]["Tables"]["partners"]["Update"])
     .eq("id", partnerId);
   if (error) return { updatedFields: 0, touchedKeys: [] };
 
@@ -316,7 +318,8 @@ export async function getPartnerStats() {
       supabase
         .from("partners")
         .select("id, country_code, country_name, partner_type, member_since")
-        .range(from, to) as unknown as Promise<SupabaseQueryResult<{ id: string; country_code: string; country_name: string; partner_type: string | null; member_since: string | null }>>
+        .range(from, to)
+        .returns<{ id: string; country_code: string; country_name: string; partner_type: string | null; member_since: string | null }[]>()
   );
 
   const totalPartners = partners.length;
@@ -653,7 +656,7 @@ export async function findPartnerByEmail(email: string) {
 export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
   let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
   if (filters.country) q = q.eq("country_code", filters.country);
-  if (filters.type) q = q.eq("partner_type", filters.type as never);
+  if (filters.type) q = q.eq("partner_type", filters.type as PartnerType);
   if (filters.onlyNotEnriched) q = q.is("enriched_at", null);
   const { data, error } = await q.limit(limit);
   if (error) throw error;
@@ -739,7 +742,7 @@ async function __persistLinkedInProfileForCompany(
           linkedin_lookup_at: new Date().toISOString(),
           linkedin_resolved_method: method,
         },
-      } as never)
+      })
       .eq("id", row.id);
     return !error;
   } catch {
@@ -833,7 +836,7 @@ export async function loadAllPartnersForEnrichment(): Promise<EnrichmentPartnerR
       .range(from, to)
       .limit(batchSize);
     if (error) throw error;
-    if (data && data.length) all.push(...(data as unknown as EnrichmentPartnerRow[]));
+    if (data && data.length) all.push(...(data as EnrichmentPartnerRow[]));
     if (!data || data.length < batchSize) break;
     page++;
   }
@@ -864,7 +867,7 @@ export async function fetchAllPartnersForGlobe(): Promise<GlobePartnerRow[]> {
       .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
-    all = all.concat(data as unknown as GlobePartnerRow[]);
+    all = all.concat(data as GlobePartnerRow[]);
     if (data.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
@@ -886,7 +889,7 @@ export async function fetchPartnersByCountryForGlobe(countryCode: string): Promi
       .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
-    all = all.concat(data as unknown as GlobePartnerRow[]);
+    all = all.concat(data as GlobePartnerRow[]);
     if (data.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
@@ -944,7 +947,7 @@ export interface CsvPartnerInsertRow {
 export async function insertPartnersBatch(rows: CsvPartnerInsertRow[]) {
   const { data, error } = await supabase
     .from("partners")
-    .insert(rows as unknown as PartnerInsert[])
+    .insert(rows.map((r) => ({ ...r, partner_type: r.partner_type as PartnerType })))
     .select();
   if (error) throw error;
   return data ?? [];

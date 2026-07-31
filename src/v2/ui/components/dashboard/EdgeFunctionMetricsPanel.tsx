@@ -24,6 +24,9 @@ interface EdgeMetricRow {
 
 async function fetchEdgeFunctionMetrics(): Promise<EdgeMetricRow[]> {
   // Aggregate from edge_function_logs (last 24h)
+  // DRIFT: this query selects `status` and `latency_ms`, but the generated schema for
+  // edge_function_logs only has `status_code`/`success` and `duration_ms`. Left on
+  // untypedFrom until the query is corrected to use the real column names.
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await untypedFrom("edge_function_logs")
     .select("function_name, status, latency_ms")

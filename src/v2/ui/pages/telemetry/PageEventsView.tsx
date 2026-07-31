@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import type { PageEventRow } from "./types";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
@@ -9,7 +9,7 @@ export function PageEventsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.telemetry.pageEvents(sinceIso),
     queryFn: async () => {
-      const { data, error } = await untypedFrom("page_events")
+      const { data, error } = await supabase.from("page_events")
         .select("*")
         .gte("created_at", sinceIso)
         .order("created_at", { ascending: false })

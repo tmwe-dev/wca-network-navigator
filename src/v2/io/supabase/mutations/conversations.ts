@@ -4,6 +4,7 @@
 import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown } from "../../../core/domain/errors";
 import type { Conversation, ConversationMessage } from "../queries/conversations";
+import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export async function createConversation(
@@ -11,7 +12,7 @@ export async function createConversation(
   title?: string,
 ): Promise<Result<Conversation>> {
   try {
-    const { data, error } = await untypedFrom("command_conversations")
+    const { data, error } = await supabase.from("command_conversations")
       .insert({ user_id: userId, title: title ?? null })
       .select()
       .single();
@@ -32,6 +33,9 @@ export async function appendMessage(
   },
 ): Promise<Result<ConversationMessage>> {
   try {
+    // DRIFT: TS overload resolution fails to match the generated Insert type for
+    // command_messages even though all fields (conversation_id, role, content, tool_id,
+    // tool_result) are real columns. Left on untypedFrom pending investigation.
     const { data, error } = await untypedFrom("command_messages")
       .insert({
         conversation_id: conversationId,
@@ -45,7 +49,7 @@ export async function appendMessage(
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
 
     // Bump last_message_at
-    await untypedFrom("command_conversations")
+    await supabase.from("command_conversations")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", conversationId);
 
@@ -60,7 +64,7 @@ export async function updateConversationTitle(
   title: string,
 ): Promise<Result<void>> {
   try {
-    const { error } = await untypedFrom("command_conversations")
+    const { error } = await supabase.from("command_conversations")
       .update({ title })
       .eq("id", id);
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
@@ -72,7 +76,7 @@ export async function updateConversationTitle(
 
 export async function archiveConversation(id: string): Promise<Result<void>> {
   try {
-    const { error } = await untypedFrom("command_conversations")
+    const { error } = await supabase.from("command_conversations")
       .update({ archived: true })
       .eq("id", id);
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));

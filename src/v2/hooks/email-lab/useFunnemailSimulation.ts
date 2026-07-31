@@ -7,7 +7,7 @@
  */
 import * as React from "react";
 import { invokeAi } from "@/lib/ai/invokeAi";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface SimulationInput {
   from: string;
@@ -68,12 +68,24 @@ export function useFunnemailSimulation(): UseFunnemailSimulationState {
   }, []);
 
   const fetchSteps = React.useCallback(async (tid: string) => {
-    const { data } = await untypedFrom("pipeline_traces")
+    const { data } = await supabase.from("pipeline_traces")
       .select("*")
       .eq("trace_id", tid)
       .order("step_order", { ascending: true });
     if (mountedRef.current && Array.isArray(data)) {
-      setSteps(data as unknown as PipelineStep[]);
+      setSteps(data.map((row) => ({
+        id: row.id,
+        step_name: row.step_name,
+        step_order: row.step_order,
+        status: row.status,
+        error_message: row.error_message,
+        input_summary: row.input_summary,
+        output_summary: row.output_summary,
+        ai_model: row.ai_model,
+        ai_scope: row.ai_scope,
+        duration_ms: row.duration_ms,
+        created_at: row.created_at,
+      })));
     }
   }, []);
 

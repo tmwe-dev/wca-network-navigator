@@ -502,6 +502,8 @@ export async function listFunnemailGroupedInbox(
       MAX_MESSAGES,
     ),
     listFunnemailFolders(),
+    // DRIFT documentato (vedi header): suggested_action nel Row generato è
+    // `string` (non la union applicativa) — restano su untypedFrom.
     fetchAllPages<FunnemailDecisionRow>(
       (from, to) => untypedFrom("funnemail_decisions")
         .select("id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at")
@@ -509,6 +511,8 @@ export async function listFunnemailGroupedInbox(
         .range(from, to),
       MAX_MESSAGES,
     ),
+    // DRIFT documentato (vedi header): funnemail_policy nel Row generato è
+    // `Json` generico (non la shape applicativa {auto_mark_read?}) — resta untyped.
     fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)

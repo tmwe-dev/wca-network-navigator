@@ -2,6 +2,8 @@
  * DAL for outreach_timing_templates
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 export interface TimingStep {
   step: number;
@@ -31,12 +33,12 @@ export interface TimingTemplate {
 
 export async function fetchTimingTemplates(): Promise<TimingTemplate[]> {
   const { data, error } = await supabase
-    .from("outreach_timing_templates" as never)
+    .from("outreach_timing_templates")
     .select("*")
     .order("is_system", { ascending: false })
     .order("template_name");
   if (error) throw error;
-  return (data ?? []) as unknown as TimingTemplate[];
+  return (data ?? []) as unknown as TimingTemplate[]; // drift: sequence is Json in DB vs TimingStep[] in domain type
 }
 
 export async function createTimingTemplate(
@@ -45,13 +47,19 @@ export async function createTimingTemplate(
   const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) throw new Error("Not authenticated");
 
+  const insertRow: Database["public"]["Tables"]["outreach_timing_templates"]["Insert"] = {
+    ...tpl,
+    sequence: toJsonValue(tpl.sequence),
+    user_id: user.id,
+    is_system: false,
+  };
   const { data, error } = await supabase
-    .from("outreach_timing_templates" as never)
-    .insert({ ...tpl, user_id: user.id, is_system: false } as never)
+    .from("outreach_timing_templates")
+    .insert(insertRow)
     .select()
     .single();
   if (error) throw error;
-  return data as unknown as TimingTemplate;
+  return data as unknown as TimingTemplate; // drift: sequence is Json in DB vs TimingStep[] in domain type
 }
 
 export async function duplicateTimingTemplate(id: string): Promise<TimingTemplate> {
@@ -76,7 +84,7 @@ export async function duplicateTimingTemplate(id: string): Promise<TimingTemplat
 
 export async function deleteTimingTemplate(id: string) {
   const { error } = await supabase
-    .from("outreach_timing_templates" as never)
+    .from("outreach_timing_templates")
     .delete()
     .eq("id", id);
   if (error) throw error;

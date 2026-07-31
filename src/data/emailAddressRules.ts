@@ -3,20 +3,20 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 type RuleUpdate = Database["public"]["Tables"]["email_address_rules"]["Update"];
 type RuleInsert = Database["public"]["Tables"]["email_address_rules"]["Insert"];
 type Json = Database["public"]["Tables"]["email_address_rules"]["Row"]["auto_action_params"];
 
 /**
- * Serializzazione reale (non un cast): il round-trip JSON produce un valore
- * che è per costruzione un `Json` valido. `JSON.parse` restituisce `any`,
- * quindi l'assegnazione è tipizzata senza `as`.
+ * Conversione runtime-safe verso `Json`: delega a `toJsonValue`, che ricostruisce
+ * ricorsivamente il valore ispezionando ogni nodo (nessun `JSON.parse` → `any`,
+ * nessun cast). Il tipo di ritorno è preciso.
  */
 function serializeJson(value: unknown): Json {
   if (value === null || value === undefined) return null;
-  const json: Json = JSON.parse(JSON.stringify(value));
-  return json;
+  return toJsonValue(value);
 }
 
 /** Converte un patch di dominio nel tipo Update generato, campo per campo. */

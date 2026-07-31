@@ -1,7 +1,7 @@
 /**
  * DAL — Funnemail Brain view (Sprint 5)
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface FunnemailBrainRow {
   message_id: string;
@@ -26,10 +26,37 @@ export interface FunnemailBrainRow {
 }
 
 export async function listFunnemailBrain(limit = 100): Promise<FunnemailBrainRow[]> {
-  const { data, error } = await untypedFrom("funnemail_brain_v")
+  const { data, error } = await supabase.from("funnemail_brain_v")
     .select("*")
     .order("received_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as FunnemailBrainRow[];
+  // La view espone tutte le colonne come nullable: scartiamo le righe senza
+  // chiavi obbligatorie e normalizziamo i contatori, senza asserzioni di tipo.
+  const out: FunnemailBrainRow[] = [];
+  for (const row of data ?? []) {
+    if (row.message_id == null || row.received_at == null) continue;
+    out.push({
+      message_id: row.message_id,
+      user_id: row.user_id,
+      channel: row.channel,
+      from_address: row.from_address,
+      subject: row.subject,
+      received_at: row.received_at,
+      job_stage: row.job_stage,
+      job_attempts: row.job_attempts,
+      job_last_error: row.job_last_error,
+      job_completed_at: row.job_completed_at,
+      decision_action: row.decision_action,
+      decision_confidence: row.decision_confidence,
+      decision_reasoning: row.decision_reasoning,
+      decision_at: row.decision_at,
+      funnemail_status: row.funnemail_status,
+      funnemail_sub_status: row.funnemail_sub_status,
+      actions_count: row.actions_count ?? 0,
+      actions_ok_count: row.actions_ok_count ?? 0,
+      last_action_at: row.last_action_at,
+    });
+  }
+  return out;
 }

@@ -8,7 +8,7 @@ import { useMissionActions, type MissionPlan } from "@/hooks/useMissionActions";
 import { createLogger } from "@/lib/log";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { insertOutreachMission } from "@/data/outreachMissions";
-import type { Json } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { findActivePartnersCountryEmailStats, findActivePartnerIdsByCountries } from "@/data/partners";
 
@@ -218,12 +218,12 @@ export function useMissionBuilder() {
       const totalContacts = pendingPlan.totalContacts;
       const title = missionTitle || `Missione ${new Date().toLocaleDateString("it-IT")}`;
       const mission = await insertOutreachMission({
-        user_id: session.user.id, title, status: "active", target_filters: (stepData.targets || {}) as unknown as Json, channel: stepData.channel || "email",
-        total_contacts: totalContacts, agent_assignments: (stepData.agents || []) as unknown as Json, schedule_config: ({ type: stepData.schedule, date: stepData.scheduleDate }) as unknown as Json,
-        idempotency_key: pendingPlan.idempotencyKey, plan_json: (pendingPlan as unknown) as Json, danger_level: pendingPlan.dangerLevel, plan_status: "approved",
-        metadata: ({ deepSearch: stepData.deepSearch || {}, communication: stepData.communication || {}, attachments: stepData.attachments || {}, toneConfig: stepData.toneConfig || {} }) as unknown as Json,
+        user_id: session.user.id, title, status: "active", target_filters: toJsonValue(stepData.targets || {}), channel: stepData.channel || "email",
+        total_contacts: totalContacts, agent_assignments: toJsonValue(stepData.agents || []), schedule_config: toJsonValue({ type: stepData.schedule, date: stepData.scheduleDate }),
+        idempotency_key: pendingPlan.idempotencyKey, plan_json: toJsonValue(pendingPlan), danger_level: pendingPlan.dangerLevel, plan_status: "approved",
+        metadata: toJsonValue({ deepSearch: stepData.deepSearch || {}, communication: stepData.communication || {}, attachments: stepData.attachments || {}, toneConfig: stepData.toneConfig || {} }),
       });
-      const missionId = (mission as unknown as Record<string, unknown>).id as string;
+      const missionId = mission.id;
       setCurrentMissionId(missionId);
       await createActions.mutateAsync({ missionId, plan: pendingPlan });
       await approveAll.mutateAsync(missionId);

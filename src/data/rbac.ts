@@ -88,15 +88,50 @@ export interface UserWithRoles {
   roles: Role[];
 }
 
-// Internal helpers — narrow row shapes used by the relational lookups
-interface RolePermissionRow {
-  permissions?: Permission | null;
+// ─── Adattatori di drift schema (minimi, validati a runtime) ───────────
+// Usati SOLO per le query su colonne assenti nei tipi generati
+// (`user_roles.role_id`, `user_roles.assigned_by`, `team_members.team_id`).
+// Nessun cast: ogni riga viene ispezionata campo per campo.
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
 }
-interface UserRoleJoinRow {
-  roles?: Role | null;
+
+function toRows(data: unknown): Record<string, unknown>[] {
+  return Array.isArray(data) ? data.filter(isRecord) : [];
 }
-interface UserRoleIdRow {
-  role_id: string;
+
+/** Ricostruisce un `Role` da una riga sconosciuta; null se non conforme. */
+function parseRole(value: unknown): Role | null {
+  if (!isRecord(value)) return null;
+  const { id, name } = value;
+  if (typeof id !== "string" || typeof name !== "string") return null;
+  return {
+    id,
+    name,
+    description: typeof value.description === "string" ? value.description : null,
+    is_system: value.is_system === true,
+    module: typeof value.module === "string" ? value.module : null,
+    created_at: typeof value.created_at === "string" ? value.created_at : undefined,
+  };
+}
+
+/** Ricostruisce un `TeamMember` da una riga sconosciuta; null se non conforme. */
+function parseTeamMember(value: unknown): TeamMember | null {
+  if (!isRecord(value)) return null;
+  const userId = value.user_id;
+  if (typeof userId !== "string") return null;
+  return {
+    id: typeof value.id === "string" ? value.id : undefined,
+    team_id: typeof value.team_id === "string" ? value.team_id : undefined,
+    user_id: userId,
+    role: typeof value.role === "string" ? value.role : null,
+    joined_at: typeof value.joined_at === "string" ? value.joined_at : undefined,
+    created_at: typeof value.created_at === "string" ? value.created_at : undefined,
+    name: typeof value.name === "string" ? value.name : undefined,
+    email: typeof value.email === "string" ? value.email : null,
+    is_active: typeof value.is_active === "boolean" ? value.is_active : undefined,
+  };
 }
 
 // ─── Roles ──────────────────────────────────────────────
@@ -230,9 +265,12 @@ export async function fetchRolePermissions(roleId: string): Promise<Permission[]
     .eq("role_id", roleId);
   if (error) throw error;
 
-  return ((data ?? []) as RolePermissionRow[])
-    .map((rp) => rp.permissions ?? null)
-    .filter((p): p is Permission => p != null);
+  // Inferenza relazionale dai tipi generati: `permissions` è già tipizzato
+  // come `PermissionRow | null`, quindi nessuna asserzione è necessaria.
+  return (data ?? [])
+    .map((rp) => rp.permissions)
+    .filter((p): p is PermissionRow => p != null)
+    .map(mapPermission);
 }
 
 /**
@@ -271,8 +309,8 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
     .eq("user_id", targetUserId);
   if (error) throw error;
 
-  return ((data ?? []) as UserRoleJoinRow[])
-    .map((ur) => ur.roles ?? null)
+  return toRows(data)
+    .map((row) => parseRole(row.roles))
     .filter((r): r is Role => r != null);
 }
 
@@ -327,7 +365,9 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   // Granular RBAC may not be configured (column role_id missing): treat as no extra perms.
   if (roleError) return false;
 
-  const roleIds = ((userRoles ?? []) as UserRoleIdRow[]).map((ur) => ur.role_id);
+  const roleIds = toRows(userRoles)
+    .map((row) => row.role_id)
+    .filter((id): id is string => typeof id === "string");
   if (!roleIds.length) return false;
 
   // Fetch permission ID
@@ -403,7 +443,9 @@ export async function fetchTeamMembers(teamId: string): Promise<TeamMember[]> {
     .eq("team_id", teamId)
     .order("joined_at", { ascending: false });
   if (error) throw error;
-  return data || [];
+  return toRows(data)
+    .map(parseTeamMember)
+    .filter((m): m is TeamMember => m != null);
 }
 
 /**

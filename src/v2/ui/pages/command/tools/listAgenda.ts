@@ -1,7 +1,7 @@
 /**
  * Tool: list-agenda — Read-only daily agenda: open activities ordered by due date.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult } from "./types";
 
 interface ActivityRow {
@@ -21,7 +21,7 @@ export const listAgendaTool: Tool = {
     /\b(agenda|cosa\s+devo\s+fare|cosa\s+ho\s+da\s+fare|attivit[àa]\s+(di\s+)?oggi|scadenz|to-?do|task\s+(di\s+)?oggi|impegni)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const { data, error, count } = await untypedFrom("activities")
+    const { data, error, count } = await supabase.from("activities")
       .select("id,title,description,due_date,status,priority", { count: "exact" })
       .is("deleted_at", null)
       .neq("status", "completed")

@@ -14,7 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/providers/AuthProvider";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -68,11 +68,17 @@ export function FunnemailBulkBar({
     enabled: !!user?.id,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<SenderGroupRow[]> => {
-      const { data } = await untypedFrom("email_sender_groups")
+      const { data } = await supabase.from("email_sender_groups")
         .select("nome_gruppo, colore, icon")
         .eq("user_id", user!.id)
         .order("sort_order", { ascending: true });
-      return (data ?? []) as SenderGroupRow[];
+      // Mapping esplicito: la view espone colore/icon nullable, il tipo di dominio no.
+      const out: SenderGroupRow[] = [];
+      for (const g of data ?? []) {
+        if (typeof g.nome_gruppo !== "string") continue;
+        out.push({ nome_gruppo: g.nome_gruppo, colore: g.colore, icon: g.icon });
+      }
+      return out;
     },
   });
 
