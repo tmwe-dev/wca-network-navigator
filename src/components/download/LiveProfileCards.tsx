@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findLiveProfilePartners } from "@/data/downloadViews";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";

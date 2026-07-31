@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgendaPartnersByCountry } from "@/data/downloadViews";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
