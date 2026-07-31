@@ -46,3 +46,23 @@ export async function findRecentWorkPlansOverview(limit = 20) {
   if (error) throw error;
   return data ?? [];
 }
+
+export interface StaffWorkPlanJobRow {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  current_step: number;
+  steps: Record<string, unknown>;
+}
+
+/** Ultimi job ai_work_plans per la vista Staff Direzionale V2. */
+export async function findRecentWorkPlanJobs(limit = 20): Promise<StaffWorkPlanJobRow[]> {
+  const { data, error } = await supabase
+    .from("ai_work_plans")
+    .select("id, title, status, created_at, current_step, steps")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as unknown as StaffWorkPlanJobRow[];
+}
