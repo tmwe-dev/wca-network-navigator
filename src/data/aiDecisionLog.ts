@@ -26,7 +26,7 @@ export async function findDecisionLogsByEmail(emailAddress: string, limit = 10):
 }
 
 export interface DecisionKpiRow {
-  was_auto_executed: boolean;
+  was_auto_executed: boolean | null;
   user_review: string | null;
 }
 
@@ -42,7 +42,7 @@ export async function findDecisionLogKpiRows(sinceIso: string): Promise<Decision
 
 export interface DecisionTypeRow {
   decision_type: string;
-  was_auto_executed: boolean;
+  was_auto_executed: boolean | null;
   user_review: string | null;
 }
 
@@ -100,7 +100,7 @@ export interface RecentFeedbackRow {
   user_review: string | null;
   user_correction: string | null;
   email_address: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 
 /** Ultimi feedback registrati (user_review non nullo). */
