@@ -197,3 +197,25 @@ export async function findAgentWorkHoursSettings(): Promise<Array<{ key: string;
     .in("key", ["agent_work_start_hour", "agent_work_end_hour"]);
   return data ?? [];
 }
+
+/** Legge il valore raw della configurazione "Migliora tutto" schedulata (single, no filtro user). */
+export async function getScheduledImproveConfigValue(): Promise<{ value: string | null; error: unknown }> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "prompt_lab_scheduled_improve")
+    .single();
+  return { value: data?.value ?? null, error };
+}
+
+/** Upsert della configurazione "Migliora tutto" schedulata (senza onConflict esplicito). */
+export async function saveScheduledImproveConfig(userId: string, value: string): Promise<void> {
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({
+      key: "prompt_lab_scheduled_improve",
+      value,
+      user_id: userId,
+    });
+  if (error) throw error;
+}

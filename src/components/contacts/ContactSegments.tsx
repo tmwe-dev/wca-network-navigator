@@ -4,6 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findContactsForSegments, findConversationContextsForUser } from "@/data/contacts";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -56,18 +57,10 @@ export function ContactSegments({ activeSegment, onSegmentChange }: ContactSegme
       if (!userId) return {};
 
       // Fetch contacts with key fields
-      const { data: contacts } = await supabase
-        .from("imported_contacts")
-        .select("id, email, interaction_count, last_interaction_at")
-        .eq("user_id", userId)
-        .limit(1000);
+      const contacts = await findContactsForSegments(userId, 1000);
 
       // Fetch conversation context for sentiment/response data
-      const { data: contexts } = await supabase
-        .from("contact_conversation_context")
-        .select("email_address, dominant_sentiment, response_rate, last_interaction_at")
-        .eq("user_id", userId)
-        .limit(1000);
+      const contexts = await findConversationContextsForUser(userId, 1000);
 
       const contextMap = new Map<string, Record<string, unknown>>();
       for (const ctx of (contexts || [])) {

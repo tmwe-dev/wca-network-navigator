@@ -645,3 +645,115 @@ export async function findSenderEmailsPage(
   if (error) throw error;
   return (data as SenderEmailRow[]) || [];
 }
+
+const MESSAGE_LIST_SELECT_COLS = [
+  "id",
+  "user_id",
+  "channel",
+  "direction",
+  "source_type",
+  "source_id",
+  "partner_id",
+  "mailbox_id",
+  "from_address",
+  "to_address",
+  "cc_addresses",
+  "bcc_addresses",
+  "subject",
+  "body_text",
+  "raw_payload",
+  "message_id_external",
+  "in_reply_to",
+  "read_at",
+  "created_at",
+  "email_date",
+  "raw_storage_path",
+  "raw_sha256",
+  "raw_size_bytes",
+  "imap_uid",
+  "uidvalidity",
+  "imap_flags",
+  "internal_date",
+  "parse_status",
+  "parse_warnings",
+  "thread_id",
+  "references_header",
+].join(", ");
+
+export type MailboxQueryFilter =
+  | { kind: "personal" }
+  | { kind: "shared"; id: string }
+  | null
+  | undefined;
+
+/** Pagina di channel_messages per la Inbox (filtri canale/operatore/mailbox/full-text). */
+export async function findChannelMessagesPage(opts: {
+  channel?: string;
+  searchQuery?: string;
+  page: number;
+  pageSize: number;
+  operatorUserId?: string;
+  mailboxFilter?: MailboxQueryFilter;
+}): Promise<unknown[]> {
+  const { channel, searchQuery, page, pageSize, operatorUserId, mailboxFilter } = opts;
+  let q = supabase
+    .from("channel_messages")
+    .select(MESSAGE_LIST_SELECT_COLS)
+    .order("email_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+  if (channel && channel !== "all") {
+    q = q.eq("channel", channel);
+  }
+  if (operatorUserId) {
+    q = q.eq("user_id", operatorUserId);
+  }
+  if (mailboxFilter?.kind === "personal") {
+    q = q.is("mailbox_id", null);
+  } else if (mailboxFilter?.kind === "shared") {
+    q = q.eq("mailbox_id", mailboxFilter.id);
+  }
+  if (searchQuery && searchQuery.trim()) {
+    const terms = searchQuery.trim().split(/\s+/).map((t) => `${t}:*`).join(" & ");
+    q = q.textSearch("search_vector", terms);
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+export interface DownloadedEmailFeedRow {
+  id: string;
+  subject: string | null;
+  from_address: string | null;
+  email_date: string | null;
+  created_at: string;
+}
+
+/** Ultime email scaricate (feed live, es. header/notifiche). */
+export async function findDownloadedEmailsFeedRows(limit: number): Promise<DownloadedEmailFeedRow[]> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("id, subject, from_address, email_date, created_at")
+    .eq("channel", "email")
+    .order("email_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as DownloadedEmailFeedRow[];
+}
+
+/** Conteggio totale email, filtrabile per mailbox (personal/shared). */
+export async function countEmailMessagesByMailbox(mailboxFilter?: MailboxQueryFilter): Promise<number> {
+  let q = supabase
+    .from("channel_messages")
+    .select("id", { count: "planned", head: true })
+    .eq("channel", "email");
+  if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
+  else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
+  const { count, error } = await q;
+  if (error) throw error;
+  return count ?? 0;
+}

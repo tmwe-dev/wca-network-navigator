@@ -5,6 +5,7 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { countTableRows, countViewRows, rpcCall } from "@/data/rpc";
+import { listStorageBucketRoot } from "@/data/systemDiagnostics";
 import { countPartnersWithoutCountry, countActivePartners } from "@/data/partners";
 import { getProfileSummary } from "@/data/profiles";
 import { getUserCredits, countCreditTransactions } from "@/data/credits";
@@ -92,8 +93,7 @@ async function runStorageTests(upsert: Upsert, abortRef: React.RefObject<boolean
     upsert({ id, name: bucket, category: "Storage Buckets", status: "running" });
     try {
       const ms = await timedRun(async () => {
-        const { error } = await supabase.storage.from(bucket).list("", { limit: 1 });
-        if (error) throw error;
+        await listStorageBucketRoot(bucket, 1);
       });
       upsert({ id, name: bucket, category: "Storage Buckets", status: "pass", message: "Accessibile", durationMs: ms });
     } catch (e: unknown) {

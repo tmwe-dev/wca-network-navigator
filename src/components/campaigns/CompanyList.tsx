@@ -6,7 +6,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Building2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { findBusinessCardsByPartnerIds } from "@/data/businessCards";
 import { usePartnerContacts } from "@/hooks/usePartnerContacts";
 import { CompanyListHeader } from "./CompanyListHeader";
 import { CompanyListRow } from "./CompanyListRow";
@@ -47,10 +47,7 @@ function useBcaDetails(partnerIds: string[]) {
     queryKey: queryKeys.businessCards.details(partnerIds.sort().join(",")),
     queryFn: async () => {
       if (!partnerIds.length) return {};
-      const { data } = await supabase
-        .from("business_cards")
-        .select("matched_partner_id, contact_name, event_name, met_at")
-        .in("matched_partner_id", partnerIds);
+      const data = await findBusinessCardsByPartnerIds(partnerIds);
       const map: Record<string, { contact_name: string | null; event_name: string | null; met_at: string | null }> = {};
       (data ?? []).forEach((bc) => {
         if (bc.matched_partner_id && !map[bc.matched_partner_id]) {

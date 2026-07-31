@@ -1,7 +1,7 @@
 import { useAssignmentMap, useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgentBasicById } from "@/data/agents";
 import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Bot, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -49,12 +49,7 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
     queryKey: queryKeys.agents.forRecord(assignment?.agent_id),
     queryFn: async () => {
       if (!assignment?.agent_id) return null;
-      const { data } = await supabase
-        .from("agents")
-        .select("id, name, avatar_emoji, role")
-        .eq("id", assignment.agent_id)
-        .single();
-      return data;
+      return findAgentBasicById(assignment.agent_id);
     },
     enabled: !!assignment?.agent_id,
   });

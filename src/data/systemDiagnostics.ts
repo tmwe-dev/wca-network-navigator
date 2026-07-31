@@ -76,3 +76,9 @@ export async function purgeInboundActivities(onlyOrphans: boolean): Promise<{ de
   if (error) throw error;
   return { deleted: num(asRecord(data).deleted) };
 }
+
+/** Verifica accessibilità di uno storage bucket (diagnostics). Errori propagati. */
+export async function listStorageBucketRoot(bucket: string, limit = 1): Promise<void> {
+  const { error } = await supabase.storage.from(bucket).list("", { limit });
+  if (error) throw error;
+}

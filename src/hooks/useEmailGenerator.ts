@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { updateActivityEmailDraft } from "@/data/activities";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { isApiError } from "@/lib/api/apiError";
 import { toast } from "@/hooks/use-toast";
@@ -80,15 +80,12 @@ export function useEmailGenerator() {
       setEmail(result);
 
       // Save to activity so it appears in Sorting
-      const { error: updateError } = await supabase
-        .from("activities")
-        .update({
-          email_subject: result.subject,
-          email_body: result.body,
-          scheduled_at: new Date().toISOString(),
-          status: "pending",
-        })
-        .eq("id", params.activity_id);
+      const { error: updateError } = await updateActivityEmailDraft(params.activity_id, {
+        email_subject: result.subject,
+        email_body: result.body,
+        scheduled_at: new Date().toISOString(),
+        status: "pending",
+      });
 
       if (updateError) {
         log.error("save email to activity failed", { message: updateError instanceof Error ? updateError.message : String(updateError) });

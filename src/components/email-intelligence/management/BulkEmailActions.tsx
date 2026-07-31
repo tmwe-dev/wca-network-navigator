@@ -4,16 +4,18 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { untypedFrom } from '@/lib/supabaseUntyped';
 import { toast } from 'sonner';
 import { Trash2, Archive, Check } from 'lucide-react';
+import {
+  countChannelMessagesFromSender,
+  fetchChannelMessageIdsFromSender,
+  softDeleteChannelMessageById,
+  archiveChannelMessageById,
+  markChannelMessageIsReadFlag,
+} from '@/data/channelMessages';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("BulkEmailActions");
-
-// Bypass tipi via untypedFrom centralizzato (DEBT-EMAIL-INTEL-COLUMNS):
-// le colonne `from`/`is_read` non sono nei tipi generati. Refactor coordinato pendente.
-const supabase = { from: untypedFrom };
 
 interface BulkEmailActionsProps {
   senderEmail: string;
@@ -34,14 +36,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
   useEffect(() => {
     const fetchTotalEmails = async () => {
       try {
-        const { count, error } = await supabase
-          .from('channel_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('channel', 'email')
-          .eq('from', senderEmail)
-          .is('deleted_at', null);
-
-        if (error) throw error;
+        const count = await countChannelMessagesFromSender(senderEmail);
         setTotalEmails(count || 0);
       } catch (err) {
         log.error('Error fetching email count:', { error: err });
@@ -93,16 +88,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
 
     try {
       // Fetch all email IDs for this sender
-      const { data: emails, error: fetchError } = await supabase
-        .from('channel_messages')
-        .select('id')
-        .eq('channel', 'email')
-        .eq('from', senderEmail)
-        .is('deleted_at', null);
-
-      if (fetchError) throw fetchError;
-
-      const emailIds = (emails || []).map((e: { id: string }) => e.id);
+      const emailIds = await fetchChannelMessageIdsFromSender(senderEmail);
       const total = emailIds.length;
 
       if (total === 0) {
@@ -119,25 +105,13 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
         try {
           if (action === 'delete') {
             // Soft delete
-            const { error } = await supabase
-              .from('channel_messages')
-              .update({ deleted_at: new Date().toISOString() })
-              .eq('id', emailId);
-            if (error) throw error;
+            await softDeleteChannelMessageById(emailId);
           } else if (action === 'archive') {
             // Set folder to ARCHIVE
-            const { error } = await supabase
-              .from('channel_messages')
-              .update({ folder: 'ARCHIVE' })
-              .eq('id', emailId);
-            if (error) throw error;
+            await archiveChannelMessageById(emailId);
           } else if (action === 'mark-read') {
             // Mark as read
-            const { error } = await supabase
-              .from('channel_messages')
-              .update({ is_read: true })
-              .eq('id', emailId);
-            if (error) throw error;
+            await markChannelMessageIsReadFlag(emailId);
           }
         } catch (err) {
           log.error(`Error processing email ${i + 1}:`, { error: err });

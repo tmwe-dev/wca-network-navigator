@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getChannelMessageBodyById } from "@/data/channelMessages";
 import { queryKeys } from "@/lib/queryKeys";
 
 type InitialEmailMessageContent = {
@@ -18,13 +18,7 @@ export function useEmailMessageContent(
     queryKey: queryKeys.email.messageContent(messageId),
     enabled: !!messageId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("channel_messages")
-        .select("body_html, body_text")
-        .eq("id", messageId!)
-        .maybeSingle();
-
-      if (error) throw error;
+      const data = await getChannelMessageBodyById(messageId!);
 
       return {
         body_html: data?.body_html ?? fallbackBodyHtml,

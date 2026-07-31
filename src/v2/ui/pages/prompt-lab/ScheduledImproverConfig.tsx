@@ -11,8 +11,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
+import { getScheduledImproveConfigValue, saveScheduledImproveConfig } from "@/data/appSettings";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -78,13 +78,9 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
     if (!userId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "prompt_lab_scheduled_improve")
-        .single();
+      const { value: rawValue, error } = await getScheduledImproveConfigValue();
 
-      if (error || !data) {
+      if (error || !rawValue) {
         // Se non esiste, usa i defaults
         setConfig({
           enabled: false,
@@ -93,7 +89,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         });
       } else {
         try {
-          const parsed = JSON.parse(data.value as string) as ScheduledImproverConfig;
+          const parsed = JSON.parse(rawValue as string) as ScheduledImproverConfig;
           setConfig(parsed);
         } catch {
           // JSON non valido, fallback ai defaults
@@ -123,15 +119,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
       if (!userId) return;
       setSaving(true);
       try {
-        const { error } = await supabase
-          .from("app_settings")
-          .upsert({
-            key: "prompt_lab_scheduled_improve",
-            value: JSON.stringify(newConfig),
-            user_id: userId,
-          });
-
-        if (error) throw error;
+        await saveScheduledImproveConfig(userId, JSON.stringify(newConfig));
 
         setConfig(newConfig);
         toast.success(
