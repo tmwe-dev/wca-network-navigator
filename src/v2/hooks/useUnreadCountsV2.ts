@@ -3,7 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
-import { fetchUnreadCounts } from "@/data/unreadCounts";
+import { fetchSidebarBadgeCounts } from "@/data/sidebarBadgeCounts";
 
 interface UnreadCounts {
   readonly unreadMessages: number;
@@ -23,7 +23,7 @@ export function useUnreadCountsV2() {
       // Filtro mailbox-aware: il badge deve riflettere la casella attiva.
       // - personale → mailbox_id IS NULL
       // - condivisa → mailbox_id == id specifico
-      return fetchUnreadCounts(
+      return fetchSidebarBadgeCounts(
         activeMailbox
           ? { kind: activeMailbox.kind, mailbox_id: activeMailbox.mailbox_id }
           : null,

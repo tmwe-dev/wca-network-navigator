@@ -1,42 +1,47 @@
 /**
- * DAL — Sidebar unread/pending badge counts
+ * DAL — contatori non letti per canale + circuito/todo.
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export interface UnreadCountsMailboxFilter {
-  readonly kind: "personal" | "shared";
-  readonly mailbox_id: string;
+export interface UnreadCountsResult {
+  email: number;
+  whatsapp: number;
+  linkedin: number;
+  circuito: number;
+  todo: number;
 }
 
-export interface UnreadCountsRaw {
-  readonly unreadMessages: number;
-  readonly pendingTasks: number;
-  readonly pendingQueue: number;
-}
-
-/** Alias di compatibilità per i consumer esistenti. */
-export type UnreadCountsResult = UnreadCountsRaw;
-
-export async function fetchUnreadCounts(activeMailbox: UnreadCountsMailboxFilter | null = null): Promise<UnreadCountsRaw> {
-  let msgQuery = supabase
+function unreadByChannel(channel: string) {
+  return supabase
     .from("channel_messages")
-    .select("id", { count: "exact", head: true })
-    .is("read_at", null)
+    .select("id", { count: "planned", head: true })
+    .eq("channel", channel)
     .eq("direction", "inbound")
+    .is("read_at", null)
     .not("hidden_by_rule", "is", true);
-  if (activeMailbox?.kind === "personal") {
-    msgQuery = msgQuery.is("mailbox_id", null);
-  } else if (activeMailbox?.kind === "shared") {
-    msgQuery = msgQuery.eq("mailbox_id", activeMailbox.mailbox_id);
-  }
-  const [msgRes, taskRes, queueRes] = await Promise.all([
-    msgQuery,
-    supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null),
-    supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
+}
+
+export async function fetchUnreadCounts(): Promise<UnreadCountsResult> {
+  const [emailRes, waRes, liRes, circuitoRes, todoRes] = await Promise.all([
+    unreadByChannel("email"),
+    unreadByChannel("whatsapp"),
+    unreadByChannel("linkedin"),
+    supabase
+      .from("partners")
+      .select("id", { count: "planned", head: true })
+      .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
+    supabase
+      .from("activities")
+      .select("id", { count: "planned", head: true })
+      .is("deleted_at", null)
+      .in("status", ["pending", "in_progress"]),
   ]);
+
   return {
-    unreadMessages: msgRes.count ?? 0,
-    pendingTasks: taskRes.count ?? 0,
-    pendingQueue: queueRes.count ?? 0,
+    email: emailRes.count ?? 0,
+    whatsapp: waRes.count ?? 0,
+    linkedin: liRes.count ?? 0,
+    circuito: circuitoRes.count ?? 0,
+    todo: todoRes.count ?? 0,
   };
 }
