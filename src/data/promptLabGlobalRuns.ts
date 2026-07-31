@@ -5,6 +5,7 @@
  * incrementalmente così il run sopravvive a refresh, crash, errori di rete.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface GlobalRunProposal {
@@ -79,7 +80,7 @@ export async function updateRun(
     completed_at?: string;
   },
 ): Promise<void> {
-  const payload: Record<string, unknown> = {};
+  const payload: Database["public"]["Tables"]["prompt_lab_global_runs"]["Update"] = {};
   if (updates.status !== undefined) payload.status = updates.status;
   if (updates.progress_current !== undefined) payload.progress_current = updates.progress_current;
   if (updates.proposals !== undefined) payload.proposals = JSON.stringify(updates.proposals);

@@ -10,6 +10,7 @@
  * Tabella: public.harmonizer_sessions (migration 20260424123735).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 export type HarmonizerSessionStatus =
   | "pending"
@@ -125,7 +126,7 @@ export async function createHarmonizerSession(input: {
       harmonize_run_id: input.harmonizeRunId ?? null,
       status: "in_progress",
       started_at: new Date().toISOString(),
-      entities_created: input.bootstrapEntities ?? [],
+      entities_created: toJsonValue(input.bootstrapEntities ?? []),
     })
     .select()
     .single();
@@ -170,7 +171,7 @@ export async function appendFacts(
   const compacted = compactFacts(reg);
   const { error } = await supabase
     .from("harmonizer_sessions")
-    .update({ facts_registry: compacted, updated_at: new Date().toISOString() })
+    .update({ facts_registry: toJsonValue(compacted), updated_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (error) throw error;
 }
@@ -185,7 +186,7 @@ export async function appendConflicts(
   const merged = [...session.conflicts_found, ...newConflicts];
   const { error } = await supabase
     .from("harmonizer_sessions")
-    .update({ conflicts_found: merged, updated_at: new Date().toISOString() })
+    .update({ conflicts_found: toJsonValue(merged), updated_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (error) throw error;
 }
@@ -200,7 +201,7 @@ export async function appendCrossReferences(
   const merged = [...session.cross_references, ...refs];
   const { error } = await supabase
     .from("harmonizer_sessions")
-    .update({ cross_references: merged, updated_at: new Date().toISOString() })
+    .update({ cross_references: toJsonValue(merged), updated_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (error) throw error;
 }
@@ -215,7 +216,7 @@ export async function appendEntities(
   const merged = [...session.entities_created, ...entities];
   const { error } = await supabase
     .from("harmonizer_sessions")
-    .update({ entities_created: merged, updated_at: new Date().toISOString() })
+    .update({ entities_created: toJsonValue(merged), updated_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (error) throw error;
 }
@@ -242,7 +243,7 @@ export async function markSessionError(
   const merged = [...session.errors, err];
   const { error } = await supabase
     .from("harmonizer_sessions")
-    .update({ errors: merged, updated_at: new Date().toISOString() })
+    .update({ errors: toJsonValue(merged), updated_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (error) throw error;
 }
