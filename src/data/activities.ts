@@ -548,3 +548,22 @@ export async function findPartnerContactsForPartnerIds(partnerIds: string[]): Pr
   }
   return allData;
 }
+
+export type TodayActivityRow = Pick<
+  Database["public"]["Tables"]["activities"]["Row"],
+  "id" | "activity_type" | "title" | "source_id" | "source_type" | "description" | "completed_at" | "source_meta" | "status"
+>;
+
+/** Attività create oggi (pending/in_progress/completed), max 50. */
+export async function findTodayActivities(sinceIso: string): Promise<TodayActivityRow[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta, status")
+    .gte("created_at", sinceIso)
+    .is("deleted_at", null)
+    .in("status", ["pending", "in_progress", "completed"])
+    .order("completed_at", { ascending: false, nullsFirst: false })
+    .limit(50);
+  if (error) throw error;
+  return data ?? [];
+}

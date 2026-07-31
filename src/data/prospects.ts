@@ -90,3 +90,24 @@ export async function findAllProspects(): Promise<Prospect[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+/** Chiavi di dedup (P.IVA + ragione sociale) per l'import prospect. */
+export async function findProspectDedupKeys(): Promise<Array<{ partita_iva: string | null; company_name: string }>> {
+  const { data } = await supabase
+    .from("prospects")
+    .select("partita_iva, company_name")
+    .not("partita_iva", "is", null);
+  return data ?? [];
+}
+
+export type ProspectContactRow = Database["public"]["Tables"]["prospect_contacts"]["Row"];
+
+/** Contatti di un prospect. */
+export async function findProspectContactsByProspectId(prospectId: string): Promise<ProspectContactRow[]> {
+  const { data, error } = await supabase
+    .from("prospect_contacts")
+    .select("*")
+    .eq("prospect_id", prospectId);
+  if (error) throw error;
+  return data ?? [];
+}

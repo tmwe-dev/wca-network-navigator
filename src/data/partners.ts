@@ -1070,3 +1070,15 @@ export async function findPartnersPaginated(
     total: count ?? 0,
   };
 }
+
+/** Massimo `wca_id` presente in anagrafica partner (0 se assente). */
+export async function getMaxPartnerWcaId(): Promise<number> {
+  const { data } = await supabase
+    .from("partners")
+    .select("wca_id")
+    .not("wca_id", "is", null)
+    .order("wca_id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.wca_id ?? 0;
+}
