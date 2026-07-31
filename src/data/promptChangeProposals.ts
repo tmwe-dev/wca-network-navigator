@@ -52,7 +52,7 @@ export async function listPromptChangeProposals(opts: { status?: string } = {}):
   if (opts.status) q = q.eq("status", opts.status);
   const { data, error } = await q;
   if (error) throw error;
-  return (data || []) as unknown as PromptChangeProposal[];
+  return (data || []) as PromptChangeProposal[];
 }
 
 export async function createPromptChangeProposal(input: CreatePromptChangeProposalInput): Promise<PromptChangeProposal> {
@@ -70,11 +70,11 @@ export async function createPromptChangeProposal(input: CreatePromptChangePropos
       risks: input.risks ?? null,
       assumptions: input.assumptions ?? null,
       kb_entries_consulted: input.kb_entries_consulted ?? [],
-    } as never)
+    } satisfies Database["public"]["Tables"]["prompt_change_proposals"]["Insert"])
     .select("*")
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as PromptChangeProposal;
+  return data as PromptChangeProposal;
 }
 
 export async function reviewPromptChangeProposal(
@@ -88,7 +88,7 @@ export async function reviewPromptChangeProposal(
       status,
       review_note: note ?? null,
       reviewed_at: new Date().toISOString(),
-    } as never)
+    } satisfies Database["public"]["Tables"]["prompt_change_proposals"]["Update"])
     .eq("id", id);
   if (error) throw error;
 }

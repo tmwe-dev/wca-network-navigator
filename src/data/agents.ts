@@ -200,7 +200,7 @@ export async function findAgentsByIds(ids: string[]): Promise<AgentBasicNameRow[
     .from("agents")
     .select("id, name, avatar_emoji, role")
     .in("id", ids.length ? ids : ["__none__"]);
-  return (data ?? []) as unknown as AgentBasicNameRow[];
+  return (data ?? []) as AgentBasicNameRow[];
 }
 
 export interface AgentOption {

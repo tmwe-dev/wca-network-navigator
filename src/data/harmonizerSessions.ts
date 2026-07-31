@@ -10,6 +10,7 @@
  * Tabella: public.harmonizer_sessions (migration 20260424123735).
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toJsonValue } from "@/lib/jsonGuards";
 
 export type HarmonizerSessionStatus =
@@ -103,6 +104,33 @@ function compactFacts(reg: Record<string, FactEntry>): Record<string, FactEntry>
   return Object.fromEntries(entries.slice(0, keep));
 }
 
+
+type HarmonizerSessionRow = Database["public"]["Tables"]["harmonizer_sessions"]["Row"];
+
+/** Converte una riga grezza del DB (Json generici) nel tipo applicativo tipizzato. */
+function toHarmonizerSession(row: HarmonizerSessionRow): HarmonizerSession {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    source_file: row.source_file,
+    source_kind: row.source_kind as HarmonizerSourceKind,
+    total_chunks: row.total_chunks,
+    current_chunk: row.current_chunk,
+    status: row.status as HarmonizerSessionStatus,
+    facts_registry: (row.facts_registry ?? {}) as Record<string, FactEntry>,
+    conflicts_found: (row.conflicts_found ?? []) as unknown as ConflictEntry[],
+    cross_references: (row.cross_references ?? []) as unknown as CrossRefEntry[],
+    entities_created: (row.entities_created ?? []) as unknown as EntityCreatedEntry[],
+    errors: (row.errors ?? []) as unknown as ChunkErrorEntry[],
+    harmonize_run_id: row.harmonize_run_id,
+    started_at: row.started_at,
+    last_chunk_completed_at: row.last_chunk_completed_at,
+    completed_at: row.completed_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 export async function createHarmonizerSession(input: {
   userId: string;
   sourceFile: string;
@@ -131,7 +159,7 @@ export async function createHarmonizerSession(input: {
     .select()
     .single();
   if (error) throw error;
-  return data as unknown as HarmonizerSession;
+  return toHarmonizerSession(data);
 }
 
 export async function loadHarmonizerSession(id: string): Promise<HarmonizerSession | null> {
@@ -141,7 +169,7 @@ export async function loadHarmonizerSession(id: string): Promise<HarmonizerSessi
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
-  return (data as unknown as HarmonizerSession) ?? null;
+  return data ? toHarmonizerSession(data) : null;
 }
 
 export async function findActiveHarmonizerSession(userId: string): Promise<HarmonizerSession | null> {
@@ -153,8 +181,7 @@ export async function findActiveHarmonizerSession(userId: string): Promise<Harmo
     .order("updated_at", { ascending: false })
     .limit(1);
   if (error) throw error;
-  const rows = data as unknown as HarmonizerSession[] | null;
-  return rows && rows.length > 0 ? rows[0] : null;
+  return data && data.length > 0 ? toHarmonizerSession(data[0]) : null;
 }
 
 /** Append/merge facts (chiave deduplicata). */

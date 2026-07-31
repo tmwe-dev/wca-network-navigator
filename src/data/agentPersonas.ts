@@ -2,6 +2,9 @@
  * DAL — agent_personas
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type AgentPersonaUpdate = Database["public"]["Tables"]["agent_personas"]["Update"];
 
 export interface AgentPersona {
   id: string;
@@ -27,7 +30,7 @@ export async function findAgentPersonas(userId: string): Promise<AgentPersona[]>
 }
 
 export async function updateAgentPersona(id: string, patch: Partial<AgentPersona>): Promise<void> {
-  const { error } = await supabase.from("agent_personas").update(patch as never).eq("id", id);
+  const { error } = await supabase.from("agent_personas").update(patch as AgentPersonaUpdate).eq("id", id);
   if (error) throw error;
 }
 
@@ -58,14 +61,14 @@ export async function upsertAgentPersona(input: AgentPersonaUpsert): Promise<voi
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) throw new Error("Non autenticato");
-  const payload = { ...input, user_id: userId } as Record<string, unknown>;
+  const payload: Database["public"]["Tables"]["agent_personas"]["Insert"] = { ...input, user_id: userId };
   const { error } = await supabase
     .from("agent_personas")
-    .upsert(payload as never, { onConflict: "agent_id" });
+    .upsert(payload, { onConflict: "agent_id" });
   if (error) throw error;
 }
 /** Update arbitrario della persona di un agente, per agent_id (usato dai tool Command). */
-export async function updateAgentPersonaByAgentId(agentId: string, updates: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("agent_personas").update(updates as never).eq("agent_id", agentId);
+export async function updateAgentPersonaByAgentId(agentId: string, updates: AgentPersonaUpdate): Promise<void> {
+  const { error } = await supabase.from("agent_personas").update(updates).eq("agent_id", agentId);
   if (error) throw error;
 }
