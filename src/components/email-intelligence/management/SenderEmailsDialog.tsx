@@ -50,7 +50,7 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
     let done = false;
 
     while (!done) {
-      const data = await findSenderEmailsPage(emailAddress, from, PAGE_SIZE);
+      const data = await findSenderEmailsPage(emailAddress, from, from + PAGE_SIZE - 1);
 
       const batch = data as unknown as SenderEmail[];
       allEmails.push(...batch);
