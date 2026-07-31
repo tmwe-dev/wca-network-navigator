@@ -9,7 +9,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type CalendarEventDbRow = Database["public"]["Tables"]["calendar_events"]["Row"];
 
-interface CalendarEventRow {
+export interface CalendarEventShape {
   id: string;
   user_id: string;
   title: string;
@@ -31,10 +31,8 @@ interface CalendarEventRow {
   updated_at: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface CalendarEventInsert extends Omit<CalendarEventRow, "id" | "created_at" | "updated_at"> {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface CalendarEventUpdate extends Partial<Omit<CalendarEventRow, "id" | "created_at" | "updated_at">> {}
+type CalendarEventInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
+type CalendarEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
 
 // ─── Types ──────────────────────────────────────────────
 export type EventType = "meeting" | "call" | "task" | "reminder" | "follow_up";
