@@ -109,3 +109,136 @@ export async function softDeleteKbEntry(id: string): Promise<void> {
     .eq("id", id);
   if (error) throw error;
 }
+
+export interface KbToolListEntry {
+  readonly id: string;
+  readonly title: string;
+  readonly category: string;
+  readonly tags: readonly string[] | null;
+  readonly source_path: string | null;
+}
+
+/** Lista entry KB attive (opzionalmente filtrate per categoria) per il tool agente `list_kb`. */
+export async function findActiveKbEntriesForTool(category?: string, limit = 50): Promise<KbToolListEntry[]> {
+  let query = supabase
+    .from("kb_entries")
+    .select("id, title, category, tags, source_path, priority")
+    .eq("is_active", true)
+    .order("priority", { ascending: false });
+  if (category) query = query.eq("category", category);
+  const { data, error } = await query.limit(limit);
+  if (error) throw error;
+  return (data ?? []) as KbToolListEntry[];
+}
+
+export interface KbToolContentEntry {
+  readonly title: string;
+  readonly content: string | null;
+  readonly category: string;
+  readonly tags: readonly string[] | null;
+}
+
+/** Legge una entry KB attiva per slug (source_path o title, fuzzy match) per il tool agente `read_kb`. */
+export async function findKbEntryContentBySlug(slug: string): Promise<KbToolContentEntry | null> {
+  const { data, error } = await supabase
+    .from("kb_entries")
+    .select("id, title, content, category, tags")
+    .or(`source_path.ilike.%${slug}%,title.ilike.%${slug}%`)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as KbToolContentEntry | null;
+}
+
+export interface KbIndexRow {
+  readonly title: string;
+  readonly category: string;
+  readonly chapter: string | null;
+}
+
+/** Indice titoli+categoria delle KB entry attive per un set di categorie (usato dal Prompt Assembler). */
+export async function findKbIndexByCategories(categories: readonly string[]): Promise<KbIndexRow[]> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("title, category, chapter")
+    .in("category", categories)
+    .eq("is_active", true)
+    .order("category")
+    .order("priority", { ascending: false });
+  return (data ?? []) as KbIndexRow[];
+}
+
+export interface KbExcerptRow {
+  readonly title: string;
+  readonly content: string | null;
+}
+
+/** Estratti (title+content) delle KB entry attive con titolo in `titles` (usato dal Prompt Assembler). */
+export async function findKbExcerptsByTitles(titles: readonly string[]): Promise<KbExcerptRow[]> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("title, content")
+    .in("title", titles)
+    .eq("is_active", true);
+  return (data ?? []) as KbExcerptRow[];
+}
+
+export interface KbContextRow {
+  readonly title: string;
+  readonly category: string;
+  readonly content: string;
+  readonly source_path: string | null;
+}
+
+/** Full-text search (italiano) sul contenuto delle KB entry attive, per contesto agente. */
+export async function findKbContextByFullText(cleaned: string, limit: number): Promise<KbContextRow[]> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("title, category, content, source_path")
+    .textSearch("content", cleaned, { type: "websearch", config: "italian" })
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as KbContextRow[];
+}
+
+/** Fallback fuzzy match su titolo delle KB entry attive, per contesto agente. */
+export async function findKbContextByTitleFuzzy(word: string, limit: number): Promise<KbContextRow[]> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("title, category, content, source_path")
+    .ilike("title", `%${word}%`)
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as KbContextRow[];
+}
+
+/** Inserisce una KB entry "block" (senza user_id obbligatorio) per il flow di creazione rapida del Prompt Lab. */
+export async function insertKbEntryBlock(entry: { title: string; content: string; category: string; is_active: boolean }): Promise<void> {
+  const { error } = await supabase.from("kb_entries").insert(entry);
+  if (error) throw error;
+}
+
+export interface InsertKbEntryForApprovalInput {
+  user_id: string;
+  category: string;
+  chapter: string;
+  title: string;
+  content: string;
+  tags: string[];
+  priority: number;
+  is_active: boolean;
+}
+
+/** Inserisce una KB entry a partire da una proposta approvata; ritorna l'id creato. */
+export async function insertKbEntryForApproval(entry: InsertKbEntryForApprovalInput): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("kb_entries")
+    .insert(entry)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}

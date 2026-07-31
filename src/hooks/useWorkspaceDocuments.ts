@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { createWorkspaceDoc, deleteWorkspaceDoc } from "@/data/workspaceDocs";
+import { uploadWorkspaceDocFile, createWorkspaceDocSignedUrl } from "@/data/workspaceDocsStorage";
 
 export interface WorkspaceDoc {
   id: string;
@@ -20,18 +20,13 @@ export function useWorkspaceDocuments() {
       const ext = file.name.split(".").pop() || "bin";
       const path = `${crypto.randomUUID()}.${ext}`;
 
-      const { error: uploadErr } = await supabase.storage
-        .from("workspace-docs")
-        .upload(path, file);
-      if (uploadErr) throw uploadErr;
+      await uploadWorkspaceDocFile(path, file);
 
-      const { data: urlData } = await supabase.storage
-        .from("workspace-docs")
-        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      const signedUrl = await createWorkspaceDocSignedUrl(path, 60 * 60 * 24 * 365);
 
       const data = await createWorkspaceDoc({
           file_name: file.name,
-          file_url: urlData?.signedUrl || path,
+          file_url: signedUrl || path,
           file_size: file.size,
         }) as unknown as Record<string, unknown> | null;
 

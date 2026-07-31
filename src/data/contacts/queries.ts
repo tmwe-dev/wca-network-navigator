@@ -331,3 +331,114 @@ export async function bulkUpdateContactsByOrigins(
   if (error) throw error;
   return { updated: (data ?? []).length };
 }
+
+export interface SegmentContactRow {
+  id: string;
+  email: string | null;
+  interaction_count: number | null;
+  last_interaction_at: string | null;
+}
+
+/** Contatti dell'utente con campi minimi per il calcolo dei segmenti. */
+export async function findContactsForSegments(userId: string, limit = 1000): Promise<SegmentContactRow[]> {
+  const { data } = await supabase
+    .from("imported_contacts")
+    .select("id, email, interaction_count, last_interaction_at")
+    .eq("user_id", userId)
+    .limit(limit);
+  return (data ?? []) as SegmentContactRow[];
+}
+
+export interface ConversationContextRow {
+  email_address: string;
+  dominant_sentiment: string | null;
+  response_rate: number | null;
+  last_interaction_at: string | null;
+}
+
+/** Contesto conversazionale (sentiment/response rate) per il calcolo dei segmenti. */
+export async function findConversationContextsForUser(userId: string, limit = 1000): Promise<ConversationContextRow[]> {
+  const { data } = await supabase
+    .from("contact_conversation_context")
+    .select("email_address, dominant_sentiment, response_rate, last_interaction_at")
+    .eq("user_id", userId)
+    .limit(limit);
+  return (data ?? []) as ConversationContextRow[];
+}
+
+export interface PipelineContactRow {
+  id: string;
+  name: string | null;
+  company_name: string | null;
+  email: string | null;
+  interaction_count: number;
+  lead_status: string;
+}
+
+/** Contatti dell'utente per la vista pipeline Kanban. */
+export async function findContactsForPipeline(userId: string): Promise<PipelineContactRow[]> {
+  const { data } = await supabase
+    .from("imported_contacts")
+    .select("id, name, company_name, email, interaction_count, lead_status")
+    .eq("user_id", userId)
+    .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+    .order("company_name")
+    .limit(500);
+  return (data || []) as PipelineContactRow[];
+}
+
+export interface DedupContactRow {
+  id: string;
+  name: string | null;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  country: string | null;
+  lead_status: string | null;
+  created_at: string;
+  interaction_count: number | null;
+}
+
+/** Contatti (campi minimi) per lo scan duplicati. */
+export async function findContactsForDuplicateScan(limit = 1000): Promise<DedupContactRow[]> {
+  const { data } = await supabase
+    .from("imported_contacts")
+    .select("id, name, company_name, email, phone, mobile, country, lead_status, created_at, interaction_count")
+    .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+    .limit(limit);
+  return (data ?? []) as DedupContactRow[];
+}
+
+export interface ExportContactRow {
+  name: string | null;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  country: string | null;
+  lead_status: string | null;
+  lead_score: number | null;
+  origin: string | null;
+  created_at: string | null;
+}
+
+/** Contatti per l'export CSV, con gli stessi filtri della lista principale. */
+export async function findContactsForExport(filters: {
+  country?: string;
+  origin?: string;
+  leadStatus?: string;
+  importLogId?: string;
+}): Promise<ExportContactRow[]> {
+  let q = supabase
+    .from("imported_contacts")
+    .select("name, company_name, email, phone, country, lead_status, lead_score, origin, created_at")
+    .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
+    .order("lead_score", { ascending: false })
+    .limit(1000);
+  if (filters.country) q = q.eq("country", filters.country);
+  if (filters.origin) q = q.eq("origin", filters.origin);
+  if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
+  if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
+  const { data } = await q;
+  return (data ?? []) as ExportContactRow[];
+}

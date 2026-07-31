@@ -1,37 +1,28 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { listAiBackups, downloadAiBackup, type AiBackupFile } from "@/data/aiBackupsStorage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, RefreshCw, Shield, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 
-interface BackupFile {
-  name: string;
-  created_at: string;
-}
-
 export function AIBackupPanel({ userId }: { userId: string }) {
-  const [backups, setBackups] = useState<BackupFile[]>([]);
+  const [backups, setBackups] = useState<AiBackupFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [triggering, setTriggering] = useState(false);
 
   const loadBackups = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase.storage
-        .from("ai-backups")
-        .list(userId, { sortBy: { column: "created_at", order: "desc" } });
-      setBackups((data as BackupFile[]) || []);
+      const data = await listAiBackups(userId);
+      setBackups(data);
     } finally {
       setLoading(false);
     }
   };
 
   const downloadBackup = async (fileName: string) => {
-    const { data } = await supabase.storage
-      .from("ai-backups")
-      .download(`${userId}/${fileName}`);
+    const data = await downloadAiBackup(userId, fileName);
     if (data) {
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");

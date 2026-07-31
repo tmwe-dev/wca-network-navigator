@@ -86,3 +86,35 @@ export async function fetchEmailSendLogStats(sinceIso: string, untilIso?: string
     recentErrors,
   };
 }
+
+export interface RecentSendLogRow {
+  id: string;
+  recipient_email: string;
+  subject: string;
+  sent_at: string;
+  status: EmailSendStatus;
+  send_method: EmailSendMethod;
+  message_id: string | null;
+  campaign_queue_id: string | null;
+}
+
+/** Ultime righe di email_send_log, deduplicate per message_id (mantiene la più recente). */
+export async function findRecentSendLogRows(limit = 500): Promise<RecentSendLogRow[]> {
+  const { data, error } = await supabase
+    .from("email_send_log")
+    .select("id, recipient_email, subject, sent_at, status, send_method, message_id, campaign_queue_id")
+    .order("sent_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  const rows = (data ?? []) as RecentSendLogRow[];
+  const seen = new Set<string>();
+  const dedup: RecentSendLogRow[] = [];
+  for (const r of rows) {
+    const key = r.message_id ?? r.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    dedup.push(r);
+  }
+  return dedup;
+}

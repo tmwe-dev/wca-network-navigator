@@ -114,3 +114,22 @@ export async function countViewRows(view: string, filter?: { column: string; val
   if (error) throw error;
   return count ?? 0;
 }
+
+export interface LiveIntrospectColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  enum_values: string[] | null;
+}
+
+export interface LiveIntrospectTable {
+  table: string;
+  columns: LiveIntrospectColumn[];
+}
+
+/** Introspezione live dello schema DB (colonne + enum) per un set di tabelle. */
+export async function rpcIntrospectSchema(tableNames: readonly string[]): Promise<LiveIntrospectTable[] | null> {
+  const { data, error } = await supabase.rpc("ai_introspect_schema", { table_names: tableNames });
+  if (error || !Array.isArray(data)) return null;
+  return data as LiveIntrospectTable[];
+}

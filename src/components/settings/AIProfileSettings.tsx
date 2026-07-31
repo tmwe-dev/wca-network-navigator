@@ -15,7 +15,7 @@ import {
 import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/constants/salesKnowledgeBase";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadTemplateFile, getTemplatePublicUrl } from "@/data/templatesStorage";
 import { createLogger } from "@/lib/log";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
@@ -53,9 +53,8 @@ function ImageUploadField({ label, value, onChange, hint }: {
     try {
       const ext = file.name.split(".").pop() || "png";
       const path = `email-images/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("templates").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from("templates").getPublicUrl(path);
+      await uploadTemplateFile(path, file, { upsert: true });
+      const publicUrl = getTemplatePublicUrl(path);
       onChange(publicUrl);
       toast.success("Immagine caricata");
     } catch (err: unknown) {

@@ -5,6 +5,12 @@ import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { createImportLog } from "@/data/importLogs";
+import { updateImportLog } from "@/data/importLogs";
+import { insertImportedContactsBatch } from "@/data/importedContactsV2";
+import type { Database } from "@/integrations/supabase/types";
+
+type ImportedContactInsert = Database["public"]["Tables"]["imported_contacts"]["Insert"];
 
 export interface ImportColumn {
   readonly csvHeader: string;
@@ -71,18 +77,14 @@ export function useImportV2() {
       if (!user) throw new Error("Not authenticated");
 
       // Create import log
-      const { data: log, error: logErr } = await supabase
-        .from("import_logs")
-        .insert({
-          user_id: user.id,
-          file_name: fileName,
-          total_rows: rawRows.length,
-          status: "processing",
-          normalization_method: "manual_csv",
-        })
-        .select("id")
-        .maybeSingle();
-      if (logErr || !log) throw logErr || new Error("Failed to create import log");
+      const log = await createImportLog({
+        user_id: user.id,
+        file_name: fileName,
+        total_rows: rawRows.length,
+        status: "processing",
+        normalization_method: "manual_csv",
+      });
+      if (!log) throw new Error("Failed to create import log");
 
       const mappedCols = columns.filter((c) => c.mappedTo);
       let imported = 0;
@@ -90,35 +92,30 @@ export function useImportV2() {
 
       // Batch insert 50 at a time
       for (let i = 0; i < rawRows.length; i += 50) {
-        const batch = rawRows.slice(i, i + 50).map((row, idx) => {
-          const record: Record<string, unknown> = {
+        const batch: ImportedContactInsert[] = rawRows.slice(i, i + 50).map((row, idx) => {
+          const record: ImportedContactInsert = {
             import_log_id: log.id,
             user_id: user.id,
             row_number: i + idx + 1,
           };
           mappedCols.forEach((col) => {
-            if (col.mappedTo) record[col.mappedTo] = row[col.csvHeader] || null;
+            const field = col.mappedTo as TargetField | null;
+            if (field) record[field] = row[col.csvHeader] || null;
           });
           return record;
         });
 
-        const typedBatch = batch as Array<{
-          import_log_id: string;
-          user_id: string;
-          row_number: number;
-          [key: string]: unknown;
-        }>;
-        const { error: insertErr } = await supabase
-          .from("imported_contacts")
-          .insert(typedBatch as never);
+        const { error: insertErr } = await insertImportedContactsBatch(batch);
         if (insertErr) { errors += batch.length; } else { imported += batch.length; }
       }
 
       // Update log
-      await supabase
-        .from("import_logs")
-        .update({ status: "completed", imported_rows: imported, error_rows: errors, completed_at: new Date().toISOString() })
-        .eq("id", log.id);
+      await updateImportLog(log.id, {
+        status: "completed",
+        imported_rows: imported,
+        error_rows: errors,
+        completed_at: new Date().toISOString(),
+      });
 
       setResult({ imported, errors });
       setStep(4);

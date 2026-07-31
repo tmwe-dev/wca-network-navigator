@@ -5,7 +5,7 @@
  */
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findOperativePromptsFull, updateOperativePrompt } from "@/data/operativePrompts";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +39,8 @@ export function PromptsTab() {
     queryKey: ["forge-operative-prompts", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("operative_prompts")
-        .select("id, name, objective, procedure, criteria, tags, is_active, priority")
-        .eq("user_id", userId!)
-        .order("priority", { ascending: false });
-      if (error) throw error;
-      return (data as PromptRow[]) ?? [];
+      const data = await findOperativePromptsFull(userId!);
+      return data as unknown as PromptRow[];
     },
   });
 
@@ -112,10 +107,11 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
 
   const handleToggle = async (v: boolean) => {
     setActive(v);
-    const { error } = await supabase.from("operative_prompts").update({ is_active: v }).eq("id", prompt.id);
-    if (error) {
+    try {
+      await updateOperativePrompt(prompt.id, { is_active: v });
+    } catch (error) {
       setActive(!v);
-      toast.error("Toggle fallito", { description: error.message });
+      toast.error("Toggle fallito", { description: error instanceof Error ? error.message : String(error) });
       return;
     }
     onSaved();
@@ -123,15 +119,14 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("operative_prompts")
-      .update({ objective, procedure, criteria, priority })
-      .eq("id", prompt.id);
-    setSaving(false);
-    if (error) {
-      toast.error("Salvataggio fallito", { description: error.message });
+    try {
+      await updateOperativePrompt(prompt.id, { objective, procedure, criteria, priority });
+    } catch (error) {
+      setSaving(false);
+      toast.error("Salvataggio fallito", { description: error instanceof Error ? error.message : String(error) });
       return;
     }
+    setSaving(false);
     toast.success("Prompt aggiornato");
     onSaved();
   };

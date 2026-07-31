@@ -3,8 +3,8 @@
  * Checks for active/paused acquisition jobs on mount and restores state.
  */
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { getPartnersByCountries } from "@/data/partners";
+import { findActiveOrPausedAcquisitionJobs, findDirectoryCacheMembers } from "@/data/acquisitionResumeQueries";
 import { toast } from "@/hooks/use-toast";
 import type { QueueItem } from "@/types/acquisition";
 import { createLogger } from "@/lib/log";
@@ -35,13 +35,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
   useEffect(() => {
     (async () => {
       try {
-        const { data: activeJobs } = await supabase
-          .from("download_jobs")
-          .select("*")
-          .eq("job_type", "acquisition")
-          .in("status", ["running", "paused"])
-          .order("created_at", { ascending: false })
-          .limit(1);
+        const activeJobs = await findActiveOrPausedAcquisitionJobs();
 
         if (activeJobs && activeJobs.length > 0) {
           const job = activeJobs[0];
@@ -73,10 +67,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           // Enrich remaining from directory_cache
           const stillMissing = queueItems.filter(q => q.company_name.startsWith("WCA "));
           if (stillMissing.length > 0) {
-            const { data: cacheEntries } = await supabase
-              .from("directory_cache")
-              .select("members")
-              .eq("country_code", job.country_code);
+            const cacheEntries = await findDirectoryCacheMembers(job.country_code);
             if (cacheEntries) {
               for (const entry of cacheEntries) {
                 const members = (entry.members as unknown[]) || [];

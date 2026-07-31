@@ -406,3 +406,71 @@ export async function insertHumanActivity(activity: ActivityInsert): Promise<voi
   const { error } = await supabase.from("activities").insert(activity);
   if (error) throw error;
 }
+
+/** Attività pending assegnate a un agente esecutore (Coda AI). */
+export async function findPendingAgentActivities(userId: string, limit = 100): Promise<AllActivity[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .not("executed_by_agent_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as unknown as AllActivity[];
+}
+
+export async function rejectActivity(id: string) {
+  const { error } = await supabase
+    .from("activities")
+    .update({ status: "cancelled" as Database["public"]["Enums"]["activity_status"], reviewed: true })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export interface ContactTimelineActivityRow {
+  id: string;
+  activity_type: string;
+  title: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  response_received: boolean | null;
+}
+
+/** Attività collegate a un contatto selezionato, per la timeline. */
+export async function findActivitiesForSelectedContact(
+  contactId: string,
+  from: number,
+  to: number,
+): Promise<ContactTimelineActivityRow[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("id, activity_type, title, description, status, created_at, response_received")
+    .eq("selected_contact_id", contactId)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return (data || []) as unknown as ContactTimelineActivityRow[];
+}
+
+export interface RecordActivityRow {
+  id: string;
+  title: string;
+  status: string;
+  due_date: string | null;
+  scheduled_at: string | null;
+}
+
+/** Attività per source_id (Circuito di Attesa nel drawer contatto). */
+export async function findActivitiesForSourceId(sourceId: string, limit = 20): Promise<RecordActivityRow[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("*")
+    .eq("source_id", sourceId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as unknown as RecordActivityRow[];
+}

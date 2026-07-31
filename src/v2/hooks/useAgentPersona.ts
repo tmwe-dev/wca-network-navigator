@@ -4,6 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAgentPersonaFull, upsertAgentPersonaFull } from "@/data/agentPersonaFullV2";
 
 export interface AgentPersona {
   id: string;
@@ -28,12 +29,7 @@ export function useAgentPersona(agentId: string | undefined) {
     queryKey: ["agent-persona", agentId],
     queryFn: async (): Promise<AgentPersona | null> => {
       if (!agentId) return null;
-      const { data, error } = await supabase
-        .from("agent_personas" as never)
-        .select("*")
-        .eq("agent_id", agentId)
-        .maybeSingle();
-      if (error) throw error;
+      const data = await getAgentPersonaFull(agentId);
       return data as AgentPersona | null;
     },
     enabled: !!agentId,
@@ -49,10 +45,7 @@ export function useAgentPersona(agentId: string | undefined) {
         user_id: user.id,
       };
 
-      const { error } = await supabase
-        .from("agent_personas" as never)
-        .upsert(payload as never, { onConflict: "agent_id" });
-      if (error) throw error;
+      await upsertAgentPersonaFull(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent-persona", agentId] });

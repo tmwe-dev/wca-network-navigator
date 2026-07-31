@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
 import { createMemory } from "@/data/aiMemory";
+import { findRecentMemoriesForFeedback, updateMemoryConfidence } from "@/data/aiMemoryOps";
 
 const log = createLogger("FeedbackButtons");
 
@@ -39,22 +40,13 @@ export function FeedbackButtons({ messageIndex, className }: FeedbackButtonsProp
       });
 
       // Also boost/reduce confidence of recent L1/L2 memories
-      const { data: recentMemories } = await supabase
-        .from("ai_memory")
-        .select("id, confidence, level")
-        .eq("user_id", user.id)
-        .in("level", [1, 2] as number[])
-        .order("last_accessed_at", { ascending: false })
-        .limit(5);
+      const recentMemories = await findRecentMemoriesForFeedback(user.id, 5);
 
-      if (recentMemories?.length) {
+      if (recentMemories.length) {
         const delta = type === "up" ? 0.05 : -0.08;
         for (const m of recentMemories) {
-          const newConf = Math.max(0, Math.min(1, Number((m as Record<string, unknown>).confidence || 0.5) + delta));
-          await supabase
-            .from("ai_memory")
-            .update({ confidence: newConf } as never)
-            .eq("id", m.id);
+          const newConf = Math.max(0, Math.min(1, Number(m.confidence || 0.5) + delta));
+          await updateMemoryConfidence(m.id, newConf);
         }
       }
     } catch (e) {

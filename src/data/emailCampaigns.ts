@@ -185,3 +185,23 @@ export async function insertEmailDraft(input: InsertEmailDraftInput): Promise<vo
   const { error } = await supabase.from("email_drafts").insert(input);
   if (error) throw error;
 }
+
+export interface RecentQueueItemRow {
+  readonly id: string;
+  readonly subject: string;
+  readonly recipient_name: string | null;
+  readonly recipient_email: string;
+  readonly status: string;
+  readonly created_at: string;
+}
+
+/** Ultime N righe di email_campaign_queue, senza filtro per draft (per dashboard "Coda"). */
+export async function findRecentCampaignQueueItemsAll(limit = 50): Promise<RecentQueueItemRow[]> {
+  const { data, error } = await supabase
+    .from("email_campaign_queue")
+    .select("id, subject, recipient_name, recipient_email, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as RecentQueueItemRow[];
+}

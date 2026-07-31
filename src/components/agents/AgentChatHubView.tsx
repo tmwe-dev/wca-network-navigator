@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { createLogger } from "@/lib/log";
+import { createMemory } from "@/data/aiMemory";
 
 const log = createLogger("AgentChatHub");
 
@@ -163,7 +164,7 @@ export default function AgentChatHub() {
         });
         toast.info("Feedback registrato — l'AI migliorerà");
       } else {
-        await supabase.from("ai_memory").insert({
+        await createMemory({
           user_id: user.id,
           memory_type: "preference",
           content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,

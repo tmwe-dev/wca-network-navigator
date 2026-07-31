@@ -85,3 +85,42 @@ export async function getBusinessCardRawData(id: string): Promise<Record<string,
   const { data } = await supabase.from("business_cards").select("raw_data").eq("id", id).single();
   return (data?.raw_data as Record<string, unknown>) || {};
 }
+
+export interface BcaDetail {
+  matched_partner_id: string | null;
+  contact_name: string | null;
+  event_name: string | null;
+  met_at: string | null;
+}
+
+/** Business cards abbinate a un set di partner (per dettagli BCA nella lista aziende). */
+export async function findBusinessCardsByPartnerIds(partnerIds: string[]): Promise<BcaDetail[]> {
+  if (!partnerIds.length) return [];
+  const { data } = await supabase
+    .from("business_cards")
+    .select("matched_partner_id, contact_name, event_name, met_at")
+    .in("matched_partner_id", partnerIds);
+  return (data ?? []) as BcaDetail[];
+}
+
+/** Business card di un utente per la vista rete (BusinessCardsViewV2). */
+export async function findBusinessCardsForUser(userId: string, limit = 100) {
+  const { data, error } = await supabase
+    .from("business_cards")
+    .select("id, company_name, contact_name, email, phone, match_status, match_confidence, lead_status, event_name, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Snapshot business card per il tab Deep Search di Email Forge. */
+export async function findBusinessCardDeepSearchSnapshot(id: string) {
+  const { data } = await supabase
+    .from("business_cards")
+    .select("id, raw_data, ocr_confidence")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
+}

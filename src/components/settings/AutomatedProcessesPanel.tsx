@@ -1,17 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Power, AlertCircle, CheckCircle2, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { findGlobalSettings, findCronRunLogs, upsertGlobalSetting, type CronRunLogRow } from "@/data/automatedProcesses";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-interface CronLogRow {
-  job_name: string;
-  ran_at: string;
-  error: string | null;
-}
 
 function errorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
@@ -125,31 +119,19 @@ export default function AutomatedProcessesPanel() {
   async function loadAll() {
     setLoading(true);
     try {
-      const { data: settings } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .is("user_id", null)
-        .in(
-          "key",
-          CRON_CONFIGS.flatMap((c) => [c.enabledKey, c.intervalKey])
-        );
+      const settings = await findGlobalSettings(CRON_CONFIGS.flatMap((c) => [c.enabledKey, c.intervalKey]));
 
       const settingsMap: Record<string, string> = {};
-      (settings || []).forEach((s: { key: string; value: string | null }) => {
+      settings.forEach((s) => {
         if (s.value != null) settingsMap[s.key] = s.value;
       });
 
       const since24h = new Date(Date.now() - 86400000).toISOString();
-      const { data: logs } = await supabase
-        .from("cron_run_log")
-        .select("job_name, ran_at, error")
-        .in("job_name", CRON_CONFIGS.map((c) => c.jobName))
-        .gte("ran_at", since24h)
-        .order("ran_at", { ascending: false });
+      const logs = await findCronRunLogs(CRON_CONFIGS.map((c) => c.jobName), since24h);
 
       const next: Record<string, CronState> = {};
       for (const cfg of CRON_CONFIGS) {
-        const jobLogs = ((logs ?? []) as CronLogRow[]).filter((l) => l.job_name === cfg.jobName);
+        const jobLogs = ((logs ?? []) as CronRunLogRow[]).filter((l) => l.job_name === cfg.jobName);
         const lastRunRow = jobLogs[0];
         const errors24h = jobLogs.filter((l) => l.error).length;
         next[cfg.key] = {
@@ -181,10 +163,7 @@ export default function AutomatedProcessesPanel() {
   async function saveSetting(key: string, value: string, configKey: string) {
     setSaving(configKey);
     try {
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({ key, value, user_id: null }, { onConflict: "key,user_id" });
-      if (error) throw error;
+      await upsertGlobalSetting(key, value);
       toast.success("Salvato");
     } catch (e: unknown) {
       toast.error("Errore salvataggio", { description: errorMessage(e) });

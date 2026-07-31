@@ -12,7 +12,9 @@ import { it } from "date-fns/locale";
 import { findSentOutreach } from "@/data/outreachPipeline";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
-import { supabase } from "@/integrations/supabase/client";
+import { findRecentSendLogRows } from "@/data/emailSendLog";
+import { findInboundMessagesByAddresses } from "@/data/channelMessages";
+import { findArchiveBounceRulesForEmails } from "@/data/emailAddressRules";
 import { OutreachStatusTimeline } from "./OutreachStatusTimeline";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -40,23 +42,7 @@ export function InviatiSubTab() {
   // Real per-recipient tracking from email_send_log (single + bulk).
   const { data: sendLog } = useQuery({
     queryKey: ["outreach", "sent", "send-log"],
-    queryFn: async () => {
-      const { data: rows } = await supabase
-        .from("email_send_log")
-        .select("id, recipient_email, subject, sent_at, status, send_method, message_id, campaign_queue_id")
-        .order("sent_at", { ascending: false })
-        .limit(500);
-      // Dedup per message_id keeping latest
-      const seen = new Set<string>();
-      const dedup: NonNullable<typeof rows> = [];
-      for (const r of rows ?? []) {
-        const key = r.message_id ?? r.id;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        dedup.push(r);
-      }
-      return dedup;
-    },
+    queryFn: () => findRecentSendLogRows(500),
     refetchInterval: 30000,
   });
 
@@ -122,12 +108,7 @@ export function InviatiSubTab() {
       const emails = [...new Set(items.map((i) => i.email).filter(Boolean))];
       if (emails.length === 0) return {};
 
-      const { data: msgs } = await supabase
-        .from("channel_messages")
-        .select("id, from_address, created_at, subject, body_text, category")
-        .eq("direction", "inbound")
-        .in("from_address", emails)
-        .order("created_at", { ascending: false });
+      const msgs = await findInboundMessagesByAddresses(emails);
 
       const map: Record<string, { date: string; subject: string; snippet: string; category?: string }> = {};
       for (const msg of msgs || []) {
@@ -154,11 +135,7 @@ export function InviatiSubTab() {
       const emails = [...new Set(items.map((i) => i.email).filter(Boolean))];
       if (emails.length === 0) return {};
 
-      const { data: bounceRules } = await supabase
-        .from("email_address_rules")
-        .select("email_address, notes")
-        .in("email_address", emails)
-        .eq("auto_action", "archive");
+      const bounceRules = await findArchiveBounceRulesForEmails(emails);
 
       const map: Record<string, string> = {};
       for (const r of bounceRules || []) {

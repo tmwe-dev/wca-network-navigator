@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { countAllProspects, getAllProspectsForAtecoGroups } from "@/data/prospectStatsQueries";
 
 export interface AtecoGroup {
   codice_ateco: string;
@@ -28,13 +28,10 @@ export function useProspectStats() {
     queryKey: queryKeys.prospects.globalStats,
     queryFn: async () => {
       // Use count-only query instead of fetching all rows
-      const { count: total, error } = await supabase
-        .from("prospects")
-        .select("*", { count: "exact", head: true });
-      if (error) throw error;
+      const total = await countAllProspects();
 
       return {
-        total: total ?? 0,
+        total,
         withEmail: 0,
         withPec: 0,
         withPhone: 0,
@@ -52,11 +49,7 @@ export function useAtecoGroups() {
   return useQuery({
     queryKey: ["ateco-groups"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("prospects")
-        .select("codice_ateco, descrizione_ateco, email, pec, phone, fatturato");
-      if (error) throw error;
-      const rows = data ?? [];
+      const rows = await getAllProspectsForAtecoGroups();
 
       const map = new Map<string, AtecoGroup>();
       for (const r of rows) {

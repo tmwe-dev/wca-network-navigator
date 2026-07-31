@@ -4,7 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type AuditRow = Database["public"]["Tables"]["supervisor_audit_log"]["Row"];
+export type AuditRow = Database["public"]["Tables"]["supervisor_audit_log"]["Row"];
 
 export interface SupervisorKpis {
   total: number;

@@ -91,3 +91,11 @@ export async function reviewPromptChangeProposal(
     .eq("id", id);
   if (error) throw error;
 }
+/** Marca una proposta come "applied" dopo che il patch è stato scritto sul prompt sorgente. */
+export async function markPromptChangeProposalApplied(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("prompt_change_proposals")
+    .update({ status: "applied" })
+    .eq("id", id);
+  if (error) throw error;
+}

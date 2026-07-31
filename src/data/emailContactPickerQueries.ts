@@ -53,3 +53,24 @@ export async function findPickerBcaCards(search: string, countryName: string | n
   if (error) throw error;
   return (data ?? []) as BcaRow[];
 }
+
+/** Snapshot enrichment di un contatto importato per il tab Deep Search di Email Forge. */
+export async function findImportedContactDeepSearchSnapshot(id: string) {
+  const { data } = await supabase
+    .from("imported_contacts")
+    .select("id, enrichment_data, deep_search_at")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
+}
+
+/** Ricerca contatti importati per l'autocomplete destinatari del composer. */
+export async function searchImportedContactsForRecipientPicker(search: string) {
+  const { data } = await supabase
+    .from("imported_contacts")
+    .select("id, name, company_name, email")
+    .not("email", "is", null)
+    .or(`name.ilike.%${search}%,email.ilike.%${search}%,company_name.ilike.%${search}%`)
+    .limit(10);
+  return data ?? [];
+}

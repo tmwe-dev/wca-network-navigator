@@ -52,3 +52,14 @@ export async function findCreditTransactionsSince(userId: string, sinceIso: stri
   if (error) throw error;
   return (data || []) as CreditTransaction[];
 }
+
+/** Ultime N transazioni credito di un utente (storico in Settings). */
+export async function findRecentCreditTransactions(userId: string, limit = 20): Promise<CreditTransaction[]> {
+  const { data } = await supabase
+    .from("credit_transactions")
+    .select("id, amount, operation, description, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as CreditTransaction[];
+}

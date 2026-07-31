@@ -4,7 +4,7 @@
  * Auto-refreshes every 30s.
  */
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeHealthCheck, countSupervisorErrorsSince, findRecentDecisionLatencies, countEmailClassificationsSince } from "@/data/systemHealthMetrics";
 import { Activity, Database, Brain, Mail, RefreshCw } from "lucide-react";
 
 interface HealthData {
@@ -35,30 +35,20 @@ export function SystemHealthPanel() {
 
     // 1. Health check
     try {
-      const { data, error } = await supabase.functions.invoke("health-check");
-      if (!error && data) results.health = data as HealthData;
+      const data = await invokeHealthCheck();
+      if (data) results.health = data as HealthData;
     } catch { /* best-effort */ }
 
     // 2. Recent errors (last 24h from supervisor_audit_log)
     try {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { count } = await supabase
-        .from("supervisor_audit_log")
-        .select("id", { count: "exact", head: true })
-        .eq("action_category", "error")
-        .gte("created_at", since);
-      results.recentErrors = count ?? 0;
+      results.recentErrors = await countSupervisorErrorsSince(since);
     } catch { /* best-effort */ }
 
     // 3. Avg AI latency (last 10 calls)
     try {
-      const { data } = await supabase
-        .from("ai_decision_log")
-        .select("execution_time_ms")
-        .not("execution_time_ms", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (data && data.length > 0) {
+      const data = await findRecentDecisionLatencies(10);
+      if (data.length > 0) {
         const sum = data.reduce((a, r) => a + (r.execution_time_ms ?? 0), 0);
         results.avgAiLatency = Math.round(sum / data.length);
       }
@@ -68,11 +58,7 @@ export function SystemHealthPanel() {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const { count } = await supabase
-        .from("email_classifications")
-        .select("id", { count: "exact", head: true })
-        .gte("classified_at", today.toISOString());
-      results.emailsToday = count ?? 0;
+      results.emailsToday = await countEmailClassificationsSince(today.toISOString());
     } catch { /* best-effort */ }
 
     setMetrics(prev => ({

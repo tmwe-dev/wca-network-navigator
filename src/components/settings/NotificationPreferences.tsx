@@ -3,7 +3,7 @@
  * Saves to app_settings table
  */
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { findAppSettingsForUser, upsertAppSettingsBatch } from "@/data/notificationPreferences";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -76,14 +76,9 @@ export function NotificationPreferences() {
     const loadSettings = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("app_settings")
-          .select("*")
-          .eq("user_id", user.id);
+        const data = await findAppSettingsForUser(user.id);
 
-        if (error) throw error;
-
-        if (data && data.length > 0) {
+        if (data.length > 0) {
           const settingsMap = data.reduce(
             (acc, row) => {
               const value = String(row.value || "");
@@ -131,23 +126,14 @@ export function NotificationPreferences() {
       setError(null);
 
       // Upsert each setting
-      const promises = settings.map((setting) =>
-        supabase.from("app_settings").upsert(
-          {
-            user_id: user.id,
-            key: setting.key,
-            value: String(setting.value),
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,key" }
-        )
+      const errors = await upsertAppSettingsBatch(
+        user.id,
+        settings.map((setting) => ({ key: setting.key, value: String(setting.value) })),
       );
 
-      const results = await Promise.all(promises);
-
       // Check for errors
-      for (const result of results) {
-        if (result.error) throw result.error;
+      for (const error of errors) {
+        if (error) throw error;
       }
 
       setSaved(true);

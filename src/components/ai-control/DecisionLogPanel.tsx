@@ -3,7 +3,7 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findDecisionLogPage } from "@/data/aiDecisionLog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,19 +45,7 @@ export function DecisionLogPanel() {
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.ai.decisionLog(typeFilter, autoOnly, searchEmail, page),
-    queryFn: async () => {
-      let q = supabase
-        .from("ai_decision_log")
-        .select("*, partners(company_name)", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (typeFilter !== "all") q = q.eq("decision_type", typeFilter);
-      if (autoOnly) q = q.eq("was_auto_executed", true);
-      if (searchEmail.trim()) q = q.ilike("email_address", `%${searchEmail.trim()}%`);
-      const { data: rows, error, count } = await q;
-      if (error) throw error;
-      return { rows: rows ?? [], total: count ?? 0 };
-    },
+    queryFn: () => findDecisionLogPage({ typeFilter, autoOnly, searchEmail, page, pageSize: PAGE_SIZE }),
   });
 
   const rows = data?.rows ?? [];

@@ -39,3 +39,31 @@ export async function insertAgentTask(task: Record<string, unknown>): Promise<vo
   const { error } = await supabase.from("agent_tasks").insert(task as never);
   if (error) throw error;
 }
+
+/** Insert su agent_tasks che ritorna la riga creata. */
+export async function insertAgentTaskReturning(task: Record<string, unknown>) {
+  const { data, error } = await supabase.from("agent_tasks").insert(task as never).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export interface ProposedAgentTaskRow {
+  readonly id: string;
+  readonly agent_id: string | null;
+  readonly task_type: string | null;
+  readonly description: string | null;
+  readonly status: string;
+  readonly created_at: string;
+}
+
+/** Task agente in stato "proposed" o "pending" (Coda AI). */
+export async function findProposedOrPendingAgentTasks(limit = 100): Promise<ProposedAgentTaskRow[]> {
+  const { data, error } = await supabase
+    .from("agent_tasks")
+    .select("id, agent_id, task_type, description, status, created_at")
+    .in("status", ["proposed", "pending"])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as unknown as ProposedAgentTaskRow[];
+}

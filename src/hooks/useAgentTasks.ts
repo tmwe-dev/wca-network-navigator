@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { findAgentTasksList, insertAgentTaskReturning } from "@/data/agentTasks";
 
 type AgentTaskRow = Database["public"]["Tables"]["agent_tasks"]["Row"];
 type AgentTaskInsert = Database["public"]["Tables"]["agent_tasks"]["Insert"];
@@ -16,14 +17,7 @@ export function useAgentTasks(agentId?: string) {
     queryKey: key,
     enabled: !!agentId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agent_tasks")
-        .select("*")
-        .eq("agent_id", agentId!)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data ?? [];
+      return findAgentTasksList(agentId!, 50);
     },
   });
 
@@ -31,13 +25,7 @@ export function useAgentTasks(agentId?: string) {
     mutationFn: async (task: Partial<AgentTaskInsert>) => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
-      const { data, error } = await supabase
-        .from("agent_tasks")
-        .insert({ ...task, user_id: user.id, agent_id: task.agent_id ?? agentId! } satisfies AgentTaskInsert)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      return insertAgentTaskReturning({ ...task, user_id: user.id, agent_id: task.agent_id ?? agentId! } satisfies AgentTaskInsert);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });

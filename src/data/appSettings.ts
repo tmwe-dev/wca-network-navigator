@@ -147,3 +147,44 @@ export async function upsertAiAutomationPauseSettings(
   const results = await Promise.all(updates);
   return !results.some((r) => r.error);
 }
+
+/** Legge un app_setting per chiave, errore propagato (single, non maybeSingle). Ritorna null se assente/errore. */
+export async function getAppSettingSingleByKey(key: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", key)
+    .single();
+  if (error || !data) return null;
+  return data.value ?? null;
+}
+
+/** Upsert di un app_setting senza vincolo di conflitto esplicito (PK di default). */
+export async function upsertAppSettingByKey(params: { key: string; value: string; userId: string }): Promise<void> {
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({ key: params.key, value: params.value, user_id: params.userId });
+  if (error) throw error;
+}
+
+/** Impostazioni `ai_*` di un utente (Email Forge Sender Profile). */
+export async function findAiSettingsForUser(userId: string): Promise<Record<string, string>> {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .eq("user_id", userId)
+    .like("key", "ai_%");
+  const map: Record<string, string> = {};
+  (data ?? []).forEach((r) => { if (r.value != null) map[r.key] = r.value; });
+  return map;
+}
+
+/** Impostazioni voce ElevenLabs per il KB Supervisor (TTS). */
+export async function findElevenLabsVoiceSettings(userId: string) {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .eq("user_id", userId)
+    .in("key", ["elevenlabs_default_voice_id", "elevenlabs_custom_voice_id", "elevenlabs_language"]);
+  return Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
+}

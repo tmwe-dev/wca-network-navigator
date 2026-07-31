@@ -3,8 +3,8 @@
  * Split from the original 619-LOC monolith.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { getAllImportLogs, getImportLogById, getAllImportedContactsForLog, getImportErrorsForLog } from "@/data/importLogQueries";
 
 export interface ImportLog {
   id: string;
@@ -72,11 +72,7 @@ export function useImportLogs() {
   return useQuery({
     queryKey: queryKeys.imports.logs,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("import_logs")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const data = await getAllImportLogs();
       return data as ImportLog[];
     },
   });
@@ -87,12 +83,7 @@ export function useImportLog(id: string | null) {
     queryKey: queryKeys.imports.log(id),
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("import_logs")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (error) throw error;
+      const data = await getImportLogById(id);
       return data as ImportLog;
     },
     enabled: !!id,
@@ -108,22 +99,7 @@ export function useImportedContacts(importLogId: string | null) {
     queryKey: queryKeys.contacts.imported(importLogId),
     queryFn: async () => {
       if (!importLogId) return [];
-      const PAGE_SIZE = 1000;
-      let allData: Array<Record<string, unknown>> = [];
-      let from = 0;
-      let hasMore = true;
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("imported_contacts")
-          .select("*")
-          .eq("import_log_id", importLogId)
-          .order("row_number", { ascending: true })
-          .range(from, from + PAGE_SIZE - 1);
-        if (error) throw error;
-        allData = allData.concat(data || []);
-        hasMore = (data?.length || 0) === PAGE_SIZE;
-        from += PAGE_SIZE;
-      }
+      const allData = await getAllImportedContactsForLog(importLogId);
       return allData as unknown as ImportedContact[];
     },
     enabled: !!importLogId,
@@ -135,12 +111,7 @@ export function useImportErrors(importLogId: string | null) {
     queryKey: queryKeys.imports.errors(importLogId),
     queryFn: async () => {
       if (!importLogId) return [];
-      const { data, error } = await supabase
-        .from("import_errors")
-        .select("*")
-        .eq("import_log_id", importLogId)
-        .order("row_number", { ascending: true });
-      if (error) throw error;
+      const data = await getImportErrorsForLog(importLogId);
       return data as ImportError[];
     },
     enabled: !!importLogId,

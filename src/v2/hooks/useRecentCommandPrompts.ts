@@ -12,6 +12,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { findUserConversationIds, findRecentUserMessages } from "@/data/commandPromptsV2";
 
 const MAX_SUGGESTIONS = 3;
 const LOOKBACK_DAYS = 60;
@@ -36,26 +37,15 @@ export function useRecentCommandPrompts() {
 
       // Conversations owned by the user (RLS already restricts, but we filter
       // explicitly to keep the query narrow and indexed).
-      const { data: convs, error: convErr } = await supabase
-        .from("command_conversations")
-        .select("id")
-        .eq("user_id", userId)
-        .limit(200);
-      if (convErr || !convs || convs.length === 0) return [];
+      const convIds = await findUserConversationIds(userId, 200);
+      if (!convIds || convIds.length === 0) return [];
 
       const sinceIso = new Date(
         Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
       ).toISOString();
 
-      const { data: msgs, error: msgErr } = await supabase
-        .from("command_messages")
-        .select("content, created_at")
-        .in("conversation_id", convs.map((c) => c.id))
-        .eq("role", "user")
-        .gte("created_at", sinceIso)
-        .order("created_at", { ascending: false })
-        .limit(FETCH_LIMIT);
-      if (msgErr || !msgs) return [];
+      const msgs = await findRecentUserMessages(convIds, sinceIso, FETCH_LIMIT);
+      if (!msgs) return [];
 
       const buckets = new Map<
         string,

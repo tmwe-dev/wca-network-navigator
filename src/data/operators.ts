@@ -58,3 +58,20 @@ export async function findOperatorAdminFlag(userId: string): Promise<{ is_admin:
     .maybeSingle();
   return data ?? null;
 }
+
+export interface OperatorOnboardingPatch {
+  name: string;
+  whatsapp_phone: string | null;
+  linkedin_profile_url: string | null;
+  is_active: boolean;
+}
+
+/** Aggiorna l'operatore collegato a un utente al termine dell'onboarding. Ritorna il numero di righe toccate. */
+export async function updateOperatorForOnboarding(userId: string, patch: OperatorOnboardingPatch): Promise<number> {
+  const { error, count } = await supabase
+    .from("operators")
+    .update(patch as OperatorUpdate, { count: "exact" })
+    .eq("user_id", userId);
+  if (error) throw error;
+  return count ?? 0;
+}

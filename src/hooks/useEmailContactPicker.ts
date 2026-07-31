@@ -3,8 +3,8 @@
  */
 import { useReducer, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { rpcGetCountryStats, rpcGetContactFilterOptions } from "@/data/rpc";
+import { findPickerPartners, findPickerPartnerContacts, findPickerContacts, findPickerBcaCards } from "@/data/emailContactPickerQueries";
 import { getCountryCodesBatched } from "@/data/partners";
 import { useMission } from "@/contexts/MissionContext";
 import { getCountryFlag } from "@/lib/countries";
@@ -80,14 +80,7 @@ export function useEmailContactPicker() {
     queryKey: queryKeys.partners.picker(state.search, state.selectedCountry),
     enabled: state.tab === "partners",
     queryFn: async () => {
-      let q = supabase
-        .from("partners")
-        .select("id, company_name, company_alias, country_code, city, lead_status");
-      if (state.search.length >= 3) q = q.ilike("company_name", `%${state.search}%`);
-      if (state.selectedCountry) q = q.eq("country_code", state.selectedCountry);
-      q = q.eq("is_active", true);
-      const { data } = await q.order("company_name").limit(200);
-      return (data ?? []) as PartnerRow[];
+      return findPickerPartners(state.search, state.selectedCountry);
     },
   });
 
@@ -96,13 +89,7 @@ export function useEmailContactPicker() {
     queryKey: queryKeys.partnerContacts.pickerPartner(state.expandedPartner),
     enabled: !!state.expandedPartner,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partner_contacts")
-        .select("id, name, contact_alias, email, title")
-        .eq("partner_id", state.expandedPartner!)
-        .order("is_primary", { ascending: false })
-        .limit(50);
-      return (data ?? []) as PartnerContactRow[];
+      return findPickerPartnerContacts(state.expandedPartner!);
     },
   });
 
@@ -111,17 +98,8 @@ export function useEmailContactPicker() {
     queryKey: queryKeys.contacts.picker(state.search, state.selectedCountry, state.originFilter),
     enabled: state.tab === "contacts",
     queryFn: async () => {
-      let q = supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, email, country, contact_alias, company_alias, lead_status, origin, position");
-      if (state.search.length >= 3) q = q.or(`name.ilike.%${state.search}%,company_name.ilike.%${state.search}%,email.ilike.%${state.search}%`);
-      if (state.selectedCountry) {
-        const countryName = WCA_COUNTRIES_MAP[state.selectedCountry]?.name;
-        if (countryName) q = q.ilike("country", `%${countryName}%`);
-      }
-      if (state.originFilter !== "all") q = q.eq("origin", state.originFilter);
-      const { data } = await q.limit(200);
-      return (data ?? []) as ImportedContactRow[];
+      const countryName = state.selectedCountry ? (WCA_COUNTRIES_MAP[state.selectedCountry]?.name ?? null) : null;
+      return findPickerContacts(state.search, countryName, state.originFilter);
     },
   });
 
@@ -130,18 +108,8 @@ export function useEmailContactPicker() {
     queryKey: queryKeys.businessCards.campaign(state.search, state.selectedCountry),
     enabled: state.tab === "bca",
     queryFn: async () => {
-      let q = supabase
-        .from("business_cards")
-        .select("id, contact_name, company_name, email, location, matched_partner_id, lead_status");
-      if (state.search.length >= 3) {
-        q = q.or(`contact_name.ilike.%${state.search}%,company_name.ilike.%${state.search}%,email.ilike.%${state.search}%`);
-      }
-      if (state.selectedCountry) {
-        const countryName = WCA_COUNTRIES_MAP[state.selectedCountry]?.name;
-        if (countryName) q = q.ilike("location", `%${countryName}%`);
-      }
-      const { data } = await q.limit(200);
-      return (data ?? []) as BcaRow[];
+      const countryName = state.selectedCountry ? (WCA_COUNTRIES_MAP[state.selectedCountry]?.name ?? null) : null;
+      return findPickerBcaCards(state.search, countryName);
     },
   });
 

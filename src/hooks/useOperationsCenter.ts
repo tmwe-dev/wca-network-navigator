@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
+import { getOpsCenterAgentTasks, getAgentNamesByIds, getOpsCenterEmailQueue, getOpsCenterActivities } from "@/data/opsCenterQueries";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface AgentTaskLive {
@@ -52,25 +53,11 @@ export function useOperationsCenter() {
   const { data: agentTasks = [], refetch: refetchTasks } = useQuery({
     queryKey: queryKeys.opsCenter.agentTasks(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agent_tasks")
-        .select("id, agent_id, description, status, task_type, created_at, started_at, completed_at, result_summary")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
+      const data = await getOpsCenterAgentTasks();
 
       // Get agent names
       const agentIds = [...new Set((data || []).map((t) => t.agent_id))];
-      const agentMap: Record<string, { name: string; emoji: string }> = {};
-      if (agentIds.length > 0) {
-        const { data: agents } = await supabase
-          .from("agents")
-          .select("id, name, avatar_emoji")
-          .in("id", agentIds);
-        (agents || []).forEach((a) => {
-          agentMap[a.id] = { name: a.name, emoji: a.avatar_emoji };
-        });
-      }
+      const agentMap = await getAgentNamesByIds(agentIds);
 
       return (data || []).map((t) => ({
         ...t,
@@ -87,12 +74,7 @@ export function useOperationsCenter() {
   const { data: emailQueue = [], refetch: refetchEmails } = useQuery({
     queryKey: queryKeys.opsCenter.emailQueue(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_campaign_queue")
-        .select("id, recipient_email, recipient_name, subject, status, scheduled_at, sent_at, error_message, created_at, opened_at, open_count")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
+      const data = await getOpsCenterEmailQueue();
       return (data || []) as EmailQueueItem[];
     },
     staleTime: 10_000,
@@ -104,14 +86,7 @@ export function useOperationsCenter() {
   const { data: activities = [], refetch: refetchActivities } = useQuery({
     queryKey: queryKeys.opsCenter.activities(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("activities")
-        .select("id, title, activity_type, status, scheduled_at, due_date, email_subject, sent_at, created_at, partners(company_name)")
-        .is("deleted_at", null)
-        .neq("status", "cancelled")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
+      const data = await getOpsCenterActivities();
       return (data || []).map((a) => ({
         ...a,
         partner_name: a.partners?.company_name || null,
