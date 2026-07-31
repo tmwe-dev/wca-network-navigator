@@ -9,27 +9,6 @@ import type { Database } from "@/integrations/supabase/types";
 
 type CalendarEventDbRow = Database["public"]["Tables"]["calendar_events"]["Row"];
 
-export interface CalendarEventShape {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string | null;
-  event_type: "meeting" | "call" | "task" | "reminder" | "follow_up";
-  start_at: string;
-  end_at: string | null;
-  all_day: boolean;
-  partner_id: string | null;
-  contact_id: string | null;
-  deal_id: string | null;
-  location: string | null;
-  color: string;
-  recurrence: "daily" | "weekly" | "monthly" | "none" | null;
-  reminder_minutes: number;
-  status: "scheduled" | "completed" | "cancelled";
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string;
-}
 
 type CalendarEventInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
 type CalendarEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
