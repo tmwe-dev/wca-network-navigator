@@ -930,12 +930,12 @@ export interface CsvPartnerInsertRow {
   country_code: string;
   country_name: string;
   city: string;
-  address: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
   partner_type: string;
-  wca_id: number | null;
+  wca_id?: number | null;
   is_active: boolean;
 }
 
@@ -985,8 +985,17 @@ export interface PartnersPaginatedFilters extends PartnerFilters {
   sort?: string;
 }
 
+export interface PartnerPaginatedRow extends Record<string, unknown> {
+  id: string;
+  company_name?: string;
+  company_alias?: string | null;
+  country_code?: string;
+  city?: string;
+  lead_status?: string;
+}
+
 export interface PartnersPaginatedResult {
-  partners: unknown[];
+  partners: PartnerPaginatedRow[];
   total: number;
 }
 

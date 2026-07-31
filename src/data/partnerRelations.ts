@@ -142,7 +142,7 @@ export async function findPartnerContactsByPartnerIds(
   return results;
 }
 
-export interface PartnerSocialLinkRow {
+export interface PartnerSocialLinkRow extends Record<string, unknown> {
   id: string;
   partner_id: string;
   contact_id: string | null;

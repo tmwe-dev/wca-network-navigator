@@ -34,7 +34,7 @@ interface PromptTemplate {
   id: string;
   name: string;
   prompt_text: string;
-  category: string;
+  category: string | null;
 }
 
 interface PromptTemplateSelectorProps {

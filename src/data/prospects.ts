@@ -2,6 +2,9 @@
  * DAL — prospects
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type Prospect = Database["public"]["Tables"]["prospects"]["Row"];
 
 
 import { createLogger } from "@/lib/log";

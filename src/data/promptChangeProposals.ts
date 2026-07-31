@@ -101,7 +101,10 @@ export async function markPromptChangeProposalApplied(id: string): Promise<void>
 }
 
 /** Applica un patch al blocco di un operative_prompt (usato in approvazione proposte). */
-export async function updateOperativePromptBlockPatch(promptId: string, patch: Record<string, string>): Promise<void> {
+export async function updateOperativePromptBlockPatch(
+  promptId: string,
+  patch: Database["public"]["Tables"]["operative_prompts"]["Update"],
+): Promise<void> {
   const { error } = await supabase
     .from("operative_prompts")
     .update(patch)
