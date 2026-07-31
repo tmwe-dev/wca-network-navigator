@@ -14,7 +14,10 @@ export interface UnreadCountsRaw {
   readonly pendingQueue: number;
 }
 
-export async function fetchUnreadCounts(activeMailbox: UnreadCountsMailboxFilter | null): Promise<UnreadCountsRaw> {
+/** Alias di compatibilità per i consumer esistenti. */
+export type UnreadCountsResult = UnreadCountsRaw;
+
+export async function fetchUnreadCounts(activeMailbox: UnreadCountsMailboxFilter | null = null): Promise<UnreadCountsRaw> {
   let msgQuery = supabase
     .from("channel_messages")
     .select("id", { count: "exact", head: true })

@@ -30,7 +30,7 @@ export function useUnreadCounts() {
 
   return useQuery({
     queryKey: queryKeys.channelMessages.unreadCounts,
-    queryFn: fetchUnreadCounts,
+    queryFn: () => fetchUnreadCounts(null),
     refetchInterval: 120_000,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
