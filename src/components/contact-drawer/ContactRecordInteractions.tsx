@@ -25,7 +25,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           id: i.id,
           contact_id: partnerId,
           interaction_type: i.interaction_type,
-          title: i.subject,
+          title: i.subject ?? "",
           description: i.notes,
           outcome: null,
           created_by: null,

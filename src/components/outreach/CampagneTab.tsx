@@ -13,6 +13,15 @@ import { queryKeys } from "@/lib/queryKeys";
 
 type QueueFilter = "all" | "pending" | "sent" | "failed";
 
+interface EmailQueueItem {
+  id: string;
+  subject: string | null;
+  recipient_name: string | null;
+  recipient_email: string | null;
+  status: string;
+  created_at: string;
+}
+
 export function CampagneTab() {
   const [filter, setFilter] = useState<QueueFilter>("all");
 
@@ -26,7 +35,7 @@ export function CampagneTab() {
   const { data: emailQueue, isLoading: queueLoading } = useQuery({
     queryKey: queryKeys.email.queueOutreach(),
     queryFn: async () => {
-      return findRecentEmailQueue(50);
+      return findRecentEmailQueue<EmailQueueItem>(50);
     },
   });
 

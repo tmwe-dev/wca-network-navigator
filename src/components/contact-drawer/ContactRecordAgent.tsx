@@ -72,7 +72,7 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
     );
   }
 
-  const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
+  const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji ?? undefined);
 
   return (
     <div className="space-y-2">

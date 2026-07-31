@@ -302,7 +302,7 @@ function KbProposalsList() {
         priority: p.suggested_priority ?? 50,
         is_active: true,
       });
-      await reviewKbEntryProposal(p.id, "approved", `inserted by ${user.email ?? "operator"}`, newId);
+      await reviewKbEntryProposal(p.id, "approved", `inserted by ${user.email ?? "operator"}`, newId ?? undefined);
       toast.success("Materiale inserito in KB");
       void load();
     } catch (e) {
