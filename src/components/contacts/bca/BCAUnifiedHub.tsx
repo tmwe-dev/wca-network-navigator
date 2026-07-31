@@ -106,8 +106,7 @@ export default function BCAUnifiedHub() {
   const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedBca.has(id));
 
   const toggleBca = (id: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    setSelectedBca(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+    setSelectedBca(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   };
   const toggleAll = () => {
     setSelectedBca(allSelected ? new Set() : new Set(allFilteredIds));

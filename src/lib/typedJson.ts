@@ -78,3 +78,16 @@ export function mergeJsonObject<T extends Record<string, unknown>>(
   const obj = asJsonObject<T>(base);
   return { ...obj, ...patch } as T;
 }
+
+/**
+ * Normalizza un valore applicativo in `JsonValue` serializzabile.
+ * Round-trip via JSON: rimuove `undefined`, funzioni e riferimenti non
+ * serializzabili, così il risultato è assegnabile alle colonne `Json`.
+ */
+export function toJsonValue(value: unknown): JsonValue {
+  try {
+    return JSON.parse(JSON.stringify(value ?? null));
+  } catch {
+    return null;
+  }
+}

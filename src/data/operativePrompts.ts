@@ -4,7 +4,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function findOperativePrompts(userId: string, select = "id, name, objective, priority, tags, is_active") {
-  const { data, error } = await supabase.from("operative_prompts").select(select).order("priority", { ascending: false });
+  const { data, error } = await supabase
+    .from("operative_prompts")
+    .select(select)
+    .order("priority", { ascending: false })
+    .returns<Array<Record<string, unknown>>>();
   if (error) throw error;
   return data ?? [];
 }

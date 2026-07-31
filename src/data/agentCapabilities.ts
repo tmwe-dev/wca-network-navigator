@@ -6,6 +6,7 @@
  * modalità di esecuzione. NON sostituisce gli hard guards di sicurezza.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export type AgentExecutionMode = "autonomous" | "supervised" | "read_only";
 
@@ -36,7 +37,7 @@ export async function listAgentCapabilities(): Promise<AgentCapabilities[]> {
     .select(SELECT_COLS)
     .order("updated_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as unknown as AgentCapabilities[];
+  return (data ?? []) as AgentCapabilities[];
 }
 
 export async function getAgentCapabilities(agentId: string): Promise<AgentCapabilities | null> {
@@ -46,7 +47,7 @@ export async function getAgentCapabilities(agentId: string): Promise<AgentCapabi
     .eq("agent_id", agentId)
     .maybeSingle();
   if (error) throw error;
-  return (data ?? null) as unknown as AgentCapabilities | null;
+  return (data ?? null) as AgentCapabilities | null;
 }
 
 export async function updateAgentCapabilities(
@@ -55,7 +56,7 @@ export async function updateAgentCapabilities(
 ): Promise<void> {
   const { error } = await supabase
     .from("agent_capabilities")
-    .update(patch as never)
+    .update(patch as Database["public"]["Tables"]["agent_capabilities"]["Update"])
     .eq("id", id);
   if (error) throw error;
 }

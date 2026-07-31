@@ -64,8 +64,7 @@ export async function createRun(
     .single();
 
   if (error) throw new Error(`createRun failed: ${error.message}`);
-  const row = data as unknown as Record<string, unknown>;
-  return parseRun(row);
+  return parseRun(data);
 }
 
 /**
@@ -112,10 +111,10 @@ export async function appendProposal(
 
   if (readErr || !data) throw new Error(`appendProposal read failed: ${readErr?.message}`);
 
-  const row = data as unknown as Record<string, unknown>;
+  const row = data;
   let proposals: GlobalRunProposal[];
   try {
-    proposals = typeof row.proposals === "string" ? JSON.parse(row.proposals as string) : (row.proposals as GlobalRunProposal[]);
+    proposals = typeof row.proposals === "string" ? JSON.parse(row.proposals) : (row.proposals as unknown as GlobalRunProposal[]);
   } catch {
     proposals = [];
   }
@@ -139,10 +138,10 @@ export async function markProposalSaved(runId: string, blockId: string): Promise
 
   if (readErr || !data) return;
 
-  const row = data as unknown as Record<string, unknown>;
+  const row = data;
   let proposals: GlobalRunProposal[];
   try {
-    proposals = typeof row.proposals === "string" ? JSON.parse(row.proposals as string) : (row.proposals as GlobalRunProposal[]);
+    proposals = typeof row.proposals === "string" ? JSON.parse(row.proposals) : (row.proposals as unknown as GlobalRunProposal[]);
   } catch {
     return;
   }
@@ -167,9 +166,8 @@ export async function findActiveRun(userId: string): Promise<GlobalRun | null> {
     .order("updated_at", { ascending: false })
     .limit(1);
 
-  if (error || !data || (data as unknown[]).length === 0) return null;
-  const row = (data as unknown[])[0] as Record<string, unknown>;
-  return parseRun(row);
+  if (error || !data || data.length === 0) return null;
+  return parseRun(data[0]);
 }
 
 /**
@@ -185,7 +183,7 @@ export async function findLastRuns(userId: string, limit = 5): Promise<GlobalRun
     .limit(limit);
 
   if (error || !data) return [];
-  return (data as unknown[]).map((row) => parseRun(row as Record<string, unknown>));
+  return data.map((row) => parseRun(row));
 }
 
 /**
@@ -214,12 +212,11 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
 
   if (error || !data) throw new Error(`rollbackSavedProposals: run non trovato`);
 
-  const row = data as unknown as Record<string, unknown>;
   let proposals: GlobalRunProposal[];
   try {
-    proposals = typeof row.proposals === "string"
-      ? JSON.parse(row.proposals as string)
-      : (row.proposals as GlobalRunProposal[]) ?? [];
+    proposals = typeof data.proposals === "string"
+      ? JSON.parse(data.proposals)
+      : (data.proposals as unknown as GlobalRunProposal[]) ?? [];
   } catch {
     throw new Error("rollbackSavedProposals: proposals corrotte");
   }
@@ -264,29 +261,29 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
   return restored;
 }
 
-function parseRun(row: Record<string, unknown>): GlobalRun {
+function parseRun(row: Database["public"]["Tables"]["prompt_lab_global_runs"]["Row"]): GlobalRun {
   let proposals: GlobalRunProposal[];
   try {
     proposals = typeof row.proposals === "string"
-      ? JSON.parse(row.proposals as string)
-      : (row.proposals as GlobalRunProposal[]) ?? [];
+      ? JSON.parse(row.proposals)
+      : (row.proposals as unknown as GlobalRunProposal[]) ?? [];
   } catch {
     proposals = [];
   }
 
   return {
-    id: row.id as string,
-    user_id: row.user_id as string,
-    goal: (row.goal as string) ?? "",
+    id: row.id,
+    user_id: row.user_id,
+    goal: row.goal ?? "",
     status: row.status as GlobalRun["status"],
-    progress_current: (row.progress_current as number) ?? 0,
-    progress_total: (row.progress_total as number) ?? 0,
+    progress_current: row.progress_current ?? 0,
+    progress_total: row.progress_total ?? 0,
     proposals,
-    system_map: (row.system_map as string) ?? "",
-    doctrine_full: (row.doctrine_full as string) ?? "",
-    system_mission: (row.system_mission as string) ?? "",
-    started_at: row.started_at as string,
-    updated_at: row.updated_at as string,
-    completed_at: (row.completed_at as string) ?? null,
+    system_map: row.system_map ?? "",
+    doctrine_full: row.doctrine_full ?? "",
+    system_mission: row.system_mission ?? "",
+    started_at: row.started_at,
+    updated_at: row.updated_at,
+    completed_at: row.completed_at ?? null,
   };
 }

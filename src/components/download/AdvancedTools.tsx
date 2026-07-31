@@ -156,8 +156,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
               <ScrollArea className={`h-40 border rounded-lg ${th.panelSlate}`}>
                 <div className={th.divider}>
                   {partners?.map(p => (
-                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-                    <div key={p.id} onClick={() => setSelected(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer ${th.hover}`}>
+                    <div key={p.id} onClick={() => setSelected(prev => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })} className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer ${th.hover}`}>
                       <Checkbox checked={selected.has(p.id)} className="pointer-events-none" />
                       <div className="min-w-0 flex-1">
                         <p className={`text-xs truncate ${th.chipName}`}>{p.company_name}</p>

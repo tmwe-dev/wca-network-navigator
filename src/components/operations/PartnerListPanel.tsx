@@ -150,8 +150,7 @@ export function PartnerListPanel({
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }, []);

@@ -3,7 +3,6 @@
  * Knowledge base self-improving per Finder API.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { tFrom } from "@/lib/typedSupabase";
 
 export interface FinderApiKbEntry {
   id: string;
@@ -25,8 +24,29 @@ export const finderApiKbKeys = {
   list: (status?: string) => ["finder_api_kb", "list", status ?? "all"] as const,
 };
 
+function mapEntry(row: {
+  id: string;
+  title: string;
+  body: string;
+  trigger_query: string | null;
+  trigger_op: string | null;
+  trigger_error: string | null;
+  tags: string[];
+  status: string;
+  created_by: string | null;
+  approved_by: string | null;
+  created_at: string;
+  updated_at: string;
+}): FinderApiKbEntry {
+  return {
+    ...row,
+    status: row.status as FinderApiKbEntry["status"],
+  };
+}
+
 export async function listFinderApiKb(status?: "pending" | "approved" | "archived"): Promise<FinderApiKbEntry[]> {
-  let q = tFrom("finder_api_kb")
+  let q = supabase
+    .from("finder_api_kb")
     .select("id, title, body, trigger_query, trigger_op, trigger_error, tags, status, created_by, approved_by, created_at, updated_at")
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
@@ -34,7 +54,7 @@ export async function listFinderApiKb(status?: "pending" | "approved" | "archive
   if (status) q = q.eq("status", status);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as unknown as FinderApiKbEntry[];
+  return (data ?? []).map(mapEntry);
 }
 
 export async function proposeFinderApiKb(payload: {
@@ -47,7 +67,8 @@ export async function proposeFinderApiKb(payload: {
 }): Promise<FinderApiKbEntry> {
   const { data: userRes } = await supabase.auth.getSession();
   const userId = userRes.session?.user.id ?? null;
-  const { data, error } = await tFrom("finder_api_kb")
+  const { data, error } = await supabase
+    .from("finder_api_kb")
     .insert({
       title: payload.title,
       body: payload.body,
@@ -57,25 +78,28 @@ export async function proposeFinderApiKb(payload: {
       tags: payload.tags ?? [],
       status: "pending",
       created_by: userId,
-    } as never)
-    .select()
+    })
+    .select("id, title, body, trigger_query, trigger_op, trigger_error, tags, status, created_by, approved_by, created_at, updated_at")
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as FinderApiKbEntry;
+  if (!data) throw new Error("proposeFinderApiKb: insert returned no row");
+  return mapEntry(data);
 }
 
 export async function approveFinderApiKb(id: string): Promise<void> {
   const { data: userRes } = await supabase.auth.getSession();
   const userId = userRes.session?.user.id ?? null;
-  const { error } = await tFrom("finder_api_kb")
-    .update({ status: "approved", approved_by: userId } as never)
+  const { error } = await supabase
+    .from("finder_api_kb")
+    .update({ status: "approved", approved_by: userId })
     .eq("id", id);
   if (error) throw error;
 }
 
 export async function archiveFinderApiKb(id: string): Promise<void> {
-  const { error } = await tFrom("finder_api_kb")
-    .update({ status: "archived" } as never)
+  const { error } = await supabase
+    .from("finder_api_kb")
+    .update({ status: "archived" })
     .eq("id", id);
   if (error) throw error;
 }

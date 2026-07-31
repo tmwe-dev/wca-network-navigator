@@ -33,9 +33,11 @@ function num(row: Row | undefined, key: string): number {
 export async function fetchPromptLabHealth(): Promise<PromptLabHealth> {
   // Una sola RPC sarebbe ideale; per ora 4 query parallele su tabelle già RLS-protette.
   const [promptsRes, personasRes, testsRes, proposalsRes] = await Promise.all([
-    (supabase as unknown as { rpc: (n: string) => Promise<{ data: Row[] | null; error: unknown }> })
-      .rpc("prompt_lab_health_prompts")
-      .catch(() => ({ data: null, error: null })),
+    // prompt_lab_health_prompts non è presente nei tipi generati (RPC assente da types.ts):
+    // cast unavoidable, schema drift — la funzione esiste in DB ma non è stata rigenerata.
+    (supabase.rpc as unknown as (n: string) => Promise<{ data: Row[] | null; error: unknown }>)(
+      "prompt_lab_health_prompts",
+    ).catch(() => ({ data: null, error: null })),
     supabase.from("agent_personas").select("custom_tone_prompt"),
     supabase
       .from("prompt_test_runs")
@@ -101,35 +103,20 @@ export async function fetchPromptLabHealth(): Promise<PromptLabHealth> {
   const lastTestRun = runs.length > 0 ? runs[0].created_at : null;
 
   // Cron presence (best-effort, non blocca)
-  const cronRes = await (
-    supabase as unknown as {
-      rpc: (n: string) => Promise<{ data: Row[] | null; error: unknown }>;
-    }
-  )
-    .rpc("prompt_lab_cron_status")
-    .catch(() => ({ data: null, error: null }));
-  const cronRow = (cronRes.data?.[0] ?? {}) as Row;
+  let cronRow: Row = {};
+  try {
+    const cronRes = await supabase.rpc("prompt_lab_cron_status");
+    cronRow = (cronRes.data?.[0] ?? {}) as Row;
+  } catch {
+    cronRow = {};
+  }
   const cronTestRunner = Boolean(cronRow.cron_test_runner);
   const cronRefiner = Boolean(cronRow.cron_refiner);
 
   // ai_pending_actions: refiner pending — non garantito tutti i progetti l'abbiano
   let refinerPending = 0;
   try {
-    const { count } = await (
-      supabase as unknown as {
-        from: (t: string) => {
-          select: (
-            c: string,
-            o: { count: "exact"; head: true },
-          ) => {
-            eq: (
-              k: string,
-              v: string,
-            ) => { eq: (k: string, v: string) => Promise<{ count: number | null }> };
-          };
-        };
-      }
-    )
+    const { count } = await supabase
       .from("ai_pending_actions")
       .select("id", { count: "exact", head: true })
       .eq("action_type", "prompt_refinement")

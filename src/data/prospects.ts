@@ -9,9 +9,18 @@ type Prospect = Database["public"]["Tables"]["prospects"]["Row"];
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("prospects");
-export async function queryProspects(builder: (q: unknown) => unknown) {
-  const base = supabase.from("prospects").select("*").order("company_name");
-  const { data, error } = await (builder(base) as never);
+
+type ProspectUpdate = Database["public"]["Tables"]["prospects"]["Update"];
+
+function buildProspectsBase() {
+  return supabase.from("prospects").select("*").order("company_name");
+}
+
+export type ProspectsQueryBuilder = ReturnType<typeof buildProspectsBase>;
+
+export async function queryProspects(builder: (q: ProspectsQueryBuilder) => ProspectsQueryBuilder) {
+  const base = buildProspectsBase();
+  const { data, error } = await builder(base);
   if (error) throw error;
   return data ?? [];
 }
@@ -20,7 +29,7 @@ export async function updateProspectLeadStatus(id: string, status: string) {
   // P3.7: apply_lead_status_rpc non esiste a DB. UPDATE diretto.
   const { error } = await supabase
     .from("prospects")
-    .update({ lead_status: status as never })
+    .update({ lead_status: status })
     .eq("id", id);
   if (error) throw error;
 }
@@ -32,7 +41,7 @@ export async function updateProspect(id: string, updates: Record<string, unknown
   if (_stripped !== undefined) {
     log.warn("[updateProspect] lead_status stripped from generic update — use updateProspectLeadStatus() instead");
   }
-  const { error } = await supabase.from("prospects").update(safeUpdates as never).eq("id", id);
+  const { error } = await supabase.from("prospects").update(safeUpdates as ProspectUpdate).eq("id", id);
   if (error) throw error;
 }
 

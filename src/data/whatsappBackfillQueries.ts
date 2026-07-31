@@ -2,6 +2,7 @@
  * DAL — Queries for the deprecated useWhatsAppBackfill (kept for reference only).
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface BackfillCursorRow {
   oldest_message_external_id: string | null;
@@ -20,17 +21,17 @@ export async function getChannelBackfillCursor(externalChatId: string): Promise<
   return (data as BackfillCursorRow | null) ?? null;
 }
 
-export async function upsertChannelMessageIgnoreDup(row: Record<string, unknown>): Promise<{ error: { message: string } | null; status: number }> {
+export async function upsertChannelMessageIgnoreDup(row: Database["public"]["Tables"]["channel_messages"]["Insert"]): Promise<{ error: { message: string } | null; status: number }> {
   const { error, status } = await supabase
     .from("channel_messages")
-    .upsert(row as never, { onConflict: "message_id_external", ignoreDuplicates: true });
+    .upsert(row, { onConflict: "message_id_external", ignoreDuplicates: true });
   return { error, status };
 }
 
-export async function upsertChannelBackfillState(row: Record<string, unknown>): Promise<void> {
+export async function upsertChannelBackfillState(row: Database["public"]["Tables"]["channel_backfill_state"]["Insert"]): Promise<void> {
   const { error } = await supabase
     .from("channel_backfill_state")
-    .upsert(row as never, { onConflict: "operator_id,channel,external_chat_id" });
+    .upsert(row, { onConflict: "operator_id,channel,external_chat_id" });
   if (error) throw error;
 }
 

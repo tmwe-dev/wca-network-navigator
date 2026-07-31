@@ -71,10 +71,11 @@ export async function findJobsByStatusSelect(statuses: string[], select = "id, s
     .from("download_jobs")
     .select(select)
     .in("status", statuses)
-    .limit(limit);
+    .limit(limit)
+    // select dinamico: le colonne sono note solo a runtime.
+    .returns<JobStatusResult[]>();
   if (error) throw error;
-  // select dinamico: il client tipizzato non può inferire le colonne richieste a runtime.
-  return (data ?? []) as unknown as JobStatusResult[];
+  return data ?? [];
 }
 
 export async function findJobByCountryAndNetwork(countryCode: string, networkName: string, statuses: string[]) {
@@ -171,10 +172,11 @@ export async function getJobItemsByJobId(jobId: string, select = "status, contac
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)
-    .eq("job_id", jobId);
+    .eq("job_id", jobId)
+    // select dinamico: colonne note solo a runtime.
+    .returns<Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>>();
   if (error) throw error;
-  // select dinamico: colonne note solo a runtime.
-  return (data ?? []) as unknown as Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>;
+  return data ?? [];
 }
 
 export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<Record<string, unknown>> {
@@ -182,10 +184,11 @@ export async function getJobItemById(itemId: string, select = "attempt_count"): 
     .from("download_job_items")
     .select(select)
     .eq("id", itemId)
+    // select dinamico: colonne note solo a runtime.
+    .returns<Array<Record<string, unknown>>>()
     .single();
   if (error) throw error;
-  // select dinamico: colonne note solo a runtime.
-  return data as unknown as Record<string, unknown>;
+  return data;
 }
 
 export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {

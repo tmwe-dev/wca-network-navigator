@@ -89,9 +89,14 @@ export async function countActiveAgents() {
 }
 
 export async function findAgentsByUser(userId: string, select = "id, name, role, avatar_emoji, is_active, stats"): Promise<Array<Record<string, unknown>>> {
-  const { data, error } = await supabase.from("agents").select(select).eq("user_id", userId);
+  const { data, error } = await supabase
+    .from("agents")
+    .select(select)
+    .eq("user_id", userId)
+    // select dinamico: colonne note solo a runtime.
+    .returns<Array<Record<string, unknown>>>();
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return data ?? [];
 }
 
 export async function findAgentByUserAndName(userId: string, name: string) {
@@ -200,7 +205,7 @@ export async function findAgentsByIds(ids: string[]): Promise<AgentBasicNameRow[
     .from("agents")
     .select("id, name, avatar_emoji, role")
     .in("id", ids.length ? ids : ["__none__"]);
-  return (data ?? []) as unknown as AgentBasicNameRow[];
+  return (data ?? []) as AgentBasicNameRow[];
 }
 
 export interface AgentOption {

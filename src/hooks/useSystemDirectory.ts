@@ -83,10 +83,33 @@ export function useSystemDirectory() {
         findOperativePrompts(user.id),
       ]);
 
-      const agentsList = (agentsData || []) as unknown as AgentRecord[];
-      const assignmentsList = (assignmentsData || []) as unknown as AssignmentRecord[];
-      const tasksList = (tasksData || []) as unknown as TaskRecord[];
-      const promptsList = (promptsData || []) as unknown as PromptRecord[];
+      const toAgentRecord = (r: Record<string, unknown>): AgentRecord => ({
+        id: r.id as string,
+        name: r.name as string,
+        role: r.role as string,
+        avatar_emoji: r.avatar_emoji as string,
+        is_active: r.is_active as boolean,
+        stats: r.stats,
+      });
+      const toAssignmentRecord = (r: Record<string, unknown>): AssignmentRecord => ({
+        agent_id: r.agent_id as string,
+      });
+      const toTaskRecord = (r: Record<string, unknown>): TaskRecord => ({
+        agent_id: r.agent_id as string,
+      });
+      const toPromptRecord = (r: Record<string, unknown>): PromptRecord => ({
+        id: r.id as string,
+        name: r.name as string,
+        objective: r.objective as string | undefined,
+        priority: r.priority as number,
+        tags: r.tags as string[] | undefined,
+        is_active: r.is_active as boolean,
+      });
+
+      const agentsList = (agentsData || []).map(toAgentRecord);
+      const assignmentsList = (assignmentsData || []).map(toAssignmentRecord);
+      const tasksList = (tasksData || []).map(toTaskRecord);
+      const promptsList = (promptsData || []).map(toPromptRecord);
 
       // Count assignments per agent
       const assignMap = new Map<string, number>();

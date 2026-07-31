@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type PartnerContactInsert = Database["public"]["Tables"]["partner_contacts"]["Insert"];
+type PartnerContactUpdate = Database["public"]["Tables"]["partner_contacts"]["Update"];
 type PartnerNetworkInsert = Database["public"]["Tables"]["partner_networks"]["Insert"];
 type PartnerServiceInsert = Database["public"]["Tables"]["partner_services"]["Insert"];
 type PartnerCertInsert = Database["public"]["Tables"]["partner_certifications"]["Insert"];
@@ -15,9 +16,9 @@ type PartnerSocialLinkInsert = Database["public"]["Tables"]["partner_social_link
 export interface PartnerContactResult { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null; contact_alias: string | null; is_primary?: boolean | null; partner_id?: string; [k: string]: unknown }
 
 export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<PartnerContactResult[]> {
-  const { data, error } = await supabase.from("partner_contacts").select(select).eq("partner_id", partnerId);
+  const { data, error } = await supabase.from("partner_contacts").select(select).eq("partner_id", partnerId).returns<PartnerContactResult[]>();
   if (error) throw error;
-  return (data ?? []) as unknown as PartnerContactResult[];
+  return data ?? [];
 }
 
 export async function findPartnerContactByEmail(email: string) {
@@ -38,7 +39,7 @@ export async function insertPartnerContact(contact: Record<string, unknown>) {
 }
 
 export async function updatePartnerContact(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("partner_contacts").update(updates as never).eq("id", id);
+  const { error } = await supabase.from("partner_contacts").update(updates as PartnerContactUpdate).eq("id", id);
   if (error) throw error;
 }
 
@@ -109,18 +110,18 @@ export async function insertPartnerSocialLink(link: { partner_id: string; contac
 
 // ── partner_contacts by IDs ──
 export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias"): Promise<PartnerContactResult[]> {
-  const { data, error } = await supabase.from("partner_contacts").select(select).in("id", ids);
+  const { data, error } = await supabase.from("partner_contacts").select(select).in("id", ids).returns<PartnerContactResult[]>();
   if (error) throw error;
-  return (data ?? []) as unknown as PartnerContactResult[];
+  return data ?? [];
 }
 
 // ── prospect_contacts by IDs ──
 export interface ProspectContactResult { id: string; name: string; role: string | null; email: string | null; phone: string | null; prospect_id: string; linkedin_url: string | null; [k: string]: unknown }
 
 export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url"): Promise<ProspectContactResult[]> {
-  const { data, error } = await supabase.from("prospect_contacts").select(select).in("id", ids);
+  const { data, error } = await supabase.from("prospect_contacts").select(select).in("id", ids).returns<ProspectContactResult[]>();
   if (error) throw error;
-  return (data ?? []) as unknown as ProspectContactResult[];
+  return data ?? [];
 }
 
 // ── partner_contacts by partner IDs (batched) ──
@@ -135,9 +136,10 @@ export async function findPartnerContactsByPartnerIds(
     const { data, error } = await supabase
       .from("partner_contacts")
       .select(select)
-      .in("partner_id", chunk);
+      .in("partner_id", chunk)
+      .returns<PartnerContactResult[]>();
     if (error) throw error;
-    if (data) results.push(...(data as unknown as PartnerContactResult[]));
+    if (data) results.push(...data);
   }
   return results;
 }
@@ -156,7 +158,8 @@ export async function findPartnerSocialLinks(partnerId: string): Promise<Partner
   const { data, error } = await supabase
     .from("partner_social_links")
     .select("*")
-    .eq("partner_id", partnerId);
+    .eq("partner_id", partnerId)
+    .returns<PartnerSocialLinkRow[]>();
   if (error) throw error;
-  return data as PartnerSocialLinkRow[];
+  return data ?? [];
 }

@@ -6,8 +6,8 @@ import type { Database } from "@/integrations/supabase/types";
 
 type ImportLogInsert = Database["public"]["Tables"]["import_logs"]["Insert"];
 
-export async function updateImportLog(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("import_logs").update(updates as never).eq("id", id);
+export async function updateImportLog(id: string, updates: Database["public"]["Tables"]["import_logs"]["Update"]) {
+  const { error } = await supabase.from("import_logs").update(updates).eq("id", id);
   if (error) throw error;
 }
 
@@ -101,7 +101,7 @@ export async function findRecentImportLogs(userId: string, limit = 10): Promise<
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
-  return (data ?? []) as unknown as RecentImportLogRow[];
+  return (data ?? []) as RecentImportLogRow[];
 }
 
 export interface ImportGroupRow {
@@ -120,5 +120,5 @@ export async function findImportGroups(): Promise<ImportGroupRow[]> {
     .select("id, group_name, file_name, created_at, imported_rows, status")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as unknown as ImportGroupRow[];
+  return (data ?? []) as ImportGroupRow[];
 }

@@ -66,8 +66,7 @@ export function FunnemailGroupHeader({
     if (count > CONFIRM_THRESHOLD) {
       setConfirm(action);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      action === "archive" ? onArchiveAll() : onDeleteAll();
+      if (action === "archive") onArchiveAll(); else onDeleteAll();
     }
   };
 

@@ -58,6 +58,48 @@ export interface PromptVersion {
   created_at: string;
 }
 
+function mapTestCaseRow(row: Database["public"]["Tables"]["prompt_test_cases"]["Row"]): PromptTestCase {
+  return {
+    id: row.id,
+    prompt_id: row.prompt_id,
+    user_id: row.user_id,
+    name: row.name,
+    description: row.description,
+    input_payload: (typeof row.input_payload === "object" && row.input_payload !== null && !Array.isArray(row.input_payload)
+      ? row.input_payload as Record<string, unknown>
+      : {}),
+    expected_contains: row.expected_contains,
+    expected_not_contains: row.expected_not_contains,
+    expected_regex: row.expected_regex,
+    model: row.model,
+    temperature: row.temperature,
+    severity: row.severity as PromptTestCase["severity"],
+    is_active: row.is_active,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function mapTestRunRow(row: Database["public"]["Tables"]["prompt_test_runs"]["Row"]): PromptTestRun {
+  return {
+    id: row.id,
+    test_case_id: row.test_case_id,
+    prompt_id: row.prompt_id,
+    prompt_version_id: row.prompt_version_id,
+    user_id: row.user_id,
+    status: row.status as PromptTestRun["status"],
+    ai_output: row.ai_output,
+    failure_reasons: row.failure_reasons ?? [],
+    model_used: row.model_used,
+    tokens_input: row.tokens_input,
+    tokens_output: row.tokens_output,
+    duration_ms: row.duration_ms ?? 0,
+    trigger_source: row.trigger_source,
+    created_at: row.created_at,
+    metadata: null,
+  };
+}
+
 export async function listTestCasesForPrompt(promptId: string): Promise<PromptTestCase[]> {
   const { data, error } = await supabase
     .from("prompt_test_cases")
@@ -65,7 +107,7 @@ export async function listTestCasesForPrompt(promptId: string): Promise<PromptTe
     .eq("prompt_id", promptId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as unknown as PromptTestCase[]; // metadata drift: table has no metadata column beyond input_payload shape mismatch (Json vs Record)
+  return (data ?? []).map(mapTestCaseRow);
 }
 
 export interface UpsertTestCaseInput {
@@ -110,7 +152,8 @@ export async function upsertTestCase(input: UpsertTestCaseInput): Promise<Prompt
     .select("*")
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as PromptTestCase; // drift: input_payload is Json in DB vs Record<string, unknown> in domain type
+  if (!data) throw new Error("upsertTestCase: no row returned");
+  return mapTestCaseRow(data);
 }
 
 export async function deleteTestCase(id: string): Promise<void> {
@@ -126,7 +169,7 @@ export async function listRunsForTestCase(testCaseId: string, limit = 20): Promi
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PromptTestRun[]; // drift: metadata field on PromptTestRun not present in prompt_test_runs table
+  return (data ?? []).map(mapTestRunRow);
 }
 
 export async function listRunsForPrompt(promptId: string, limit = 50): Promise<PromptTestRun[]> {
@@ -137,7 +180,7 @@ export async function listRunsForPrompt(promptId: string, limit = 50): Promise<P
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PromptTestRun[]; // drift: metadata field on PromptTestRun not present in prompt_test_runs table
+  return (data ?? []).map(mapTestRunRow);
 }
 
 export interface RunnerSummary {

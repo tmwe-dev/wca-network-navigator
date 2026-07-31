@@ -2,6 +2,10 @@
  * DAL — agent_tasks
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type AgentTaskInsert = Database["public"]["Tables"]["agent_tasks"]["Insert"];
+type AgentTaskDbRow = Database["public"]["Tables"]["agent_tasks"]["Row"];
 
 export async function countCompletedAgentTasks() {
   const { count, error } = await supabase.from("agent_tasks").select("id", { count: "planned", head: true }).eq("status", "completed");
@@ -10,7 +14,12 @@ export async function countCompletedAgentTasks() {
 }
 
 export async function findAgentTasksByUser(userId: string, statuses: string[], select = "agent_id, status") {
-  const { data, error } = await supabase.from("agent_tasks").select(select).eq("user_id", userId).in("status", statuses);
+  const { data, error } = await supabase
+    .from("agent_tasks")
+    .select(select)
+    .eq("user_id", userId)
+    .in("status", statuses)
+    .returns<Array<Record<string, unknown>>>();
   if (error) throw error;
   return data ?? [];
 }
@@ -31,18 +40,31 @@ export async function findAgentTasksList(agentId?: string, limit = 100): Promise
   if (agentId) q = q.eq("agent_id", agentId);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as unknown as AgentTaskRow[];
+  return (data ?? []).map(toAgentTaskRow);
 }
 
-/** Insert generico su agent_tasks (usato dai tool Command / harmonize orchestrator). */
-export async function insertAgentTask(task: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("agent_tasks").insert(task as never);
+function toAgentTaskRow(row: AgentTaskDbRow): AgentTaskRow {
+  return {
+    id: row.id,
+    agent_id: row.agent_id,
+    task_type: row.task_type,
+    status: row.status,
+    description: row.description,
+    result_summary: row.result_summary,
+    created_at: row.created_at,
+    completed_at: row.completed_at,
+  };
+}
+
+/** Insert su agent_tasks (usato dai tool Command / harmonize orchestrator). */
+export async function insertAgentTask(task: AgentTaskInsert): Promise<void> {
+  const { error } = await supabase.from("agent_tasks").insert(task);
   if (error) throw error;
 }
 
 /** Insert su agent_tasks che ritorna la riga creata. */
-export async function insertAgentTaskReturning(task: Record<string, unknown>) {
-  const { data, error } = await supabase.from("agent_tasks").insert(task as never).select().single();
+export async function insertAgentTaskReturning(task: AgentTaskInsert): Promise<AgentTaskDbRow> {
+  const { data, error } = await supabase.from("agent_tasks").insert(task).select().single();
   if (error) throw error;
   return data;
 }
@@ -65,7 +87,7 @@ export async function findProposedOrPendingAgentTasks(limit = 100): Promise<Prop
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as ProposedAgentTaskRow[];
+  return data ?? [];
 }
 
 /** Numero di task pending/proposed di un utente, per il badge task count. */
@@ -100,7 +122,14 @@ export async function findPendingAgentTasksFull(limit = 200): Promise<PendingAge
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PendingAgentTaskFullRow[];
+  return (data ?? []).map((row) => ({
+    ...toAgentTaskRow(row),
+    target_filters:
+      row.target_filters !== null && typeof row.target_filters === "object" && !Array.isArray(row.target_filters)
+        ? (row.target_filters as Record<string, unknown>)
+        : {},
+    scheduled_at: row.scheduled_at,
+  }));
 }
 
 /** Aggiorna lo stato di un agent_task (approvazione/rifiuto in AgentTasksPage). */

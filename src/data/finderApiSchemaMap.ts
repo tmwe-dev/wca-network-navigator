@@ -3,8 +3,7 @@
  * Mappa campi/ruoli per ogni operazione TMWE consentita.
  * Iniettata nel system prompt di finder-api-chat per evitare ricerche cieche.
  */
-import { tFrom } from "@/lib/typedSupabase";
-
+import { supabase } from "@/integrations/supabase/client";
 export type SchemaRole =
   | "id_interno"
   | "tracking_code"
@@ -35,12 +34,13 @@ export const finderApiSchemaKeys = {
 };
 
 export async function listFinderApiSchemaMap(): Promise<FinderApiSchemaField[]> {
-  const { data, error } = await tFrom("finder_api_schema_map")
+  const { data, error } = await supabase
+    .from("finder_api_schema_map")
     .select("id, op, field, role, description, example, sample_value, verified_at, created_at, updated_at")
     .order("op", { ascending: true })
     .order("field", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as FinderApiSchemaField[];
+  return (data ?? []) as FinderApiSchemaField[];
 }
 
 export async function upsertFinderApiSchemaField(payload: {
@@ -51,7 +51,8 @@ export async function upsertFinderApiSchemaField(payload: {
   example?: string | null;
   sample_value?: string | null;
 }): Promise<void> {
-  const { error } = await tFrom("finder_api_schema_map")
+  const { error } = await supabase
+    .from("finder_api_schema_map")
     .upsert(
       {
         op: payload.op,
@@ -61,14 +62,14 @@ export async function upsertFinderApiSchemaField(payload: {
         example: payload.example ?? null,
         sample_value: payload.sample_value ?? null,
         verified_at: new Date().toISOString(),
-      } as never,
-      { onConflict: "op,field" } as never,
+      },
+      { onConflict: "op,field" },
     );
   if (error) throw error;
 }
 
 export async function deleteFinderApiSchemaField(id: string): Promise<void> {
-  const { error } = await tFrom("finder_api_schema_map").delete().eq("id", id);
+  const { error } = await supabase.from("finder_api_schema_map").delete().eq("id", id);
   if (error) throw error;
 }
 

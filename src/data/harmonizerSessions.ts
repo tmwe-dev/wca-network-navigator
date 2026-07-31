@@ -10,7 +10,8 @@
  * Tabella: public.harmonizer_sessions (migration 20260424123735).
  */
 import { supabase } from "@/integrations/supabase/client";
-import { toJsonValue } from "@/lib/jsonGuards";
+import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue, readJsonArray, readString, readNumber, isRecord } from "@/lib/jsonGuards";
 
 export type HarmonizerSessionStatus =
   | "pending"
@@ -103,6 +104,101 @@ function compactFacts(reg: Record<string, FactEntry>): Record<string, FactEntry>
   return Object.fromEntries(entries.slice(0, keep));
 }
 
+
+
+function mapConflictEntry(o: Record<string, unknown>): ConflictEntry {
+  const a = isRecord(o.source_a) ? o.source_a : {};
+  const b = isRecord(o.source_b) ? o.source_b : {};
+  return {
+    id: readString(o, "id") ?? "",
+    topic: readString(o, "topic") ?? "",
+    source_a: { ref: readString(a, "ref") ?? "", value: readString(a, "value") ?? "" },
+    source_b: { ref: readString(b, "ref") ?? "", value: readString(b, "value") ?? "" },
+    status: (readString(o, "status") as ConflictEntry["status"]) ?? "pending",
+    detected_in_chunk: readNumber(o, "detected_in_chunk") ?? 0,
+    notes: readString(o, "notes") ?? undefined,
+  };
+}
+
+function mapCrossRefEntry(o: Record<string, unknown>): CrossRefEntry {
+  const from = isRecord(o.from) ? o.from : {};
+  const to = isRecord(o.to) ? o.to : {};
+  return {
+    from: {
+      table: readString(from, "table") ?? "",
+      id: readString(from, "id") ?? "",
+      label: readString(from, "label") ?? "",
+    },
+    to: {
+      table: readString(to, "table") ?? "",
+      id: readString(to, "id") ?? "",
+      label: readString(to, "label") ?? "",
+    },
+    relation: readString(o, "relation") ?? "",
+    detected_in_chunk: readNumber(o, "detected_in_chunk") ?? 0,
+  };
+}
+
+function mapEntityCreatedEntry(o: Record<string, unknown>): EntityCreatedEntry {
+  return {
+    table: readString(o, "table") ?? "",
+    id: readString(o, "id") ?? undefined,
+    title: readString(o, "title") ?? "",
+    created_in_chunk: readNumber(o, "created_in_chunk") ?? 0,
+    proposal_id: readString(o, "proposal_id") ?? undefined,
+  };
+}
+
+function mapChunkErrorEntry(o: Record<string, unknown>): ChunkErrorEntry {
+  return {
+    chunk_index: readNumber(o, "chunk_index") ?? 0,
+    message: readString(o, "message") ?? "",
+    occurred_at: readString(o, "occurred_at") ?? "",
+  };
+}
+
+function mapFactEntry(o: Record<string, unknown>): FactEntry {
+  return {
+    key: readString(o, "key") ?? "",
+    value: readString(o, "value") ?? "",
+    source_chunk: readNumber(o, "source_chunk") ?? 0,
+    evidence: readString(o, "evidence") ?? undefined,
+  };
+}
+
+type HarmonizerSessionRow = Database["public"]["Tables"]["harmonizer_sessions"]["Row"];
+
+/** Converte una riga grezza del DB (Json generici) nel tipo applicativo tipizzato. */
+function toHarmonizerSession(row: HarmonizerSessionRow): HarmonizerSession {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    source_file: row.source_file,
+    source_kind: row.source_kind as HarmonizerSourceKind,
+    total_chunks: row.total_chunks,
+    current_chunk: row.current_chunk,
+    status: row.status as HarmonizerSessionStatus,
+    facts_registry: (() => {
+      const reg = isRecord(row.facts_registry) ? row.facts_registry : {};
+      const out: Record<string, FactEntry> = {};
+      for (const [k, v] of Object.entries(reg)) {
+        if (isRecord(v)) out[k] = mapFactEntry(v);
+      }
+      return out;
+    })(),
+    conflicts_found: readJsonArray(row.conflicts_found, mapConflictEntry),
+    cross_references: readJsonArray(row.cross_references, mapCrossRefEntry),
+    entities_created: readJsonArray(row.entities_created, mapEntityCreatedEntry),
+    errors: readJsonArray(row.errors, mapChunkErrorEntry),
+    harmonize_run_id: row.harmonize_run_id,
+    started_at: row.started_at,
+    last_chunk_completed_at: row.last_chunk_completed_at,
+    completed_at: row.completed_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 export async function createHarmonizerSession(input: {
   userId: string;
   sourceFile: string;
@@ -131,7 +227,7 @@ export async function createHarmonizerSession(input: {
     .select()
     .single();
   if (error) throw error;
-  return data as unknown as HarmonizerSession;
+  return toHarmonizerSession(data);
 }
 
 export async function loadHarmonizerSession(id: string): Promise<HarmonizerSession | null> {
@@ -141,7 +237,7 @@ export async function loadHarmonizerSession(id: string): Promise<HarmonizerSessi
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
-  return (data as unknown as HarmonizerSession) ?? null;
+  return data ? toHarmonizerSession(data) : null;
 }
 
 export async function findActiveHarmonizerSession(userId: string): Promise<HarmonizerSession | null> {
@@ -153,8 +249,7 @@ export async function findActiveHarmonizerSession(userId: string): Promise<Harmo
     .order("updated_at", { ascending: false })
     .limit(1);
   if (error) throw error;
-  const rows = data as unknown as HarmonizerSession[] | null;
-  return rows && rows.length > 0 ? rows[0] : null;
+  return data && data.length > 0 ? toHarmonizerSession(data[0]) : null;
 }
 
 /** Append/merge facts (chiave deduplicata). */

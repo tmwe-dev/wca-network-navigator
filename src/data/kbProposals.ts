@@ -4,6 +4,7 @@
  * Solo dopo approvazione il record viene materializzato in kb_entries.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface KbEntryProposal {
   id: string;
@@ -54,7 +55,7 @@ export async function listKbEntryProposals(opts: { status?: string } = {}): Prom
   if (opts.status) q = q.eq("status", opts.status);
   const { data, error } = await q;
   if (error) throw error;
-  return (data || []) as unknown as KbEntryProposal[];
+  return (data || []) as KbEntryProposal[];
 }
 
 export async function createKbEntryProposal(input: CreateKbEntryProposalInput): Promise<KbEntryProposal> {
@@ -73,11 +74,11 @@ export async function createKbEntryProposal(input: CreateKbEntryProposalInput): 
       conflicts_with: input.conflicts_with ?? [],
       duplicates_of: input.duplicates_of ?? null,
       ai_rationale: input.ai_rationale ?? null,
-    } as never)
+    } satisfies Database["public"]["Tables"]["kb_entry_proposals"]["Insert"])
     .select("*")
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as KbEntryProposal;
+  return data as KbEntryProposal;
 }
 
 export async function reviewKbEntryProposal(
@@ -93,7 +94,7 @@ export async function reviewKbEntryProposal(
       review_note: note ?? null,
       approved_kb_entry_id: approvedKbEntryId ?? null,
       reviewed_at: new Date().toISOString(),
-    } as never)
+    } satisfies Database["public"]["Tables"]["kb_entry_proposals"]["Update"])
     .eq("id", id);
   if (error) throw error;
 }

@@ -6,6 +6,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 type QueueInsert = Database["public"]["Tables"]["email_campaign_queue"]["Insert"];
+type EmailDraftUpdate = Database["public"]["Tables"]["email_drafts"]["Update"];
+type EmailDraftInsert = Database["public"]["Tables"]["email_drafts"]["Insert"];
 
 export async function findCampaignQueueItems(draftId: string) {
   const { data, error } = await supabase
@@ -35,7 +37,7 @@ export async function countPendingCampaignEmails() {
 }
 
 export async function updateEmailDraft(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("email_drafts").update(updates as never).eq("id", id);
+  const { error } = await supabase.from("email_drafts").update(updates as EmailDraftUpdate).eq("id", id);
   if (error) throw error;
 }
 
@@ -82,22 +84,22 @@ export async function createCampaignDraftQueue(
 ): Promise<CreateCampaignDraftQueueResult> {
   const { userId, subject, htmlBody, partnerIds, recipients } = input;
 
-  const draftPayload = {
+  const draftPayload: EmailDraftInsert = {
     user_id: userId,
     subject,
     html_body: htmlBody,
     status: "ready",
     total_count: recipients.length,
-  } as unknown as Record<string, unknown>;
+  };
   void partnerIds;
 
   const { data: draftRow, error: draftErr } = await supabase
     .from("email_drafts")
-    .insert(draftPayload as never)
+    .insert(draftPayload)
     .select("id")
     .maybeSingle();
   if (draftErr) throw draftErr;
-  const draftId = (draftRow as { id?: string } | null)?.id;
+  const draftId = draftRow?.id;
   if (!draftId) throw new Error("Impossibile creare la bozza email");
 
   const items: QueueInsert[] = recipients.map((r, idx) => ({
@@ -112,7 +114,7 @@ export async function createCampaignDraftQueue(
     position: idx,
     // Key stabile per (draft, partner): retry/dispatch ripetuti non duplicano l'invio.
     idempotency_key: `camp_${draftId}_${r.partner_id}`,
-  } as unknown as QueueInsert));
+  }));
 
   await insertCampaignQueueBatch(items);
 
@@ -137,7 +139,7 @@ export async function findCampaignDrafts(limit = 50): Promise<CampaignDraftListR
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as CampaignDraftListRow[];
+  return data ?? [];
 }
 
 export interface CampaignQueueItemRow {
@@ -157,7 +159,7 @@ export async function findCampaignQueueItemsForDraft(draftId: string, limit = 20
     .order("position", { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as CampaignQueueItemRow[];
+  return data ?? [];
 }
 
 export async function setCampaignDraftQueueStatus(draftId: string, queueStatus: string): Promise<void> {
@@ -203,17 +205,18 @@ export async function findRecentCampaignQueueItemsAll(limit = 50): Promise<Recen
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as RecentQueueItemRow[];
+  return data ?? [];
 }
 
 /** Ultime N righe di email_campaign_queue per la vista Campagne (outreach). */
-export async function findRecentEmailQueue<T = Record<string, unknown>>(limit = 50): Promise<T[]> {
+export async function findRecentEmailQueue<T = Database["public"]["Tables"]["email_campaign_queue"]["Row"]>(limit = 50): Promise<T[]> {
   const { data } = await supabase
     .from("email_campaign_queue")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(limit);
-  return (data || []) as unknown as T[];
+    .limit(limit)
+    .returns<T[]>();
+  return data ?? [];
 }
 
 /** Righe status di email_campaign_queue pending/sending; null in caso di errore (nessun throw). */
@@ -223,5 +226,5 @@ export async function findEmailQueueStatusRows(): Promise<{ status: string }[] |
     .select("status", { count: "exact", head: false })
     .in("status", ["pending", "sending"]);
   if (error) return null;
-  return (data || []) as { status: string }[];
+  return data ?? [];
 }

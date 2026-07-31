@@ -33,21 +33,19 @@ export const tmweCatalogKeys = {
 };
 
 export async function listTmweCatalog(): Promise<TmweCatalogRow[]> {
-  const { data, error } = await (supabase.from as unknown as (n: string) => {
-    select: (s: string) => { order: (c: string, opts: { ascending: boolean }) => { order: (c: string, opts: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: TmweCatalogRow[] | null; error: { message: string } | null }> } } };
-  })("tmwe_api_catalog")
+  const { data, error } = await supabase
+    .from("tmwe_api_catalog")
     .select("id, op, method, path, description, scopes, api_group, risk_level, identity, enabled, requires_confirmation, is_alias, alias_of, source, verified_at, last_called_at, call_count")
     .order("api_group", { ascending: true })
     .order("op", { ascending: true })
     .limit(2000);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as TmweCatalogRow[];
 }
 
 export async function setTmweCatalogEnabled(op: string, enabled: boolean): Promise<void> {
-  const { error } = await (supabase.from as unknown as (n: string) => {
-    update: (v: Record<string, unknown>) => { eq: (c: string, v: string) => Promise<{ error: { message: string } | null }> };
-  })("tmwe_api_catalog")
+  const { error } = await supabase
+    .from("tmwe_api_catalog")
     .update({ enabled })
     .eq("op", op);
   if (error) throw new Error(error.message);

@@ -68,3 +68,25 @@ export function readStringArray(source: Record<string, unknown>, key: string): s
   }
   return out;
 }
+/**
+ * Ricostruisce un array tipizzato da un valore `Json` (es. colonna jsonb),
+ * applicando `mapper` a ogni elemento che sia un record. Elementi non-record
+ * vengono scartati. Nessun cast opaco: ogni oggetto viene ispezionato.
+ */
+export function readJsonArray<T>(
+  value: Json | null | undefined,
+  mapper: (item: Record<string, unknown>) => T,
+): T[] {
+  if (!Array.isArray(value)) return [];
+  const out: T[] = [];
+  for (const item of value) {
+    if (isRecord(item)) out.push(mapper(item));
+  }
+  return out;
+}
+
+/** Lettura tipizzata di un numero da un record sconosciuto. */
+export function readNumber(source: Record<string, unknown>, key: string): number | null {
+  const v = source[key];
+  return typeof v === "number" ? v : null;
+}

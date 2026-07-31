@@ -22,13 +22,13 @@ export interface CronRunRow {
 }
 
 export async function listCronJobStatus(): Promise<CronJobStatus[]> {
-  const { data, error } = await supabase.rpc("cron_job_status" as never);
+  const { data, error } = await supabase.rpc("cron_job_status");
   if (error) return [];
-  return (data as unknown as CronJobStatus[]) ?? [];
+  return data ?? [];
 }
 
 export async function listCronRecentRuns(limit = 30): Promise<CronRunRow[]> {
-  const { data, error } = await supabase.rpc("cron_recent_runs" as never, { p_limit: limit } as never);
+  const { data, error } = await supabase.rpc("cron_recent_runs", { p_limit: limit });
   if (error) return [];
-  return (data as unknown as CronRunRow[]) ?? [];
+  return data ?? [];
 }

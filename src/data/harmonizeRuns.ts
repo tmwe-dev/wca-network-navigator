@@ -139,10 +139,52 @@ export interface HarmonizeRun {
 
 type HarmonizeRunRow = Database["public"]["Tables"]["harmonize_runs"]["Row"];
 
-function asJsonObject<T extends object>(value: unknown): T | Record<string, never> {
+function asPlainObject(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as unknown as T)
-    : {};
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Parser runtime di `InventorySummary`: valida `total` numerico e `by_table`
+ * come mappa string→number, scartando le chiavi non conformi.
+ * Se la forma non è riconoscibile ritorna `{}` (run legacy / colonna vuota).
+ */
+function parseInventorySummary(value: unknown): InventorySummary | Record<string, never> {
+  const obj = asPlainObject(value);
+  if (!obj) return {};
+  const total = finiteNumber(obj.total);
+  const rawByTable = asPlainObject(obj.by_table);
+  if (total === null || !rawByTable) return {};
+  const by_table: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(rawByTable)) {
+    const n = finiteNumber(entry);
+    if (n !== null) by_table[key] = n;
+  }
+  return { total, by_table };
+}
+
+const GAP_KEYS = ["text_only", "needs_contract", "needs_code_policy", "needs_kb_governance"] as const;
+
+/**
+ * Parser runtime di `GapClassification`: richiede le quattro chiavi numeriche.
+ * I valori mancanti o non numerici vengono normalizzati a 0; se nessuna chiave
+ * è presente il valore è considerato assente e si ritorna `{}`.
+ */
+function parseGapClassification(value: unknown): GapClassification | Record<string, never> {
+  const obj = asPlainObject(value);
+  if (!obj) return {};
+  if (!GAP_KEYS.some((k) => k in obj)) return {};
+  return {
+    text_only: finiteNumber(obj.text_only) ?? 0,
+    needs_contract: finiteNumber(obj.needs_contract) ?? 0,
+    needs_code_policy: finiteNumber(obj.needs_code_policy) ?? 0,
+    needs_kb_governance: finiteNumber(obj.needs_kb_governance) ?? 0,
+  };
 }
 
 function asProposals(value: unknown): HarmonizeProposal[] {
@@ -170,9 +212,9 @@ function mapHarmonizeRun(row: HarmonizeRunRow): HarmonizeRun {
     goal: row.goal,
     scope: row.scope,
     status: isHarmonizeStatus(row.status) ? row.status : "collecting",
-    real_inventory_summary: asJsonObject<InventorySummary>(row.real_inventory_summary),
-    desired_inventory_summary: asJsonObject<InventorySummary>(row.desired_inventory_summary),
-    gap_classification: asJsonObject<GapClassification>(row.gap_classification),
+    real_inventory_summary: parseInventorySummary(row.real_inventory_summary),
+    desired_inventory_summary: parseInventorySummary(row.desired_inventory_summary),
+    gap_classification: parseGapClassification(row.gap_classification),
     proposals: asProposals(row.proposals),
     uploaded_files: asUploadedFiles(row.uploaded_files),
     executed_count: row.executed_count ?? 0,
