@@ -8,7 +8,7 @@
  * il tab "Eval Accuracy" sia accessibile e l'UI esponga lo stato delle
  * decisioni (anche vuoto = OK, ma la sezione deve esistere).
  */
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("P0 funnemail classify pipeline", () => {
   test("inbox monta senza ErrorBoundary", async ({ page }) => {

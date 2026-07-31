@@ -2,22 +2,11 @@
  * E2E test — Mission flow: create contact, scrape partner, compose email.
  * Run with: npx playwright test e2e/mission-flow.spec.ts
  */
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:5173";
-const TEST_EMAIL = process.env.E2E_USER_EMAIL ?? "test@example.com";
-const TEST_PASSWORD = process.env.E2E_USER_PASSWORD ?? "testpassword";
 
 test.describe("Mission Flow E2E", () => {
-  test.beforeEach(async ({ page }) => {
-    // Login
-    await page.goto(`${BASE_URL}/auth`);
-    await page.fill('input[type="email"]', TEST_EMAIL);
-    await page.fill('input[type="password"]', TEST_PASSWORD);
-    await page.click('button[type="submit"]');
-    await page.waitForURL("**/v2/**", { timeout: 15000 });
-  });
-
   test("should navigate to Command page", async ({ page }) => {
     await page.goto(`${BASE_URL}/v2/command`);
     await expect(page.locator("text=Command")).toBeVisible({ timeout: 10000 });

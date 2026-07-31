@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("Funnemail Eval Flow", () => {
   test("eval accuracy tab is accessible", async ({ page }) => {

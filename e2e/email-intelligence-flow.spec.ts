@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("Email Intelligence", () => {
   test("navigare a Email Intelligence e verificare data-testid", async ({ page }) => {

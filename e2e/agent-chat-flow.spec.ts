@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("Agent Chat", () => {
   test("aprire la pagina agenti e verificare data-testid", async ({ page }) => {

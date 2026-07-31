@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("Calendar Flow - E2E Tests", () => {
   test.beforeEach(async ({ page }) => {

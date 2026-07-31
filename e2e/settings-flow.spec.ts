@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("Settings", () => {
   test("caricare la pagina settings con data-testid", async ({ page }) => {

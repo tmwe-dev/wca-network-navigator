@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("ImportWizard @regression", () => {
   test("la pagina import è raggiungibile", async ({ page }) => {

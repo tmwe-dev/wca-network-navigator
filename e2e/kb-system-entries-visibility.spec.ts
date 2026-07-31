@@ -9,7 +9,7 @@
  * Spec atomico: verifica che la KB UI (Knowledge Base v2) mostri entry
  * o quantomeno l'elenco categorie senza ErrorBoundary.
  */
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 const KB_ROUTES = ["/v2/knowledge-base", "/v2/kb", "/settings"];
 

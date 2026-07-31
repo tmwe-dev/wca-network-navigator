@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("PWA Offline Experience", () => {
   test("shows offline banner when network is lost", async ({ page, context }) => {

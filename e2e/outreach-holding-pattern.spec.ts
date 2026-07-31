@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { protectedTest as test, expect } from "./fixtures/auth";
 
 test.describe("Outreach & Holding Pattern", () => {
   test("navigare a Outreach e verificare data-testid", async ({ page }) => {
