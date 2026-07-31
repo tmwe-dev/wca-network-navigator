@@ -1,7 +1,7 @@
 /**
  * Tool: search-kb — Searches the WCA Knowledge Base via full-text search.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { searchKbFullText, searchKbByTitle } from "@/data/commandKbSearch";
 import type { Tool, ToolResult } from "./types";
 
 export const searchKbTool: Tool = {
@@ -14,29 +14,13 @@ export const searchKbTool: Tool = {
   execute: async (prompt: string): Promise<ToolResult> => {
     const cleaned = prompt.replace(/[^\p{L}\p{N}\s]/gu, " ").trim();
 
-    const { data, error } = await supabase
-      .from("kb_entries")
-      .select("id, title, category, content, source_path, priority")
-      .textSearch("content", cleaned, { type: "websearch", config: "italian" })
-      .eq("is_active", true)
-      .order("priority", { ascending: false })
-      .limit(20);
-
-    if (error) throw new Error(error.message);
-
-    const results = data ?? [];
+    const results = await searchKbFullText(cleaned);
 
     if (results.length === 0) {
       // Fallback ilike on title
       const firstWord = cleaned.split(/\s+/).find((w) => w.length > 3);
       if (firstWord) {
-        const { data: fallback } = await supabase
-          .from("kb_entries")
-          .select("id, title, category, content, source_path, priority")
-          .ilike("title", `%${firstWord}%`)
-          .eq("is_active", true)
-          .order("priority", { ascending: false })
-          .limit(20);
+        const fallback = await searchKbByTitle(firstWord);
 
         if (fallback && fallback.length > 0) {
           return buildResult(fallback);

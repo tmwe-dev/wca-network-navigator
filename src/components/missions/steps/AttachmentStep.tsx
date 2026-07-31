@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
+import { listMissionAttachmentImages } from "@/data/missionAttachments";
 import { findEmailTemplatesShort } from "@/data/emailTemplates";
 import type { MissionStepProps, AttachmentConfig } from "./types";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
@@ -21,13 +21,7 @@ export function AttachmentStep({ data, onChange }: MissionStepProps) {
 
   useEffect(() => {
     findEmailTemplatesShort().then((d) => { if (d) setTemplates(d as TemplateEntry[]); });
-    supabase.storage.from("email-images").list("", { limit: 50, sortBy: { column: "created_at", order: "desc" } })
-      .then(({ data: files }) => {
-        if (files) setImages(files.filter(f => f.name && !f.name.startsWith(".")).map(f => {
-          const { data: urlData } = supabase.storage.from("email-images").getPublicUrl(f.name);
-          return { name: f.name, url: urlData.publicUrl };
-        }));
-      });
+    listMissionAttachmentImages().then((imgs) => setImages(imgs));
   }, []);
 
   const addLink = () => {

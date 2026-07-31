@@ -10,6 +10,7 @@ import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { insertOutreachMission } from "@/data/outreachMissions";
 import type { Json } from "@/integrations/supabase/types";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { findActivePartnersCountryEmailStats, findActivePartnerIdsByCountries } from "@/data/partners";
 
 const log = createLogger("MissionBuilder");
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
@@ -49,16 +50,7 @@ export function useMissionBuilder() {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const allPartners: { country_code: string | null; country_name: string | null; email: string | null }[] = [];
-      const BATCH = 2000;
-      let from = 0;
-      while (true) {
-        const { data: batch } = await supabase.from("partners").select("country_code, country_name, email").eq("is_active", true).range(from, from + BATCH - 1);
-        if (!batch || batch.length === 0) break;
-        allPartners.push(...batch);
-        if (batch.length < BATCH) break;
-        from += BATCH;
-      }
+      const allPartners = await findActivePartnersCountryEmailStats();
       const map = new Map<string, { code: string; name: string; count: number; withEmail: number }>();
       for (const p of allPartners) {
         const code = p.country_code || "??";
@@ -236,7 +228,7 @@ export function useMissionBuilder() {
       await createActions.mutateAsync({ missionId, plan: pendingPlan });
       await approveAll.mutateAsync(missionId);
       if (stepData.targets?.countries?.length) {
-        const { data: partners } = await supabase.from("partners").select("id").in("country_code", stepData.targets.countries).eq("is_active", true).limit(totalContacts);
+        const partners = await findActivePartnerIdsByCountries(stepData.targets.countries, totalContacts);
         if (partners?.length) {
           await insertCockpitQueueItems(partners.map(p => ({ user_id: session.user.id, source_type: "mission", source_id: missionId, partner_id: p.id, status: "queued" })));
         }
