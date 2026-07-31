@@ -188,3 +188,34 @@ export async function findElevenLabsVoiceSettings(userId: string) {
     .in("key", ["elevenlabs_default_voice_id", "elevenlabs_custom_voice_id", "elevenlabs_language"]);
   return Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
 }
+
+/** Ore di lavoro agent (start/end) per la night pause. Estratto da `useGlobalAutoSync`. */
+export async function findAgentWorkHoursSettings(): Promise<Array<{ key: string; value: string | null }>> {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .in("key", ["agent_work_start_hour", "agent_work_end_hour"]);
+  return data ?? [];
+}
+
+/** Legge il valore raw della configurazione "Migliora tutto" schedulata (single, no filtro user). */
+export async function getScheduledImproveConfigValue(): Promise<{ value: string | null; error: unknown }> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "prompt_lab_scheduled_improve")
+    .single();
+  return { value: data?.value ?? null, error };
+}
+
+/** Upsert della configurazione "Migliora tutto" schedulata (senza onConflict esplicito). */
+export async function saveScheduledImproveConfig(userId: string, value: string): Promise<void> {
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({
+      key: "prompt_lab_scheduled_improve",
+      value,
+      user_id: userId,
+    });
+  if (error) throw error;
+}

@@ -9,6 +9,7 @@ import { t } from "@/components/download/theme";
 import { SearchResultsTable, type SearchResult } from "./SearchResultsTable";
 import type { ProspectFilters } from "./ProspectAdvancedFilters";
 import { ImportWizard } from "./ImportWizard";
+import { findProspectDedupKeys } from "@/data/prospects";
 
 interface Props {
   isDark: boolean;
@@ -162,10 +163,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
   // ── Dedup: check P.IVA against prospects table ──
   const dedupAgainstDb = async (results: SearchResult[]): Promise<SearchResult[]> => {
     // Get all partita_iva from DB
-    const { data: existing } = await supabase
-      .from("prospects")
-      .select("partita_iva, company_name")
-      .not("partita_iva", "is", null);
+    const existing = await findProspectDedupKeys();
 
     const dbPivas = new Set((existing || []).map((e) => e.partita_iva?.trim()).filter(Boolean));
     const dbNames = new Set((existing || []).map((e) => e.company_name?.toLowerCase().trim()).filter(Boolean));

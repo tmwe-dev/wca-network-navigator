@@ -6,6 +6,8 @@ import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type Agent } from "../../../core/domain/entities";
 import { mapAgentRow } from "../../../core/mappers/agent-mapper";
+import type { Database } from "@/integrations/supabase/types";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 export async function fetchAgents(): Promise<Result<Agent[], AppError>> {
   try {
@@ -33,4 +35,18 @@ export async function fetchAgents(): Promise<Result<Agent[], AppError>> {
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchAgents"));
   }
+}
+
+/* ── Raw single-agent fetch (chat hub) ─────────────────── */
+export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
+
+export async function fetchAgentByIdRaw(agentId: string): Promise<{
+  data: AgentRow | null;
+  error: PostgrestError | null;
+}> {
+  return supabase
+    .from("agents")
+    .select("*")
+    .eq("id", agentId)
+    .maybeSingle();
 }

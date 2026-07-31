@@ -205,3 +205,23 @@ export async function findRecentCampaignQueueItemsAll(limit = 50): Promise<Recen
   if (error) throw error;
   return (data ?? []) as RecentQueueItemRow[];
 }
+
+/** Ultime N righe di email_campaign_queue per la vista Campagne (outreach). */
+export async function findRecentEmailQueue<T = Record<string, unknown>>(limit = 50): Promise<T[]> {
+  const { data } = await supabase
+    .from("email_campaign_queue")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data || []) as unknown as T[];
+}
+
+/** Righe status di email_campaign_queue pending/sending; null in caso di errore (nessun throw). */
+export async function findEmailQueueStatusRows(): Promise<{ status: string }[] | null> {
+  const { data, error } = await supabase
+    .from("email_campaign_queue")
+    .select("status", { count: "exact", head: false })
+    .in("status", ["pending", "sending"]);
+  if (error) return null;
+  return (data || []) as { status: string }[];
+}

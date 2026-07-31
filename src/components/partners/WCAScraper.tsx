@@ -11,6 +11,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerDetailModal } from "./PartnerDetailModal";
 import { queryKeys } from "@/lib/queryKeys";
+import { getMaxPartnerWcaId } from "@/data/partners";
 
 interface ScrapeLog {
   wcaId: number;
@@ -46,14 +47,7 @@ export function WCAScraper() {
   const { data: maxWcaId } = useQuery({
     queryKey: queryKeys.downloads.maxWcaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("wca_id")
-        .not("wca_id", "is", null)
-        .order("wca_id", { ascending: false })
-        .limit(1)
-        .single();
-      return data?.wca_id || 0;
+      return await getMaxPartnerWcaId();
     },
   });
 

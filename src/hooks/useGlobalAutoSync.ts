@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgentWorkHoursSettings } from "@/data/appSettings";
 
 function getCETHour(): number {
   const now = new Date();
@@ -43,11 +43,8 @@ export function useGlobalAutoSync() {
 
   // Load work hours once from DB
   useEffect(() => {
-    supabase
-      .from("app_settings")
-      .select("key, value")
-      .in("key", ["agent_work_start_hour", "agent_work_end_hour"])
-      .then(({ data }) => {
+    findAgentWorkHoursSettings()
+      .then((data) => {
         if (!data) return;
         for (const row of data) {
           if (row.key === "agent_work_start_hour") workHoursRef.current.start = parseInt(row.value || "6", 10);

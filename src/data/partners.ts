@@ -930,12 +930,12 @@ export interface CsvPartnerInsertRow {
   country_code: string;
   country_name: string;
   city: string;
-  address: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
   partner_type: string;
-  wca_id: number | null;
+  wca_id?: number | null;
   is_active: boolean;
 }
 
@@ -977,4 +977,108 @@ export async function findPartnerHeroSnapshot(id: string) {
     .eq("id", id)
     .maybeSingle();
   return data;
+}
+
+export interface PartnersPaginatedFilters extends PartnerFilters {
+  quality?: string;
+  hideHolding?: boolean;
+  sort?: string;
+}
+
+export interface PartnerPaginatedRow extends Record<string, unknown> {
+  id: string;
+  company_name?: string;
+  company_alias?: string | null;
+  country_code?: string;
+  city?: string;
+  lead_status?: string;
+}
+
+export interface PartnersPaginatedResult {
+  partners: PartnerPaginatedRow[];
+  total: number;
+}
+
+/**
+ * Query paginata leggera (no join) per il Network. Estratta da `usePartnersPaginated`.
+ */
+export async function findPartnersPaginated(
+  filters: PartnersPaginatedFilters | undefined,
+  from: number,
+  to: number,
+): Promise<PartnersPaginatedResult> {
+  const selectFields = `id, company_name, company_alias, country_code, city, email, phone, mobile,
+       office_type, is_active, is_favorite, rating, member_since, wca_id,
+       raw_profile_html, enrichment_data, partner_type, lead_status`;
+
+  let query = supabase
+    .from("partners")
+    .select(selectFields, { count: "exact" })
+    .eq("is_active", true);
+
+  if (filters?.search) {
+    const s = sanitizeSearchTerm(filters.search);
+    if (s) query = query.ilike("company_name", `%${s}%`);
+  }
+
+  if (filters?.countries && filters.countries.length > 0) {
+    query = query.in("country_code", filters.countries);
+  }
+
+  if (filters?.cities && filters.cities.length > 0) {
+    query = query.in("city", filters.cities);
+  }
+
+  if (filters?.partnerTypes && filters.partnerTypes.length > 0) {
+    query = query.in("partner_type", filters.partnerTypes as readonly ("3pl" | "carrier" | "courier" | "customs_broker" | "freight_forwarder" | "nvocc")[]);
+  }
+
+  if (filters?.favorites) {
+    query = query.eq("is_favorite", true);
+  }
+
+  if (filters?.hideHolding) {
+    query = query.or("lead_status.is.null,lead_status.eq.new");
+  }
+
+  if (filters?.quality === "with_email") {
+    query = query.not("email", "is", null);
+  }
+  if (filters?.quality === "with_phone") {
+    query = query.or("phone.not.is.null,mobile.not.is.null");
+  }
+  if (filters?.quality === "with_profile") {
+    query = query.not("raw_profile_html", "is", null);
+  }
+  if (filters?.quality === "no_email") {
+    query = query.is("email", null);
+  }
+
+  if (filters?.sort === "rating") {
+    query = query.order("rating", { ascending: false, nullsFirst: false }).order("company_name");
+  } else if (filters?.sort === "recent") {
+    query = query.order("member_since", { ascending: false, nullsFirst: false }).order("company_name");
+  } else {
+    query = query.order("company_name");
+  }
+
+  const { data, error, count } = await query.range(from, to);
+  if (error) throw error;
+
+  return {
+    partners: data || [],
+    total: count ?? 0,
+  };
+}
+
+/** Massimo `wca_id` presente in anagrafica partner (0 se assente). */
+export async function getMaxPartnerWcaId(): Promise<number> {
+  const { data } = await supabase
+    .from("partners")
+    .select("wca_id")
+    .not("wca_id", "is", null)
+    .order("wca_id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.wca_id ?? 0;
 }

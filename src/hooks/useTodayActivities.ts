@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findTodayActivities } from "@/data/activities";
 import { asSourceMeta } from "@/lib/types/sourceMeta";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -23,18 +23,9 @@ export function useTodayActivities() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data, error } = await supabase
-        .from("activities")
-        .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta, status")
-        .gte("created_at", today.toISOString())
-        .is("deleted_at", null)
-        .in("status", ["pending", "in_progress", "completed"] as Array<"pending" | "in_progress" | "completed">)
-        .order("completed_at", { ascending: false, nullsFirst: false })
-        .limit(50);
+      const data = await findTodayActivities(today.toISOString());
 
-      if (error) throw error;
-
-      return (data || []).map((a): TodayActivity => {
+      return data.map((a): TodayActivity => {
         const meta = asSourceMeta(a.source_meta);
         return {
           id: a.id,

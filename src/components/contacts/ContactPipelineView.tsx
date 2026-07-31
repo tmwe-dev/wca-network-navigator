@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import { updateLeadStatus } from "@/data/partners";
+import { findContactsForPipeline } from "@/data/contacts";
 
 // ── Stage definitions mapped to lead_status ──
 interface Stage {
@@ -54,13 +55,7 @@ export function ContactPipelineView(): React.ReactElement {
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user?.id) return [];
-      const { data } = await supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, email, interaction_count, lead_status")
-        .eq("user_id", session.session.user.id)
-        .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
-        .order("company_name")
-        .limit(500);
+      const data = await findContactsForPipeline(session.session.user.id);
       return (data || []) as PipelineContact[];
     },
   });

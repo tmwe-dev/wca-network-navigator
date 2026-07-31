@@ -7,8 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Mail, Phone, MapPin, Building2, User, ArrowLeft, ExternalLink, Users, ChevronRight, Shield, Send as SendIcon, Loader2, ClipboardList } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { queryProspects } from "@/data/prospects";
+import { queryProspects, findProspectContactsByProspectId } from "@/data/prospects";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { t } from "@/components/download/theme";
@@ -312,13 +311,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
   const { data: contacts = [] } = useQuery({
     queryKey: queryKeys.prospects.contacts(prospect.id),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("prospect_contacts")
-        .select("*")
-        .eq("prospect_id", prospect.id);
-      if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return data as Array<Record<string, any>>;
+      return await findProspectContactsByProspectId(prospect.id);
     },
   });
 

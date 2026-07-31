@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { insertKbEntryBlock } from "@/data/kbEntries";
 
 interface CreateBlockDialogProps {
   open: boolean;
@@ -86,13 +86,12 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
     try {
       switch (blockType) {
         case "kb_entry": {
-          const { error } = await supabase.from("kb_entries").insert({
+          await insertKbEntryBlock({
             title: title.trim(),
             content: content.trim(),
             category: category,
             is_active: true,
           });
-          if (error) throw error;
           break;
         }
         case "operative_prompt": {

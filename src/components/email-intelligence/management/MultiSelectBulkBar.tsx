@@ -6,10 +6,14 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { untypedFrom } from '@/lib/supabaseUntyped';
-// Vedi nota in BulkEmailActions.tsx (DEBT-EMAIL-INTEL-COLUMNS).
-const supabase = { from: untypedFrom };
 import { toast } from 'sonner';
+import {
+  fetchChannelMessageIdsFromSender,
+  softDeleteChannelMessageById,
+  archiveChannelMessageById,
+  markChannelMessageIsReadFlag,
+  moveChannelMessageToFolder,
+} from '@/data/channelMessages';
 import { Trash2, Archive, Folder, Check } from 'lucide-react';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 
@@ -81,20 +85,13 @@ export function MultiSelectBulkBar({
     try {
       // Collect all emails from all selected senders
       const emailPromises = selectedSenders.map((sender) =>
-        supabase
-          .from('channel_messages')
-          .select('id')
-          .eq('channel', 'email')
-          .eq('from', sender.email)
-          .is('deleted_at', null)
+        fetchChannelMessageIdsFromSender(sender.email).catch(() => [] as string[])
       );
 
       const results = await Promise.all(emailPromises);
       const allEmails: string[] = [];
-      results.forEach((result) => {
-        if (!result.error && result.data) {
-          allEmails.push(...result.data.map((e: { id: string }) => e.id));
-        }
+      results.forEach((ids) => {
+        allEmails.push(...ids);
       });
 
       if (allEmails.length === 0) {
@@ -110,25 +107,13 @@ export function MultiSelectBulkBar({
 
         try {
           if (action === 'delete') {
-            await supabase
-              .from('channel_messages')
-              .update({ deleted_at: new Date().toISOString() })
-              .eq('id', emailId);
+            await softDeleteChannelMessageById(emailId);
           } else if (action === 'archive') {
-            await supabase
-              .from('channel_messages')
-              .update({ folder: 'ARCHIVE' })
-              .eq('id', emailId);
+            await archiveChannelMessageById(emailId);
           } else if (action === 'mark-read') {
-            await supabase
-              .from('channel_messages')
-              .update({ is_read: true })
-              .eq('id', emailId);
+            await markChannelMessageIsReadFlag(emailId);
           } else if (action === 'move' && selectedFolder) {
-            await supabase
-              .from('channel_messages')
-              .update({ folder: selectedFolder })
-              .eq('id', emailId);
+            await moveChannelMessageToFolder(emailId, selectedFolder);
           }
         } catch (err) {
           log.error(`Error processing email ${i + 1}:`, { error: err });

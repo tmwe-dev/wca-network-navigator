@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPartnerSocialLinks } from "@/data/partnerRelations";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface SocialLink {
@@ -16,12 +16,8 @@ export function useSocialLinks(partnerId: string | null) {
     queryKey: queryKeys.socialLinks.byPartner(partnerId),
     queryFn: async () => {
       if (!partnerId) return [];
-      const { data, error } = await supabase
-        .from("partner_social_links")
-        .select("*")
-        .eq("partner_id", partnerId);
-      if (error) throw error;
-      return data as SocialLink[];
+      const data = await findPartnerSocialLinks(partnerId);
+      return data as unknown as SocialLink[];
     },
     enabled: !!partnerId,
   });

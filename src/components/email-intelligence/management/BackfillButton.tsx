@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { backfillForAddress, backfillForGroup } from "@/data/emailRulesBackfill";
 import type { BackfillReport } from "@/data/emailRulesBackfill";
+import { fetchOperatorIdForUser } from "@/data/emailGrouping";
 
 interface BackfillButtonProps {
   scope: "address" | "group";
@@ -54,12 +55,7 @@ export function BackfillButton({
       }
       // operator_id è opzionale (regole legacy hanno operator_id NULL).
       // Restringiamo se disponibile, altrimenti filtriamo solo per user.
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const operatorId = opRow?.id ?? undefined;
+      const operatorId = (await fetchOperatorIdForUser(user.id)) ?? undefined;
 
       const report = scope === "address"
         ? await backfillForAddress(user.id, target, false, operatorId)

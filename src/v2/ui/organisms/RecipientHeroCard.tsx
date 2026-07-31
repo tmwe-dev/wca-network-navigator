@@ -8,7 +8,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPartnerHeroSnapshot } from "@/data/partners";
 import { MapPin, Sparkles, X, Mail, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCountryFlag } from "@/lib/countries";
@@ -127,11 +127,7 @@ export function RecipientHeroCard({
     queryKey: ["compose-recipient-hero", partnerId],
     queryFn: async (): Promise<PartnerSnapshot | null> => {
       if (!partnerId) return null;
-      const { data: row } = await supabase
-        .from("partners")
-        .select("company_name, company_alias, country_name, country_code, city, logo_url, last_interaction_at, interaction_count, enrichment_data, lead_status")
-        .eq("id", partnerId)
-        .maybeSingle();
+      const row = await findPartnerHeroSnapshot(partnerId);
       return (row as unknown as PartnerSnapshot) ?? null;
     },
     enabled: !!partnerId,

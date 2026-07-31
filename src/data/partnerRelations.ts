@@ -94,12 +94,6 @@ export async function insertPartnerCertifications(certs: Record<string, unknown>
 }
 
 // ── partner_social_links ──
-export async function findPartnerSocialLinks(partnerId: string) {
-  const { data, error } = await supabase.from("partner_social_links").select("*").eq("partner_id", partnerId);
-  if (error) throw error;
-  return data ?? [];
-}
-
 export async function findSocialLinksByPartnerIds(partnerIds: string[], platform?: string) {
   let q = supabase.from("partner_social_links").select("partner_id, contact_id, platform, url").in("partner_id", partnerIds);
   if (platform) q = q.eq("platform", platform as Database["public"]["Enums"]["social_platform"]);
@@ -146,4 +140,23 @@ export async function findPartnerContactsByPartnerIds(
     if (data) results.push(...(data as unknown as PartnerContactResult[]));
   }
   return results;
+}
+
+export interface PartnerSocialLinkRow extends Record<string, unknown> {
+  id: string;
+  partner_id: string;
+  contact_id: string | null;
+  platform: string;
+  url: string;
+  created_at: string;
+}
+
+/** Social link di un partner. Estratto da `useSocialLinks`. */
+export async function findPartnerSocialLinks(partnerId: string): Promise<PartnerSocialLinkRow[]> {
+  const { data, error } = await supabase
+    .from("partner_social_links")
+    .select("*")
+    .eq("partner_id", partnerId);
+  if (error) throw error;
+  return data as PartnerSocialLinkRow[];
 }

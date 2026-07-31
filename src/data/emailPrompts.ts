@@ -79,3 +79,67 @@ export async function setEmailPromptActive(id: string, isActive: boolean): Promi
 export async function deleteEmailPrompt(id: string): Promise<void> {
   await supabase.from("email_prompts").delete().eq("id", id);
 }
+
+/* ── Template prompt ufficiali (SenderActionsDialog) ── */
+
+export interface EmailPromptTemplateRow {
+  id: string;
+  title: string;
+  instructions: string | null;
+  scope: string | null;
+  scope_value: string | null;
+}
+
+/** Template prompt ufficiali attivi con instructions valorizzate, per il picker. */
+export async function findActiveEmailPromptTemplates(userId: string): Promise<EmailPromptTemplateRow[]> {
+  const { data } = await supabase
+    .from("email_prompts")
+    .select("id, title, instructions, scope, scope_value")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .not("instructions", "is", null)
+    .order("priority", { ascending: false })
+    .limit(50);
+  return (data ?? []) as EmailPromptTemplateRow[];
+}
+
+/* ── prompt_templates (PromptTemplateSelector) ──
+ * Tabella distinta da `email_prompts`, ma stesso dominio (template prompt UI).
+ */
+
+export type PromptTemplateRow = Database["public"]["Tables"]["prompt_templates"]["Row"];
+type PromptTemplateInsert = Database["public"]["Tables"]["prompt_templates"]["Insert"];
+
+/** Tutti i template prompt dell'utente, ordinati come nella UI legacy. */
+export async function findPromptTemplatesForUser(userId: string): Promise<PromptTemplateRow[]> {
+  const { data, error } = await supabase
+    .from("prompt_templates")
+    .select("*")
+    .eq("user_id", userId)
+    .order("is_system", { ascending: false })
+    .order("category", { ascending: true })
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Verifica se i template di sistema esistono già per l'utente. */
+export async function hasSystemPromptTemplates(userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("prompt_templates")
+    .select("name")
+    .eq("user_id", userId)
+    .eq("is_system", true)
+    .limit(1);
+  return !!(data && data.length > 0);
+}
+
+/**
+ * Crea i template di sistema per l'utente. `23505` (violazione unique) è
+ * atteso quando i template esistono già ed è tollerato dal caller.
+ */
+export async function insertSystemPromptTemplates(rows: PromptTemplateInsert[]): Promise<{ code?: string } | null> {
+  const { error } = await supabase.from("prompt_templates").insert(rows);
+  if (error && error.code !== "23505") throw error;
+  return error ? { code: error.code } : null;
+}

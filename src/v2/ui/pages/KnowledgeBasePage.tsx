@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findRecentWorkPlansOverview } from "@/data/workPlans";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { cn } from "@/lib/utils";
 import { Loader2, Briefcase, Crown, Circle } from "lucide-react";
@@ -40,13 +40,7 @@ export function KnowledgeBasePage() {
   const { data: jobs } = useQuery({
     queryKey: queryKeys.downloads.staffJobs(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_work_plans")
-        .select("id, title, status, created_at, current_step, steps")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return (data ?? []) as JobRow[];
+      return (await findRecentWorkPlansOverview(20)) as unknown as JobRow[];
     },
   });
 

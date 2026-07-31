@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { findContactsForDuplicateScan } from "@/data/contacts";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,11 +38,7 @@ export function DuplicateDetector() {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
 
-      const { data: contacts } = await supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, email, phone, mobile, country, lead_status, created_at, interaction_count")
-        .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
-        .limit(1000);
+      const contacts = await findContactsForDuplicateScan(1000);
 
       if (!contacts || contacts.length === 0) { setDuplicates([]); return; }
 

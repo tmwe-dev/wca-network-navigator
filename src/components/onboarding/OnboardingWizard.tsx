@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { findProfileForOnboarding, upsertOnboardingProfile } from "@/data/profiles";
+import { updateOperatorForOnboarding } from "@/data/operators";
 import { StepOperatorIdentity, type OperatorIdentityValues } from "./StepOperatorIdentity";
 
 import { createLogger } from "@/lib/log";
@@ -50,11 +52,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       const user = session?.user;
       if (!user || cancelled) return;
       const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("display_name, language, phone, whatsapp_number, linkedin_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const profile = await findProfileForOnboarding(user.id);
       if (cancelled) return;
       setEmail(user.email ?? "");
       setInitial({
@@ -93,13 +91,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         linkedin_url: values.linkedinUrl.trim() || null,
         onboarding_completed: true,
       };
-      const { data: upserted, error } = await supabase
-        .from("profiles")
-        .upsert(profilePayload, { onConflict: "user_id" })
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      if (!upserted) throw new Error("profile_upsert_no_row (RLS o user_id non autorizzato)");
+      const upsertedId = await upsertOnboardingProfile(profilePayload);
+      if (!upsertedId) throw new Error("profile_upsert_no_row (RLS o user_id non autorizzato)");
 
       // Sync row operator (UPDATE-first per evitare conflitti su unique email).
       // Never touches is_admin — governato da Settings → Operatori.
@@ -116,18 +109,17 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           linkedin_profile_url: values.linkedinUrl.trim() || null,
           is_active: true,
         };
-        const { error: opErr, count } = await supabase
-          .from("operators")
-          .update(operatorPatch, { count: "exact" })
-          .eq("user_id", user.id);
-        if (opErr) {
+        try {
+          const count = await updateOperatorForOnboarding(user.id, operatorPatch);
+          if (count === 0) {
+            // Nessuna riga operator esistente: il trigger non l'ha creata
+            // (probabile email duplicata su un'altra utenza). Non blocchiamo:
+            // l'operatore può essere ripristinato da Settings → Operatori.
+            // eslint-disable-next-line no-console
+            console.warn("[onboarding] no operator row matched user_id; skipping (admin can fix in Settings)");
+          }
+        } catch (opErr) {
           log.warn("[onboarding] operator update non-blocking:", { detail: describeSaveError(opErr) });
-        } else if ((count ?? 0) === 0) {
-          // Nessuna riga operator esistente: il trigger non l'ha creata
-          // (probabile email duplicata su un'altra utenza). Non blocchiamo:
-          // l'operatore può essere ripristinato da Settings → Operatori.
-          // eslint-disable-next-line no-console
-          console.warn("[onboarding] no operator row matched user_id; skipping (admin can fix in Settings)");
         }
       }
 

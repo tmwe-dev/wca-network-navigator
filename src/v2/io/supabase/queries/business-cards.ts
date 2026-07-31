@@ -47,3 +47,37 @@ export async function fetchBusinessCardsByPartner(partnerId: string): Promise<Re
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchBusinessCardsByPartner"));
   }
 }
+
+/* ── Raw exact count (Explore tab counters) ────────────── */
+export async function fetchBusinessCardsCountRaw(): Promise<{
+  count: number | null;
+  error: { message: string } | null;
+}> {
+  return supabase
+    .from("business_cards")
+    .select("*", { count: "exact", head: true });
+}
+
+export interface BusinessCardListRow {
+  id: string;
+  company_name: string | null;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  match_status: string | null;
+  match_confidence: number | null;
+  lead_status: string | null;
+  event_name: string | null;
+  created_at: string;
+}
+
+/** Elenco business card dell'utente per la vista Network V2 (raw, no mapping). */
+export async function fetchBusinessCardsForUser(userId: string): Promise<{ data: BusinessCardListRow[]; error: { message: string } | null }> {
+  const { data, error } = await supabase
+    .from("business_cards")
+    .select("id, company_name, contact_name, email, phone, match_status, match_confidence, lead_status, event_name, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return { data: (data ?? []) as unknown as BusinessCardListRow[], error };
+}

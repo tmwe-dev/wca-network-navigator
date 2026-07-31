@@ -3,6 +3,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 type ChannelMessageInsert = Database["public"]["Tables"]["channel_messages"]["Insert"];
 
@@ -483,3 +484,277 @@ export async function findPartnerRelationshipMessages(partnerId: string) {
     .limit(20);
   return { data: data ?? [], count: count ?? 0 };
 }
+
+/** Body html/text di un channel_message per id. Estratto da `useEmailMessageContent`. */
+export async function getChannelMessageBodyById(
+  messageId: string,
+): Promise<{ body_html: string | null; body_text: string | null } | null> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("body_html, body_text")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+/**
+ * Pagina di from_address inbound per email, filtrabile per mailbox.
+ * Estratto da `useMailboxSenderAllowlist` per il loop di paginazione client-side.
+ */
+export async function findInboundEmailFromAddressesPage(
+  params: { mailboxFilter: "personal" | "shared" | null; mailboxId: string | null; offset: number; pageSize: number },
+): Promise<Array<{ from_address: string | null }>> {
+  let q = supabase
+    .from("channel_messages")
+    .select("from_address")
+    .eq("channel", "email")
+    .eq("direction", "inbound")
+    .not("from_address", "is", null)
+    .order("id", { ascending: true })
+    .range(params.offset, params.offset + params.pageSize - 1);
+
+  if (params.mailboxFilter === "personal") {
+    q = q.is("mailbox_id", null);
+  } else if (params.mailboxFilter === "shared" && params.mailboxId) {
+    q = q.eq("mailbox_id", params.mailboxId);
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as Array<{ from_address: string | null }>;
+}
+
+/* ── Bulk actions per mittente (BulkEmailActions / MultiSelectBulkBar) ──
+ * `from` e `is_read` sono colonne legacy non presenti nei tipi generati
+ * (DEBT-EMAIL-INTEL-COLUMNS): bypass via untypedFrom, unico boundary
+ * sanzionato per tabelle/colonne non tipizzate. Payload/filtri/semantica
+ * errori preservati 1:1 rispetto ai componenti originali.
+ */
+
+/** Conteggio email (non cancellate) di un mittente specifico. */
+export async function countChannelMessagesFromSender(senderEmail: string): Promise<number> {
+  const { count, error } = await untypedFrom("channel_messages")
+    .select("*", { count: "exact", head: true })
+    .eq("channel", "email")
+    .eq("from", senderEmail)
+    .is("deleted_at", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** Id di tutte le email (non cancellate) di un mittente specifico. */
+export async function fetchChannelMessageIdsFromSender(senderEmail: string): Promise<string[]> {
+  const { data, error } = await untypedFrom("channel_messages")
+    .select("id")
+    .eq("channel", "email")
+    .eq("from", senderEmail)
+    .is("deleted_at", null);
+  if (error) throw error;
+  return ((data ?? []) as Array<{ id: string }>).map((e) => e.id);
+}
+
+/** Soft delete di un singolo messaggio (imposta `deleted_at`). */
+export async function softDeleteChannelMessageById(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("channel_messages")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Archivia un singolo messaggio (imposta `folder = 'ARCHIVE'`). */
+export async function archiveChannelMessageById(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("channel_messages")
+    .update({ folder: "ARCHIVE" })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Sposta un singolo messaggio in una cartella arbitraria. */
+export async function moveChannelMessageToFolder(id: string, folder: string): Promise<void> {
+  const { error } = await supabase
+    .from("channel_messages")
+    .update({ folder })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Marca `is_read = true` su un singolo messaggio. Colonna legacy non
+ * presente nei tipi generati (diversa da `read_at`): bypass via untypedFrom.
+ */
+export async function markChannelMessageIsReadFlag(id: string): Promise<void> {
+  const { error } = await untypedFrom("channel_messages")
+    .update({ is_read: true })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Righe per l'esportazione CSV delle email di un mittente. */
+export interface ChannelMessageExportRow {
+  email_date: string | null;
+  subject: string | null;
+  from_address: string | null;
+  to_address: string | null;
+}
+
+export async function findChannelMessagesForExport(senderEmail: string): Promise<ChannelMessageExportRow[]> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("email_date, subject, from_address, to_address")
+    .eq("from_address", senderEmail)
+    .eq("channel", "email")
+    .order("email_date", { ascending: false })
+    .limit(2000);
+  if (error) throw error;
+  return (data ?? []) as ChannelMessageExportRow[];
+}
+
+/** Riga email per il visore sequenziale (SenderEmailsDialog). */
+export interface SenderEmailRow {
+  id: string;
+  subject: string | null;
+  email_date: string | null;
+  direction: string;
+  from_address: string | null;
+  to_address: string | null;
+  body_text?: string | null;
+  body_html?: string | null;
+}
+
+/**
+ * Pagina di email (inbound + outbound) coinvolgenti un indirizzo, per il
+ * visore sequenziale del mittente. Stesso `.or(ilike)` e ordinamento
+ * dell'implementazione originale.
+ */
+export async function findSenderEmailsPage(
+  emailAddress: string,
+  from: number,
+  to: number,
+): Promise<SenderEmailRow[]> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("id, subject, email_date, direction, from_address, to_address")
+    .eq("channel", "email")
+    .or(`from_address.ilike.%${emailAddress}%,to_address.ilike.%${emailAddress}%`)
+    .order("email_date", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return (data as SenderEmailRow[]) || [];
+}
+
+const MESSAGE_LIST_SELECT_COLS = [
+  "id",
+  "user_id",
+  "channel",
+  "direction",
+  "source_type",
+  "source_id",
+  "partner_id",
+  "mailbox_id",
+  "from_address",
+  "to_address",
+  "cc_addresses",
+  "bcc_addresses",
+  "subject",
+  "body_text",
+  "raw_payload",
+  "message_id_external",
+  "in_reply_to",
+  "read_at",
+  "created_at",
+  "email_date",
+  "raw_storage_path",
+  "raw_sha256",
+  "raw_size_bytes",
+  "imap_uid",
+  "uidvalidity",
+  "imap_flags",
+  "internal_date",
+  "parse_status",
+  "parse_warnings",
+  "thread_id",
+  "references_header",
+].join(", ");
+
+export type MailboxQueryFilter =
+  | { kind: "personal" }
+  | { kind: "shared"; id: string }
+  | null
+  | undefined;
+
+/** Pagina di channel_messages per la Inbox (filtri canale/operatore/mailbox/full-text). */
+export async function findChannelMessagesPage(opts: {
+  channel?: string;
+  searchQuery?: string;
+  page: number;
+  pageSize: number;
+  operatorUserId?: string;
+  mailboxFilter?: MailboxQueryFilter;
+}): Promise<unknown[]> {
+  const { channel, searchQuery, page, pageSize, operatorUserId, mailboxFilter } = opts;
+  let q = supabase
+    .from("channel_messages")
+    .select(MESSAGE_LIST_SELECT_COLS)
+    .order("email_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+  if (channel && channel !== "all") {
+    q = q.eq("channel", channel);
+  }
+  if (operatorUserId) {
+    q = q.eq("user_id", operatorUserId);
+  }
+  if (mailboxFilter?.kind === "personal") {
+    q = q.is("mailbox_id", null);
+  } else if (mailboxFilter?.kind === "shared") {
+    q = q.eq("mailbox_id", mailboxFilter.id);
+  }
+  if (searchQuery && searchQuery.trim()) {
+    const terms = searchQuery.trim().split(/\s+/).map((t) => `${t}:*`).join(" & ");
+    q = q.textSearch("search_vector", terms);
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+export interface DownloadedEmailFeedRow {
+  id: string;
+  subject: string | null;
+  from_address: string | null;
+  email_date: string | null;
+  created_at: string;
+}
+
+/** Ultime email scaricate (feed live, es. header/notifiche). */
+export async function findDownloadedEmailsFeedRows(limit: number): Promise<DownloadedEmailFeedRow[]> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("id, subject, from_address, email_date, created_at")
+    .eq("channel", "email")
+    .order("email_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as DownloadedEmailFeedRow[];
+}
+
+/** Conteggio totale email, filtrabile per mailbox (personal/shared). */
+export async function countEmailMessagesByMailbox(mailboxFilter?: MailboxQueryFilter): Promise<number> {
+  let q = supabase
+    .from("channel_messages")
+    .select("id", { count: "planned", head: true })
+    .eq("channel", "email");
+  if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
+  else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
+  const { count, error } = await q;
+  if (error) throw error;
+  return count ?? 0;
+}
+

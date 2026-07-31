@@ -103,3 +103,22 @@ export async function findRecentImportLogs(userId: string, limit = 10): Promise<
     .limit(limit);
   return (data ?? []) as unknown as RecentImportLogRow[];
 }
+
+export interface ImportGroupRow {
+  id: string;
+  group_name: string | null;
+  file_name: string;
+  created_at: string;
+  imported_rows: number;
+  status: string;
+}
+
+/** Elenco import_logs per la vista gruppi di import. Estratto da `useImportGroups`. */
+export async function findImportGroups(): Promise<ImportGroupRow[]> {
+  const { data, error } = await supabase
+    .from("import_logs")
+    .select("id, group_name, file_name, created_at, imported_rows, status")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as ImportGroupRow[];
+}

@@ -16,7 +16,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { approveActivity } from "@/data/activities";
+import { approveActivity, rejectActivity, findPendingAgentActivities } from "@/data/activities";
+import { findProposedOrPendingAgentTasks } from "@/data/agentTasks";
 import { queryKeys } from "@/lib/queryKeys";
 import { TabIntroBanner } from "./TabIntroBanner";
 
@@ -57,22 +58,10 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
       const userId = session.session.user.id;
 
       // 1) attività pending con agente assegnato
-      const { data: actData } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .not("executed_by_agent_id", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(100);
+      const actData = await findPendingAgentActivities(userId, 100);
 
       // 2) agent_tasks proposti/pending (dove vivono davvero le proposte agente)
-      const { data: taskData } = await supabase
-        .from("agent_tasks")
-        .select("id, agent_id, task_type, description, status, created_at")
-        .in("status", ["proposed", "pending"])
-        .order("created_at", { ascending: false })
-        .limit(100);
+      const taskData = await findProposedOrPendingAgentTasks(100);
 
       const fromActivities = ((actData || []) as unknown) as AgentAction[];
       const fromTasks: AgentAction[] = ((taskData || []) as Array<{
@@ -106,11 +95,7 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
 
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {
-      const { error } = await supabase
-        .from("activities")
-        .update({ status: "approved" as never, reviewed: true })
-        .eq("id", actionId);
-      if (error) throw error;
+      await approveActivity(actionId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ai.agentPendingActions });
@@ -120,11 +105,7 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
 
   const rejectAction = useMutation({
     mutationFn: async (actionId: string) => {
-      const { error } = await supabase
-        .from("activities")
-        .update({ status: "cancelled", reviewed: true })
-        .eq("id", actionId);
-      if (error) throw error;
+      await rejectActivity(actionId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ai.agentPendingActions });

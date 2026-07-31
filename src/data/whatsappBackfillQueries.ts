@@ -33,3 +33,31 @@ export async function upsertChannelBackfillState(row: Record<string, unknown>): 
     .upsert(row as never, { onConflict: "operator_id,channel,external_chat_id" });
   if (error) throw error;
 }
+
+/** Operatore associato a un utente, per il flusso di backfill WhatsApp deprecato. */
+export async function findOperatorIdByUserId(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("operators")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+export interface BackfillStateStatusRow {
+  reached_beginning: boolean | null;
+  oldest_message_at: string | null;
+  messages_imported: number | null;
+}
+
+/** Righe di stato backfill per un canale intero (WhatsApp/LinkedIn), per il riepilogo cursore persistente. */
+export async function findBackfillStateRowsByChannel(
+  channel: "whatsapp" | "linkedin",
+): Promise<BackfillStateStatusRow[] | null> {
+  const { data, error } = await supabase
+    .from("channel_backfill_state")
+    .select("reached_beginning, oldest_message_at, messages_imported")
+    .eq("channel", channel);
+  if (error || !data?.length) return null;
+  return data as BackfillStateStatusRow[];
+}

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { countPendingAgentTasksForUser } from "@/data/agentTasks";
 import { useEffect, useState } from "react";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -11,13 +12,7 @@ export function usePendingTaskCount() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return 0;
-      const { count, error } = await supabase
-        .from("agent_tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .in("status", ["pending", "proposed"]);
-      if (error) return 0;
-      return count ?? 0;
+      return countPendingAgentTasksForUser(user.id);
     },
     refetchInterval: 60_000,
   });

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findDownloadedEmailsFeedRows } from "@/data/channelMessages";
 import type { DownloadedEmail } from "@/lib/backgroundSync";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -30,17 +31,8 @@ export function useDownloadedEmailsFeed() {
   const query = useQuery({
     queryKey: queryKeys.email.downloadedFeed(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("channel_messages")
-        .select("id, subject, from_address, email_date, created_at")
-        .eq("channel", "email")
-        .order("email_date", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .limit(FEED_LIMIT);
-
-      if (error) throw error;
-
-      return ((data || []) as DownloadedEmailRow[]).map(mapRowToDownloadedEmail);
+      const data = await findDownloadedEmailsFeedRows(FEED_LIMIT);
+      return data.map(mapRowToDownloadedEmail);
     },
     staleTime: 10_000,
   });

@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findInteractionsForPartnerRecord } from "@/data/interactions";
+import { findContactInteractionsForRecord } from "@/data/contactInteractions";
+import { findProspectInteractionsForRecord } from "@/data/prospects";
+import { findActivitiesForSourceId } from "@/data/activities";
 import { ContactInteractionTimeline } from "@/components/contacts/ContactInteractionTimeline";
 import { Loader2, History } from "lucide-react";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
@@ -17,17 +20,12 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
     queryKey: queryKeys.contacts.recordInteractions(sourceType, sourceId),
     queryFn: async (): Promise<ContactInteraction[]> => {
       if (sourceType === "partner" && partnerId) {
-        const { data } = await supabase
-          .from("interactions")
-          .select("*")
-          .eq("partner_id", partnerId)
-          .order("interaction_date", { ascending: false })
-          .limit(20);
+        const data = await findInteractionsForPartnerRecord(partnerId, 20);
         return (data || []).map((i): ContactInteraction => ({
           id: i.id,
           contact_id: partnerId,
           interaction_type: i.interaction_type,
-          title: i.subject,
+          title: i.subject ?? "",
           description: i.notes,
           outcome: null,
           created_by: null,
@@ -35,21 +33,11 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
         }));
       }
       if (sourceType === "contact") {
-        const { data } = await supabase
-          .from("contact_interactions")
-          .select("*")
-          .eq("contact_id", sourceId)
-          .order("created_at", { ascending: false })
-          .limit(20);
+        const data = await findContactInteractionsForRecord(sourceId, 20);
         return (data || []) as ContactInteraction[];
       }
       if (sourceType === "prospect") {
-        const { data } = await supabase
-          .from("prospect_interactions")
-          .select("*")
-          .eq("prospect_id", sourceId)
-          .order("created_at", { ascending: false })
-          .limit(20);
+        const data = await findProspectInteractionsForRecord(sourceId, 20);
         return (data || []).map((i) => ({
           id: i.id,
           contact_id: sourceId,
@@ -70,12 +58,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
   const { data: activities } = useQuery({
     queryKey: queryKeys.contacts.recordActivities(sourceType, sourceId),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("source_id", sourceId)
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const data = await findActivitiesForSourceId(sourceId, 20);
       return data || [];
     },
     enabled: !!sourceId,

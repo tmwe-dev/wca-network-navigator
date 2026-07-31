@@ -332,7 +332,7 @@ export async function bulkUpdateContactsByOrigins(
   return { updated: (data ?? []).length };
 }
 
-export interface SegmentContactRow {
+export interface SegmentContactRow extends Record<string, unknown> {
   id: string;
   email: string | null;
   interaction_count: number | null;
@@ -349,7 +349,7 @@ export async function findContactsForSegments(userId: string, limit = 1000): Pro
   return (data ?? []) as SegmentContactRow[];
 }
 
-export interface ConversationContextRow {
+export interface ConversationContextRow extends Record<string, unknown> {
   email_address: string;
   dominant_sentiment: string | null;
   response_rate: number | null;

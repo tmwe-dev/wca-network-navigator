@@ -4,6 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findBusinessCardsForUser } from "@/data/businessCards";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { EmptyState } from "../../atoms/EmptyState";
 import { StatusBadge } from "../../atoms/StatusBadge";
@@ -17,14 +18,7 @@ export function BusinessCardsViewV2(): React.ReactElement {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("business_cards")
-        .select("id, company_name, contact_name, email, phone, match_status, match_confidence, lead_status, event_name, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data ?? [];
+      return await findBusinessCardsForUser(user.id, 100);
     },
   });
   const { data: blacklistNames } = useBlacklistedCompanyNames();

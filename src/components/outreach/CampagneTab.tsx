@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findRecentCampaignJobs } from "@/data/campaignJobs";
+import { findRecentEmailQueue } from "@/data/emailCampaigns";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,30 +13,29 @@ import { queryKeys } from "@/lib/queryKeys";
 
 type QueueFilter = "all" | "pending" | "sent" | "failed";
 
+interface EmailQueueItem {
+  id: string;
+  subject: string | null;
+  recipient_name: string | null;
+  recipient_email: string | null;
+  status: string;
+  created_at: string;
+}
+
 export function CampagneTab() {
   const [filter, setFilter] = useState<QueueFilter>("all");
 
   const { data: campaignJobs, isLoading: jobsLoading } = useQuery({
     queryKey: queryKeys.campaigns.jobsOutreach(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("campaign_jobs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      return data || [];
+      return findRecentCampaignJobs(50);
     },
   });
 
   const { data: emailQueue, isLoading: queueLoading } = useQuery({
     queryKey: queryKeys.email.queueOutreach(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("email_campaign_queue")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      return data || [];
+      return findRecentEmailQueue<EmailQueueItem>(50);
     },
   });
 

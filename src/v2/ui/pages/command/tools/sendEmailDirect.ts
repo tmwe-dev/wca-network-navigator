@@ -65,7 +65,7 @@ export const sendEmailDirectTool: Tool = {
       return { kind: "result", title: "Sessione non valida", message: "Effettua nuovamente il login.", meta: { count: 0, sourceLabel: "command" } };
     }
     const html = String(p.body).replace(/\n/g, "<br/>");
-    const { data, error } = await insertPendingActionReturningId({
+    const { id: pendingId, error } = await insertPendingActionReturningId({
       user_id: userId,
       action_type: "send_email",
       action_payload: {
@@ -73,8 +73,8 @@ export const sendEmailDirectTool: Tool = {
         subject: String(p.subject),
         html,
         body: String(p.body),
-        partner_id: p.partner_id ?? null,
-        contact_id: p.contact_id ?? null,
+        partner_id: (p.partner_id as string | null) ?? null,
+        contact_id: (p.contact_id as string | null) ?? null,
       },
       partner_id: (p.partner_id as string | null) ?? null,
       contact_id: (p.contact_id as string | null) ?? null,
@@ -91,7 +91,7 @@ export const sendEmailDirectTool: Tool = {
     return {
       kind: "result",
       title: "📥 Email in coda di approvazione",
-      message: `Apri AI Control per approvare l'invio a ${String(p.to)}${data?.id ? ` (id: ${data.id})` : ""}.`,
+      message: `Apri AI Control per approvare l'invio a ${String(p.to)}${pendingId ? ` (id: ${pendingId})` : ""}.`,
       meta: { count: 1, sourceLabel: "ai_pending_actions" },
     };
   },

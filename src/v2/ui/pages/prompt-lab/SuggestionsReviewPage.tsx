@@ -32,7 +32,7 @@ import { findRecentHarmonizeRuns, type HarmonizeRun } from "@/data/harmonizeRuns
 import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
 import { SingleProposalReview } from "./components/SingleProposalReview";
-import { supabase } from "@/integrations/supabase/client";
+import { findActiveAgentVoiceByName } from "@/data/agents";
 import { toast } from "sonner";
 import { priorityColor, typeIcon, typeLabel } from "./suggestionsReview.helpers";
 
@@ -242,15 +242,8 @@ export default function SuggestionsReviewPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("agents")
-        .select("id, elevenlabs_voice_id")
-        .eq("name", "Gordon")
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .limit(1)
-        .maybeSingle();
-      if (!cancelled && data) setGordon({ id: data.id as string, voiceId: (data.elevenlabs_voice_id as string | null) ?? null });
+      const data = await findActiveAgentVoiceByName("Gordon");
+      if (!cancelled && data) setGordon({ id: data.id, voiceId: data.voiceId });
     })();
     return () => { cancelled = true; };
   }, []);

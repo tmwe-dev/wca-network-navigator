@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
 import { findPendingOutreachItems, updateOutreachItem, getOutreachItemField } from "@/data/outreachQueue";
+import { insertPendingAction } from "@/data/aiPendingActions";
 
 const log = createLogger("useOutreachQueue");
 
@@ -85,7 +86,7 @@ export function useOutreachQueue() {
         contact_name: item.recipient_name,
         outreach_queue_id: item.id,
       };
-      const { error } = await supabase.from("ai_pending_actions").insert({
+      const { error } = await insertPendingAction({
         user_id: userId,
         action_type: actionType,
         action_payload: payload as never,

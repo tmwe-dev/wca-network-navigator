@@ -2,7 +2,7 @@
  * useBackfillState — Query persistent cursor state for a channel
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findBackfillStateRowsByChannel } from "@/data/whatsappBackfillQueries";
 
 type BackfillStateSummary = {
   totalChats: number;
@@ -15,12 +15,9 @@ export function useBackfillState(channel: "whatsapp" | "linkedin") {
   return useQuery<BackfillStateSummary>({
     queryKey: ["backfill-state", channel],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("channel_backfill_state")
-        .select("reached_beginning, oldest_message_at, messages_imported")
-        .eq("channel", channel);
+      const data = await findBackfillStateRowsByChannel(channel);
 
-      if (error || !data?.length) {
+      if (!data?.length) {
         return { totalChats: 0, completedChats: 0, totalImported: 0, oldestMessageAt: null };
       }
 

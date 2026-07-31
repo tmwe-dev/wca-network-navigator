@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { insertActivity } from "@/data/activities";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { Button } from "../atoms/Button";
 import { toast } from "sonner";
@@ -38,7 +38,7 @@ export function CreateActivityDrawer({ open, onClose, onCreated }: Props): React
   const createMut = useMutation({
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Titolo obbligatorio");
-      const { error } = await supabase.from("activities").insert([{
+      await insertActivity({
         title: title.trim(),
         activity_type: type as "follow_up",
         priority,
@@ -47,8 +47,7 @@ export function CreateActivityDrawer({ open, onClose, onCreated }: Props): React
         source_id: crypto.randomUUID(),
         source_type: "manual",
         user_id: session?.user?.id,
-      }]);
-      if (error) throw error;
+      });
     },
     onSuccess: () => {
       toast.success("Attività creata");

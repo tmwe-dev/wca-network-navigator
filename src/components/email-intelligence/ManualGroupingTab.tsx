@@ -40,6 +40,7 @@ import { ActiveFiltersBar } from "./manual-grouping/ActiveFiltersBar";
 import { GroupGridPanel } from "./manual-grouping/GroupGridPanel";
 import { VirtualizedSenderList } from "./manual-grouping/VirtualizedSenderList";
 import { inLetterRange, type LetterRange } from "./manual-grouping/letterRange";
+import { createSenderGroup } from "@/data/senderManagement";
 
 interface SuggestEmailGroupsResponse {
   processed?: number;
@@ -136,13 +137,14 @@ export default function ManualGroupingTab() {
   }) => {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
-    const { data: created, error } = await supabase
-      .from("email_sender_groups")
-      .insert({ ...data, user_id: user.id, sort_order: groups.length })
-      .select()
-      .single();
-    if (error) { toast.error("Errore creazione"); throw error; }
-    setGroups((prev) => [...prev, created as unknown as (typeof prev)[number]]);
+    let created: unknown;
+    try {
+      created = await createSenderGroup({ ...data, user_id: user.id, sort_order: groups.length });
+    } catch (error) {
+      toast.error("Errore creazione");
+      throw error;
+    }
+    setGroups((prev) => [...prev, created as (typeof prev)[number]]);
     toast.success(`${data.nome_gruppo} creato`);
   };
 

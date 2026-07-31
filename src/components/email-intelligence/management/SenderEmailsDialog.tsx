@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
+import { findSenderEmailsPage } from "@/data/channelMessages";
 
 interface SenderEmail {
   id: string;
@@ -49,18 +50,9 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
     let done = false;
 
     while (!done) {
-      const { data, error } = await supabase
-        .from("channel_messages")
-        .select("id, subject, email_date, direction, from_address, to_address")
-        .eq("channel", "email")
-        .or(`from_address.ilike.%${emailAddress}%,to_address.ilike.%${emailAddress}%`)
-        .order("email_date", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, from + PAGE_SIZE - 1);
+      const data = await findSenderEmailsPage(emailAddress, from, from + PAGE_SIZE - 1);
 
-      if (error) throw error;
-
-      const batch = (data as SenderEmail[]) || [];
+      const batch = data as unknown as SenderEmail[];
       allEmails.push(...batch);
 
       if (batch.length < PAGE_SIZE) done = true;

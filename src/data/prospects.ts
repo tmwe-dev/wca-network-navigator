@@ -2,6 +2,9 @@
  * DAL — prospects
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type Prospect = Database["public"]["Tables"]["prospects"]["Row"];
 
 
 import { createLogger } from "@/lib/log";
@@ -55,4 +58,56 @@ export async function findProspectsForDedup(): Promise<ProspectDedupRow[]> {
     .select("partita_iva, company_name")
     .not("partita_iva", "is", null);
   return (data ?? []) as ProspectDedupRow[];
+}
+
+export interface ProspectInteractionRecordRow {
+  id: string;
+  interaction_type: string;
+  title: string;
+  description: string | null;
+  outcome: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** Interazioni prospect per il drawer contatto (Circuito di Attesa). */
+export async function findProspectInteractionsForRecord(prospectId: string, limit = 20): Promise<ProspectInteractionRecordRow[]> {
+  const { data } = await supabase
+    .from("prospect_interactions")
+    .select("*")
+    .eq("prospect_id", prospectId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as ProspectInteractionRecordRow[];
+}
+
+/** Tutti i prospect ordinati per company_name. Estratto da `useProspects`. */
+export async function findAllProspects(): Promise<Prospect[]> {
+  const { data, error } = await supabase
+    .from("prospects")
+    .select("*")
+    .order("company_name");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Chiavi di dedup (P.IVA + ragione sociale) per l'import prospect. */
+export async function findProspectDedupKeys(): Promise<Array<{ partita_iva: string | null; company_name: string }>> {
+  const { data } = await supabase
+    .from("prospects")
+    .select("partita_iva, company_name")
+    .not("partita_iva", "is", null);
+  return data ?? [];
+}
+
+export type ProspectContactRow = Database["public"]["Tables"]["prospect_contacts"]["Row"];
+
+/** Contatti di un prospect. */
+export async function findProspectContactsByProspectId(prospectId: string): Promise<ProspectContactRow[]> {
+  const { data, error } = await supabase
+    .from("prospect_contacts")
+    .select("*")
+    .eq("prospect_id", prospectId);
+  if (error) throw error;
+  return data ?? [];
 }

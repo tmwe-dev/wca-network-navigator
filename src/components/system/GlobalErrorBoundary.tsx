@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { insertReactCrashLog } from "@/data/appErrorLogs";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("GlobalErrorBoundary");
@@ -36,15 +37,13 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     try {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
-      await supabase.from("app_error_logs").insert({
+      await insertReactCrashLog({
         user_id: user.id,
-        error_type: "react_crash",
         error_message: error.message,
         error_stack: error.stack?.substring(0, 2000) ?? null,
         component_stack: info.componentStack?.substring(0, 2000) ?? null,
         page_url: window.location.pathname,
         user_agent: navigator.userAgent,
-        metadata: { timestamp: new Date().toISOString() },
       });
     } catch (e) {
       log.warn("Failed to persist error log", { error: e instanceof Error ? e.message : String(e) });

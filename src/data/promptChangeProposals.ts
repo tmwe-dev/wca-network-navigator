@@ -4,6 +4,7 @@
  * Nessuna scrittura diretta su operative_prompts: solo proposte da revisionare.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface PromptChangeProposal {
   id: string;
@@ -97,5 +98,17 @@ export async function markPromptChangeProposalApplied(id: string): Promise<void>
     .from("prompt_change_proposals")
     .update({ status: "applied" })
     .eq("id", id);
+  if (error) throw error;
+}
+
+/** Applica un patch al blocco di un operative_prompt (usato in approvazione proposte). */
+export async function updateOperativePromptBlockPatch(
+  promptId: string,
+  patch: Database["public"]["Tables"]["operative_prompts"]["Update"],
+): Promise<void> {
+  const { error } = await supabase
+    .from("operative_prompts")
+    .update(patch)
+    .eq("id", promptId);
   if (error) throw error;
 }

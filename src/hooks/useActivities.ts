@@ -11,8 +11,8 @@ import {
   activityKeys,
   invalidateActivityCache,
 } from "@/data/activities";
-import { supabase } from "@/integrations/supabase/client";
 import type { Activity, AllActivity, SourceMeta } from "@/data/activities";
+import { findPartnerContactsForPartnerIds } from "@/data/activities";
 import { queryKeys } from "@/lib/queryKeys";
 
 // Re-export types for backward compat
@@ -73,17 +73,7 @@ export function useContactsForPartners(partnerIds: string[]) {
     queryKey: queryKeys.partnerContacts.map(partnerIds),
     queryFn: async () => {
       if (!partnerIds.length) return {} as Record<string, PartnerContactRecord[]>;
-      const CHUNK = 100;
-      const allData: PartnerContactRecord[] = [];
-      for (let i = 0; i < partnerIds.length; i += CHUNK) {
-        const chunk = partnerIds.slice(i, i + CHUNK);
-        const { data, error } = await supabase
-          .from("partner_contacts")
-          .select("id, partner_id, name, email, direct_phone, mobile, title, is_primary, contact_alias")
-          .in("partner_id", chunk);
-        if (error) throw error;
-        if (data) allData.push(...data);
-      }
+      const allData = await findPartnerContactsForPartnerIds(partnerIds);
       const map: Record<string, PartnerContactRecord[]> = {};
       allData.forEach((c) => {
         if (!map[c.partner_id]) map[c.partner_id] = [];

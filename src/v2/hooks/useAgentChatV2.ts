@@ -3,7 +3,7 @@
  */
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAgentByIdRaw } from "@/v2/io/supabase/queries/agents";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -21,11 +21,7 @@ export function useAgentChatV2(agentId: string | null) {
     queryKey: queryKeys.v2.agentChat(agentId),
     queryFn: async () => {
       if (!agentId) return null;
-      const { data, error } = await supabase
-        .from("agents")
-        .select("*")
-        .eq("id", agentId)
-        .maybeSingle();
+      const { data, error } = await fetchAgentByIdRaw(agentId);
       if (error) return null;
       return data;
     },

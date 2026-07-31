@@ -31,6 +31,19 @@ export {
   bulkUpdateContactsOrigin,
   listDistinctContactOrigins,
   bulkUpdateContactsByOrigins,
+  findContactsForSegments,
+  findConversationContextsForUser,
+  findContactsForPipeline,
+  findContactsForDuplicateScan,
+  findContactsForExport,
+} from "./queries";
+
+export type {
+  SegmentContactRow,
+  ConversationContextRow,
+  PipelineContactRow,
+  DedupContactRow,
+  ExportContactRow,
 } from "./queries";
 
 export type { ImportDuplicateMatch } from "./queries";

@@ -90,3 +90,21 @@ export async function findConversationContextsOrdered(
   if (error) throw error;
   return data ?? [];
 }
+
+/**
+ * Ultime 100 classificazioni (senza join partner), opzionalmente filtrate
+ * per categoria. Usata da SmartClassificationView.
+ */
+export async function findEmailClassificationsPlain(
+  categoryFilter: string,
+): Promise<Database["public"]["Tables"]["email_classifications"]["Row"][]> {
+  let q = supabase
+    .from("email_classifications")
+    .select("*")
+    .order("classified_at", { ascending: false })
+    .limit(100);
+  if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []) as Database["public"]["Tables"]["email_classifications"]["Row"][];
+}

@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { runHarmonizeCollector, type CollectorOutput } from "./harmonizeCollector";
 import { runHarmonizeAnalyzer, type AnalyzerContext } from "./harmonizeAnalyzer";
 import { executeProposal } from "./harmonizeExecutor";
-import { supabase } from "@/integrations/supabase/client";
 import {
   createHarmonizeRun,
   updateHarmonizeRun,
@@ -28,6 +27,7 @@ import {
   type HarmonizeRun,
   type HarmonizeProposal,
 } from "@/data/harmonizeRuns";
+import { insertAgentTask } from "@/data/agentTasks";
 import type { ParsedFile } from "../utils/fileParser";
 
 import { createLogger } from "@/lib/log";
@@ -300,14 +300,14 @@ export function useHarmonizeOrchestrator(userId: string) {
         // Loop di apprendimento: per agents/agent_personas crea verifica post-armonizzazione.
         if (p.target.table === "agents" && p.target.id) {
           try {
-            await supabase.from("agent_tasks").insert({
+            await insertAgentTask({
               agent_id: p.target.id,
               user_id: userId,
               task_type: "harmonize_verification",
               description: `Verifica comportamento post-armonizzazione: ${p.block_label ?? p.reasoning.slice(0, 80)}`,
               status: "pending",
-              target_filters: { harmonize_run_id: state.runId, proposal_id: p.id } as never,
-            } as never);
+              target_filters: { harmonize_run_id: state.runId, proposal_id: p.id },
+            });
           } catch (e) {
             log.warn("[harmonize] agent_task creation failed", { error: e });
           }
@@ -341,14 +341,14 @@ export function useHarmonizeOrchestrator(userId: string) {
         await setProposalStatus(state.runId, proposal.id, "executed").catch(() => {});
         if (proposal.target.table === "agents" && proposal.target.id) {
           try {
-            await supabase.from("agent_tasks").insert({
+            await insertAgentTask({
               agent_id: proposal.target.id,
               user_id: userId,
               task_type: "harmonize_verification",
               description: `Verifica comportamento post-armonizzazione: ${proposal.block_label ?? proposal.reasoning.slice(0, 80)}`,
               status: "pending",
-              target_filters: { harmonize_run_id: state.runId, proposal_id: proposal.id } as never,
-            } as never);
+              target_filters: { harmonize_run_id: state.runId, proposal_id: proposal.id },
+            });
           } catch (e) {
             log.warn("[harmonize] agent_task creation failed", { error: e });
           }

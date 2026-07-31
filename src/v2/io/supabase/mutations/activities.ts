@@ -77,3 +77,9 @@ export async function deleteActivity(
     return err(fromUnknown(caught, "DATABASE_ERROR", "deleteActivity"));
   }
 }
+
+/** Insert semplice attività manuale dal drawer V2 (nessun mapping Result). */
+export async function insertManualActivity(activity: ActivityInsert): Promise<{ error: { message: string } | null }> {
+  const { error } = await supabase.from("activities").insert([activity]);
+  return { error };
+}

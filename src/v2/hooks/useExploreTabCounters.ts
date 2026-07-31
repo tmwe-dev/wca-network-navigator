@@ -6,7 +6,8 @@
  * Pattern: nessuna logica di rendering qui, solo dati formattati `it-IT`.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchContactsCountRaw } from "@/v2/io/supabase/queries/contacts";
+import { fetchBusinessCardsCountRaw } from "@/v2/io/supabase/queries/business-cards";
 import { queryKeys } from "@/lib/queryKeys";
 import { useCountryStats } from "@/hooks/useCountryStats";
 
@@ -18,9 +19,9 @@ export interface ExploreTabCounters {
 }
 
 async function fetchCount(table: "imported_contacts" | "business_cards"): Promise<number> {
-  const { count, error } = await supabase
-    .from(table)
-    .select("*", { count: "exact", head: true });
+  const { count, error } = table === "imported_contacts"
+    ? await fetchContactsCountRaw()
+    : await fetchBusinessCardsCountRaw();
   if (error) throw error;
   return count ?? 0;
 }

@@ -2,7 +2,7 @@
  * useCountryStatsV2 — Country partner counts via RPC
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchPartnerCountryCodesRaw } from "@/v2/io/supabase/queries/partners";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface CountryStat {
@@ -16,16 +16,11 @@ export function useCountryStatsV2() {
     queryKey: queryKeys.v2.countryStats,
     staleTime: 60_000,
     queryFn: async (): Promise<CountryStat[]> => {
-      const { data, error } = await supabase
-        .from("partners")
-        .select("country_code")
-        .not("country_code", "is", null);
-
-      if (error) throw error;
+      const result = await fetchPartnerCountryCodesRaw();
+      if (result._tag === "Err") throw new Error(result.error.message);
 
       const counts = new Map<string, number>();
-      for (const row of data ?? []) {
-        const cc = row.country_code as string;
+      for (const cc of result.value) {
         counts.set(cc, (counts.get(cc) ?? 0) + 1);
       }
 

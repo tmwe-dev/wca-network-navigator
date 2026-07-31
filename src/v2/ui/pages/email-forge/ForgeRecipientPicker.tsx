@@ -8,7 +8,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchForgePartners, fetchForgeContacts, fetchForgeBusinessCards } from "@/v2/io/supabase/queries/email-forge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -61,15 +61,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
     queryKey: ["forge-picker", "partners", debounced, country, partnerLimit],
     enabled: tab === "partner",
     queryFn: async () => {
-      let q = supabase
-        .from("partners")
-        .select("id, company_name, country_code, city, email, website, linkedin_url", { count: "exact" })
-        .eq("is_active", true)
-        .order("company_name", { ascending: true })
-        .limit(partnerLimit);
-      if (debounced.length >= 2) q = q.ilike("company_name", `%${debounced}%`);
-      if (country) q = q.eq("country_code", country);
-      const { data, count } = await q;
+      const { data, count } = await fetchForgePartners({ search: debounced, country, limit: partnerLimit });
       return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
@@ -78,19 +70,8 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
     queryKey: ["forge-picker", "contacts", debounced, country, contactLimit],
     enabled: tab === "contact",
     queryFn: async () => {
-      let q = supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, email, country, position", { count: "exact" })
-        .order("name", { ascending: true })
-        .limit(contactLimit);
-      if (debounced.length >= 2) {
-        q = q.or(`name.ilike.%${debounced}%,company_name.ilike.%${debounced}%,email.ilike.%${debounced}%`);
-      }
-      if (country) {
-        const cn = WCA_COUNTRIES_MAP[country]?.name;
-        if (cn) q = q.ilike("country", `%${cn}%`);
-      }
-      const { data, count } = await q;
+      const countryName = country ? WCA_COUNTRIES_MAP[country]?.name ?? null : null;
+      const { data, count } = await fetchForgeContacts({ search: debounced, countryName, limit: contactLimit });
       return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
@@ -99,15 +80,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
     queryKey: ["forge-picker", "bca", debounced, country, bcaLimit],
     enabled: tab === "bca",
     queryFn: async () => {
-      let q = supabase
-        .from("business_cards")
-        .select("id, contact_name, company_name, email, location, matched_partner_id", { count: "exact" })
-        .order("company_name", { ascending: true })
-        .limit(bcaLimit);
-      if (debounced.length >= 2) {
-        q = q.or(`contact_name.ilike.%${debounced}%,company_name.ilike.%${debounced}%,email.ilike.%${debounced}%`);
-      }
-      const { data, count } = await q;
+      const { data, count } = await fetchForgeBusinessCards({ search: debounced, limit: bcaLimit });
       return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });

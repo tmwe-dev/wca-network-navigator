@@ -177,3 +177,15 @@ export async function findProspectInteractionsForRecord(prospectId: string, limi
     .limit(limit);
   return (data ?? []) as ProspectInteractionRecordRow[];
 }
+
+/** Primo agente attivo (id), usato per l'analisi strategica AI. Estratto da `useHoldingStrategy`. */
+export async function findFirstActiveAgentId(): Promise<string | null> {
+  const { data } = await supabase
+    .from("agents")
+    .select("id")
+    .is("deleted_at", null)
+    .eq("is_active", true)
+    .limit(1)
+    .single();
+  return data?.id ?? null;
+}

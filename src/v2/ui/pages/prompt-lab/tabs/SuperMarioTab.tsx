@@ -15,35 +15,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Rocket, RefreshCw, Brain, AlertCircle, CheckCircle2 } from "lucide-react";
 import { isSuperMarioEnabled, setSuperMarioEnabled } from "@/v2/ai/superMarioFlag";
-import { supabase } from "@/integrations/supabase/client";
+import { findRecentSuperMarioInvocations, type SuperMarioInvocationRow } from "@/data/superMarioInvocations";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 
-interface InvocationRow {
-  id: string;
-  trace_id: string;
-  scope: string;
-  model: string;
-  latency_ms: number | null;
-  prompt_tokens: number | null;
-  completion_tokens: number | null;
-  tool_calls_json: unknown;
-  audit_warnings: unknown;
-  error_code: string | null;
-  created_at: string;
-  response_summary: string | null;
-}
+type InvocationRow = SuperMarioInvocationRow;
 
 async function fetchInvocations(): Promise<InvocationRow[]> {
-  const { data, error } = await supabase
-    .from("super_mario_invocations" as never)
-    .select(
-      "id, trace_id, scope, model, latency_ms, prompt_tokens, completion_tokens, tool_calls_json, audit_warnings, error_code, created_at, response_summary",
-    )
-    .order("created_at", { ascending: false })
-    .limit(20);
-  if (error) throw error;
-  return (data ?? []) as unknown as InvocationRow[];
+  return findRecentSuperMarioInvocations(20);
 }
 
 export function SuperMarioTab() {

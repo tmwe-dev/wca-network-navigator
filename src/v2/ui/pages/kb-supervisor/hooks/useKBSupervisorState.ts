@@ -7,6 +7,7 @@
  */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { findElevenLabsVoiceSettings } from "@/data/appSettings";
 import { useVoiceInput } from "@/v2/ui/pages/command/hooks/useVoiceInput";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
@@ -133,13 +134,7 @@ export function useKBSupervisorState() {
     if (!voiceEnabled || !userId || !text.trim()) return;
     try {
       setIsSpeaking(true);
-      const { data: settings } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .eq("user_id", userId)
-        .in("key", ["elevenlabs_default_voice_id", "elevenlabs_custom_voice_id", "elevenlabs_language"]);
-
-      const settingsMap = Object.fromEntries((settings ?? []).map(s => [s.key, s.value]));
+      const settingsMap = await findElevenLabsVoiceSettings(userId);
       const voiceId = settingsMap.elevenlabs_custom_voice_id || settingsMap.elevenlabs_default_voice_id || DEFAULT_VOICE_ID;
       const language = settingsMap.elevenlabs_language || "it";
 

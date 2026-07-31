@@ -4,6 +4,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { resetEmailSyncState } from "@/data/emailSyncState";
 import { toast } from "sonner";
 import { callCheckInbox } from "@/lib/checkInbox";
 import { queryKeys } from "@/lib/queryKeys";
@@ -19,12 +20,7 @@ export function useResetSync() {
       } = await supabase.auth.getSession();
       if (!session) throw new Error("Non autenticato");
 
-      const { error } = await supabase
-        .from("email_sync_state")
-        .update({ last_uid: 0, stored_uidvalidity: null })
-        .eq("user_id", session.user.id);
-
-      if (error) throw error;
+      await resetEmailSyncState(session.user.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });

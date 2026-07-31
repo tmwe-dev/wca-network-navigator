@@ -15,6 +15,7 @@ import { SequenceVisualizer } from "./scheduling/SequenceVisualizer";
 import { TemplateBuilderDialog } from "./scheduling/TemplateBuilderDialog";
 import { SchedulingWizard } from "./scheduling/SchedulingWizard";
 import { supabase } from "@/integrations/supabase/client";
+import { findScheduledMissionActionsWithCadence } from "@/data/missionActions";
 import { queryKeys } from "@/lib/queryKeys";
 import { TabIntroBanner } from "./TabIntroBanner";
 import { Clock } from "lucide-react";
@@ -67,15 +68,7 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data } = await supabase
-        .from("mission_actions")
-        .select("*")
-        .eq("user_id", user.id)
-        .not("cadence_rule", "is", null)
-        .in("status", ["planned", "approved", "executing"])
-        .order("scheduled_at", { ascending: true })
-        .limit(50);
-      return data ?? [];
+      return findScheduledMissionActionsWithCadence(user.id, 50);
     },
   });
 

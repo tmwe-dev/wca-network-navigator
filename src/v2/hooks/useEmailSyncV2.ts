@@ -2,7 +2,7 @@
  * useEmailSyncV2 — Email sync jobs management
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchEmailSyncJobsRaw } from "@/v2/io/supabase/queries/email-sync";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface EmailSyncJob {
@@ -21,11 +21,7 @@ export function useEmailSyncV2() {
   return useQuery({
     queryKey: queryKeys.v2.emailSync(),
     queryFn: async (): Promise<readonly EmailSyncJob[]> => {
-      const { data, error } = await supabase
-        .from("email_sync_jobs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const { data, error } = await fetchEmailSyncJobsRaw(20);
       if (error) return [];
       return (data ?? []).map((r) => ({
         id: r.id,

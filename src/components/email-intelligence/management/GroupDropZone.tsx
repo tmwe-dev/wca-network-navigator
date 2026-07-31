@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Trash2, List, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+import { clearAddressRuleGroupAssignment, clearAddressRuleGroupAssignmentsByGroupName } from '@/data/emailAddressRules';
+import { deleteSenderGroup } from '@/data/emailGrouping';
 import { toast } from 'sonner';
 import type { EmailSenderGroup, SenderAnalysis } from '@/types/email-management';
 import { BackfillButton } from './BackfillButton';
@@ -82,10 +83,7 @@ function GroupDropZoneInner({
   };
 
   const handleRemoveRule = useCallback(async (ruleId: string, email: string) => {
-    const { error } = await supabase
-      .from('email_address_rules')
-      .update({ group_name: null, group_color: null, group_icon: null })
-      .eq('id', ruleId);
+    const { error } = await clearAddressRuleGroupAssignment(ruleId);
     if (!error) {
       toast.success(`${extractCompany(email)} rimosso da ${group.nome_gruppo}`);
       onRulesChanged?.();
@@ -100,20 +98,9 @@ function GroupDropZoneInner({
     // i prompt dedicati al singolo address (custom_prompt, notes,
     // auto_action, auto_action_params, target_folder…). I prompt sono
     // proprietà del mittente, non della categoria.
-    await supabase
-      .from('email_address_rules')
-      .update({
-        group_name: null,
-        group_color: null,
-        group_icon: null,
-        category: null,
-      })
-      .eq('group_name', group.nome_gruppo);
+    await clearAddressRuleGroupAssignmentsByGroupName(group.nome_gruppo);
     // Delete group definition
-    const { error } = await supabase
-      .from('email_sender_groups')
-      .delete()
-      .eq('id', group.id);
+    const { error } = await deleteSenderGroup(group.id);
     if (!error) {
       toast.success(
         `${group.nome_gruppo} eliminato. Mittenti riportati a "Da classificare" — i prompt dedicati sono stati conservati.`,

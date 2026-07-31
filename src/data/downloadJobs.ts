@@ -258,3 +258,13 @@ export async function setJobTerminalLog(jobId: string, entries: unknown[]): Prom
     .update({ terminal_log: entries as Json })
     .eq("id", jobId);
 }
+
+/** Set di ID già processati per un job (keep-alive loop di acquisizione). */
+export async function getDownloadJobProcessedIds(jobId: string): Promise<number[]> {
+  const { data } = await supabase
+    .from("download_jobs")
+    .select("processed_ids")
+    .eq("id", jobId)
+    .single();
+  return ((data?.processed_ids as number[]) || []);
+}

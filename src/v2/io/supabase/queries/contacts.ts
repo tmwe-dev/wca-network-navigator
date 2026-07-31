@@ -77,3 +77,13 @@ export async function fetchContactById(
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchContactById"));
   }
 }
+
+/* ── Raw exact count (Explore tab counters) ────────────── */
+export async function fetchContactsCountRaw(): Promise<{
+  count: number | null;
+  error: { message: string } | null;
+}> {
+  return supabase
+    .from("imported_contacts")
+    .select("*", { count: "exact", head: true });
+}

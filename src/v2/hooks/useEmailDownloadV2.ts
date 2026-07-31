@@ -2,7 +2,7 @@
  * useEmailDownloadV2 — Email download/sync job management
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchEmailSyncJobsRaw } from "@/v2/io/supabase/queries/email-sync";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -22,11 +22,7 @@ export function useEmailDownloadV2() {
   const query = useQuery({
     queryKey: queryKeys.v2.emailDownload(),
     queryFn: async (): Promise<readonly EmailDownloadJob[]> => {
-      const { data, error } = await supabase
-        .from("email_sync_jobs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const { data, error } = await fetchEmailSyncJobsRaw(10);
       if (error) return [];
       return (data ?? []).map((r) => ({
         id: r.id,
