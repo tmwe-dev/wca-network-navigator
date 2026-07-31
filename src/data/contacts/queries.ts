@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { ContactFilters, LeadStatus, ImportedContactInsert, ImportedContactRow } from "./types";
 import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 type ImportedContactUpdate = Database["public"]["Tables"]["imported_contacts"]["Update"];
 
