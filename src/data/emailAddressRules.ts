@@ -54,6 +54,8 @@ export interface AddressRuleUpsertInput {
   ai_confidence_threshold?: number | null;
   preferred_channel?: string | null;
   tone_override?: string | null;
+  topics_to_emphasize?: string[] | null;
+  topics_to_avoid?: string[] | null;
   custom_prompt?: string | null;
   notes?: string | null;
   group_id?: string | null;
@@ -74,6 +76,8 @@ function toRuleWrite(input: Partial<AddressRuleUpsertInput>): RuleUpdate {
   if (input.ai_confidence_threshold !== undefined) out.ai_confidence_threshold = input.ai_confidence_threshold;
   if (input.preferred_channel !== undefined) out.preferred_channel = input.preferred_channel;
   if (input.tone_override !== undefined) out.tone_override = input.tone_override;
+  if (input.topics_to_emphasize !== undefined) out.topics_to_emphasize = input.topics_to_emphasize;
+  if (input.topics_to_avoid !== undefined) out.topics_to_avoid = input.topics_to_avoid;
   if (input.custom_prompt !== undefined) out.custom_prompt = input.custom_prompt;
   if (input.notes !== undefined) out.notes = input.notes;
   if (input.group_id !== undefined) out.group_id = input.group_id;
