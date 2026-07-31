@@ -1,5 +1,4 @@
 /**
-import { toJsonValue } from "@/lib/jsonGuards";
  * LinkedIn Sync — download messaggi via estensione.
  * Usa cursor per-contatto: salva SOLO i messaggi nuovi rispetto al DB.
  * Filtra etichette UI ("Da leggere", "Tutti", ...) e ghost preview ("foto", "audio", ...).
@@ -19,6 +18,7 @@ import { findOperatorByUserId } from "@/data/operators";
 import { upsertLinkedInAddress } from "@/data/linkedinAddressRpc";
 import { queryKeys } from "@/lib/queryKeys";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 const LI_UI_LABELS = new Set([
   "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
