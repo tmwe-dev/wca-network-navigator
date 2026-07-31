@@ -6,6 +6,8 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findOperatorAdminFlag } from "@/data/operators";
+import { findAiRoutingConfigs, updateAiRoutingConfig } from "@/data/aiRoutingConfig";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -60,8 +62,7 @@ export function AiRoutingConfigPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user ?? null;
       if (!user) return null;
-      const { data } = await supabase.from("operators").select("is_admin").eq("user_id", user.id).maybeSingle();
-      return data;
+      return findOperatorAdminFlag(user.id);
     },
   });
   const isAdmin = profile?.is_admin ?? false;
@@ -70,13 +71,7 @@ export function AiRoutingConfigPage() {
     enabled: isAdmin,
     queryKey: ["ai_routing_config", "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_routing_config" as never)
-        .select("scope, provider, model, tier, notes, updated_at")
-        .order("tier", { ascending: true })
-        .order("scope", { ascending: true });
-      if (error) throw error;
-      return (data || []) as unknown as RoutingRow[];
+      return findAiRoutingConfigs();
     },
   });
 
@@ -95,16 +90,12 @@ export function AiRoutingConfigPage() {
     mutationFn: async (scope: string) => {
       const patch = edits[scope];
       if (!patch) return;
-      const { error } = await supabase
-        .from("ai_routing_config" as never)
-        .update({
-          ...(patch.provider ? { provider: patch.provider } : {}),
-          ...(patch.model ? { model: patch.model } : {}),
-          ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
-          updated_at: new Date().toISOString(),
-        } as never)
-        .eq("scope", scope);
-      if (error) throw error;
+      await updateAiRoutingConfig(scope, {
+        ...(patch.provider ? { provider: patch.provider } : {}),
+        ...(patch.model ? { model: patch.model } : {}),
+        ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
+        updated_at: new Date().toISOString(),
+      });
     },
     onSuccess: (_d, scope) => {
       toast.success(`Scope "${scope}" aggiornato`);

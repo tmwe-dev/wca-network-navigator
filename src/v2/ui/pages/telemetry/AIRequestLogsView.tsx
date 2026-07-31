@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAiRequestLogsSince } from "@/data/telemetry";
 import type { AIRequestLogRow } from "./types";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, StatusPill, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
@@ -9,14 +9,8 @@ export function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.telemetry.aiRequests(sinceIso),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_request_log")
-        .select("*")
-        .gte("created_at", sinceIso)
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return (data ?? []) as unknown as AIRequestLogRow[];
+      const data = await findAiRequestLogsSince(sinceIso, 500);
+      return data as unknown as AIRequestLogRow[];
     },
     refetchInterval: 30_000,
   });

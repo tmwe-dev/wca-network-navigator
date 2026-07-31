@@ -4,7 +4,8 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { listCronJobStatus } from "@/data/cronJobs";
+import { findUsageDailyBudgetRows, findAgentActionToolNames, findAgentActionMissionRows } from "@/data/observabilityQueries";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,12 +56,7 @@ function useUsageSummary(userId: string | undefined) {
     queryKey: ["observability", "usage", userId],
     queryFn: async (): Promise<UsageSummary> => {
       if (!userId) return { totalAiTokens: 0, totalTtsChars: 0, aiTokenCap: 500000, ttsCharCap: 50000, daysTracked: 0 };
-      const { data } = await untypedFrom("usage_daily_budget")
-        .select("ai_tokens_used, tts_chars_used, ai_token_cap, tts_char_cap")
-        .eq("user_id", userId)
-        .order("usage_date", { ascending: false })
-        .limit(30);
-      const rows = (data ?? []) as Array<Record<string, number>>;
+      const rows = await findUsageDailyBudgetRows(userId);
       return {
         totalAiTokens: rows.reduce((s, r) => s + (r.ai_tokens_used ?? 0), 0),
         totalTtsChars: rows.reduce((s, r) => s + (r.tts_chars_used ?? 0), 0),
@@ -79,12 +75,7 @@ function useToolStats(userId: string | undefined) {
     queryKey: ["observability", "tools", userId],
     queryFn: async (): Promise<ToolStats[]> => {
       if (!userId) return [];
-      const { data } = await untypedFrom("agent_action_log")
-        .select("tool_name")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1000);
-      const rows = (data ?? []) as Array<{ tool_name: string }>;
+      const rows = await findAgentActionToolNames(userId);
       const counts = new Map<string, number>();
       for (const r of rows) {
         counts.set(r.tool_name, (counts.get(r.tool_name) ?? 0) + 1);
@@ -104,12 +95,7 @@ function useMissionStats(userId: string | undefined) {
     queryKey: ["observability", "missions", userId],
     queryFn: async (): Promise<MissionStats> => {
       if (!userId) return { totalMissions: 0, avgSteps: 0, totalErrors: 0 };
-      const { data } = await untypedFrom("agent_action_log")
-        .select("conversation_id, result")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1000);
-      const rows = (data ?? []) as Array<{ conversation_id: string | null; result: Record<string, unknown> }>;
+      const rows = await findAgentActionMissionRows(userId);
       const missions = new Set(rows.map((r) => r.conversation_id).filter(Boolean));
       const errors = rows.filter((r) => {
         const res = r.result;
@@ -130,12 +116,7 @@ function useCronJobs() {
   return useQuery({
     queryKey: ["observability", "cron-jobs"],
     queryFn: async (): Promise<CronJobInfo[]> => {
-      const { data, error } = await supabase.rpc("cron_job_status" as never);
-      if (error) {
-        log.warn("cron_job_status RPC not available:", { error: error.message });
-        return [];
-      }
-      return (data as unknown as CronJobInfo[]) ?? [];
+      return listCronJobStatus() as unknown as Promise<CronJobInfo[]>;
     },
     staleTime: 30_000,
     retry: 1,

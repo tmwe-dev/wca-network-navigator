@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getOnboardingCompletedForUser } from "@/data/profiles";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { X, Menu, Command, Sparkles, Target } from "lucide-react";
@@ -134,13 +135,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       // Use getSession() (local, 0ms) instead of getUser() (network, ~200ms)
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return true;
-      const { data } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+      const onboardingCompleted = await getOnboardingCompletedForUser(session.user.id);
       // If no profile row or null, treat as completed (existing user safety)
-      return data?.onboarding_completed !== false;
+      return onboardingCompleted !== false;
     },
     staleTime: Infinity,
     enabled: isAuthenticated && sessionReady,

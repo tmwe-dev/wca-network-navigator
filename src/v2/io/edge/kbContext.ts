@@ -2,14 +2,14 @@
  * kbContext — Loads relevant KB entries for a given prompt.
  * Uses full-text search (Italian) with fuzzy title fallback.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findKbContextByFullText, findKbContextByTitleFuzzy } from "@/data/kbEntries";
 
-export interface KbContextEntry {
+export type KbContextEntry = {
   readonly title: string;
   readonly category: string;
   readonly content: string;
   readonly source_path: string | null;
-}
+};
 
 /**
  * Carica le entry KB più rilevanti per il prompt dato.
@@ -24,27 +24,12 @@ export async function loadKbContext(
   if (!cleaned) return [];
 
   // Full-text search su content
-  const { data: ftsData } = await supabase
-    .from("kb_entries")
-    .select("title, category, content, source_path")
-    .textSearch("content", cleaned, { type: "websearch", config: "italian" })
-    .eq("is_active", true)
-    .order("priority", { ascending: false })
-    .limit(limit);
-
-  if (ftsData && ftsData.length > 0) return ftsData;
+  const ftsData = await findKbContextByFullText(cleaned, limit);
+  if (ftsData.length > 0) return ftsData;
 
   // Fallback: fuzzy match su title (prima parola > 3 chars)
   const firstWord = cleaned.split(/\s+/).find((w) => w.length > 3) ?? cleaned.split(/\s+/)[0];
   if (!firstWord) return [];
 
-  const { data: trgmData } = await supabase
-    .from("kb_entries")
-    .select("title, category, content, source_path")
-    .ilike("title", `%${firstWord}%`)
-    .eq("is_active", true)
-    .order("priority", { ascending: false })
-    .limit(limit);
-
-  return trgmData ?? [];
+  return findKbContextByTitleFuzzy(firstWord, limit);
 }

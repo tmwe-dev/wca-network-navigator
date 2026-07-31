@@ -2,8 +2,8 @@
  * useImportLogsV2 — fetch import history
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { findImportLogsList } from "@/data/importLogsListV2";
 
 export interface ImportLog {
   readonly id: string;
@@ -19,13 +19,8 @@ export function useImportLogsV2() {
   return useQuery({
     queryKey: queryKeys.v2.importLogs,
     queryFn: async (): Promise<readonly ImportLog[]> => {
-      const { data, error } = await supabase
-        .from("import_logs")
-        .select("id, file_name, total_rows, imported_rows, error_rows, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return (data ?? []).map((r) => ({
+      const data = await findImportLogsList(50);
+      return data.map((r) => ({
         id: r.id,
         fileName: r.file_name,
         totalRows: r.total_rows,
