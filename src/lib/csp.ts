@@ -43,9 +43,24 @@ export const CSP_HEADER: string = Object.entries(CSP_DIRECTIVES)
   .join("; ");
 
 /**
+ * Direttive che il browser IGNORA quando la CSP è consegnata via `<meta>`
+ * (e per le quali emette un console error). Restano attive nell'header HTTP.
+ */
+const META_UNSUPPORTED_DIRECTIVES = new Set(["frame-ancestors", "report-uri", "sandbox"]);
+
+/**
+ * Valore CSP destinato al `<meta http-equiv>` di index.html: identico a
+ * `CSP_HEADER` ma privo delle direttive non supportate nel meta.
+ */
+export const CSP_META_CONTENT: string = Object.entries(CSP_DIRECTIVES)
+  .filter(([directive]) => !META_UNSUPPORTED_DIRECTIVES.has(directive))
+  .map(([directive, sources]) => (sources.length > 0 ? `${directive} ${sources.join(" ")}` : directive))
+  .join("; ");
+
+/**
  * Returns a `<meta>` tag string for injecting CSP into an HTML document head.
  * Useful for static SPA hosting where HTTP headers cannot be set.
  */
 export function cspMetaTag(): string {
-  return `<meta http-equiv="Content-Security-Policy" content="${CSP_HEADER}">`;
+  return `<meta http-equiv="Content-Security-Policy" content="${CSP_META_CONTENT}">`;
 }
