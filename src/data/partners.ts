@@ -779,3 +779,8 @@ export async function findPartnersForBlacklistMatch(): Promise<Array<{ id: strin
   const { data } = await supabase.from("partners").select("id, company_name, country_name");
   return (data ?? []) as Array<{ id: string; company_name: string; country_name: string | null }>;
 }
+
+export async function getPartnerEnrichmentData(id: string): Promise<Record<string, unknown>> {
+  const { data } = await supabase.from("partners").select("enrichment_data").eq("id", id).single();
+  return (data?.enrichment_data as Record<string, unknown>) || {};
+}

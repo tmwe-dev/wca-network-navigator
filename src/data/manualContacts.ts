@@ -119,7 +119,7 @@ export interface OnboardingContactInput {
 export async function insertOnboardingContactsBatch(contacts: OnboardingContactInput[], batchSize = 50): Promise<void> {
   for (let i = 0; i < contacts.length; i += batchSize) {
     const batch = contacts.slice(i, i + batchSize);
-    const { error } = await supabase.from("imported_contacts").insert(batch);
+    const { error } = await supabase.from("imported_contacts").insert(batch as never);
     if (error) throw error;
   }
 }
