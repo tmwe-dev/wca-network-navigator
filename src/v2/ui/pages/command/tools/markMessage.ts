@@ -3,7 +3,7 @@
  * Payload atteso: { message_id?: string, action?: "read"|"unread"|"category", category?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { patchChannelMessage } from "@/data/channelMessages";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = {
@@ -53,17 +53,14 @@ export const markMessageTool: Tool = {
 
     if (!id || !isUuid(id)) throw new Error("message_id mancante o non valido");
 
-    let updatePromise;
     if (action === "read") {
-      updatePromise = supabase.from("channel_messages").update({ read_at: new Date().toISOString() }).eq("id", id);
+      await patchChannelMessage(id, { read_at: new Date().toISOString() });
     } else if (action === "unread") {
-      updatePromise = supabase.from("channel_messages").update({ read_at: null }).eq("id", id);
+      await patchChannelMessage(id, { read_at: null });
     } else {
       if (!payload.category) throw new Error("Categoria mancante");
-      updatePromise = supabase.from("channel_messages").update({ category: payload.category }).eq("id", id);
+      await patchChannelMessage(id, { category: payload.category });
     }
-    const { error } = await updatePromise;
-    if (error) throw new Error(error.message);
 
     return {
       kind: "result",
