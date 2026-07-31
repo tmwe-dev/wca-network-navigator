@@ -9,6 +9,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "./VoiceLanguageSelector";
+import { upsertUserAppSetting } from "@/data/uiShellQueries";
 
 type VoiceState = "idle" | "listening" | "speaking";
 
