@@ -2,8 +2,43 @@
  * DAL — email_address_rules
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { Database } from "@/integrations/supabase/types";
+
+type RuleUpdate = Database["public"]["Tables"]["email_address_rules"]["Update"];
+type RuleInsert = Database["public"]["Tables"]["email_address_rules"]["Insert"];
+type Json = Database["public"]["Tables"]["email_address_rules"]["Row"]["auto_action_params"];
+
+/**
+ * Serializzazione reale (non un cast): il round-trip JSON produce un valore
+ * che è per costruzione un `Json` valido. `JSON.parse` restituisce `any`,
+ * quindi l'assegnazione è tipizzata senza `as`.
+ */
+function serializeJson(value: unknown): Json {
+  if (value === null || value === undefined) return null;
+  const json: Json = JSON.parse(JSON.stringify(value));
+  return json;
+}
+
+/** Converte un patch di dominio nel tipo Update generato, campo per campo. */
+function toRuleUpdate(patch: Partial<EmailAddressRule>): RuleUpdate {
+  const out: RuleUpdate = {};
+  if (patch.email_address !== undefined) out.email_address = patch.email_address;
+  if (patch.display_name !== undefined) out.display_name = patch.display_name;
+  if (patch.category !== undefined) out.category = patch.category;
+  if (patch.group_name !== undefined) out.group_name = patch.group_name;
+  if (patch.custom_prompt !== undefined) out.custom_prompt = patch.custom_prompt;
+  if (patch.notes !== undefined) out.notes = patch.notes;
+  if (patch.is_active !== undefined) out.is_active = patch.is_active;
+  if (patch.priority !== undefined) out.priority = patch.priority;
+  if (patch.auto_action !== undefined) out.auto_action = patch.auto_action;
+  if (patch.auto_action_params !== undefined) {
+    out.auto_action_params = serializeJson(patch.auto_action_params);
+  }
+  if (patch.applied_count !== undefined) out.applied_count = patch.applied_count;
+  if (patch.last_applied_at !== undefined) out.last_applied_at = patch.last_applied_at;
+  if (patch.is_blocked !== undefined) out.is_blocked = patch.is_blocked;
+  return out;
+}
 
 export interface EmailAddressRule {
   id: string;
@@ -33,9 +68,10 @@ export async function findEmailAddressRules(_userId: string): Promise<EmailAddre
 }
 
 export async function updateEmailAddressRule(id: string, patch: Partial<EmailAddressRule>): Promise<void> {
-  // `auto_action_params` è Record<string, unknown> ma il tipo generato Supabase è Json
-  // (ricorsivo). Compatibili a runtime — usiamo l'untypedFrom centralizzato.
-  const { error } = await untypedFrom("email_address_rules").update(patch).eq("id", id);
+  const { error } = await supabase
+    .from("email_address_rules")
+    .update(toRuleUpdate(patch))
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -51,10 +87,11 @@ export async function bulkUpdateAutoAction(
   params: Record<string, unknown> = {},
 ): Promise<void> {
   if (emails.length === 0) return;
-  const { error } = await untypedFrom("email_address_rules")
+  const { error } = await supabase
+    .from("email_address_rules")
     .update({
       auto_action: action,
-      auto_action_params: params,
+      auto_action_params: serializeJson(params),
       auto_execute: action !== "none",
     })
     .in("email_address", emails);
@@ -72,10 +109,11 @@ export async function bulkSetBlocked(
   blocked: boolean,
 ): Promise<void> {
   if (emails.length === 0) return;
-  const patch = blocked
+  const patch: RuleUpdate = blocked
     ? { is_blocked: true, auto_action: "spam", auto_execute: true }
     : { is_blocked: false };
-  const { error } = await untypedFrom("email_address_rules")
+  const { error } = await supabase
+    .from("email_address_rules")
     .update(patch)
     .in("email_address", emails);
   if (error) throw error;
@@ -95,19 +133,22 @@ export async function upsertEmailAddressRule(
   if (!addr) return;
   // Classificazione condivisa: cerco una regola esistente per questa email
   // (di qualsiasi operatore) e la aggiorno; se non esiste la creo col user_id corrente.
-  const { data: existing, error: selErr } = await untypedFrom("email_address_rules")
+  const { data: existing, error: selErr } = await supabase
+    .from("email_address_rules")
     .select("id")
     .eq("email_address", addr)
     .limit(1);
   if (selErr) throw selErr;
-  const existingId = (existing as Array<{ id: string }> | null)?.[0]?.id;
+  const existingId = existing?.[0]?.id;
   if (existingId) {
-    const { error } = await untypedFrom("email_address_rules")
+    const { error } = await supabase
+      .from("email_address_rules")
       .update(patch)
       .eq("id", existingId);
     if (error) throw error;
   } else {
-    const { error } = await untypedFrom("email_address_rules")
+    const { error } = await supabase
+      .from("email_address_rules")
       .insert([{ user_id: userId, email_address: addr, ...patch }]);
     if (error) throw error;
   }
@@ -137,14 +178,16 @@ export async function findAddressRulesForUi(
 }
 
 /** Update by id (semantica AddressRulesManager). */
-export async function updateAddressRuleById(id: string, payload: Record<string, unknown>): Promise<void> {
-  const { error } = await untypedFrom("email_address_rules").update(payload).eq("id", id);
+export async function updateAddressRuleById(id: string, payload: RuleUpdate): Promise<void> {
+  const { error } = await supabase.from("email_address_rules").update(payload).eq("id", id);
   if (error) throw error;
 }
 
 /** Insert nuova regola con user_id esplicito. */
-export async function insertAddressRule(payload: Record<string, unknown>, userId: string): Promise<void> {
-  const { error } = await untypedFrom("email_address_rules").insert({ ...payload, user_id: userId });
+export async function insertAddressRule(payload: RuleInsert, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .insert({ ...payload, user_id: userId });
   if (error) throw error;
 }
 
@@ -187,14 +230,15 @@ export async function findAddressRuleIdByAddressAndOperator(
 
 /** Insert regola completa restituendo l'id creato. */
 export async function insertAddressRuleReturningId(
-  payload: Record<string, unknown>,
+  payload: RuleInsert,
 ): Promise<string> {
-  const { data, error } = await untypedFrom("email_address_rules")
+  const { data, error } = await supabase
+    .from("email_address_rules")
     .insert(payload)
     .select("id")
     .single();
   if (error) throw error;
-  return (data as { id: string }).id;
+  return data.id;
 }
 
 export interface AddressRuleMatchTargets {
@@ -369,13 +413,14 @@ export interface ReusablePromptRuleRow {
 
 /** Regole con prompt custom già usato, per il picker "riusa da altri mittenti". */
 export async function findReusablePromptRules(userId: string): Promise<ReusablePromptRuleRow[]> {
-  const { data } = await untypedFrom("email_address_rules")
+  const { data } = await supabase
+    .from("email_address_rules")
     .select("id, email_address, display_name, custom_prompt")
     .eq("user_id", userId)
     .not("custom_prompt", "is", null)
     .order("last_applied_at", { ascending: false, nullsFirst: false })
     .limit(100);
-  return (data ?? []) as ReusablePromptRuleRow[];
+  return data ?? [];
 }
 
 /* ── Assegnazione gruppo (GroupDropZone) ── */
