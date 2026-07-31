@@ -9,8 +9,6 @@ type ImportedContactUpdate = Database["public"]["Tables"]["imported_contacts"]["
  * Confine DAL: gli update generici arrivano come record non tipizzati dalla UI.
  * Si conservano solo le chiavi realmente presenti nello schema tabella.
  */
-const CONTACT_COLUMNS = new Set<string>(Object.keys({} as Required<ImportedContactUpdate>));
-
 function toContactUpdate(updates: Record<string, unknown>): ImportedContactUpdate {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(updates)) out[k] = v;
