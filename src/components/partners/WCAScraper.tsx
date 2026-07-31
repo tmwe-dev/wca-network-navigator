@@ -46,14 +46,7 @@ export function WCAScraper() {
   const { data: maxWcaId } = useQuery({
     queryKey: queryKeys.downloads.maxWcaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("wca_id")
-        .not("wca_id", "is", null)
-        .order("wca_id", { ascending: false })
-        .limit(1)
-        .single();
-      return data?.wca_id || 0;
+      return await getMaxPartnerWcaId();
     },
   });
 

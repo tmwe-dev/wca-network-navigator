@@ -90,12 +90,7 @@ export function useWhatsAppBackfill() {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) { toast.error("Non autenticato"); return; }
 
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const operatorId = opRow?.id ?? null;
+      const operatorId = await fetchOperatorIdForUser(user.id);
       if (!operatorId) {
         toast.error("Nessun operatore associato");
         return;

@@ -62,9 +62,8 @@ export function useAcquisitionPipeline() {
       try { await updateDownloadJob(jobId, {}); } catch { /* non-blocking */ }
     }, scrapingSettings.keepAliveMs);
 
-    const { data: currentJobData } = await supabase
-      .from("download_jobs").select("processed_ids").eq("id", jobId).single();
-    const processedSet = new Set<number>(((currentJobData?.processed_ids as number[]) || []));
+    const processedIds = await getDownloadJobProcessedIds(jobId);
+    const processedSet = new Set<number>(processedIds);
 
     for (let i = startFrom; i < items.length; i++) {
       if (state.cancelRef.current) break;

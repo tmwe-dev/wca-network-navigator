@@ -38,15 +38,8 @@ export function SmartClassificationView() {
   const { data: classifications = [], isLoading } = useQuery({
     queryKey: ['email-classifications', selectedCategory],
     queryFn: async () => {
-      let q = supabase
-        .from('email_classifications')
-        .select('*')
-        .order('classified_at', { ascending: false })
-        .limit(100);
-      if (selectedCategory !== 'all') q = q.eq('category', selectedCategory);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data || []) as Classification[];
+      const data = await findEmailClassificationsPlain(selectedCategory);
+      return data as unknown as Classification[];
     },
   });
 
@@ -54,11 +47,8 @@ export function SmartClassificationView() {
   const { data: allClassifications = [] } = useQuery({
     queryKey: ['email-classifications-counts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('email_classifications')
-        .select('category');
-      if (error) throw error;
-      return (data || []) as { category: string }[];
+      const data = await findEmailClassificationCategories();
+      return data as { category: string }[];
     },
   });
 

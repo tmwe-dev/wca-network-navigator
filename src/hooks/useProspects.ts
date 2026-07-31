@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAllProspects } from "@/data/prospects";
 import type { Database } from "@/integrations/supabase/types";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -11,12 +11,7 @@ export function useProspects() {
   return useQuery({
     queryKey: queryKeys.prospects.all,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("prospects")
-        .select("*")
-        .order("company_name");
-      if (error) throw error;
-      return data ?? [];
+      return await findAllProspects();
     },
   });
 }
