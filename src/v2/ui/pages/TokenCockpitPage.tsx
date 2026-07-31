@@ -12,6 +12,7 @@ import { TokenUsageTable } from "@/components/token-cockpit/TokenUsageTable";
 import { TokenTrendCard } from "@/components/token-cockpit/TokenTrendCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findPromptLogTokens, getTokenSettings } from "@/data/tokenUsage";
 import { formatTokenCount } from "@/data/tokenUsage";
 import { Card } from "@/components/ui/card";
 import { BarChart3, Activity, TrendingUp } from "lucide-react";
@@ -62,29 +63,14 @@ function TokenCockpitContent() {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const [{ data: dailyData }, { data: monthlyData }, { data: settingsData }] = await Promise.all([
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfDay.toISOString()),
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfMonth.toISOString()),
-        supabase
-          .from("app_settings")
-          .select("key, value")
-          .eq("user_id", userData.id)
-          .in("key", ["ai_daily_token_limit", "ai_monthly_token_limit"]),
+      const [dailyData, monthlyData, settings] = await Promise.all([
+        findPromptLogTokens({ since: startOfDay.toISOString() }),
+        findPromptLogTokens({ since: startOfMonth.toISOString() }),
+        getTokenSettings(userData.id),
       ]);
 
       const today = (dailyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
       const month = (monthlyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-
-      const settings = (settingsData || []).reduce((acc, row) => {
-        if (row.key) acc[row.key] = String(row.value ?? "");
-        return acc;
-      }, {} as Record<string, string>);
 
       const dailyLimit = parseInt(settings["ai_daily_token_limit"] || "500000", 10);
       const monthlyLimit = parseInt(settings["ai_monthly_token_limit"] || "10000000", 10);

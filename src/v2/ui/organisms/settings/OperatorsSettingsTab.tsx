@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAllOperators, updateOperator } from "@/data/operators";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2, Users } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -16,21 +16,14 @@ export function OperatorsSettingsTab(): React.ReactElement {
   const { data: operators, isLoading } = useQuery({
     queryKey: queryKeys.v2.operators,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("operators")
-        .select("id, name, email, is_active, is_admin, created_at")
-        .order("name");
-      return data ?? [];
+      const rows = await findAllOperators();
+      return [...rows].sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const { error } = await supabase
-        .from("operators")
-        .update({ is_active: isActive })
-        .eq("id", id);
-      if (error) throw error;
+      await updateOperator(id, { is_active: isActive });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.v2.operators });

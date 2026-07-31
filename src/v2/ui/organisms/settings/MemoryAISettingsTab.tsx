@@ -4,6 +4,7 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findMemoryTypesByUser, deleteEpisodicMemoriesForUser } from "@/data/aiMemory";
 import { FormSection } from "../../organisms/FormSection";
 import { Button } from "@/components/ui/button";
 import { Loader2, Database, Trash2 } from "lucide-react";
@@ -18,11 +19,7 @@ export function MemoryAISettingsTab(): React.ReactElement {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return { total: 0, episodic: 0, semantic: 0 };
-      const { data } = await supabase
-        .from("ai_memory")
-        .select("memory_type")
-        .eq("user_id", user.id);
-      const items = data ?? [];
+      const items = await findMemoryTypesByUser(user.id);
       return {
         total: items.length,
         episodic: items.filter((m) => m.memory_type === "episodic").length,
@@ -35,12 +32,7 @@ export function MemoryAISettingsTab(): React.ReactElement {
     mutationFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
-      const { error } = await supabase
-        .from("ai_memory")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("memory_type", "episodic");
-      if (error) throw error;
+      await deleteEpisodicMemoriesForUser(user.id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.v2.aiMemoryStats });

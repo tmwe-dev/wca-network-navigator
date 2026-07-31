@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAuthorizedUsers } from "@/data/authorizedUsers";
 import { StatusBadge } from "../../atoms/StatusBadge";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -11,12 +11,8 @@ export function SecuritySettingsTab(): React.ReactElement {
   const { data: users, isLoading } = useQuery({
     queryKey: queryKeys.v2.authorizedUsers,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("authorized_users")
-        .select("id, email, display_name, is_active, last_login_at, login_count")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      const rows = await findAuthorizedUsers();
+      return [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at));
     },
   });
 

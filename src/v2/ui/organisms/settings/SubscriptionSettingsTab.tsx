@@ -4,6 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findRecentCreditTransactions } from "@/data/credits";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2, Crown } from "lucide-react";
 import { format } from "date-fns";
@@ -16,14 +17,7 @@ export function SubscriptionSettingsTab(): React.ReactElement {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return { balance: 0, transactions: [] };
 
-      const { data: txs } = await supabase
-        .from("credit_transactions")
-        .select("id, amount, operation, description, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      const items = txs ?? [];
+      const items = await findRecentCreditTransactions(user.id, 20);
       const balance = items.reduce((s, t) => s + t.amount, 0);
       return { balance, transactions: items };
     },
