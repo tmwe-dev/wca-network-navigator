@@ -51,6 +51,42 @@ interface PartnerFilterRow { id: string; profile_description?: string | null; ra
 interface PartnerInfoRow { id: string; company_name?: string; country_code?: string; logo_url?: string }
 interface ContactInfoRow { id: string; company_name?: string | null; name?: string | null; country?: string | null }
 interface DeepSearchAlreadyDoneRow { id: string; deep_search_at?: string | null; enrichment_data?: Record<string, unknown> | null }
+
+function toPartnerFilterRow(r: Record<string, unknown>): PartnerFilterRow {
+  return {
+    id: r.id as string,
+    profile_description: (r.profile_description as string | null | undefined) ?? null,
+    raw_profile_html: (r.raw_profile_html as string | null | undefined) ?? null,
+    raw_profile_markdown: (r.raw_profile_markdown as string | null | undefined) ?? null,
+    enrichment_data: (r.enrichment_data as Record<string, unknown> | null | undefined) ?? null,
+  };
+}
+
+function toDeepSearchAlreadyDoneRow(r: Record<string, unknown>): DeepSearchAlreadyDoneRow {
+  return {
+    id: r.id as string,
+    deep_search_at: (r.deep_search_at as string | null | undefined) ?? null,
+    enrichment_data: (r.enrichment_data as Record<string, unknown> | null | undefined) ?? null,
+  };
+}
+
+function toPartnerInfoRow(r: Record<string, unknown>): PartnerInfoRow {
+  return {
+    id: r.id as string,
+    company_name: r.company_name as string | undefined,
+    country_code: r.country_code as string | undefined,
+    logo_url: r.logo_url as string | undefined,
+  };
+}
+
+function toContactInfoRow(r: Record<string, unknown>): ContactInfoRow {
+  return {
+    id: r.id as string,
+    company_name: (r.company_name as string | null | undefined) ?? null,
+    name: (r.name as string | null | undefined) ?? null,
+    country: (r.country as string | null | undefined) ?? null,
+  };
+}
 interface LocalSearchResult { success: boolean; error?: string; companyName?: string; socialLinksFound?: number; logoFound?: boolean; contactProfilesFound?: number; companyProfileFound?: boolean; rating?: number; rateLimited?: boolean }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
@@ -86,7 +122,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     // Pre-check: for partners, detect missing profiles
     let noProfileIds: string[] = [];
     if (mode === "partner") {
-      const allPartnerData = await getPartnersByIds(ids, "id, profile_description, raw_profile_html, raw_profile_markdown, enrichment_data") as unknown as PartnerFilterRow[];
+      const allPartnerData = (await getPartnersByIds(ids, "id, profile_description, raw_profile_html, raw_profile_markdown, enrichment_data")).map(toPartnerFilterRow);
 
       noProfileIds = allPartnerData
         .filter((p) => !p.profile_description && !p.raw_profile_html && !p.raw_profile_markdown)
@@ -117,10 +153,10 @@ export function useDeepSearchRunner(): DeepSearchState {
     if (!force) {
       let alreadyDone: DeepSearchAlreadyDoneRow[] = [];
       if (mode === "contact") {
-        const allContacts = await getContactsByIds(toProcess, "id, deep_search_at") as unknown as DeepSearchAlreadyDoneRow[];
+        const allContacts = (await getContactsByIds(toProcess, "id, deep_search_at")).map(toDeepSearchAlreadyDoneRow);
         alreadyDone = allContacts.filter((c) => c.deep_search_at);
       } else {
-        const partnerData = await getPartnersByIds(toProcess, "id, enrichment_data") as unknown as DeepSearchAlreadyDoneRow[];
+        const partnerData = (await getPartnersByIds(toProcess, "id, enrichment_data")).map(toDeepSearchAlreadyDoneRow);
         alreadyDone = partnerData.filter((p) => p.enrichment_data?.deep_search_at);
       }
 
@@ -165,11 +201,11 @@ export function useDeepSearchRunner(): DeepSearchState {
             }
           }
           if (!cached) {
-            const partnerResults = await getPartnersByIds([id], "id, company_name, country_code, logo_url") as unknown as PartnerInfoRow[];
+            const partnerResults = (await getPartnersByIds([id], "id, company_name, country_code, logo_url")).map(toPartnerInfoRow);
             cached = partnerResults[0] || null;
           }
         } else {
-          const contactResults = await getContactsByIds([id], "id, company_name, name, country") as unknown as ContactInfoRow[];
+          const contactResults = (await getContactsByIds([id], "id, company_name, name, country")).map(toContactInfoRow);
           const data = contactResults[0] || null;
           cached = data ? { id: data.id, company_name: data.name || data.company_name || undefined, country_code: data.country || undefined } as PartnerInfoRow : null;
         }
