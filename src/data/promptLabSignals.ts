@@ -36,11 +36,11 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
   // 1) Pattern errori ricorrenti nelle azioni AI
   try {
     const { data: errorLogs } = await supabase
-      .from("supervisor_audit_log" as never)
-      .select("action, target_table, target_id, payload, created_at" as never)
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .or("action.ilike.%error%,action.ilike.%fail%" as never)
-      .order("created_at" as never, { ascending: false } as never)
+      .from("supervisor_audit_log")
+      .select("action, target_table, target_id, payload, created_at")
+      .gte("created_at", sevenDaysAgo)
+      .or("action.ilike.%error%,action.ilike.%fail%")
+      .order("created_at", { ascending: false })
       .limit(100);
 
     if (errorLogs && (errorLogs as unknown[]).length >= 3) {
@@ -73,16 +73,16 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
   // 2) Tasso di accettazione email basso (molte email generate ma poche inviate)
   try {
     const { data: generatedEmails } = await supabase
-      .from("supervisor_audit_log" as never)
-      .select("action" as never)
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .eq("action" as never, "generate_email" as never);
+      .from("supervisor_audit_log")
+      .select("action")
+      .gte("created_at", sevenDaysAgo)
+      .eq("action", "generate_email");
 
     const { data: sentEmails } = await supabase
-      .from("supervisor_audit_log" as never)
-      .select("action" as never)
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .eq("action" as never, "send_email" as never);
+      .from("supervisor_audit_log")
+      .select("action")
+      .gte("created_at", sevenDaysAgo)
+      .eq("action", "send_email");
 
     const generated = (generatedEmails as unknown[] | null)?.length ?? 0;
     const sent = (sentEmails as unknown[] | null)?.length ?? 0;
@@ -109,10 +109,10 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
   // 3) Decision Engine: molte azioni rifiutate (rejected)
   try {
     const { data: rejectedActions } = await supabase
-      .from("ai_pending_actions" as never)
-      .select("action_type, payload, created_at" as never)
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .eq("status" as never, "rejected" as never)
+      .from("ai_pending_actions")
+      .select("action_type, payload, created_at")
+      .gte("created_at", sevenDaysAgo)
+      .eq("status", "rejected")
       .limit(50);
 
     if (rejectedActions && (rejectedActions as unknown[]).length >= 3) {
@@ -144,11 +144,11 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
   // 4) Memorie di apprendimento (feedback dall'utente salvati come memory)
   try {
     const { data: memories } = await supabase
-      .from("ai_memory" as never)
-      .select("content, tags, created_at" as never)
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .contains("tags" as never, ["feedback"] as never)
-      .order("created_at" as never, { ascending: false } as never)
+      .from("ai_memory")
+      .select("content, tags, created_at")
+      .gte("created_at", sevenDaysAgo)
+      .contains("tags", ["feedback"])
+      .order("created_at", { ascending: false })
       .limit(20);
 
     if (memories && (memories as unknown[]).length > 0) {
@@ -174,18 +174,18 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
 
     // Volume ultime 7 gg
     const { count: recentGenerated } = await supabase
-      .from("supervisor_audit_log" as never)
-      .select("id" as never, { count: "exact", head: true })
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .eq("action" as never, "generate_email" as never);
+      .from("supervisor_audit_log")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", sevenDaysAgo)
+      .eq("action", "generate_email");
 
     // Volume 7 gg precedenti (14-7 giorni fa)
     const { count: previousGenerated } = await supabase
-      .from("supervisor_audit_log" as never)
-      .select("id" as never, { count: "exact", head: true })
-      .gte("created_at" as never, fourteenDaysAgo as never)
-      .lt("created_at" as never, sevenDaysAgo as never)
-      .eq("action" as never, "generate_email" as never);
+      .from("supervisor_audit_log")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", fourteenDaysAgo)
+      .lt("created_at", sevenDaysAgo)
+      .eq("action", "generate_email");
 
     const recent = recentGenerated ?? 0;
     const previous = previousGenerated ?? 0;
@@ -211,11 +211,11 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
   // LOVABLE-93: coerenza Prompt Lab multi-dominio — detect domain misclassification patterns
   try {
     const { data: corrections } = await supabase
-      .from("ai_memory" as never)
-      .select("tags" as never)
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .eq("user_id" as never, userId as never)
-      .contains("tags" as never, ["correzione_utente"] as never)
+      .from("ai_memory")
+      .select("tags")
+      .gte("created_at", sevenDaysAgo)
+      .eq("user_id", userId)
+      .contains("tags", ["correzione_utente"])
       .limit(50);
 
     if (corrections && (corrections as unknown[]).length >= 3) {
@@ -265,16 +265,16 @@ export async function getRecentSignalCount(_userId: string): Promise<number> {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     // Count errori + rejected nelle ultime 7 giorni come proxy per segnalazioni attive
     const { count: errorCount } = await supabase
-      .from("supervisor_audit_log" as never)
-      .select("id" as never, { count: "exact", head: true })
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .or("action.ilike.%error%,action.ilike.%fail%" as never);
+      .from("supervisor_audit_log")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", sevenDaysAgo)
+      .or("action.ilike.%error%,action.ilike.%fail%");
 
     const { count: rejectedCount } = await supabase
-      .from("ai_pending_actions" as never)
-      .select("id" as never, { count: "exact", head: true })
-      .gte("created_at" as never, sevenDaysAgo as never)
-      .eq("status" as never, "rejected" as never);
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", sevenDaysAgo)
+      .eq("status", "rejected");
 
     const total = (errorCount ?? 0) + (rejectedCount ?? 0);
     // Ritorna un contatore proporzionale (non il numero grezzo)
