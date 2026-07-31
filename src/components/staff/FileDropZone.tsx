@@ -1,7 +1,7 @@
 import { useState, useCallback, type DragEvent, type ReactNode } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/data/chatAttachments";
 
 interface Props {
   children: ReactNode;
@@ -24,10 +24,9 @@ export function FileDropZone({ children, onFileUploaded, className }: Props) {
     setUploading(true);
     for (const file of files) {
       const path = `staff/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from("chat-attachments").upload(path, file);
+      const { error } = await uploadChatAttachment(path, file);
       if (!error) {
-        const { data } = supabase.storage.from("chat-attachments").getPublicUrl(path);
-        onFileUploaded(data.publicUrl, file.name);
+        onFileUploaded(getChatAttachmentPublicUrl(path), file.name);
       }
     }
     setUploading(false);

@@ -2,8 +2,8 @@
  * useInreachV2 — Inbound messages query + mark read
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { findInboundMessages, markChannelMessageRead } from "@/data/inreach";
 
 interface InboundMessage {
   readonly id: string;
@@ -22,17 +22,13 @@ export function useInreachV2(search: string, catFilter: string) {
   return useQuery({
     queryKey: queryKeys.v2.inreach(search, catFilter),
     queryFn: async (): Promise<readonly InboundMessage[]> => {
-      let q = supabase
-        .from("channel_messages")
-        .select("id, from_address, subject, body_text, body_html, channel, direction, created_at, read_at, category")
-        .eq("direction", "inbound")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (search) q = q.or(`subject.ilike.%${search}%,from_address.ilike.%${search}%`);
-      if (catFilter) q = q.eq("category", catFilter);
-      const { data, error } = await q;
-      if (error) return [];
-      return (data ?? []).map((m) => ({
+      let data;
+      try {
+        data = await findInboundMessages(search, catFilter, 100);
+      } catch {
+        return [];
+      }
+      return data.map((m) => ({
         id: m.id,
         fromAddress: m.from_address,
         subject: m.subject,
@@ -52,10 +48,7 @@ export function useMarkReadV2() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("channel_messages")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
+      await markChannelMessageRead(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.v2.inreach() }),
   });

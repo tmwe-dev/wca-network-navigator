@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,7 @@ import { it } from "date-fns/locale";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
+import { updateActivitySchedule, logAuditEntry, findRecentActivities, completeActivity, updateActivityDescription } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 import { OutreachRow } from "./shared/OutreachRow";
 import { resolveActionKind } from "./shared/ActionIcon";
@@ -43,12 +42,7 @@ export function AttivitaTab() {
   const { data: activities, isLoading } = useQuery({
     queryKey: queryKeys.activities.outreach(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("activities")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      return data || [];
+      return findRecentActivities(200);
     },
   });
 
@@ -92,10 +86,7 @@ export function AttivitaTab() {
 
   const handleComplete = async (id: string) => {
     try {
-      const { error } = await supabase.from("activities")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
+      await completeActivity(id);
       qc.invalidateQueries({ queryKey: queryKeys.activities.outreach() });
       toast.success("Attività completata");
     } catch { toast.error("Errore"); }
@@ -104,10 +95,7 @@ export function AttivitaTab() {
   const handleSaveNote = async (id: string) => {
     if (!noteText.trim()) return;
     try {
-      const { error } = await supabase.from("activities")
-        .update({ description: noteText.trim() })
-        .eq("id", id);
-      if (error) throw error;
+      await updateActivityDescription(id, noteText.trim());
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Nota aggiunta`, decision_origin: "manual", target_type: "activity", target_id: id });
       qc.invalidateQueries({ queryKey: queryKeys.activities.outreach() });
       toast.success("Nota salvata");

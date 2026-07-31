@@ -6,6 +6,7 @@
  * Regex sul prompt solo come fallback per input umano diretto.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { insertPendingActionReturningId } from "@/data/aiPendingActions";
 import type { Tool, ToolResult, ToolContext } from "./types";
 import { mergePayload } from "./_helpers/writePayload";
 
@@ -64,7 +65,7 @@ export const sendEmailDirectTool: Tool = {
       return { kind: "result", title: "Sessione non valida", message: "Effettua nuovamente il login.", meta: { count: 0, sourceLabel: "command" } };
     }
     const html = String(p.body).replace(/\n/g, "<br/>");
-    const { data, error } = await supabase.from("ai_pending_actions").insert({
+    const { data, error } = await insertPendingActionReturningId({
       user_id: userId,
       action_type: "send_email",
       action_payload: {
@@ -74,7 +75,7 @@ export const sendEmailDirectTool: Tool = {
         body: String(p.body),
         partner_id: p.partner_id ?? null,
         contact_id: p.contact_id ?? null,
-      } as never,
+      },
       partner_id: (p.partner_id as string | null) ?? null,
       contact_id: (p.contact_id as string | null) ?? null,
       email_address: String(p.to),
@@ -83,7 +84,7 @@ export const sendEmailDirectTool: Tool = {
       confidence: 1.0,
       source: "command:send-email-direct",
       status: "pending",
-    } as never).select("id").maybeSingle();
+    });
     if (error) {
       return { kind: "result", title: "Errore in coda", message: error.message, meta: { count: 0, sourceLabel: "command" } };
     }

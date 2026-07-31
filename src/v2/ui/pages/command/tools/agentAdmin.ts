@@ -2,19 +2,16 @@
  * Tools: toggle-agent, update-agent-persona.
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgentRef } from "@/data/agents";
+import { updateAgent } from "@/data/agents";
+import { updateAgentPersonaByAgentId } from "@/data/agentPersonas";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type TogglePayload = { agent_id?: string; agent_name?: string; active?: boolean; [k: string]: unknown };
 
 async function resolveAgent(ref: string): Promise<{ id: string; name: string } | null> {
   if (!ref) return null;
-  if (isUuid(ref)) {
-    const { data } = await supabase.from("agents").select("id, name").eq("id", ref).maybeSingle();
-    return data ? { id: data.id as string, name: (data.name ?? "") as string } : null;
-  }
-  const { data } = await supabase.from("agents").select("id, name").ilike("name", `%${ref}%`).limit(1).maybeSingle();
-  return data ? { id: data.id as string, name: (data.name ?? "") as string } : null;
+  return findAgentRef(ref, isUuid(ref));
 }
 
 export const toggleAgentTool: Tool = {
@@ -45,8 +42,7 @@ export const toggleAgentTool: Tool = {
     if (!ref) throw new Error("Riferimento agente mancante");
     const resolved = await resolveAgent(ref);
     if (!resolved) throw new Error(`Agente "${ref}" non trovato`);
-    const { error } = await supabase.from("agents").update({ is_active: !!payload.active }).eq("id", resolved.id);
-    if (error) throw new Error(error.message);
+    await updateAgent(resolved.id, { is_active: !!payload.active });
     return {
       kind: "result",
       title: payload.active ? "🟢 Agente attivato" : "⚪ Agente disattivato",
@@ -90,8 +86,7 @@ export const updateAgentPersonaTool: Tool = {
     if (Object.keys(updates).length === 0) throw new Error("Nessun aggiornamento fornito");
     const resolved = await resolveAgent(ref);
     if (!resolved) throw new Error(`Agente "${ref}" non trovato`);
-    const { error } = await supabase.from("agent_personas").update(updates as never).eq("agent_id", resolved.id);
-    if (error) throw new Error(error.message);
+    await updateAgentPersonaByAgentId(resolved.id, updates);
     return {
       kind: "result",
       title: "🎭 Persona aggiornata",

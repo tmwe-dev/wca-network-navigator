@@ -3,7 +3,7 @@
  * Payload atteso: { activity_id?: string, activity_ref?: string, dueAt: string (ISO o YYYY-MM-DD), note?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { findActivityRef, patchActivity } from "@/data/activities";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = {
@@ -22,19 +22,7 @@ function fallbackFromPrompt(prompt: string): Payload {
 
 async function resolveActivity(ref: string): Promise<{ id: string; title: string } | null> {
   if (!ref) return null;
-  if (isUuid(ref)) {
-    const { data } = await supabase.from("activities").select("id, title").eq("id", ref).maybeSingle();
-    return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
-  }
-  const { data } = await supabase
-    .from("activities")
-    .select("id, title")
-    .ilike("title", `%${ref}%`)
-    .neq("status", "completed")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+  return findActivityRef(ref, isUuid(ref));
 }
 
 export const rescheduleActivityTool: Tool = {
@@ -69,16 +57,12 @@ export const rescheduleActivityTool: Tool = {
     const resolved = await resolveActivity(ref);
     if (!resolved) throw new Error(`Attività "${ref}" non trovata`);
 
-    const { error } = await supabase
-      .from("activities")
-      .update({
-        due_date: dueAt.slice(0, 10),
-        scheduled_at: dueAt.length > 10 ? dueAt : `${dueAt.slice(0, 10)}T09:00:00Z`,
-        status: "pending",
-        ...(payload.note ? { description: payload.note } : {}),
-      })
-      .eq("id", resolved.id);
-    if (error) throw new Error(error.message);
+    await patchActivity(resolved.id, {
+      due_date: dueAt.slice(0, 10),
+      scheduled_at: dueAt.length > 10 ? dueAt : `${dueAt.slice(0, 10)}T09:00:00Z`,
+      status: "pending",
+      ...(payload.note ? { description: payload.note } : {}),
+    });
 
     return {
       kind: "result",

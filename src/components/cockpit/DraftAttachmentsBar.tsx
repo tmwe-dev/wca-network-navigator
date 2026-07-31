@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadCockpitAttachment, removeCockpitAttachment } from "@/data/cockpitAttachments";
 import { ImageGalleryTab } from "@/components/email/ImageGalleryTab";
 import type { DraftState, DraftLink, DraftAttachment } from "@/types/cockpit";
 
@@ -78,11 +79,7 @@ export function DraftAttachmentsBar({ draft, onDraftChange }: Props) {
       for (const file of accepted) {
         const safe = file.name.replace(/[^\w.-]+/g, "_");
         const path = `${user.id}/${crypto.randomUUID()}-${safe}`;
-        const { error } = await supabase.storage.from("cockpit-attachments").upload(path, file, {
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
-        });
-        if (error) throw error;
+        await uploadCockpitAttachment(path, file, file.type || "application/octet-stream");
         uploaded.push({ name: file.name, path, size: file.size, mime: file.type || "application/octet-stream" });
       }
       onDraftChange({ ...draft, attachments: [...attachments, ...uploaded] });
@@ -98,7 +95,7 @@ export function DraftAttachmentsBar({ draft, onDraftChange }: Props) {
   const removeAttachment = async (idx: number) => {
     const att = attachments[idx];
     onDraftChange({ ...draft, attachments: attachments.filter((_, i) => i !== idx) });
-    void supabase.storage.from("cockpit-attachments").remove([att.path]).catch(() => {});
+    void removeCockpitAttachment(att.path).catch(() => {});
   };
 
   return (

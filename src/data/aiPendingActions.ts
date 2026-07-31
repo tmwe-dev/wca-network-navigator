@@ -69,3 +69,10 @@ export async function updateAgentSystemPrompt(agentId: string, systemPrompt: str
 export async function insertPendingAction(payload: Record<string, unknown>) {
   return await supabase.from("ai_pending_actions").insert(payload as never);
 }
+
+/** Insert di una pending action con ritorno dell'id creato (usato dal tool Command send-email-direct). */
+export async function insertPendingActionReturningId(
+  payload: Record<string, unknown>,
+): Promise<{ data: { id: string } | null; error: { message: string } | null }> {
+  return await supabase.from("ai_pending_actions").insert(payload as never).select("id").maybeSingle();
+}

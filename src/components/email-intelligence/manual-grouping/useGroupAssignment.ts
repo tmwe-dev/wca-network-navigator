@@ -15,6 +15,7 @@ import {
   insertGroupAssignmentDecision,
   findDomainPatternKbEntryId,
   insertKbEntry,
+  checkDomainGroupPattern,
 } from "@/data/emailGrouping";
 
 import { createLogger } from "@/lib/log";
@@ -76,11 +77,7 @@ export function useGroupAssignment(
       // Check domain pattern for auto-learning
       const domain = sender.email.split("@")[1];
       if (domain) {
-        const { data: pattern } = await supabase.rpc("check_domain_group_pattern", {
-          p_user_id: user.id,
-          p_domain: domain,
-          p_min_count: 3,
-        });
+        const pattern = await checkDomainGroupPattern(user.id, domain, 3);
 
         if (pattern && pattern.length > 0) {
           const p = pattern[0];

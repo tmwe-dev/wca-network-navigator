@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { listEmailImages, getEmailImagePublicUrl, uploadEmailImage, removeEmailImage } from "@/data/emailImages";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, Trash2, Copy, Check, Loader2, ImageIcon } from "lucide-react";
@@ -26,17 +26,10 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
   const { data: images = [], isLoading } = useQuery({
     queryKey: queryKeys.email.images,
     queryFn: async () => {
-      const { data, error } = await supabase.storage.from("email-images").list("", {
-        limit: 100,
-        sortBy: { column: "created_at", order: "desc" },
-      });
-      if (error) throw error;
-      return (data || [])
+      const data = await listEmailImages();
+      return data
         .filter(f => f.name && !f.name.startsWith("."))
-        .map(f => {
-          const { data: urlData } = supabase.storage.from("email-images").getPublicUrl(f.name);
-          return { name: f.name, url: urlData.publicUrl, created_at: f.created_at || "" };
-        }) as EmailImage[];
+        .map(f => ({ name: f.name, url: getEmailImagePublicUrl(f.name), created_at: f.created_at || "" })) as EmailImage[];
     },
   });
 
@@ -56,8 +49,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
         }
         const ext = file.name.split(".").pop() || "png";
         const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from("email-images").upload(path, file, { contentType: file.type });
-        if (error) throw error;
+        await uploadEmailImage(path, file);
       }
       toast.success("Immagini caricate");
       queryClient.invalidateQueries({ queryKey: queryKeys.email.images });
@@ -71,8 +63,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
 
   const deleteImage = useMutation({
     mutationFn: async (name: string) => {
-      const { error } = await supabase.storage.from("email-images").remove([name]);
-      if (error) throw error;
+      await removeEmailImage(name);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.email.images });

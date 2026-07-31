@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { createAbTest } from "@/data/abTests";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import { FlaskConical, Sparkles } from "lucide-react";
@@ -42,14 +43,13 @@ export function ABTestCreator() {
       if (!user) throw new Error("Non autenticato");
 
       const fieldKey = testType === "body" ? "body" : testType;
-      const { error } = await supabase.from("ab_tests").insert({
+      await createAbTest({
         user_id: user.id,
         test_name: name,
         test_type: testType,
         variant_a: { [fieldKey]: variantA },
         variant_b: { [fieldKey]: variantB },
-      } as never);
-      if (error) throw error;
+      });
     },
     onSuccess: () => {
       toast.success("A/B Test creato");

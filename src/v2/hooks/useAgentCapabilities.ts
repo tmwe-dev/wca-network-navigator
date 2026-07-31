@@ -2,8 +2,8 @@
  * useAgentCapabilities — data hook for agent capabilities report
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { findActiveAgentsForCapabilities, findAgentTasksForCapabilities } from "@/data/agentCapabilities";
 import {
   ALL_OPERATIONAL_TOOLS,
   MANAGEMENT_TOOLS,
@@ -73,22 +73,19 @@ export function useAgentCapabilities() {
   return useQuery({
     queryKey: queryKeys.v2.agents("capabilities"),
     queryFn: async () => {
-      const [agentsRes, tasksRes] = await Promise.all([
-        supabase.from("agents").select("id, name, role, avatar_emoji, is_active, assigned_tools").is("deleted_at", null).order("created_at", { ascending: true }),
-        supabase.from("agent_tasks").select("agent_id, task_type, status"),
+      const [agentsData, tasksData] = await Promise.all([
+        findActiveAgentsForCapabilities(),
+        findAgentTasksForCapabilities(),
       ]);
 
-      if (agentsRes.error) throw agentsRes.error;
-      if (tasksRes.error) throw tasksRes.error;
-
       const tasksByAgent = new Map<string, Record<string, number>>();
-      for (const t of tasksRes.data ?? []) {
+      for (const t of tasksData) {
         if (!tasksByAgent.has(t.agent_id)) tasksByAgent.set(t.agent_id, {});
         const map = tasksByAgent.get(t.agent_id)!;
         map[t.task_type] = (map[t.task_type] ?? 0) + 1;
       }
 
-      const agents: AgentCapability[] = (agentsRes.data ?? []).map((a) => {
+      const agents: AgentCapability[] = agentsData.map((a) => {
         const rawTools = a.assigned_tools;
         const assignedTools: string[] = Array.isArray(rawTools) ? (rawTools as string[]) : [];
         const assignedSet = new Set(assignedTools);

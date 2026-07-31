@@ -91,3 +91,23 @@ export async function findBlacklistEntriesForPartner(partnerId: string) {
   if (error) throw error;
   return data ?? [];
 }
+
+/** Inserisce una singola voce blacklist (usato dal tool Command blacklist-add). */
+export async function insertBlacklistEntry(entry: {
+  company_name: string;
+  matched_partner_id: string | null;
+  source: string;
+  status: string;
+}): Promise<void> {
+  const { error } = await supabase.from("blacklist_entries").insert(entry as never);
+  if (error) throw error;
+}
+
+/** Rimuove voci blacklist per partner_id esatto o company_name fuzzy; ritorna il conteggio rimosso. */
+export async function deleteBlacklistByRef(ref: string, byPartnerId: boolean): Promise<number> {
+  const { error, count } = byPartnerId
+    ? await supabase.from("blacklist_entries").delete({ count: "exact" }).eq("matched_partner_id", ref)
+    : await supabase.from("blacklist_entries").delete({ count: "exact" }).ilike("company_name", `%${ref}%`);
+  if (error) throw error;
+  return count ?? 0;
+}

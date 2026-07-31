@@ -3,7 +3,7 @@
  * Payload atteso dal planner: { activity_id?: string, activity_ref?: string, status?: "completed"|"cancelled", note?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { findActivityRef, patchActivity } from "@/data/activities";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = {
@@ -25,19 +25,7 @@ function fallbackFromPrompt(prompt: string): Payload {
 
 async function resolveActivity(ref: string): Promise<{ id: string; title: string } | null> {
   if (!ref) return null;
-  if (isUuid(ref)) {
-    const { data } = await supabase.from("activities").select("id, title").eq("id", ref).maybeSingle();
-    return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
-  }
-  const { data } = await supabase
-    .from("activities")
-    .select("id, title")
-    .ilike("title", `%${ref}%`)
-    .neq("status", "completed")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+  return findActivityRef(ref, isUuid(ref));
 }
 
 export const closeActivityTool: Tool = {
@@ -71,15 +59,11 @@ export const closeActivityTool: Tool = {
     const resolved = await resolveActivity(ref);
     if (!resolved) throw new Error(`Attività "${ref}" non trovata`);
 
-    const { error } = await supabase
-      .from("activities")
-      .update({
-        status,
-        completed_at: status === "completed" ? new Date().toISOString() : null,
-        ...(payload.note ? { description: payload.note } : {}),
-      })
-      .eq("id", resolved.id);
-    if (error) throw new Error(error.message);
+    await patchActivity(resolved.id, {
+      status,
+      completed_at: status === "completed" ? new Date().toISOString() : null,
+      ...(payload.note ? { description: payload.note } : {}),
+    });
 
     return {
       kind: "result",

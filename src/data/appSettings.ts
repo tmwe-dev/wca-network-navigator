@@ -93,3 +93,57 @@ export async function saveAppSettingForUser(userId: string, key: string, value: 
     if (error) throw error;
   }
 }
+
+export interface PauseSettingsRow { key: string; value: string | null }
+
+/** Righe app_settings correlate alla pausa globale automazioni AI. */
+export async function findAiAutomationPauseSettings(userId: string): Promise<PauseSettingsRow[]> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .eq("user_id", userId)
+    .in("key", ["ai_automations_paused", "ai_automations_paused_at", "ai_automations_paused_reason"]);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Upsert atomico (parallelo) dei settaggi di pausa automazioni AI. Ritorna true se tutte le operazioni sono andate a buon fine. */
+export async function upsertAiAutomationPauseSettings(
+  userId: string,
+  isPausedValue: boolean,
+  reason: string,
+): Promise<boolean> {
+  const updates = [
+    supabase
+      .from("app_settings")
+      .upsert(
+        { user_id: userId, key: "ai_automations_paused", value: isPausedValue ? "true" : "false" },
+        { onConflict: "user_id,key" },
+      ),
+  ];
+
+  if (isPausedValue) {
+    updates.push(
+      supabase
+        .from("app_settings")
+        .upsert(
+          { user_id: userId, key: "ai_automations_paused_at", value: new Date().toISOString() },
+          { onConflict: "user_id,key" },
+        ),
+    );
+
+    if (reason.trim()) {
+      updates.push(
+        supabase
+          .from("app_settings")
+          .upsert(
+            { user_id: userId, key: "ai_automations_paused_reason", value: reason },
+            { onConflict: "user_id,key" },
+          ),
+      );
+    }
+  }
+
+  const results = await Promise.all(updates);
+  return !results.some((r) => r.error);
+}

@@ -198,3 +198,54 @@ export async function fetchAgentTaskBreakdowns(): Promise<Result<AgentTaskBreakd
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchAgentTaskBreakdowns"));
   }
 }
+
+export interface DashboardSnapshotRpc {
+  total_partners: number;
+  total_contacts: number;
+  new_partners: number;
+  new_contacts: number;
+  contacted_partners: number;
+  contacted_contacts: number;
+  replied_activities: number;
+  schedules_active: number;
+  schedules_pending: number;
+  actions_approved: number;
+  actions_proposed: number;
+  sent_today: number;
+  awaiting_reply: number;
+  replies_received: number;
+  unread_emails: number;
+  proposed_tasks: number;
+  draft_emails: number;
+  pending_outreach: number;
+  active_jobs: number;
+  partner_count: number;
+  ready_contacts_count: number;
+  open_activities_count: number;
+  prospect_total: number;
+  agent_breakdowns: ReadonlyArray<{
+    agent_id: string;
+    proposed: number;
+    running: number;
+    pending: number;
+    completed_today: number;
+  }>;
+}
+
+/**
+ * Snapshot dashboard: 1 RPC invece di 12 query parallele.
+ * `get_dashboard_snapshot` non è ancora nei tipi generati: cast mirato.
+ */
+export async function fetchDashboardSnapshot(): Promise<Result<DashboardSnapshotRpc | null, AppError>> {
+  try {
+    const { data, error } = await (supabase.rpc as unknown as (
+      fn: string
+    ) => Promise<{ data: DashboardSnapshotRpc | null; error: { message: string } | null }>)(
+      "get_dashboard_snapshot"
+    );
+    if (error) return err(ioError("DATABASE_ERROR", error.message, { rpc: "get_dashboard_snapshot" }, "fetchDashboardSnapshot"));
+    return ok(data ?? null);
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "fetchDashboardSnapshot"));
+  }
+}

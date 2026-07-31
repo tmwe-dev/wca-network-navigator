@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { findAIGeneratedActivities, setActivityStatus, updateActivityDescription, type AIActivity } from '@/data/activities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,19 +12,6 @@ import { Loader2, CheckCircle2, XCircle, Edit2, Calendar, Phone, ListTodo, Spark
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from "@/lib/queryKeys";
-
-interface AIActivity {
-  id: string;
-  activity_type: string;
-  title: string;
-  description: string | null;
-  status: string;
-  due_date: string | null;
-  priority: string;
-  created_at: string;
-  partner_id: string | null;
-  source_meta: Record<string, unknown> | null;
-}
 
 const ActivityIcon = ({ type }: { type: string }) => {
   switch (type) {
@@ -57,28 +44,12 @@ export function AIGeneratedActivitiesPanel() {
 
   const { data: activities, isLoading } = useQuery({
     queryKey: queryKeys.activities.aiGenerated,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('activities')
-        .select('id, activity_type, title, description, status, due_date, priority, created_at, partner_id, source_meta')
-        .eq('status', 'pending')
-        .eq('source_type', 'ai_generated')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return (data || []) as AIActivity[];
-    },
+    queryFn: () => findAIGeneratedActivities(10),
     refetchInterval: 10000,
   });
 
   const approveMutation = useMutation({
-    mutationFn: async (activityId: string) => {
-      const { error } = await supabase
-        .from('activities')
-        .update({ status: 'in_progress' })
-        .eq('id', activityId);
-      if (error) throw error;
-    },
+    mutationFn: (activityId: string) => setActivityStatus(activityId, 'in_progress'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
       toast.success('Attività approvata');
@@ -87,13 +58,7 @@ export function AIGeneratedActivitiesPanel() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async (activityId: string) => {
-      const { error } = await supabase
-        .from('activities')
-        .update({ status: 'cancelled' })
-        .eq('id', activityId);
-      if (error) throw error;
-    },
+    mutationFn: (activityId: string) => setActivityStatus(activityId, 'cancelled'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
       toast.success('Attività rifiutata');
@@ -102,13 +67,7 @@ export function AIGeneratedActivitiesPanel() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, description }: { id: string; description: string }) => {
-      const { error } = await supabase
-        .from('activities')
-        .update({ description })
-        .eq('id', id);
-      if (error) throw error;
-    },
+    mutationFn: ({ id, description }: { id: string; description: string }) => updateActivityDescription(id, description),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
       toast.success('Descrizione aggiornata');

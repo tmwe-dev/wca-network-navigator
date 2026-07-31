@@ -2,7 +2,7 @@
  * useAcquisitionV2 — Acquisition pipeline for WCA partner download
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAcquisitionCacheRows, fetchActiveDownloadJobs } from "@/data/acquisitionStats";
 
 interface AcquisitionStats {
   readonly totalCountries: number;
@@ -15,12 +15,10 @@ export function useAcquisitionV2() {
   const statsQuery = useQuery({
     queryKey: ["v2", "acquisition-stats"],
     queryFn: async (): Promise<AcquisitionStats> => {
-      const [cacheRes, jobsRes] = await Promise.all([
-        supabase.from("directory_cache").select("country_code, total_results"),
-        supabase.from("download_jobs").select("status").in("status", ["running", "paused"]),
+      const [cache, jobs] = await Promise.all([
+        fetchAcquisitionCacheRows(),
+        fetchActiveDownloadJobs(),
       ]);
-      const cache = cacheRes.data ?? [];
-      const jobs = jobsRes.data ?? [];
       return {
         totalCountries: new Set(cache.map((c) => c.country_code)).size,
         countriesScanned: cache.length,

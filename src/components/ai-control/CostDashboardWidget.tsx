@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { findUserCreditsById, findCreditTransactionsSince, type CreditData, type CreditTransaction } from '@/data/credits';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,21 +16,6 @@ import {
   CreditCard, TrendingDown, Clock, AlertCircle, Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface CreditTransaction {
-  id: string;
-  user_id: string;
-  amount: number;
-  operation: string;
-  description: string;
-  created_at: string;
-}
-
-interface CreditData {
-  balance: number;
-  total_consumed: number;
-  updated_at: string;
-}
 
 interface TransactionBreakdown {
   operation: string;
@@ -63,16 +49,7 @@ export function CostDashboardWidget() {
   // Fetch credit balance
   const { data: credits, isLoading: creditsLoading } = useQuery({
     queryKey: ['user-credits', userId],
-    queryFn: async () => {
-      if (!userId) return null;
-      const { data, error } = await supabase
-        .from('user_credits')
-        .select('balance, total_consumed, updated_at')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (error) throw error;
-      return data as CreditData | null;
-    },
+    queryFn: () => (userId ? findUserCreditsById(userId) : Promise.resolve(null)),
     enabled: !!userId,
   });
 
@@ -99,15 +76,7 @@ export function CostDashboardWidget() {
           break;
       }
 
-      const { data, error } = await supabase
-        .from('credit_transactions')
-        .select('id, user_id, amount, operation, description, created_at')
-        .eq('user_id', userId)
-        .gte('created_at', startDate.toISOString())
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return (data || []) as CreditTransaction[];
+      return findCreditTransactionsSince(userId, startDate.toISOString());
     },
     enabled: !!userId,
   });

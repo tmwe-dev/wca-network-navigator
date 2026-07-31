@@ -253,3 +253,55 @@ export async function setAddressRuleExclusiveAgent(ruleId: string, agentId: stri
     .eq("id", ruleId);
   if (error) throw error;
 }
+
+export interface AddressRuleSummary {
+  email_address: string;
+  auto_action: string | null;
+  preferred_channel: string | null;
+  ai_confidence_threshold: number | null;
+  success_rate: number | null;
+  display_name: string | null;
+  is_active: boolean | null;
+}
+
+/** Riepilogo regole indirizzo per la vista profili sender. */
+export async function findAddressRuleSummaries(): Promise<AddressRuleSummary[]> {
+  const { data, error } = await supabase
+    .from("email_address_rules")
+    .select("email_address, auto_action, preferred_channel, ai_confidence_threshold, success_rate, display_name, is_active");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface EmailRuleWithStats {
+  id: string;
+  email_address: string;
+  display_name: string | null;
+  category: string | null;
+  is_active: boolean;
+  auto_action: string | null;
+  auto_execute: boolean;
+  ai_confidence_threshold: number;
+  interaction_count: number;
+  success_rate: number | null;
+  last_interaction_at: string | null;
+  created_at: string;
+}
+
+/** Regole email con statistiche di esecuzione (per AIAutomationDashboard). */
+export async function findEmailAddressRulesWithStats(): Promise<EmailRuleWithStats[]> {
+  const { data, error } = await supabase
+    .from("email_address_rules")
+    .select("id, email_address, display_name, category, is_active, auto_action, auto_execute, ai_confidence_threshold, interaction_count, success_rate, last_interaction_at, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as EmailRuleWithStats[];
+}
+
+export async function setEmailAddressRuleActive(ruleId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .update({ is_active: isActive })
+    .eq("id", ruleId);
+  if (error) throw error;
+}

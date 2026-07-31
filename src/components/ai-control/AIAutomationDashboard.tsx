@@ -5,7 +5,8 @@
  */
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { findEmailAddressRulesWithStats, setEmailAddressRuleActive, type EmailRuleWithStats } from '@/data/emailAddressRules';
+import { findDecisionLogsByEmail, type DecisionLogEntry } from '@/data/aiDecisionLog';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,57 +22,19 @@ import { cn } from '@/lib/utils';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("AIAutomationDashboard");
-interface RuleWithStats {
-  id: string;
-  email_address: string;
-  display_name: string | null;
-  category: string | null;
-  is_active: boolean;
-  auto_action: string | null;
-  auto_execute: boolean;
-  ai_confidence_threshold: number;
-  interaction_count: number;
-  success_rate: number | null;
-  last_interaction_at: string | null;
-  created_at: string;
-}
-
-interface DecisionLog {
-  id: string;
-  decision_type: string;
-  ai_reasoning: string | null;
-  confidence: number | null;
-  was_auto_executed: boolean;
-  user_review: string | null;
-  created_at: string;
-}
-
 export function AIAutomationDashboard() {
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
-  const [executionLogs, setExecutionLogs] = useState<DecisionLog[]>([]);
+  const [executionLogs, setExecutionLogs] = useState<DecisionLogEntry[]>([]);
 
   const { data: rules = [], isLoading, refetch } = useQuery({
     queryKey: ['ai-automation-rules'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('email_address_rules')
-        .select('id, email_address, display_name, category, is_active, auto_action, auto_execute, ai_confidence_threshold, interaction_count, success_rate, last_interaction_at, created_at')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as RuleWithStats[];
-    },
+    queryFn: () => findEmailAddressRulesWithStats(),
   });
 
   const fetchExecutionLogs = async (emailAddress: string) => {
     try {
-      const { data, error } = await supabase
-        .from('ai_decision_log')
-        .select('id, decision_type, ai_reasoning, confidence, was_auto_executed, user_review, created_at')
-        .eq('email_address', emailAddress)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      setExecutionLogs((data || []) as DecisionLog[]);
+      const data = await findDecisionLogsByEmail(emailAddress, 10);
+      setExecutionLogs(data);
     } catch (error) {
       log.error('Error fetching logs:', { error: error });
     }
@@ -97,11 +60,7 @@ export function AIAutomationDashboard() {
 
   const handleToggleActive = async (ruleId: string, currentState: boolean) => {
     try {
-      const { error } = await supabase
-        .from('email_address_rules')
-        .update({ is_active: !currentState })
-        .eq('id', ruleId);
-      if (error) throw error;
+      await setEmailAddressRuleActive(ruleId, !currentState);
       toast.success(currentState ? 'Regola disattivata' : 'Regola attivata');
       refetch();
     } catch (error) {

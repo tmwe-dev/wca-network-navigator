@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { findForgeKbEntries, updateForgeKbEntry, insertForgeKbEntry, type ForgeKbEntryRow } from "@/data/forgeKb";
 
 export interface ForgeKbEntry {
   id: string;
@@ -26,16 +27,8 @@ export function useForgeKb(categories: string[] | null) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      let q = supabase
-        .from("kb_entries")
-        .select("id,title,content,category,chapter,priority,is_active,tags,updated_at")
-        .order("priority", { ascending: false })
-        .order("title", { ascending: true })
-        .limit(200);
-      if (categories && categories.length > 0) q = q.in("category", categories);
-      const { data, error } = await q;
-      if (error) throw error;
-      setEntries((data ?? []) as ForgeKbEntry[]);
+      const data = await findForgeKbEntries(categories);
+      setEntries(data as ForgeKbEntry[]);
     } catch (e) {
       toast.error("Impossibile caricare KB", { description: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -48,8 +41,7 @@ export function useForgeKb(categories: string[] | null) {
   const update = useCallback(async (id: string, patch: Partial<Pick<ForgeKbEntry, "title" | "content" | "priority" | "is_active">>) => {
     setSavingId(id);
     try {
-      const { error } = await supabase.from("kb_entries").update(patch).eq("id", id);
-      if (error) throw error;
+      await updateForgeKbEntry(id, patch);
       setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch, updated_at: new Date().toISOString() } : e)));
       toast.success("Voce KB aggiornata");
     } catch (e) {
@@ -65,19 +57,13 @@ export function useForgeKb(categories: string[] | null) {
     try {
       const { data: userRes } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       const user_id = userRes.user?.id ?? null;
-      const { data, error } = await supabase
-        .from("kb_entries")
-        .insert({
-          title: input.title,
-          content: input.content,
-          category: input.category,
-          priority: input.priority ?? 5,
-          is_active: true,
-          user_id,
-        })
-        .select("id,title,content,category,chapter,priority,is_active,tags,updated_at")
-        .single();
-      if (error) throw error;
+      const data = await insertForgeKbEntry({
+        title: input.title,
+        content: input.content,
+        category: input.category,
+        priority: input.priority,
+        user_id,
+      });
       setEntries((prev) => [data as ForgeKbEntry, ...prev]);
       toast.success("Voce KB creata");
       return data as ForgeKbEntry;

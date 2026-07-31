@@ -122,3 +122,13 @@ export async function findAssignableAgents(userId: string): Promise<AssignableAg
     .order("created_at", { ascending: true });
   return (data ?? []) as AssignableAgent[];
 }
+
+/** Risolve un riferimento agente (UUID esatto o nome fuzzy) → {id, name}. */
+export async function findAgentRef(ref: string, byId: boolean): Promise<{ id: string; name: string } | null> {
+  if (byId) {
+    const { data } = await supabase.from("agents").select("id, name").eq("id", ref).maybeSingle();
+    return data ? { id: data.id as string, name: (data.name ?? "") as string } : null;
+  }
+  const { data } = await supabase.from("agents").select("id, name").ilike("name", `%${ref}%`).limit(1).maybeSingle();
+  return data ? { id: data.id as string, name: (data.name ?? "") as string } : null;
+}

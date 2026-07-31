@@ -331,3 +331,78 @@ export function invalidateActivityCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: activityKeys.all });
   qc.invalidateQueries({ queryKey: queryKeys.activities.all });
 }
+
+// ─── AI Generated Activities ────────────────────────────
+
+export interface AIActivity {
+  id: string;
+  activity_type: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  priority: string;
+  created_at: string;
+  partner_id: string | null;
+  source_meta: Record<string, unknown> | null;
+}
+
+const AI_ACTIVITY_SELECT = "id, activity_type, title, description, status, due_date, priority, created_at, partner_id, source_meta";
+
+/** Attività pendenti generate dall'AI (ultime N). */
+export async function findAIGeneratedActivities(limit = 10): Promise<AIActivity[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select(AI_ACTIVITY_SELECT)
+    .eq("status", "pending")
+    .eq("source_type", "ai_generated")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as AIActivity[];
+}
+
+export async function setActivityStatus(activityId: string, status: string): Promise<void> {
+  const { error } = await supabase
+    .from("activities")
+    .update({ status } as unknown as ActivityUpdate)
+    .eq("id", activityId);
+  if (error) throw error;
+}
+
+export async function updateActivityDescription(id: string, description: string): Promise<void> {
+  const { error } = await supabase
+    .from("activities")
+    .update({ description })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Risolve un riferimento attività (UUID esatto o titolo fuzzy, non completate) → {id, title}. */
+export async function findActivityRef(ref: string, byId: boolean): Promise<{ id: string; title: string } | null> {
+  if (byId) {
+    const { data } = await supabase.from("activities").select("id, title").eq("id", ref).maybeSingle();
+    return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+  }
+  const { data } = await supabase
+    .from("activities")
+    .select("id, title")
+    .ilike("title", `%${ref}%`)
+    .neq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+}
+
+/** Patch arbitrario di un'attività per id (usato dai tool Command). */
+export async function patchActivity(id: string, patch: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from("activities").update(patch as ActivityUpdate).eq("id", id);
+  if (error) throw error;
+}
+
+/** Insert di un'attività human con campi custom (usato dal tool Command schedule-activity). */
+export async function insertHumanActivity(activity: ActivityInsert): Promise<void> {
+  const { error } = await supabase.from("activities").insert(activity);
+  if (error) throw error;
+}

@@ -78,3 +78,34 @@ export async function bulkInsertKbEntries(entries: KbInsert[]): Promise<number> 
 export function invalidateKbEntries(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: QUERY_KEY });
 }
+
+/** Risolve un riferimento KB entry (UUID esatto o titolo fuzzy, solo non-deleted) → {id, title}. */
+export async function findKbEntryRef(ref: string, byId: boolean): Promise<{ id: string; title: string } | null> {
+  if (byId) {
+    const { data } = await supabase.from("kb_entries").select("id, title").eq("id", ref).maybeSingle();
+    return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+  }
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("id, title")
+    .ilike("title", `%${ref}%`)
+    .is("deleted_at", null)
+    .limit(1)
+    .maybeSingle();
+  return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+}
+
+/** Update arbitrario di una KB entry per id (usato dai tool Command). */
+export async function updateKbEntryFields(id: string, updates: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from("kb_entries").update(updates as never).eq("id", id);
+  if (error) throw error;
+}
+
+/** Soft-delete di una KB entry (deleted_at + is_active=false). */
+export async function softDeleteKbEntry(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("kb_entries")
+    .update({ deleted_at: new Date().toISOString(), is_active: false })
+    .eq("id", id);
+  if (error) throw error;
+}

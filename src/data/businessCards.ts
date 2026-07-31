@@ -80,3 +80,8 @@ export function invalidateBusinessCards(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: businessCardKeys.all });
   qc.invalidateQueries({ queryKey: businessCardKeys.matches });
 }
+
+export async function getBusinessCardRawData(id: string): Promise<Record<string, unknown>> {
+  const { data } = await supabase.from("business_cards").select("raw_data").eq("id", id).single();
+  return (data?.raw_data as Record<string, unknown>) || {};
+}

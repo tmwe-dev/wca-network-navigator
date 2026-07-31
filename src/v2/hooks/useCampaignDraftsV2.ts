@@ -2,10 +2,14 @@
  * useCampaignDraftsV2 — Campaign drafts, queue, stats, pause/resume
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import { fetchCampaignStatsCounts } from "@/data/campaignStats";
+import {
+  findCampaignDrafts,
+  findCampaignQueueItemsForDraft,
+  setCampaignDraftQueueStatus,
+} from "@/data/emailCampaigns";
 
 interface CampaignDraft {
   readonly id: string;
@@ -44,12 +48,12 @@ export function useCampaignDraftsV2() {
   return useQuery({
     queryKey: queryKeys.v2.campaignDrafts(),
     queryFn: async (): Promise<readonly CampaignDraft[]> => {
-      const { data, error } = await supabase
-        .from("email_drafts")
-        .select("id, subject, status, total_count, sent_count, queue_status, queue_delay_seconds, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error || !data) return [];
+      let data;
+      try {
+        data = await findCampaignDrafts(50);
+      } catch {
+        return [];
+      }
       return data.map((d) => ({
         id: d.id, subject: d.subject, status: d.status,
         totalCount: d.total_count, sentCount: d.sent_count,
@@ -66,13 +70,12 @@ export function useCampaignQueueV2(draftId: string | null) {
     enabled: !!draftId,
     queryFn: async (): Promise<readonly QueueItem[]> => {
       if (!draftId) return [];
-      const { data, error } = await supabase
-        .from("email_campaign_queue")
-        .select("id, recipient_email, recipient_name, status, sent_at, error_message")
-        .eq("draft_id", draftId)
-        .order("position", { ascending: true })
-        .limit(200);
-      if (error || !data) return [];
+      let data;
+      try {
+        data = await findCampaignQueueItemsForDraft(draftId, 200);
+      } catch {
+        return [];
+      }
       return data.map((q) => ({
         id: q.id, recipientEmail: q.recipient_email,
         recipientName: q.recipient_name, status: q.status,
@@ -86,8 +89,7 @@ export function usePauseCampaignV2() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (draftId: string) => {
-      const { error } = await supabase.from("email_drafts").update({ queue_status: "paused" }).eq("id", draftId);
-      if (error) throw error;
+      await setCampaignDraftQueueStatus(draftId, "paused");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.v2.campaignDrafts() });
@@ -100,8 +102,7 @@ export function useResumeCampaignV2() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (draftId: string) => {
-      const { error } = await supabase.from("email_drafts").update({ queue_status: "processing" }).eq("id", draftId);
-      if (error) throw error;
+      await setCampaignDraftQueueStatus(draftId, "processing");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.v2.campaignDrafts() });

@@ -417,3 +417,9 @@ export async function findHoldingMessagesByFromAddresses(
     .limit(limit);
   return data ?? [];
 }
+
+/** Update arbitrario di un messaggio canale per id (usato dai tool Command). */
+export async function patchChannelMessage(id: string, patch: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from("channel_messages").update(patch as never).eq("id", id);
+  if (error) throw error;
+}

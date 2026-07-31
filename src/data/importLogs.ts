@@ -76,3 +76,9 @@ export async function createImportLog(row: Record<string, unknown>) {
   if (error) throw error;
   return data;
 }
+
+/** URL pubblico per un file del bucket import-files. */
+export function getImportFilePublicUrl(path: string): string | null {
+  const { data } = supabase.storage.from("import-files").getPublicUrl(path);
+  return data?.publicUrl ?? null;
+}

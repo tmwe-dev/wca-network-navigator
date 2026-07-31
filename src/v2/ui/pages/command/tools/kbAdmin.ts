@@ -2,19 +2,14 @@
  * Tools: update-kb-entry, delete-kb-entry (soft-delete).
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { findKbEntryRef, updateKbEntryFields, softDeleteKbEntry } from "@/data/kbEntries";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type UpdatePayload = { entry_id?: string; title?: string; updates?: Record<string, unknown>; [k: string]: unknown };
 
 async function resolveEntry(ref: string): Promise<{ id: string; title: string } | null> {
   if (!ref) return null;
-  if (isUuid(ref)) {
-    const { data } = await supabase.from("kb_entries").select("id, title").eq("id", ref).maybeSingle();
-    return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
-  }
-  const { data } = await supabase.from("kb_entries").select("id, title").ilike("title", `%${ref}%`).is("deleted_at", null).limit(1).maybeSingle();
-  return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+  return findKbEntryRef(ref, isUuid(ref));
 }
 
 export const updateKbEntryTool: Tool = {
@@ -44,8 +39,7 @@ export const updateKbEntryTool: Tool = {
     if (Object.keys(updates).length === 0) throw new Error("Nessun aggiornamento");
     const resolved = await resolveEntry(ref);
     if (!resolved) throw new Error(`Entry "${ref}" non trovata`);
-    const { error } = await supabase.from("kb_entries").update(updates as never).eq("id", resolved.id);
-    if (error) throw new Error(error.message);
+    await updateKbEntryFields(resolved.id, updates);
     return {
       kind: "result",
       title: "📚 KB aggiornata",
@@ -79,11 +73,7 @@ export const deleteKbEntryTool: Tool = {
     if (!ref) throw new Error("Riferimento mancante");
     const resolved = await resolveEntry(ref);
     if (!resolved) throw new Error(`Entry "${ref}" non trovata`);
-    const { error } = await supabase
-      .from("kb_entries")
-      .update({ deleted_at: new Date().toISOString(), is_active: false })
-      .eq("id", resolved.id);
-    if (error) throw new Error(error.message);
+    await softDeleteKbEntry(resolved.id);
     return {
       kind: "result",
       title: "🗑️ Entry eliminata",

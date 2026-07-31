@@ -76,3 +76,17 @@ export async function updateClassificationCategory(
     .eq("id", id);
   return { error: error ? { message: error.message } : null };
 }
+
+/** Contesti conversazione ordinati per una colonna specifica (per profili sender). */
+export async function findConversationContextsOrdered(
+  orderColumn: "last_interaction_at" | "response_rate" | "interaction_count",
+  limit: number,
+): Promise<Database["public"]["Tables"]["contact_conversation_context"]["Row"][]> {
+  const { data, error } = await supabase
+    .from("contact_conversation_context")
+    .select("*")
+    .order(orderColumn, { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
