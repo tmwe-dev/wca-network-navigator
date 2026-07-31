@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 
 const mockFrom = vi.fn();
 
-vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (table: string) => mockFrom(table),
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (table: string) => mockFrom(table) },
 }));
 
 import { findBusyPartnerIds, findBusyPartnerRows } from "@/data/partnerBusy";

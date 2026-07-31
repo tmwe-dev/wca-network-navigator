@@ -111,3 +111,23 @@ export async function findProspectContactsByProspectId(prospectId: string): Prom
   if (error) throw error;
   return data ?? [];
 }
+
+export interface ProspectSearchRow {
+  id: string;
+  company_name: string;
+  website: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+/** Prospect corrispondente al termine di ricerca sul nome azienda (tool scrape-prospect). */
+export async function findProspectBySearchTerm(searchTerm: string): Promise<ProspectSearchRow | null> {
+  const { data, error } = await supabase
+    .from("prospects")
+    .select("id, company_name, website, email, phone")
+    .or(`company_name.ilike.%${searchTerm}%`)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data;
+}

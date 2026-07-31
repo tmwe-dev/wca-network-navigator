@@ -3,6 +3,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { getScrapeCacheEntry } from "@/data/scrapeCache";
 import type { AgentTool, AgentToolResult } from "./index";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -19,13 +20,9 @@ function getDomain(url: string): string {
 }
 
 async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
-  const { data } = await supabase.from("scrape_cache")
-    .select("payload, scraped_at")
-    .eq("url", url)
-    .maybeSingle();
+  const rec = await getScrapeCacheEntry(url);
 
-  if (!data) return null;
-  const rec = data as { payload: Record<string, unknown>; scraped_at: string };
+  if (!rec) return null;
   const age = Date.now() - new Date(rec.scraped_at).getTime();
   if (age > CACHE_TTL_MS) return null;
   return rec.payload;

@@ -186,3 +186,30 @@ export async function findAgentDetailForEditor(agentId: string): Promise<AgentDe
     .maybeSingle();
   return data as AgentDetailForEditor | null;
 }
+
+export interface AgentBasicNameRow {
+  id: string;
+  name: string;
+  avatar_emoji: string;
+  role: string;
+}
+
+/** Nome/emoji/ruolo di un set di agenti per id (usato per denormalizzare liste di task). */
+export async function findAgentsByIds(ids: string[]): Promise<AgentBasicNameRow[]> {
+  const { data } = await supabase
+    .from("agents")
+    .select("id, name, avatar_emoji, role")
+    .in("id", ids.length ? ids : ["__none__"]);
+  return (data ?? []) as unknown as AgentBasicNameRow[];
+}
+
+export interface AgentOption {
+  id: string;
+  name: string;
+}
+
+/** Elenco ridotto agenti per select/wizard (MissionsAutopilotPage). */
+export async function findAgentOptions(limit = 50): Promise<AgentOption[]> {
+  const { data } = await supabase.from("agents").select("id, name").limit(limit);
+  return data ?? [];
+}

@@ -1,7 +1,7 @@
 /**
  * Tool: list-agenda — Read-only daily agenda: open activities ordered by due date.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findOpenAgendaActivities } from "@/data/activities";
 import type { Tool, ToolResult } from "./types";
 
 interface ActivityRow {
@@ -21,14 +21,14 @@ export const listAgendaTool: Tool = {
     /\b(agenda|cosa\s+devo\s+fare|cosa\s+ho\s+da\s+fare|attivit[àa]\s+(di\s+)?oggi|scadenz|to-?do|task\s+(di\s+)?oggi|impegni)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const { data, error, count } = await supabase.from("activities")
-      .select("id,title,description,due_date,status,priority", { count: "exact" })
-      .is("deleted_at", null)
-      .neq("status", "completed")
-      .order("due_date", { ascending: true, nullsFirst: false })
-      .limit(40);
-
-    if (error) {
+    let rows: ActivityRow[];
+    let count: number | null;
+    try {
+      const res = await findOpenAgendaActivities(40);
+      rows = res.rows;
+      count = res.count;
+    } catch (e) {
+      const error = e as { message: string };
       return {
         kind: "result",
         title: "Agenda non disponibile",
@@ -38,7 +38,6 @@ export const listAgendaTool: Tool = {
       };
     }
 
-    const rows = (data ?? []) as ActivityRow[];
     if (rows.length === 0) {
       return {
         kind: "result",

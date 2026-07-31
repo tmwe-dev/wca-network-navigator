@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, FileText, Copy, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { findRecentScrapeCacheEntries } from "@/data/commandScrapePartner";
 
 interface ScrapeEntry {
   id: string;
@@ -86,12 +86,7 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
   const cacheQuery = useQuery({
     queryKey: ["raw-scrape-cache", partnerId, contactId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("scrape_cache")
-        .select("url, payload, scraped_at, mode")
-        .order("scraped_at", { ascending: false })
-        .limit(20);
-      if (error) return [];
-      return (data ?? []) as Array<{ url: string; payload: unknown; scraped_at: string; mode: string }>;
+      return await findRecentScrapeCacheEntries(20);
     },
   });
 

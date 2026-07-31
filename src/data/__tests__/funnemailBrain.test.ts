@@ -14,7 +14,29 @@ describe("DAL — funnemailBrain", () => {
     mockLimit.mockResolvedValue({ data: [], error: null });
   });
   it("returns brain entries", async () => {
-    const entries = [{ id: "b1", rule: "test" }];
+    const entries = [
+      {
+        message_id: "b1",
+        user_id: null,
+        channel: "email",
+        from_address: null,
+        subject: null,
+        received_at: "2026-01-01",
+        job_stage: null,
+        job_attempts: null,
+        job_last_error: null,
+        job_completed_at: null,
+        decision_action: null,
+        decision_confidence: null,
+        decision_reasoning: null,
+        decision_at: null,
+        funnemail_status: null,
+        funnemail_sub_status: null,
+        actions_count: 0,
+        actions_ok_count: 0,
+        last_action_at: null,
+      },
+    ];
     mockLimit.mockResolvedValue({ data: entries, error: null });
     const r = await listFunnemailBrain();
     expect(r).toEqual(entries);

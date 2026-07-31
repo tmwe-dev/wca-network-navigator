@@ -121,8 +121,7 @@ export async function findAllActivities(limit = 1000): Promise<AllActivity[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  // Il select("*") non include le relazioni partners/team_members/selected_contact di AllActivity.
-  return (data || []).map((row) => ({ ...row, partners: null, team_members: null, selected_contact: null })) as AllActivity[];
+  return (data || []) as AllActivity[];
 }
 
 export async function createActivities(
@@ -551,3 +550,27 @@ export async function findPartnerContactsForPartnerIds(partnerIds: string[]): Pr
   return allData;
 }
 
+
+export interface OpenAgendaActivityRow {
+  id: string;
+  title: string | null;
+  description: string | null;
+  due_date: string | null;
+  status: string | null;
+  priority: string | null;
+}
+
+/** Attività aperte ordinate per scadenza, per il tool "list-agenda". */
+export async function findOpenAgendaActivities(
+  limit = 40,
+): Promise<{ rows: OpenAgendaActivityRow[]; count: number | null }> {
+  const { data, error, count } = await supabase
+    .from("activities")
+    .select("id,title,description,due_date,status,priority", { count: "exact" })
+    .is("deleted_at", null)
+    .neq("status", "completed")
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .limit(limit);
+  if (error) throw error;
+  return { rows: (data ?? []) as OpenAgendaActivityRow[], count: count ?? null };
+}

@@ -324,6 +324,32 @@ function _slugifyGroup(value: string): string {
     .replace(/^-+|-+$/g, "") || "group";
 }
 
+/** Carica snapshot partner per una lista di id (usato da useInboxEnrichment). */
+export async function listPartnerSnapshotsByIds(
+  ids: string[],
+): Promise<FunnemailPartnerSnapshot[]> {
+  const { data, error } = await supabase.from("partners")
+    .select(
+      "id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website",
+    )
+    .in("id", ids);
+  if (error) return [];
+  return (data ?? []) as FunnemailPartnerSnapshot[];
+}
+
+/** Carica intel Scout per una lista di domini (usato da useInboxEnrichment). */
+export async function listSenderIntelByDomains(
+  domains: string[],
+): Promise<SenderIntelRow[]> {
+  const { data, error } = await supabase.from("funnemail_sender_intel")
+    .select(
+      "email_domain,is_known_partner,partner_id,company_type,country,website,role_guess",
+    )
+    .in("email_domain", domains);
+  if (error) return [];
+  return (data ?? []) as SenderIntelRow[];
+}
+
 /** Carica intel Scout per un dominio (best-effort, non throwa). */
 export async function getSenderIntelByDomain(domain: string): Promise<SenderIntelRow | null> {
   if (!domain) return null;

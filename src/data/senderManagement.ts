@@ -97,3 +97,19 @@ export async function updateAddressRuleSenderGroup(
 export async function insertSenderAddressRule(row: AddressRuleInsert): Promise<void> {
   await supabase.from("email_address_rules").insert(row);
 }
+
+export interface SenderGroupNameRow {
+  nome_gruppo: string;
+  colore: string | null;
+  icon: string | null;
+}
+
+/** Nome/colore/icona dei gruppi mittente di un utente, ordinati per sort_order. */
+export async function findSenderGroupNamesByUser(userId: string): Promise<SenderGroupNameRow[]> {
+  const { data } = await supabase
+    .from("email_sender_groups")
+    .select("nome_gruppo, colore, icon")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true });
+  return (data ?? []) as unknown as SenderGroupNameRow[];
+}

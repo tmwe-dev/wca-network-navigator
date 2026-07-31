@@ -78,3 +78,36 @@ export async function countPendingAgentTasksForUser(userId: string): Promise<num
   if (error) return 0;
   return count ?? 0;
 }
+
+export interface PendingAgentTaskFullRow {
+  id: string;
+  agent_id: string;
+  task_type: string;
+  description: string;
+  status: string;
+  target_filters: Record<string, unknown>;
+  created_at: string;
+  scheduled_at: string | null;
+  result_summary: string | null;
+}
+
+/** Task in stato "proposed"/"pending" con tutte le colonne (AgentTasksPage). */
+export async function findPendingAgentTasksFull(limit = 200): Promise<PendingAgentTaskFullRow[]> {
+  const { data, error } = await supabase
+    .from("agent_tasks")
+    .select("*")
+    .in("status", ["proposed", "pending"])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as unknown as PendingAgentTaskFullRow[];
+}
+
+/** Aggiorna lo stato di un agent_task (approvazione/rifiuto in AgentTasksPage). */
+export async function updateAgentTaskStatus(id: string, status: string, startedAt?: string): Promise<void> {
+  const { error } = await supabase
+    .from("agent_tasks")
+    .update({ status, started_at: startedAt })
+    .eq("id", id);
+  if (error) throw error;
+}

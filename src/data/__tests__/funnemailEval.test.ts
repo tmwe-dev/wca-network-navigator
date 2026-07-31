@@ -6,7 +6,10 @@ vi.mock("@/lib/supabaseUntyped", () => ({
   untypedFrom: (table: string) => mockFrom(table),
 }));
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { functions: { invoke: vi.fn().mockResolvedValue({ data: { ok: true }, error: null }) } },
+  supabase: {
+    from: (table: string) => mockFrom(table),
+    functions: { invoke: vi.fn().mockResolvedValue({ data: { ok: true }, error: null }) },
+  },
 }));
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }) }));
 
@@ -44,10 +47,21 @@ beforeEach(() => {
 describe("DAL — funnemailEval (Sprint 5)", () => {
   describe("listFunnemailEvalCases", () => {
     it("returns cases", async () => {
-      mockFrom.mockReturnValue(chain({ data: [{ id: "1", name: "test" }], error: null }));
+      const row = {
+        id: "1",
+        name: "test",
+        description: null,
+        inbound_payload: { from: "a@b.com" },
+        expected_decision: { category: "commercial" },
+        tags: [],
+        enabled: true,
+        created_at: "2026-01-01",
+        updated_at: "2026-01-01",
+      };
+      mockFrom.mockReturnValue(chain({ data: [row], error: null }));
       const result = await listFunnemailEvalCases();
       expect(mockFrom).toHaveBeenCalledWith("funnemail_eval_cases");
-      expect(result).toEqual([{ id: "1", name: "test" }]);
+      expect(result).toEqual([row]);
     });
 
     it("throws on error", async () => {
@@ -58,9 +72,21 @@ describe("DAL — funnemailEval (Sprint 5)", () => {
 
   describe("listFunnemailEvalRuns", () => {
     it("returns runs", async () => {
-      mockFrom.mockReturnValue(chain({ data: [{ id: "r1" }], error: null }));
+      const run = {
+        id: "r1",
+        case_id: "c1",
+        prompt_version_id: null,
+        actual_decision: null,
+        passed: true,
+        diff: null,
+        latency_ms: 10,
+        cost_usd: null,
+        error: null,
+        run_at: "2026-01-01",
+      };
+      mockFrom.mockReturnValue(chain({ data: [run], error: null }));
       const result = await listFunnemailEvalRuns(50);
-      expect(result).toEqual([{ id: "r1" }]);
+      expect(result).toEqual([run]);
     });
   });
 

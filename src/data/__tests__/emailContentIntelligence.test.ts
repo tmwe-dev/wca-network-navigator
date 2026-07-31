@@ -6,8 +6,8 @@ const mockMaybeSingle = vi.fn();
 const mockIn = vi.fn();
 const mockFrom = vi.fn();
 
-vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (table: string) => mockFrom(table),
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: (table: string) => mockFrom(table) },
 }));
 
 import { fetchContentIntelligence, fetchContentIntelligenceBulk } from "@/data/emailContentIntelligence";
@@ -24,7 +24,27 @@ describe("DAL — emailContentIntelligence", () => {
 
   describe("fetchContentIntelligence", () => {
     it("returns intelligence for message", async () => {
-      const row = { id: "e1", message_id: "m1", content_label: "commercial" };
+      const row = {
+        id: "e1",
+        message_id: "m1",
+        user_id: null,
+        partner_id: null,
+        from_address: null,
+        content_label: "commercial",
+        intent_summary: "richiesta quotazione",
+        business_value: null,
+        urgency: null,
+        target_role: null,
+        continuity: {},
+        reasoning: null,
+        confidence: 0.9,
+        suggested_actions: [],
+        model: null,
+        context_summary: {},
+        pending_action_ids: [],
+        created_at: "2026-01-01",
+        updated_at: "2026-01-01",
+      };
       mockMaybeSingle.mockResolvedValue({ data: row, error: null });
       const result = await fetchContentIntelligence("m1");
       expect(mockFrom).toHaveBeenCalledWith("email_content_intelligence");

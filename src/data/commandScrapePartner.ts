@@ -48,3 +48,21 @@ export async function findPartnerBySearchTerm(searchTerm: string): Promise<Scrap
   if (error || !data) return null;
   return data;
 }
+
+export interface RecentScrapeCacheRow {
+  url: string;
+  payload: unknown;
+  scraped_at: string;
+  mode: string;
+}
+
+/** Ultimi record di scrape_cache, più recenti prima (RawScrapePanel). */
+export async function findRecentScrapeCacheEntries(limit = 20): Promise<RecentScrapeCacheRow[]> {
+  const { data, error } = await supabase
+    .from("scrape_cache")
+    .select("url, payload, scraped_at, mode")
+    .order("scraped_at", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return (data ?? []) as unknown as RecentScrapeCacheRow[];
+}

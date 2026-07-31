@@ -15,7 +15,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { bulkUpdateAutoAction } from "@/data/emailAddressRules";
+import { bulkUpdateAutoAction, findAutoActionRulesForEmails } from "@/data/emailAddressRules";
 import {
   RulesConfiguration,
   type RulesConfigValue,
@@ -57,18 +57,9 @@ export function RulesConfigurationDialog({
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         if (!user) throw new Error("Non autenticato");
 
-        const { data, error } = await supabase.from("email_address_rules")
-          .select("auto_action, auto_action_params")
-          .eq("user_id", user.id)
-          .in("email_address", senderEmails);
-        if (error) throw error;
+        const rows = await findAutoActionRulesForEmails(user.id, senderEmails);
 
         if (cancelled) return;
-
-        const rows = (data ?? []) as Array<{
-          auto_action: string | null;
-          auto_action_params: Record<string, unknown> | null;
-        }>;
 
         if (rows.length === 0) {
           setValue(EMPTY_VALUE);
