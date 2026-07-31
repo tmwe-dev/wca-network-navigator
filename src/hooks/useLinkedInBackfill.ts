@@ -106,13 +106,13 @@ export function useLinkedInBackfill() {
         try {
           const r = await upsertChannelMessageDedup({
             user_id: user.id,
-            channel: "linkedin" as never,
-            direction: "inbound" as never,
+            channel: "linkedin",
+            direction: "inbound",
             from_address: thread.name,
             body_text: text,
             message_id_external: extId,
             thread_id: thread.threadUrl || null,
-          } as never);
+          });
           if (r.inserted) previewSaved++;
         } catch { /* ignore single failures */ }
       }
@@ -222,8 +222,8 @@ export function useLinkedInBackfill() {
           const dir: "inbound" | "outbound" = direction === "outbound" ? "outbound" : "inbound";
           const res = await upsertChannelMessageDedup({
             user_id: user.id,
-            channel: "linkedin" as never,
-            direction: dir as never,
+            channel: "linkedin",
+            direction: dir,
             from_address: dir === "outbound" ? undefined : thread.name,
             to_address: dir === "outbound" ? thread.name : undefined,
             body_text: text,

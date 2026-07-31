@@ -1,4 +1,5 @@
 /**
+import { toJsonValue } from "@/lib/jsonGuards";
  * LinkedIn Sync — download messaggi via estensione.
  * Usa cursor per-contatto: salva SOLO i messaggi nuovi rispetto al DB.
  * Filtra etichette UI ("Da leggere", "Tutti", ...) e ghost preview ("foto", "audio", ...).
@@ -221,17 +222,17 @@ export function useLinkedInSync() {
           const res = await upsertChannelMessageDedup({
             user_id: user.id,
             operator_id: operatorId,
-            channel: "linkedin" as never,
-            direction: "inbound" as never,
+            channel: "linkedin",
+            direction: "inbound",
             from_address: contactAddr,
             from_name: thread.name,
             body_text: thread.lastMessage,
             message_id_external: extIdPreview,
             thread_id: thread.threadId || thread.threadUrl || null,
             email_date: tsIso,
-            raw_payload: rawPayload as never,
+            raw_payload: toJsonValue(rawPayload),
             created_at: tsIso,
-          } as never);
+          });
           if (res.inserted) {
             newMsgs++;
             // P0.4 — Rubrica LinkedIn (best-effort).
@@ -293,8 +294,8 @@ export function useLinkedInSync() {
                   const r = await upsertChannelMessageDedup({
                     user_id: user.id,
                     operator_id: operatorId,
-                    channel: "linkedin" as never,
-                    direction: direction as never,
+                    channel: "linkedin",
+                    direction,
                     from_address: direction === "inbound" ? contactAddr : "me",
                     to_address: direction === "outbound" ? contactAddr : "me",
                     from_name: direction === "inbound" ? thread.name : null,
@@ -303,9 +304,9 @@ export function useLinkedInSync() {
                     message_id_external: extId,
                     thread_id: thread.threadId || thread.threadUrl,
                     email_date: msgIso,
-                    raw_payload: { ...rawPayload, message_method: m.method ?? null, message_confidence: m.confidence ?? null } as never,
+                    raw_payload: toJsonValue({ ...rawPayload, message_method: m.method ?? null, message_confidence: m.confidence ?? null }),
                     created_at: new Date().toISOString(),
-                  } as never);
+                  });
                   if (r.inserted) {
                     newMsgs++;
                     stats.messagesAccepted++;
