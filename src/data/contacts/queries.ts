@@ -7,13 +7,71 @@ type ImportedContactUpdate = Database["public"]["Tables"]["imported_contacts"]["
 
 /**
  * Confine DAL: gli update generici arrivano come record non tipizzati dalla UI.
- * Si conservano solo le chiavi realmente presenti nello schema tabella.
+ * Whitelist runtime esplicita: si costruisce `ImportedContactUpdate` campo per
+ * campo, senza cast. `lead_status` è volutamente escluso (passa da
+ * `updateLeadStatus`/`updateContactStatus`), così come le chiavi identitarie
+ * (`id`, `user_id`, `created_at`, `import_log_id`) e i campi di soft-delete.
  */
+const NULLABLE_STRING_COLUMNS = [
+  "address", "city", "company_alias", "company_name", "contact_alias",
+  "converted_at", "country", "deep_search_at", "email", "external_id",
+  "last_interaction_at", "lead_score_updated_at", "mobile", "name", "note",
+  "operator_id", "origin", "phone", "position", "status_reason",
+  "transferred_at", "transferred_to_partner_id", "wca_partner_id", "zip_code",
+] as const;
+
+const REQUIRED_STRING_COLUMNS = ["email_status"] as const;
+
+const NULLABLE_NUMBER_COLUMNS = ["lead_score", "wca_match_confidence"] as const;
+
+const REQUIRED_NUMBER_COLUMNS = ["interaction_count", "row_number"] as const;
+
+const BOOLEAN_COLUMNS = ["is_selected", "is_transferred"] as const;
+
+const JSON_COLUMNS = ["enrichment_data", "lead_score_breakdown", "raw_data"] as const;
+
 function toContactUpdate(updates: Record<string, unknown>): ImportedContactUpdate {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(updates)) out[k] = v;
-  return out as ImportedContactUpdate;
+  const out: ImportedContactUpdate = {};
+  for (const key of NULLABLE_STRING_COLUMNS) {
+    if (!(key in updates)) continue;
+    const value = updates[key];
+    if (typeof value === "string") out[key] = value;
+    else if (value === null) out[key] = null;
+  }
+  for (const key of REQUIRED_STRING_COLUMNS) {
+    const value = updates[key];
+    if (typeof value === "string") out[key] = value;
+  }
+  for (const key of NULLABLE_NUMBER_COLUMNS) {
+    if (!(key in updates)) continue;
+    const value = updates[key];
+    if (typeof value === "number" && Number.isFinite(value)) out[key] = value;
+    else if (value === null) out[key] = null;
+  }
+  for (const key of REQUIRED_NUMBER_COLUMNS) {
+    const value = updates[key];
+    if (typeof value === "number" && Number.isFinite(value)) out[key] = value;
+  }
+  for (const key of BOOLEAN_COLUMNS) {
+    const value = updates[key];
+    if (typeof value === "boolean") out[key] = value;
+  }
+  for (const key of JSON_COLUMNS) {
+    if (!(key in updates)) continue;
+    out[key] = toJsonValue(updates[key]);
+  }
+  return out;
 }
+
+/** Chiavi ignorate da `toContactUpdate` (utile ai chiamanti per diagnostica). */
+export const CONTACT_UPDATABLE_COLUMNS: readonly string[] = [
+  ...NULLABLE_STRING_COLUMNS,
+  ...REQUIRED_STRING_COLUMNS,
+  ...NULLABLE_NUMBER_COLUMNS,
+  ...REQUIRED_NUMBER_COLUMNS,
+  ...BOOLEAN_COLUMNS,
+  ...JSON_COLUMNS,
+];
 
 function toDuplicateSource(value: string | null): ImportDuplicateMatch["source"] {
   if (value === "partner" || value === "partner_company") return value;
