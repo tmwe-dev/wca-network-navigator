@@ -15,19 +15,6 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import type { SelectedRecipient } from "@/contexts/MissionContext";
 
-interface PartnerSnapshot {
-  company_name: string | null;
-  company_alias: string | null;
-  country_name: string | null;
-  country_code: string | null;
-  city: string | null;
-  logo_url: string | null;
-  last_interaction_at: string | null;
-  interaction_count: number | null;
-  enrichment_data: { deep_search_at?: string } | null;
-  lead_status: string | null;
-}
-
 interface RecipientHeroCardProps {
   readonly recipients: ReadonlyArray<SelectedRecipient>;
   readonly manualEmail: string;
