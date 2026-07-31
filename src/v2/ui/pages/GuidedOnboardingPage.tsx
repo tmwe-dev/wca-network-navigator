@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { updateProfileOnboarding } from "@/data/profiles";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/queryClient";
 import { queryKeys } from "@/lib/queryKeys";
@@ -66,10 +67,7 @@ export function GuidedOnboardingPage(): React.ReactElement {
   const markOnboardingComplete = async () => {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (user) {
-      await supabase
-        .from("profiles")
-        .update({ onboarding_completed: true })
-        .eq("user_id", user.id);
+      await updateProfileOnboarding(user.id);
     }
     queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed });
   };

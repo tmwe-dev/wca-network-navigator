@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { searchImportedContactsForRecipientPicker } from "@/data/contacts";
 import { Search, X, Plus } from "lucide-react";
 import type { EmailRecipient } from "@/v2/hooks/useEmailComposerV2";
 import { queryKeys } from "@/lib/queryKeys";
@@ -26,13 +26,7 @@ export function RecipientPicker({ recipients, onAdd, onRemove }: RecipientPicker
     queryKey: queryKeys.v2.recipientSearch(search),
     enabled: search.length >= 2,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, email")
-        .not("email", "is", null)
-        .or(`name.ilike.%${search}%,email.ilike.%${search}%,company_name.ilike.%${search}%`)
-        .limit(10);
-      return data ?? [];
+      return await searchImportedContactsForRecipientPicker(search);
     },
   });
 

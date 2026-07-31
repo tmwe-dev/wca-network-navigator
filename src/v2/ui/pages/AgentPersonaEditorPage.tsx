@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgentDetailForEditor } from "@/data/agents";
 import { useAgentPersona } from "@/v2/hooks/useAgentPersona";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,12 +36,7 @@ export function AgentPersonaEditorPage() {
   const { data: agent } = useQuery({
     queryKey: ["agent-detail", agentId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("agents")
-        .select("id, name, role, avatar_emoji, system_prompt")
-        .eq("id", agentId)
-        .maybeSingle();
-      return data;
+      return await findAgentDetailForEditor(agentId);
     },
     enabled: !!agentId,
   });
