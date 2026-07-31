@@ -474,3 +474,44 @@ export async function findActivitiesForSourceId(sourceId: string, limit = 20): P
   if (error) throw error;
   return (data || []) as unknown as RecordActivityRow[];
 }
+
+/**
+ * Salva subject/body generati come bozza email sull'activity, pronta a
+ * comparire in Sorting. Estratto da `useEmailGenerator`.
+ */
+export async function updateActivityEmailDraft(
+  activityId: string,
+  patch: { email_subject: string; email_body: string; scheduled_at: string; status: string },
+): Promise<{ error: { message: string } | null }> {
+  const { error } = await supabase
+    .from("activities")
+    .update(patch)
+    .eq("id", activityId);
+  return { error };
+}
+
+export interface TodayActivityRow {
+  id: string;
+  activity_type: string;
+  title: string;
+  source_id: string;
+  source_type: string;
+  description: string | null;
+  completed_at: string | null;
+  source_meta: unknown;
+  status: string;
+}
+
+/** Attività di oggi (pending/in_progress/completed), estratto da `useTodayActivities`. */
+export async function findTodayActivities(sinceIso: string): Promise<TodayActivityRow[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta, status")
+    .gte("created_at", sinceIso)
+    .is("deleted_at", null)
+    .in("status", ["pending", "in_progress", "completed"] as Array<"pending" | "in_progress" | "completed">)
+    .order("completed_at", { ascending: false, nullsFirst: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as unknown as TodayActivityRow[];
+}

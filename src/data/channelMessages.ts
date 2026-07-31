@@ -483,3 +483,43 @@ export async function findPartnerRelationshipMessages(partnerId: string) {
     .limit(20);
   return { data: data ?? [], count: count ?? 0 };
 }
+
+/** Body html/text di un channel_message per id. Estratto da `useEmailMessageContent`. */
+export async function getChannelMessageBodyById(
+  messageId: string,
+): Promise<{ body_html: string | null; body_text: string | null } | null> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("body_html, body_text")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+/**
+ * Pagina di from_address inbound per email, filtrabile per mailbox.
+ * Estratto da `useMailboxSenderAllowlist` per il loop di paginazione client-side.
+ */
+export async function findInboundEmailFromAddressesPage(
+  params: { mailboxFilter: "personal" | "shared" | null; mailboxId: string | null; offset: number; pageSize: number },
+): Promise<Array<{ from_address: string | null }>> {
+  let q = supabase
+    .from("channel_messages")
+    .select("from_address")
+    .eq("channel", "email")
+    .eq("direction", "inbound")
+    .not("from_address", "is", null)
+    .order("id", { ascending: true })
+    .range(params.offset, params.offset + params.pageSize - 1);
+
+  if (params.mailboxFilter === "personal") {
+    q = q.is("mailbox_id", null);
+  } else if (params.mailboxFilter === "shared" && params.mailboxId) {
+    q = q.eq("mailbox_id", params.mailboxId);
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as Array<{ from_address: string | null }>;
+}

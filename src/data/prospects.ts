@@ -56,3 +56,24 @@ export async function findProspectsForDedup(): Promise<ProspectDedupRow[]> {
     .not("partita_iva", "is", null);
   return (data ?? []) as ProspectDedupRow[];
 }
+
+export interface ProspectInteractionRecordRow {
+  id: string;
+  interaction_type: string;
+  title: string;
+  description: string | null;
+  outcome: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** Interazioni prospect per il drawer contatto (Circuito di Attesa). */
+export async function findProspectInteractionsForRecord(prospectId: string, limit = 20): Promise<ProspectInteractionRecordRow[]> {
+  const { data } = await supabase
+    .from("prospect_interactions")
+    .select("*")
+    .eq("prospect_id", prospectId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as ProspectInteractionRecordRow[];
+}

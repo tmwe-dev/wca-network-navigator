@@ -151,3 +151,20 @@ export async function findActiveAgentVoiceByName(name: string): Promise<AgentVoi
   if (!data) return null;
   return { id: data.id, voiceId: data.elevenlabs_voice_id ?? null };
 }
+
+export interface AgentBasicRow {
+  id: string;
+  name: string;
+  avatar_emoji: string | null;
+  role: string;
+}
+
+/** Dati minimi di un agente per il pannello "Agente di riferimento" nel drawer contatto. */
+export async function findAgentBasicById(id: string): Promise<AgentBasicRow | null> {
+  const { data } = await supabase
+    .from("agents")
+    .select("id, name, avatar_emoji, role")
+    .eq("id", id)
+    .single();
+  return data ?? null;
+}
