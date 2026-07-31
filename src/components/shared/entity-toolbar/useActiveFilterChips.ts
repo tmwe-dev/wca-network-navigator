@@ -92,8 +92,8 @@ export function useActiveFilterChips(context: ChipContext): readonly FilterChip[
           onRemove: () => {
             const next = new Set(countries);
             next.delete(cc);
-            if (context === "crm") g.setCrmSelectedCountries(next as never);
-            else g.setNetworkSelectedCountries(next as never);
+            if (context === "crm") g.setCrmSelectedCountries(next);
+            else g.setNetworkSelectedCountries(next);
           },
         });
       });
@@ -104,8 +104,8 @@ export function useActiveFilterChips(context: ChipContext): readonly FilterChip[
           label: `+${extra} paesi`,
           tone: "neutral",
           onRemove: () => {
-            if (context === "crm") g.setCrmSelectedCountries(new Set() as never);
-            else g.setNetworkSelectedCountries(new Set() as never);
+            if (context === "crm") g.setCrmSelectedCountries(new Set<string>());
+            else g.setNetworkSelectedCountries(new Set<string>());
           },
         });
       }
@@ -131,7 +131,7 @@ export function useActiveFilterChips(context: ChipContext): readonly FilterChip[
           label: `Origine: ${origins.length === 1 ? origins[0] : `${origins.length}`}`,
           tone: "primary",
           icon: Filter,
-          onRemove: () => g.setCrmOrigin(new Set() as never),
+          onRemove: () => g.setCrmOrigin(new Set<string>()),
         });
       }
     }

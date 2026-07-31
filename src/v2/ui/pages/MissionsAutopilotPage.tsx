@@ -6,6 +6,7 @@ import * as React from "react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,7 @@ export function MissionsPage() {
   const { data: missions = [], isLoading } = useQuery({
     queryKey: ["agent-missions"],
     queryFn: async () => {
-      const { data, error } = await untypedFrom("agent_missions")
+      const { data, error } = await supabase.from("agent_missions")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -86,7 +87,7 @@ export function MissionsPage() {
     queryKey: ["agent-mission-events", selectedMission],
     queryFn: async () => {
       if (!selectedMission) return [];
-      const { data, error } = await untypedFrom("agent_mission_events")
+      const { data, error } = await supabase.from("agent_mission_events")
         .select("*")
         .eq("mission_id", selectedMission)
         .order("created_at", { ascending: false })
@@ -100,9 +101,10 @@ export function MissionsPage() {
   // Status mutation
   const statusMut = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: Record<string, unknown> = { status };
+      type MissionUpdate = Database["public"]["Tables"]["agent_missions"]["Update"];
+      const updates: MissionUpdate = { status };
       if (status === "active") updates.started_at = new Date().toISOString();
-      const { error } = await untypedFrom("agent_missions").update(updates).eq("id", id);
+      const { error } = await supabase.from("agent_missions").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -115,6 +117,9 @@ export function MissionsPage() {
   const createMut = useMutation({
     mutationFn: async (mission: Partial<AgentMission>) => {
       const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+      // DRIFT: agent_missions generated Insert type requires `owner_user_id` (not `user_id`),
+      // and this mission payload uses looser fields than the generated Insert shape.
+      // Left on untypedFrom until the payload / column drift is reconciled.
       const { error } = await untypedFrom("agent_missions").insert({
         ...mission,
         user_id: userData.user?.id,
@@ -304,7 +309,7 @@ function MissionWizard({
   const { data: agents = [] } = useQuery({
     queryKey: ["agents-for-mission"],
     queryFn: async () => {
-      const { data } = await untypedFrom("agents").select("id, name").limit(50);
+      const { data } = await supabase.from("agents").select("id, name").limit(50);
       return data ?? [];
     },
   });

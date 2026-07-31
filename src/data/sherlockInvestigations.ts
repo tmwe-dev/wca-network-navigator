@@ -2,7 +2,7 @@
  * DAL — Sherlock investigations level lookup.
  * Restituisce il massimo livello di indagine completata per partner/contatto.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("sherlockInvestigations");
@@ -18,13 +18,12 @@ async function fetchMaxLevel(
   const out: SherlockLevelMap = {};
   if (!ids.length) return out;
   try {
-    const { data, error } = (await untypedFrom("sherlock_investigations")
-      .select(`${column}, level, completed_at`)
+    const query = supabase
+      .from("sherlock_investigations")
+      .select(column === "partner_id" ? "partner_id, level, completed_at" : "contact_id, level, completed_at")
       .eq("status", "completed")
-      .in(column, ids as string[])) as {
-      data: unknown;
-      error: unknown;
-    };
+      .in(column, ids as string[]);
+    const { data, error } = await query;
     if (error) throw error;
     const rows = (data ?? []) as Array<Record<string, unknown>>;
     for (const r of rows) {

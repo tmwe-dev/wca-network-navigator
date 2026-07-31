@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
 import { findEmailAddressRules } from "@/data/emailAddressRules";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface EmailGroupInfo {
   groupName: string | null;
@@ -35,7 +35,7 @@ export function useEmailAddressGroups() {
     enabled: !!userId,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await untypedFrom("email_sender_groups")
+      const { data, error } = await supabase.from("email_sender_groups")
         .select("nome_gruppo, colore, icon")
         ;
       if (error) return new Map<string, { color: string | null; icon: string | null }>();

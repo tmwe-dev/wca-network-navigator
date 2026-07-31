@@ -155,7 +155,8 @@ class TraceCollector {
     }));
     try {
       // Insert insert-only — RLS richiede user_id = auth.uid()
-      // deno-lint-ignore no-explicit-any
+      // DRIFT: TraceRow.error is typed as Record<string, unknown> | null, which is not
+      // assignable to the generated Json type. Left on untypedFrom to avoid an unsafe cast.
       const { error } = await untypedFrom("ai_runtime_traces").insert(rows);
       if (error) {
         // Re-queue se errore transient (max 1 retry implicito al prossimo tick)

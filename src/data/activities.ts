@@ -121,7 +121,8 @@ export async function findAllActivities(limit = 1000): Promise<AllActivity[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data || []) as unknown as AllActivity[];
+  // Il select("*") non include le relazioni partners/team_members/selected_contact di AllActivity.
+  return (data || []).map((row) => ({ ...row, partners: null, team_members: null, selected_contact: null })) as AllActivity[];
 }
 
 export async function createActivities(
@@ -240,7 +241,7 @@ export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCar
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  const rows = (data || []) as unknown as KanbanRow[];
+  const rows = (data || []) as KanbanRow[];
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -263,7 +264,7 @@ export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCar
 export async function updateActivityDepartment(id: string, department: ActivityDepartment | null): Promise<void> {
   const { error } = await supabase
     .from("activities")
-    .update({ department } as unknown as ActivityUpdate)
+    .update({ department } as ActivityUpdate)
     .eq("id", id);
   if (error) throw error;
 }
@@ -365,7 +366,7 @@ export async function findAIGeneratedActivities(limit = 10): Promise<AIActivity[
 export async function setActivityStatus(activityId: string, status: string): Promise<void> {
   const { error } = await supabase
     .from("activities")
-    .update({ status } as unknown as ActivityUpdate)
+    .update({ status } as ActivityUpdate)
     .eq("id", activityId);
   if (error) throw error;
 }
@@ -418,7 +419,8 @@ export async function findPendingAgentActivities(userId: string, limit = 100): P
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data || []) as unknown as AllActivity[];
+  // Il select("*") non include le relazioni partners/team_members/selected_contact di AllActivity.
+  return (data || []).map((row) => ({ ...row, partners: null, team_members: null, selected_contact: null })) as AllActivity[];
 }
 
 export async function rejectActivity(id: string) {
@@ -452,7 +454,7 @@ export async function findActivitiesForSelectedContact(
     .order("created_at", { ascending: false })
     .range(from, to);
   if (error) throw error;
-  return (data || []) as unknown as ContactTimelineActivityRow[];
+  return (data || []) as ContactTimelineActivityRow[];
 }
 
 export interface RecordActivityRow {
@@ -472,7 +474,7 @@ export async function findActivitiesForSourceId(sourceId: string, limit = 20): P
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data || []) as unknown as RecordActivityRow[];
+  return (data || []) as RecordActivityRow[];
 }
 
 /**
@@ -518,7 +520,7 @@ export async function findTodayActivities(sinceIso: string): Promise<TodayActivi
     .order("completed_at", { ascending: false, nullsFirst: false })
     .limit(50);
   if (error) throw error;
-  return (data ?? []) as unknown as TodayActivityRow[];
+  return (data ?? []) as TodayActivityRow[];
 }
 
 export interface PartnerContactRow {

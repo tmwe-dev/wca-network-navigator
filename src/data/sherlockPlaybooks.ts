@@ -2,10 +2,12 @@
  * DAL — Sherlock playbooks & investigations.
  * Tutte le query passano da qui (regola DAL: src/data/README.md).
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type {
   SherlockPlaybook,
   SherlockInvestigation,
+  SherlockStep,
   SherlockStepResult,
   SherlockLevel,
 } from "@/v2/services/sherlock/sherlockTypes";
@@ -20,34 +22,70 @@ export const sherlockKeys = {
   investigation: (id: string) => ["sherlock", "investigation", id] as const,
 };
 
+type PlaybookRow = Database["public"]["Tables"]["sherlock_playbooks"]["Row"];
+type InvestigationRow = Database["public"]["Tables"]["sherlock_investigations"]["Row"];
+
+function mapPlaybookRow(row: PlaybookRow): SherlockPlaybook {
+  return {
+    id: row.id,
+    level: row.level as SherlockLevel,
+    name: row.name,
+    description: row.description,
+    is_active: row.is_active,
+    sort_order: row.sort_order,
+    steps: (Array.isArray(row.steps) ? row.steps : []) as unknown as SherlockStep[],
+    target_fields: row.target_fields,
+    estimated_seconds: row.estimated_seconds,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function mapInvestigationRow(row: InvestigationRow): SherlockInvestigation {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    operator_id: row.operator_id,
+    playbook_id: row.playbook_id,
+    level: row.level as SherlockLevel,
+    partner_id: row.partner_id,
+    contact_id: row.contact_id,
+    target_label: row.target_label,
+    status: row.status as SherlockInvestigation["status"],
+    vars: (row.vars ?? {}) as Record<string, string>,
+    findings: (row.findings ?? {}) as Record<string, unknown>,
+    step_log: (Array.isArray(row.step_log) ? row.step_log : []) as unknown as SherlockStepResult[],
+    summary: row.summary,
+    duration_ms: row.duration_ms,
+    started_at: row.started_at,
+    completed_at: row.completed_at,
+  };
+}
+
 // ───────────────────────── Playbooks ─────────────────────────
 
 export async function listPlaybooks(): Promise<SherlockPlaybook[]> {
-  const { data, error } = (await untypedFrom("sherlock_playbooks")
+  const { data, error } = await supabase
+    .from("sherlock_playbooks")
     .select("*")
     .eq("is_active", true)
     .order("level", { ascending: true })
-    .order("sort_order", { ascending: true })) as {
-    data: unknown;
-    error: unknown;
-  };
+    .order("sort_order", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as SherlockPlaybook[];
+  return (data ?? []).map(mapPlaybookRow);
 }
 
 export async function getPlaybookByLevel(level: SherlockLevel): Promise<SherlockPlaybook | null> {
-  const { data, error } = (await untypedFrom("sherlock_playbooks")
+  const { data, error } = await supabase
+    .from("sherlock_playbooks")
     .select("*")
     .eq("level", level)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .limit(1)
-    .maybeSingle()) as {
-    data: unknown;
-    error: unknown;
-  };
+    .maybeSingle();
   if (error) throw error;
-  return (data as SherlockPlaybook | null) ?? null;
+  return data ? mapPlaybookRow(data) : null;
 }
 
 // ─────────────────────── Investigations ──────────────────────
@@ -66,7 +104,8 @@ interface CreateInvestigationInput {
 export async function createInvestigation(
   input: CreateInvestigationInput,
 ): Promise<SherlockInvestigation> {
-  const { data, error } = (await untypedFrom("sherlock_investigations")
+  const { data, error } = await supabase
+    .from("sherlock_investigations")
     .insert({
       user_id: input.user_id,
       operator_id: input.operator_id ?? null,
@@ -79,12 +118,9 @@ export async function createInvestigation(
       status: "running",
     })
     .select("*")
-    .single()) as {
-    data: unknown;
-    error: unknown;
-  };
+    .single();
   if (error) throw error;
-  return data as SherlockInvestigation;
+  return mapInvestigationRow(data);
 }
 
 export async function updateInvestigation(
@@ -98,11 +134,10 @@ export async function updateInvestigation(
     completed_at?: string;
   },
 ): Promise<void> {
-  const { error } = (await untypedFrom("sherlock_investigations")
-    .update(patch as Record<string, unknown>)
-    .eq("id", id)) as {
-    error: unknown;
-  };
+  const { error } = await supabase
+    .from("sherlock_investigations")
+    .update(patch as Database["public"]["Tables"]["sherlock_investigations"]["Update"])
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -116,19 +151,17 @@ export async function updatePartnerWebsiteIfMissing(
 ): Promise<boolean> {
   if (!partnerId || !website) return false;
   try {
-    const { data: current } = (await untypedFrom("partners")
+    const { data: current } = await supabase
+      .from("partners")
       .select("website")
       .eq("id", partnerId)
-      .maybeSingle()) as {
-      data: unknown;
-    };
-    const existing = (current as { website?: string | null } | null)?.website;
+      .maybeSingle();
+    const existing = current?.website;
     if (existing && existing.trim().length > 0) return false;
-    const { error } = (await untypedFrom("partners")
-      .update({ website } as Record<string, unknown>)
-      .eq("id", partnerId)) as {
-      error: unknown;
-    };
+    const { error } = await supabase
+      .from("partners")
+      .update({ website })
+      .eq("id", partnerId);
     if (error) throw error;
     return true;
   } catch (e) {
@@ -147,19 +180,17 @@ export async function updatePartnerLinkedinIfMissing(
 ): Promise<boolean> {
   if (!partnerId || !linkedinUrl) return false;
   try {
-    const { data: current } = (await untypedFrom("partners")
+    const { data: current } = await supabase
+      .from("partners")
       .select("linkedin_url")
       .eq("id", partnerId)
-      .maybeSingle()) as {
-      data: unknown;
-    };
-    const existing = (current as { linkedin_url?: string | null } | null)?.linkedin_url;
+      .maybeSingle();
+    const existing = current?.linkedin_url;
     if (existing && existing.trim().length > 0) return false;
-    const { error } = (await untypedFrom("partners")
-      .update({ linkedin_url: linkedinUrl } as Record<string, unknown>)
-      .eq("id", partnerId)) as {
-      error: unknown;
-    };
+    const { error } = await supabase
+      .from("partners")
+      .update({ linkedin_url: linkedinUrl })
+      .eq("id", partnerId);
     if (error) throw error;
     return true;
   } catch (e) {

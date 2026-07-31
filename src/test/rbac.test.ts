@@ -349,7 +349,8 @@ describe("RBAC Functions", () => {
 
       const result = await fetchUserRoles();
 
-      expect(result).toEqual([role]);
+      // Il mapper normalizza la riga: aggiunge `module` e `created_at` espliciti.
+      expect(result).toEqual([{ ...role, module: null, created_at: undefined }]);
     });
 
     it("should fetch roles for specific user when userId provided", async () => {
@@ -359,7 +360,7 @@ describe("RBAC Functions", () => {
 
       const result = await fetchUserRoles("user456");
 
-      expect(result).toEqual([role]);
+      expect(result).toEqual([{ ...role, module: null, created_at: undefined }]);
     });
 
     it("should return empty array when user not authenticated", async () => {
@@ -549,7 +550,17 @@ describe("RBAC Functions", () => {
 
       const result = await fetchTeamMembers("t1");
 
-      expect(result).toEqual(members);
+      // Il mapper normalizza ogni riga con i campi opzionali espliciti.
+      expect(result).toEqual(
+        members.map((m) => ({
+          ...m,
+          id: undefined,
+          created_at: undefined,
+          name: undefined,
+          email: null,
+          is_active: undefined,
+        })),
+      );
       expect(mockFrom).toHaveBeenCalledWith("team_members");
     });
 

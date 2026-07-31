@@ -8,7 +8,7 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import type {
   FunnemailPartnerSnapshot,
@@ -77,7 +77,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     enabled: partnerIds.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<FunnemailPartnerSnapshot[]> => {
-      const { data, error } = await untypedFrom("partners")
+      const { data, error } = await supabase.from("partners")
         .select(
           "id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website",
         )
@@ -92,7 +92,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     enabled: domains.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<SenderIntelRow[]> => {
-      const { data, error } = await untypedFrom("funnemail_sender_intel")
+      const { data, error } = await supabase.from("funnemail_sender_intel")
         .select(
           "email_domain,is_known_partner,partner_id,company_type,country,website,role_guess",
         )
@@ -121,7 +121,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     enabled: intelPartnerIds.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<FunnemailPartnerSnapshot[]> => {
-      const { data, error } = await untypedFrom("partners")
+      const { data, error } = await supabase.from("partners")
         .select(
           "id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website",
         )
@@ -138,7 +138,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     queryFn: async (): Promise<
       Array<{ email_address: string; ai_suggested_group: string | null }>
     > => {
-      const { data, error } = await untypedFrom("email_address_rules")
+      const { data, error } = await supabase.from("email_address_rules")
         .select("email_address,ai_suggested_group")
         .in("email_address", addresses);
       if (error) return [];

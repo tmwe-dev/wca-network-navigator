@@ -3,6 +3,7 @@
  * Uses scrape-website edge function with scrape_cache.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { toJsonValue } from "@/lib/jsonGuards";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
@@ -11,7 +12,7 @@ const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|websit
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
-  const { data } = await untypedFrom("scrape_cache")
+  const { data } = await supabase.from("scrape_cache")
     .select("payload, scraped_at")
     .eq("url", url)
     .maybeSingle();
@@ -24,6 +25,9 @@ async function getCachedScrape(url: string): Promise<Record<string, unknown> | n
 }
 
 async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
+  // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
+  // `.upsert()` overload cannot be resolved even though all columns are real.
+  // Left on untypedFrom (TS overload-resolution limitation, not a schema mismatch).
   await untypedFrom("scrape_cache")
     .upsert({ url, payload, scraped_at: new Date().toISOString() });
 }
@@ -45,6 +49,9 @@ export const scrapeProspectTool: Tool = {
       for (const [k, v] of Object.entries(payload)) {
         if (k !== "prospectId") updateData[k] = v;
       }
+      // DRIFT: updateData is built dynamically from the approval payload and may include
+      // `profile_description`, which does not exist on the generated `prospects` schema
+      // (it exists on `partners`). Left on untypedFrom to avoid changing behavior.
       const { error } = await untypedFrom("prospects")
         .update(updateData)
         .eq("id", prospectId);
@@ -62,7 +69,7 @@ export const scrapeProspectTool: Tool = {
       return { kind: "result", title: "Errore", message: "Specifica il nome del prospect da analizzare." };
     }
 
-    const { data: prospect, error: pErr } = await untypedFrom("prospects")
+    const { data: prospect, error: pErr } = await supabase.from("prospects")
       .select("id, company_name, website, email, phone")
       .or(`company_name.ilike.%${searchTerm}%`)
       .limit(1)

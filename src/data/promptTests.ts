@@ -5,6 +5,8 @@
  * Backend: edge function `prompt-test-runner` (vedi docs/audit).
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 export interface PromptTestCase {
   id: string;
@@ -63,7 +65,7 @@ export async function listTestCasesForPrompt(promptId: string): Promise<PromptTe
     .eq("prompt_id", promptId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as unknown as PromptTestCase[];
+  return (data ?? []) as unknown as PromptTestCase[]; // metadata drift: table has no metadata column beyond input_payload shape mismatch (Json vs Record)
 }
 
 export interface UpsertTestCaseInput {
@@ -86,13 +88,13 @@ export async function upsertTestCase(input: UpsertTestCaseInput): Promise<Prompt
   const user = session?.user;
   if (!user) throw new Error("Not authenticated");
 
-  const row = {
+  const row: Database["public"]["Tables"]["prompt_test_cases"]["Insert"] = {
     id: input.id,
     user_id: user.id,
     prompt_id: input.prompt_id,
     name: input.name,
     description: input.description ?? null,
-    input_payload: input.input_payload as never,
+    input_payload: toJsonValue(input.input_payload),
     expected_contains: input.expected_contains ?? [],
     expected_not_contains: input.expected_not_contains ?? [],
     expected_regex: input.expected_regex ?? null,
@@ -104,11 +106,11 @@ export async function upsertTestCase(input: UpsertTestCaseInput): Promise<Prompt
 
   const { data, error } = await supabase
     .from("prompt_test_cases")
-    .upsert(row as never, { onConflict: "id" })
+    .upsert(row, { onConflict: "id" })
     .select("*")
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as PromptTestCase;
+  return data as unknown as PromptTestCase; // drift: input_payload is Json in DB vs Record<string, unknown> in domain type
 }
 
 export async function deleteTestCase(id: string): Promise<void> {
@@ -124,7 +126,7 @@ export async function listRunsForTestCase(testCaseId: string, limit = 20): Promi
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PromptTestRun[];
+  return (data ?? []) as unknown as PromptTestRun[]; // drift: metadata field on PromptTestRun not present in prompt_test_runs table
 }
 
 export async function listRunsForPrompt(promptId: string, limit = 50): Promise<PromptTestRun[]> {
@@ -135,7 +137,7 @@ export async function listRunsForPrompt(promptId: string, limit = 50): Promise<P
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PromptTestRun[];
+  return (data ?? []) as unknown as PromptTestRun[]; // drift: metadata field on PromptTestRun not present in prompt_test_runs table
 }
 
 export interface RunnerSummary {
@@ -177,7 +179,7 @@ export async function listVersionsForPrompt(promptId: string, limit = 20): Promi
     .order("version_number", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PromptVersion[];
+  return (data ?? []) as PromptVersion[];
 }
 
 export async function rollbackPromptToVersion(args: {
@@ -185,10 +187,10 @@ export async function rollbackPromptToVersion(args: {
   versionNumber: number;
   reason?: string;
 }): Promise<void> {
-  const { error } = await supabase.rpc("rollback_prompt_to_version" as never, {
+  const { error } = await supabase.rpc("rollback_prompt_to_version", {
     p_prompt_id: args.promptId,
     p_version_number: args.versionNumber,
-    p_reason: args.reason ?? null,
-  } as never);
+    p_reason: args.reason,
+  });
   if (error) throw error;
 }

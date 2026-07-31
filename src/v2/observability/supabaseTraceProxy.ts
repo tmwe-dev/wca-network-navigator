@@ -11,49 +11,67 @@ import { traceCollector } from "./traceCollector";
 
 let installed = false;
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type AnyFn = (...args: any[]) => any;
+// Firma generica per i metodi runtime del query builder Supabase (then/select/
+// insert/...): gli argomenti e il ritorno variano per verbo e non sono
+// esportati come tipo pubblico dal client generato, quindi restano `unknown`.
+type AnyFn = (...args: unknown[]) => unknown;
 
-function wrapBuilder(table: string, builder: any): any {
-  // I metodi che terminano la query e ritornano una Promise sono `then`-able.
+/** Forma minima e comune a tutte le risposte Supabase (`{ data, error, status }`). */
+interface QueryResult {
+  data?: unknown;
+  error?: { message?: unknown; code?: unknown } | null;
+  status?: unknown;
+}
+
+// Il builder di supabase.from(table) è un oggetto proxy interno la cui shape
+// esatta (query builder concatenabile + thenable) non è esposta come tipo
+// pubblico dal client generato: usiamo un indice dinamico e restiamo su
+// `unknown` per i valori, narrowing puntuale dove serve.
+type QueryBuilder = { then?: AnyFn; [key: string]: unknown };
+
+function wrapBuilder(table: string, builder: unknown): unknown {
+  // I metodi che terminano la query e ritornano una Promise sono `then`-abili.
   // Strategy: wrap la `then` del builder.
-  if (!builder || typeof builder.then !== "function") return builder;
+  const b = builder as QueryBuilder | null | undefined;
+  if (!b || typeof b.then !== "function") return builder;
 
-  const originalThen: AnyFn = builder.then.bind(builder);
+  const originalThen = (b.then as AnyFn).bind(b);
   const ops: string[] = [];
 
   // Track quale verbo è stato chiamato sul builder
   for (const verb of ["select", "insert", "update", "delete", "upsert"] as const) {
-    if (typeof builder[verb] === "function") {
-      const orig: AnyFn = builder[verb].bind(builder);
-      builder[verb] = (...args: any[]) => {
+    if (typeof b[verb] === "function") {
+      const orig = (b[verb] as AnyFn).bind(b);
+      b[verb] = (...args: unknown[]) => {
         ops.push(verb);
         return wrapBuilder(table, orig(...args));
       };
     }
   }
 
-  builder.then = (onFulfilled?: AnyFn, onRejected?: AnyFn) => {
+  b.then = (((onFulfilled?: AnyFn, onRejected?: AnyFn) => {
     const start = Date.now();
     return originalThen(
-      (res: any) => {
+      (res: unknown) => {
+        const r = res as QueryResult | undefined;
         const route = typeof window !== "undefined" ? window.location.pathname : undefined;
         const op = ops[ops.length - 1] ?? "select";
-        const count = Array.isArray(res?.data) ? res.data.length : res?.data ? 1 : 0;
+        const count = Array.isArray(r?.data) ? r.data.length : r?.data ? 1 : 0;
         traceCollector.push({
           type: "db.query",
           scope: "db",
           source: `${op}:${table}`,
           route,
-          status: res?.error ? "error" : "success",
+          status: r?.error ? "error" : "success",
           duration_ms: Date.now() - start,
-          payload_summary: { table, op, count, status: res?.status },
-          error: res?.error ? { message: String(res.error.message ?? res.error), code: res.error.code } : undefined,
+          payload_summary: { table, op, count, status: r?.status },
+          error: r?.error ? { message: String(r.error.message ?? r.error), code: r.error.code as string | undefined } : undefined,
         });
         return onFulfilled ? onFulfilled(res) : res;
       },
-      (err: any) => {
+      (err: unknown) => {
         const route = typeof window !== "undefined" ? window.location.pathname : undefined;
+        const e = err as { message?: unknown; code?: unknown } | undefined;
         traceCollector.push({
           type: "db.query",
           scope: "db",
@@ -62,13 +80,13 @@ function wrapBuilder(table: string, builder: any): any {
           status: "error",
           duration_ms: Date.now() - start,
           payload_summary: { table },
-          error: { message: err?.message ?? String(err), code: err?.code },
+          error: { message: e?.message !== undefined ? String(e.message) : String(err), code: e?.code as string | undefined },
         });
         if (onRejected) return onRejected(err);
         throw err;
       },
     );
-  };
+  }) as AnyFn);
 
   return builder;
 }
@@ -76,46 +94,51 @@ function wrapBuilder(table: string, builder: any): any {
 export function installSupabaseTraceProxy(): void {
   if (installed) return;
   installed = true;
+  // `supabase.from`/`.rpc` sono monkey-patchati a runtime senza cambiare il
+  // tipo pubblico del client (protetto): l'oggetto locale con firme `AnyFn`
+  // è l'unico modo di riassegnare questi metodi senza toccare client.ts.
   const sb = supabase as unknown as { from: AnyFn; rpc: AnyFn };
   const originalFrom = sb.from.bind(supabase);
-  sb.from = (table: string) => wrapBuilder(table, originalFrom(table));
+  sb.from = (table: unknown) => wrapBuilder(table as string, originalFrom(table));
 
   const originalRpc = sb.rpc.bind(supabase);
-  sb.rpc = (fnName: string, params?: any) => {
+  sb.rpc = (fnName: unknown, params?: unknown) => {
     const start = Date.now();
-    const result = originalRpc(fnName, params);
-    if (result && typeof result.then === "function") {
-      const original = result.then.bind(result);
-      result.then = (ok?: AnyFn, ko?: AnyFn) =>
+    const result = originalRpc(fnName, params) as QueryBuilder | unknown;
+    const r = result as QueryBuilder | null | undefined;
+    if (r && typeof r.then === "function") {
+      const original = (r.then as AnyFn).bind(r);
+      r.then = ((ok?: AnyFn, ko?: AnyFn) =>
         original(
-          (r: any) => {
+          (res: unknown) => {
+            const rr = res as QueryResult | undefined;
             traceCollector.push({
               type: "db.query",
               scope: "db",
-              source: `rpc:${fnName}`,
+              source: `rpc:${String(fnName)}`,
               route: typeof window !== "undefined" ? window.location.pathname : undefined,
-              status: r?.error ? "error" : "success",
+              status: rr?.error ? "error" : "success",
               duration_ms: Date.now() - start,
-              payload_summary: { rpc: fnName },
-              error: r?.error ? { message: String(r.error.message ?? r.error), code: r.error.code } : undefined,
+              payload_summary: { rpc: String(fnName) },
+              error: rr?.error ? { message: String(rr.error.message ?? rr.error), code: rr.error.code as string | undefined } : undefined,
             });
-            return ok ? ok(r) : r;
+            return ok ? ok(res) : res;
           },
-          (err: any) => {
+          (err: unknown) => {
+            const e = err as { message?: unknown } | undefined;
             traceCollector.push({
               type: "db.query",
               scope: "db",
-              source: `rpc:${fnName}`,
+              source: `rpc:${String(fnName)}`,
               status: "error",
               duration_ms: Date.now() - start,
-              error: { message: err?.message ?? String(err) },
+              error: { message: e?.message !== undefined ? String(e.message) : String(err) },
             });
             if (ko) return ko(err);
             throw err;
           },
-        );
+        )) as AnyFn;
     }
     return result;
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */

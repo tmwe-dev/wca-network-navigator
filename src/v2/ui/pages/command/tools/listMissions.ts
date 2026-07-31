@@ -1,7 +1,7 @@
 /**
  * Tool: list-missions — Read-only overview of autopilot missions with KPI/budget progress.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult } from "./types";
 
 interface MissionRow {
@@ -25,7 +25,7 @@ export const listMissionsTool: Tool = {
     !/\b(avvia|esegui|lancia|fai\s+partire|trigger|ferma|pausa|stoppa)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const { data, error, count } = await untypedFrom("agent_missions")
+    const { data, error, count } = await supabase.from("agent_missions")
       .select(
         "id,title,goal_type,status,autopilot,kpi_target,kpi_current,budget,budget_consumed",
         { count: "exact" },

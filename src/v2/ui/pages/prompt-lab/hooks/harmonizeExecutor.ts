@@ -16,6 +16,7 @@ import { updateAgentPersona } from "@/data/agentPersonas";
 import { createAgent, updateAgent, type AgentInsert, type AgentUpdate } from "@/data/agents";
 import { upsertAppSetting } from "@/data/appSettings";
 import { createHarmonizerFollowup, followupFromProposal } from "@/data/harmonizerFollowups";
+import { toJsonValue } from "@/lib/jsonGuards";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
@@ -123,7 +124,7 @@ async function execKbEntry(userId: string, p: HarmonizeProposal): Promise<Execut
         id: p.target.id,
         title: String((p.payload?.title as string) ?? p.block_label ?? "Senza titolo"),
         content: p.after ?? "",
-      } as never, userId);
+      }, userId);
       return { ok: true };
     }
     case "MOVE": {
@@ -135,7 +136,7 @@ async function execKbEntry(userId: string, p: HarmonizeProposal): Promise<Execut
         content: p.after ?? p.before ?? "",
         category: String(payload.category ?? "doctrine"),
         chapter: String(payload.chapter ?? "general"),
-      } as never, userId);
+      }, userId);
       return { ok: true };
     }
     case "DELETE": {
@@ -150,7 +151,7 @@ async function execOperativePrompt(p: HarmonizeProposal): Promise<ExecuteResult>
   if (p.action !== "UPDATE" || !p.target.id || !p.target.field) {
     return { ok: false, reason: "operative_prompts supporta solo UPDATE con target.id + field." };
   }
-  await updateOperativePrompt(p.target.id, { [p.target.field]: p.after ?? "" } as never);
+  await updateOperativePrompt(p.target.id, { [p.target.field]: p.after ?? "" } as Partial<import("@/data/operativePrompts").OperativePromptFull>);
   return { ok: true };
 }
 
@@ -158,7 +159,7 @@ async function execEmailPrompt(p: HarmonizeProposal): Promise<ExecuteResult> {
   if (p.action !== "UPDATE" || !p.target.id) {
     return { ok: false, reason: "email_prompts supporta solo UPDATE con target.id." };
   }
-  await updateEmailPrompt(p.target.id, { instructions: p.after ?? "" } as never);
+  await updateEmailPrompt(p.target.id, { instructions: p.after ?? "" });
   return { ok: true };
 }
 
@@ -166,7 +167,7 @@ async function execEmailAddressRule(p: HarmonizeProposal): Promise<ExecuteResult
   if (p.action !== "UPDATE" || !p.target.id || !p.target.field) {
     return { ok: false, reason: "email_address_rules supporta solo UPDATE con field." };
   }
-  await updateEmailAddressRule(p.target.id, { [p.target.field]: p.after ?? "" } as never);
+  await updateEmailAddressRule(p.target.id, { [p.target.field]: p.after ?? "" } as Partial<import("@/data/emailAddressRules").EmailAddressRule>);
   return { ok: true };
 }
 
@@ -174,7 +175,7 @@ async function execPlaybook(p: HarmonizeProposal): Promise<ExecuteResult> {
   if (p.action !== "UPDATE" || !p.target.id || !p.target.field) {
     return { ok: false, reason: "commercial_playbooks supporta solo UPDATE con field." };
   }
-  await updateCommercialPlaybook(p.target.id, { [p.target.field]: p.after ?? "" } as never);
+  await updateCommercialPlaybook(p.target.id, { [p.target.field]: p.after ?? "" } as Partial<import("@/data/commercialPlaybooks").CommercialPlaybook>);
   return { ok: true };
 }
 
@@ -214,7 +215,7 @@ async function execAgent(userId: string, p: HarmonizeProposal): Promise<ExecuteR
       user_id: userId,
       system_prompt: String(payload.system_prompt ?? p.after ?? ""),
       avatar_emoji: payload.avatar_emoji ? String(payload.avatar_emoji) : undefined,
-      knowledge_base: Array.isArray(payload.knowledge_base) ? (payload.knowledge_base as never) : undefined,
+      knowledge_base: Array.isArray(payload.knowledge_base) ? toJsonValue(payload.knowledge_base) : undefined,
       assigned_tools: Array.isArray(payload.assigned_tools) ? (payload.assigned_tools as string[]) : undefined,
       territory_codes: Array.isArray(payload.territory_codes) ? (payload.territory_codes as string[]) : undefined,
       is_active: typeof payload.is_active === "boolean" ? (payload.is_active as boolean) : true,

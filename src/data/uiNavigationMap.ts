@@ -4,6 +4,9 @@
  * Editabile da Prompt Lab → Navigation Map (admin only).
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type UiNavigationMapRow = Database["public"]["Tables"]["ui_navigation_map"]["Row"];
 
 export interface UiNavigationIntent {
   id: string;
@@ -21,64 +24,65 @@ export interface UiNavigationIntent {
   updated_at: string;
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function toIntent(row: UiNavigationMapRow): UiNavigationIntent {
+  return {
+    id: row.id,
+    intent_key: row.intent_key,
+    label: row.label,
+    description: row.description,
+    examples: row.examples,
+    path: row.path,
+    default_filters: isRecord(row.default_filters) ? row.default_filters : {},
+    modal: row.modal,
+    modal_params: isRecord(row.modal_params) ? row.modal_params : {},
+    category: row.category,
+    requires_confirmation: row.requires_confirmation,
+    enabled: row.enabled,
+    updated_at: row.updated_at,
+  };
+}
+
 const TABLE = "ui_navigation_map" as const;
 
 export async function listNavigationIntents(opts?: {
   category?: string;
   onlyEnabled?: boolean;
 }): Promise<UiNavigationIntent[]> {
-  // Untyped access: tabella non ancora nei generated types fino al prossimo regen.
-  let query = (supabase as unknown as {
-    from: (t: string) => {
-      select: (cols: string) => {
-        order: (col: string, opts: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }>;
-        eq: (col: string, val: unknown) => unknown;
-      };
-    };
-  }).from(TABLE).select("*");
+  let query = supabase.from(TABLE).select("*");
   if (opts?.onlyEnabled) {
-    // chain eq before order
-    query = (query as unknown as { eq: (c: string, v: unknown) => typeof query }).eq("enabled", true);
+    query = query.eq("enabled", true);
   }
   if (opts?.category) {
-    query = (query as unknown as { eq: (c: string, v: unknown) => typeof query }).eq("category", opts.category);
+    query = query.eq("category", opts.category);
   }
-  const { data, error } = await (query as unknown as {
-    order: (c: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }>;
-  }).order("category", { ascending: true });
+  const { data, error } = await query.order("category", { ascending: true });
   if (error) throw error;
-  return (data as UiNavigationIntent[]) ?? [];
+  return (data ?? []).map(toIntent);
 }
 
 export async function findIntentByKey(intentKey: string): Promise<UiNavigationIntent | null> {
-  const { data, error } = await (supabase as unknown as {
-    from: (t: string) => {
-      select: (c: string) => {
-        eq: (c: string, v: unknown) => {
-          maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
-        };
-      };
-    };
-  }).from(TABLE).select("*").eq("intent_key", intentKey).maybeSingle();
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("*")
+    .eq("intent_key", intentKey)
+    .maybeSingle();
   if (error) throw error;
-  return (data as UiNavigationIntent) ?? null;
+  return data ? toIntent(data) : null;
 }
 
 export async function upsertIntent(input: Partial<UiNavigationIntent> & { intent_key: string }): Promise<void> {
-  const { error } = await (supabase as unknown as {
-    from: (t: string) => {
-      upsert: (row: unknown, opts: { onConflict: string }) => Promise<{ error: unknown }>;
-    };
-  }).from(TABLE).upsert(input, { onConflict: "intent_key" });
+  const { error } = await supabase
+    .from(TABLE)
+    .upsert(input as Database["public"]["Tables"]["ui_navigation_map"]["Insert"], { onConflict: "intent_key" });
   if (error) throw error;
 }
 
 export async function deleteIntent(id: string): Promise<void> {
-  const { error } = await (supabase as unknown as {
-    from: (t: string) => {
-      delete: () => { eq: (c: string, v: unknown) => Promise<{ error: unknown }> };
-    };
-  }).from(TABLE).delete().eq("id", id);
+  const { error } = await supabase.from(TABLE).delete().eq("id", id);
   if (error) throw error;
 }
 

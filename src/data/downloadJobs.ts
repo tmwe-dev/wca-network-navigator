@@ -3,7 +3,8 @@
  * Centralizes all download-related queries and cache invalidation.
  */
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -72,6 +73,7 @@ export async function findJobsByStatusSelect(statuses: string[], select = "id, s
     .in("status", statuses)
     .limit(limit);
   if (error) throw error;
+  // select dinamico: il client tipizzato non può inferire le colonne richieste a runtime.
   return (data ?? []) as unknown as JobStatusResult[];
 }
 
@@ -104,13 +106,13 @@ export async function updateDownloadJob(
     "last_processed_wca_id" | "last_processed_company" | "last_contact_result" |
     "contacts_found_count" | "contacts_missing_count">> & { processed_ids?: number[]; completed_at?: string; failed_ids?: unknown }
 ) {
-  const payload: Record<string, unknown> = { ...updates };
-  if (updates.processed_ids) {
-    payload.processed_ids = updates.processed_ids as unknown as Json;
-  }
+  const { processed_ids, failed_ids, ...rest } = updates;
+  const payload: Database["public"]["Tables"]["download_jobs"]["Update"] = { ...rest };
+  if (processed_ids) payload.processed_ids = toJsonValue(processed_ids);
+  if (failed_ids !== undefined) payload.failed_ids = toJsonValue(failed_ids);
   const { error } = await supabase
     .from("download_jobs")
-    .update(payload as never)
+    .update(payload)
     .eq("id", id);
   if (error) throw error;
 }
@@ -141,7 +143,7 @@ export async function createDownloadJob(params: {
     .from("download_jobs")
     .insert({
       ...params,
-      wca_ids: params.wca_ids as unknown as Json,
+      wca_ids: toJsonValue(params.wca_ids),
     })
     .select("id")
     .single();
@@ -171,6 +173,7 @@ export async function getJobItemsByJobId(jobId: string, select = "status, contac
     .select(select)
     .eq("job_id", jobId);
   if (error) throw error;
+  // select dinamico: colonne note solo a runtime.
   return (data ?? []) as unknown as Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>;
 }
 
@@ -181,19 +184,20 @@ export async function getJobItemById(itemId: string, select = "attempt_count"): 
     .eq("id", itemId)
     .single();
   if (error) throw error;
+  // select dinamico: colonne note solo a runtime.
   return data as unknown as Record<string, unknown>;
 }
 
 export async function updateJobItem(itemId: string, updates: Record<string, unknown>) {
   const { error } = await supabase
     .from("download_job_items")
-    .update(updates as never)
+    .update(updates as Database["public"]["Tables"]["download_job_items"]["Update"])
     .eq("id", itemId);
   if (error) throw error;
 }
 
 export async function updateJobItemsByJobIdAndStatus(jobId: string, fromStatus: string | string[], updates: Record<string, unknown>) {
-  let q = supabase.from("download_job_items").update(updates as never).eq("job_id", jobId);
+  let q = supabase.from("download_job_items").update(updates as Database["public"]["Tables"]["download_job_items"]["Update"]).eq("job_id", jobId);
   if (Array.isArray(fromStatus)) q = q.in("status", fromStatus);
   else q = q.eq("status", fromStatus);
   const { error } = await q;

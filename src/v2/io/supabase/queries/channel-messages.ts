@@ -140,7 +140,7 @@ async function queryRecipientHistoryFromView(
         ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "recipientHistory:view"),
       );
     }
-    return ok((data ?? []) as unknown as RecipientHistoryRow[]);
+    return ok((data ?? []) as RecipientHistoryRow[]);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "recipientHistory:view"));
   }
@@ -165,7 +165,7 @@ async function queryRecipientHistoryFromLegacy(
         ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "recipientHistory:legacy"),
       );
     }
-    return ok((data ?? []) as unknown as RecipientHistoryRow[]);
+    return ok((data ?? []) as RecipientHistoryRow[]);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "recipientHistory:legacy"));
   }
@@ -224,7 +224,7 @@ async function querySenderMessagesFromView(
         ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "senderMessages:view"),
       );
     }
-    return ok((data ?? []) as unknown as SenderMessageRow[]);
+    return ok((data ?? []) as SenderMessageRow[]);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "senderMessages:view"));
   }
@@ -247,7 +247,7 @@ async function querySenderMessagesFromLegacy(
         ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderMessages:legacy"),
       );
     }
-    return ok((data ?? []) as unknown as SenderMessageRow[]);
+    return ok((data ?? []) as SenderMessageRow[]);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "senderMessages:legacy"));
   }
@@ -307,7 +307,7 @@ async function querySenderConversationFromView(
         ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "senderConversation:view"),
       );
     }
-    return ok((data ?? []) as unknown as SenderConversationRow[]);
+    return ok((data ?? []) as SenderConversationRow[]);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "senderConversation:view"));
   }
@@ -330,7 +330,7 @@ async function querySenderConversationFromLegacy(
         ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderConversation:legacy"),
       );
     }
-    return ok((data ?? []) as unknown as SenderConversationRow[]);
+    return ok((data ?? []) as SenderConversationRow[]);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "senderConversation:legacy"));
   }

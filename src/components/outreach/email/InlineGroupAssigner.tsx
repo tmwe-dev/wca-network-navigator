@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 import { upsertEmailAddressRule } from "@/data/emailAddressRules";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 type GroupRow = { nome_gruppo: string; colore: string | null; icon: string | null };
@@ -49,7 +49,7 @@ export function InlineGroupAssigner({
     enabled: open,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data } = await untypedFrom("email_sender_groups")
+      const { data } = await supabase.from("email_sender_groups")
         .select("nome_gruppo, colore, icon")
         .order("sort_order", { ascending: true });
       return (data ?? []) as GroupRow[];

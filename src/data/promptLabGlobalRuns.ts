@@ -235,7 +235,7 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
         await untypedFrom("app_settings").update({ value: p.before }).eq("key", src.key);
         restored++;
       } else if (kind === "kb_entry") {
-        await untypedFrom("kb_entries").update({ content: p.before }).eq("id", src.id);
+        await supabase.from("kb_entries").update({ content: p.before as string }).eq("id", src.id as string);
         restored++;
       } else if (kind === "operative_prompt") {
         await untypedFrom("operative_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);

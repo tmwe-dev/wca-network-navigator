@@ -14,6 +14,7 @@
  * AbortSignal propagato a tutto.
  */
 import { fs as extFs } from "@/v2/io/extensions/bridge";
+import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import {
   updatePartnerWebsiteIfMissing,
@@ -48,7 +49,7 @@ function extractMarkdown(data: unknown): string {
 
 async function checkCache(url: string): Promise<{ markdown: string; scrapedAt: string } | null> {
   try {
-    const { data } = await untypedFrom("scrape_cache")
+    const { data } = await supabase.from("scrape_cache")
       .select("payload, scraped_at")
       .eq("url", url)
       .maybeSingle();
@@ -72,6 +73,8 @@ async function persistScrape(args: {
   contactId: string | null;
 }): Promise<void> {
   try {
+    // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
+    // `.upsert()` overload cannot be resolved even though all columns are real.
     await untypedFrom("scrape_cache").upsert({
       url: args.url,
       mode: "static",

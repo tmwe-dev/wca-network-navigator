@@ -72,6 +72,7 @@ async function convertToExcel(
 
 // ── Export functions ──
 
+// DRIFT: selects "title" which does not exist on imported_contacts in generated types — left untyped.
 async function fetchContactsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
   let query = untypedFrom("imported_contacts")
     .select(
@@ -99,6 +100,7 @@ async function fetchContactsData(filters?: ExportFilters): Promise<Record<string
   return data || [];
 }
 
+// DRIFT: selects "name", "registration_number", "contact_person", "status" which do not exist on partners in generated types — left untyped.
 async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
   let query = untypedFrom("partners")
     .select(
@@ -126,6 +128,7 @@ async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string
   return data || [];
 }
 
+// DRIFT: selects "close_date" which does not exist on deals (only expected_close_date/actual_close_date) in generated types — left untyped.
 async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
   let query = untypedFrom("deals")
     .select(

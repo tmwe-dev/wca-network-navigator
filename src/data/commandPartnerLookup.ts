@@ -109,6 +109,9 @@ export async function fetchPartnersByFilters(
   filters: ReadonlyArray<{ column: string; op: string; value: unknown }>,
 ): Promise<CommandPartnerRow[]> {
   if (!filters.length) return [];
+  // DRIFT: filtri dinamici (column: string a runtime) — il query builder
+  // tipizzato richiede letterali per i nomi colonna, qui arrivano da un
+  // contesto salvato arbitrario, quindi resta su untypedFrom("partners").
   let q = untypedFrom("partners")
     .select(PARTNER_COLS)
     .eq("is_active", true)

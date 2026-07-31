@@ -19,7 +19,7 @@ function getDomain(url: string): string {
 }
 
 async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
-  const { data } = await untypedFrom("scrape_cache")
+  const { data } = await supabase.from("scrape_cache")
     .select("payload, scraped_at")
     .eq("url", url)
     .maybeSingle();
@@ -32,6 +32,9 @@ async function getCachedScrape(url: string): Promise<Record<string, unknown> | n
 }
 
 async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
+  // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
+  // `.upsert()` overload cannot be resolved even though all columns are real.
+  // Left on untypedFrom (TS overload-resolution limitation, not a schema mismatch).
   await untypedFrom("scrape_cache")
     .upsert({ url, payload, scraped_at: new Date().toISOString() });
 }

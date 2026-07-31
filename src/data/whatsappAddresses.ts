@@ -1,7 +1,7 @@
 /**
  * DAL — whatsapp_addresses (Rubrica WhatsApp)
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface WhatsAppAddressRow {
@@ -32,7 +32,8 @@ export async function listWhatsAppAddresses(opts: {
   limit?: number;
 } = {}): Promise<WhatsAppAddressRow[]> {
   const limit = opts.limit ?? 500;
-  let q = untypedFrom("whatsapp_addresses")
+  let q = supabase
+    .from("whatsapp_addresses")
     .select("*, linked_partner:partners(id,company_name)")
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(limit);
@@ -46,7 +47,7 @@ export async function listWhatsAppAddresses(opts: {
 }
 
 export async function updateWhatsAppAddressNotes(id: string, notes: string): Promise<void> {
-  const { error } = await untypedFrom("whatsapp_addresses").update({ notes }).eq("id", id);
+  const { error } = await supabase.from("whatsapp_addresses").update({ notes }).eq("id", id);
   if (error) throw error;
 }
 

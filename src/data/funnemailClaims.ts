@@ -1,11 +1,7 @@
 /**
  * DAL — Funnemail "Lo prendo io" (claim/release/force-claim).
- *
- * La tabella `funnemail_message_claims` è stata creata in una migration
- * più recente della rigenerazione dei tipi Supabase: usiamo cast espliciti.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface FunnemailClaimRow {
   message_id: string;
@@ -26,14 +22,14 @@ const TABLE = "funnemail_message_claims" as const;
 export async function listActiveFunnemailClaims(
   groupId?: string | null,
 ): Promise<FunnemailClaimWithOperator[]> {
-  let q = untypedFrom(TABLE)
+  let q = supabase.from(TABLE)
     .select("message_id, group_id, claimed_by, claimed_at, released_at, user_id")
     .is("released_at", null);
   if (groupId) q = q.eq("group_id", groupId);
 
   const { data, error } = await q;
   if (error) throw error;
-  const rows = (data ?? []) as FunnemailClaimRow[];
+  const rows = data ?? [];
 
   // Risolvi display name dal table operators (non-blocking per row)
   const ids = Array.from(new Set(rows.map((r) => r.claimed_by)));
@@ -67,18 +63,17 @@ export async function claimFunnemailMessage(args: {
   if (!uid) throw new Error("not_authenticated");
 
   // Verifica claim esistente attivo
-  const { data: existing } = await untypedFrom(TABLE)
+  const { data: existing } = await supabase.from(TABLE)
     .select("message_id, group_id, claimed_by, claimed_at, released_at, user_id")
     .eq("message_id", args.messageId)
     .is("released_at", null)
     .maybeSingle();
 
-  const current = existing as FunnemailClaimRow | null;
-  if (current && current.claimed_by !== uid) {
-    return { ok: false, conflict: current };
+  if (existing && existing.claimed_by !== uid) {
+    return { ok: false, conflict: existing };
   }
 
-  const { error } = await untypedFrom(TABLE)
+  const { error } = await supabase.from(TABLE)
     .upsert(
       {
         message_id: args.messageId,
@@ -96,7 +91,7 @@ export async function claimFunnemailMessage(args: {
 
 /** Rilascia il claim (soft, per audit). Solo proprietario o admin via RLS. */
 export async function releaseFunnemailMessage(messageId: string): Promise<void> {
-  const { error } = await untypedFrom(TABLE)
+  const { error } = await supabase.from(TABLE)
     .update({ released_at: new Date().toISOString() })
     .eq("message_id", messageId)
     .is("released_at", null);
