@@ -15,6 +15,16 @@ const log = createLogger("rbac");
 
 const TEAMS_TABLE_WARNING = 'Table "teams" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
 
+/**
+ * NOTA SCHEMA (type safety):
+ * i tipi generati per `user_roles` espongono solo (id, user_id, role, created_at)
+ * e `team_members` solo (id, name, email, role, is_active, created_at).
+ * Le query che usano `role_id` / `assigned_by` / `team_id` appartengono al modello
+ * RBAC granulare descritto nella migrazione 20260422180200_lovable102_rbac.sql ma NON
+ * presente nei tipi generati: restano quindi su `untypedFrom` (documentato, non inventiamo
+ * schema). Tutto il resto — roles, permissions, role_permissions — è ora tipizzato.
+ */
+
 // ─── Types ──────────────────────────────────────────────
 
 // Local type definitions for tables that may not be in Supabase schema
@@ -95,34 +105,51 @@ interface UserRoleIdRow {
  * Fetch all roles
  */
 export async function fetchRoles(): Promise<Role[]> {
-  const { data, error } = await untypedFrom("roles")
+  const { data, error } = await supabase
+    .from("roles")
     .select("*")
     .order("name");
   if (error) throw error;
-  return data || [];
+  return (data ?? []).map(mapRole);
+}
+
+type RoleRow = Database["public"]["Tables"]["roles"]["Row"];
+type PermissionRow = Database["public"]["Tables"]["permissions"]["Row"];
+
+function mapRole(row: RoleRow): Role {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    is_system: row.is_system ?? false,
+    created_at: row.created_at ?? undefined,
+  };
+}
+
+function mapPermission(row: PermissionRow): Permission {
+  return {
+    id: row.id,
+    key: row.key,
+    description: row.description,
+    module: row.module,
+    created_at: row.created_at ?? undefined,
+  };
 }
 
 /**
  * Fetch a single role with its permissions
  */
 export async function fetchRoleWithPermissions(roleId: string): Promise<RoleWithPermissions | null> {
-  const { data: role, error: roleError } = await untypedFrom("roles")
+  const { data: role, error: roleError } = await supabase
+    .from("roles")
     .select("*")
     .eq("id", roleId)
     .maybeSingle();
   if (roleError) throw roleError;
   if (!role) return null;
 
-  const { data: permissions, error: permError } = await untypedFrom("role_permissions")
-    .select("permission_id, permissions(id, key, description, module)")
-    .eq("role_id", roleId);
-  if (permError) throw permError;
-
-  const perms = ((permissions ?? []) as RolePermissionRow[])
-    .map((rp) => rp.permissions ?? null)
-    .filter((p): p is Permission => p != null);
-
-  return { ...role, permissions: perms };
+  const perms = await fetchRolePermissions(roleId);
+  return { ...mapRole(role), permissions: perms };
 }
 
 /**
@@ -133,12 +160,13 @@ export async function createRole(
   description?: string,
   isSystem: boolean = false
 ): Promise<Role> {
-  const { data, error } = await untypedFrom("roles")
+  const { data, error } = await supabase
+    .from("roles")
     .insert({ name, description, is_system: isSystem })
     .select()
     .single();
   if (error) throw error;
-  return data;
+  return mapRole(data);
 }
 
 /**
@@ -148,20 +176,22 @@ export async function updateRole(
   roleId: string,
   updates: { name?: string; description?: string }
 ): Promise<Role> {
-  const { data, error } = await untypedFrom("roles")
+  const { data, error } = await supabase
+    .from("roles")
     .update(updates)
     .eq("id", roleId)
     .select()
     .single();
   if (error) throw error;
-  return data;
+  return mapRole(data);
 }
 
 /**
  * Delete a role (cannot delete system roles)
  */
 export async function deleteRole(roleId: string): Promise<void> {
-  const { data: role, error: fetchError } = await untypedFrom("roles")
+  const { data: role, error: fetchError } = await supabase
+    .from("roles")
     .select("is_system")
     .eq("id", roleId)
     .maybeSingle();
@@ -170,7 +200,7 @@ export async function deleteRole(roleId: string): Promise<void> {
     throw new Error("Cannot delete system role");
   }
 
-  const { error } = await untypedFrom("roles").delete().eq("id", roleId);
+  const { error } = await supabase.from("roles").delete().eq("id", roleId);
   if (error) throw error;
 }
 
@@ -180,11 +210,12 @@ export async function deleteRole(roleId: string): Promise<void> {
  * Fetch all permissions
  */
 export async function fetchPermissions(): Promise<Permission[]> {
-  const { data, error } = await untypedFrom("permissions")
+  const { data, error } = await supabase
+    .from("permissions")
     .select("*")
     .order("module, key");
   if (error) throw error;
-  return data || [];
+  return (data ?? []).map(mapPermission);
 }
 
 // ─── Role Permissions ───────────────────────────────────
@@ -193,8 +224,9 @@ export async function fetchPermissions(): Promise<Permission[]> {
  * Fetch permissions for a role
  */
 export async function fetchRolePermissions(roleId: string): Promise<Permission[]> {
-  const { data, error } = await untypedFrom("role_permissions")
-    .select("permission_id, permissions(id, key, description, module)")
+  const { data, error } = await supabase
+    .from("role_permissions")
+    .select("permission_id, permissions(id, key, description, module, created_at)")
     .eq("role_id", roleId);
   if (error) throw error;
 
@@ -207,7 +239,8 @@ export async function fetchRolePermissions(roleId: string): Promise<Permission[]
  * Assign a permission to a role
  */
 export async function assignPermission(roleId: string, permissionId: string): Promise<void> {
-  const { error } = await untypedFrom("role_permissions")
+  const { error } = await supabase
+    .from("role_permissions")
     .insert({ role_id: roleId, permission_id: permissionId });
   if (error && error.code !== "23505") throw error; // Ignore unique constraint
 }
@@ -216,7 +249,8 @@ export async function assignPermission(roleId: string, permissionId: string): Pr
  * Remove a permission from a role
  */
 export async function removePermission(roleId: string, permissionId: string): Promise<void> {
-  const { error } = await untypedFrom("role_permissions")
+  const { error } = await supabase
+    .from("role_permissions")
     .delete()
     .eq("role_id", roleId)
     .eq("permission_id", permissionId);
@@ -297,7 +331,8 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   if (!roleIds.length) return false;
 
   // Fetch permission ID
-  const { data: permission, error: permError } = await untypedFrom("permissions")
+  const { data: permission, error: permError } = await supabase
+    .from("permissions")
     .select("id")
     .eq("key", permissionKey)
     .maybeSingle();
@@ -305,8 +340,9 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   if (!permission) return false;
 
   // Check if any of user's roles have this permission
-  const { data: rolePerms, error: checkError } = await untypedFrom("role_permissions")
-    .select("id")
+  const { data: rolePerms, error: checkError } = await supabase
+    .from("role_permissions")
+    .select("permission_id")
     .eq("permission_id", permission.id)
     .in("role_id", roleIds)
     .limit(1);
