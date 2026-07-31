@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recha
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findTokensByFunctionSince } from "@/data/tokenCockpit";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFunctionDisplayName } from "@/lib/tokenFormat";
 
@@ -44,10 +45,7 @@ export function TokenByFunctionPie() {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const { data, error } = await supabase
-        .from("ai_prompt_log")
-        .select("function_name, tokens_total")
-        .gte("created_at", sevenDaysAgo.toISOString());
+      const { data, error } = await findTokensByFunctionSince(sevenDaysAgo.toISOString());
 
       if (error) {
         log.error("Error fetching function breakdown:", { error: error });

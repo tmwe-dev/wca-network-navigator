@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findRecentTokenUsageRows } from "@/data/tokenCockpit";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,11 +46,7 @@ export function TokenUsageTable() {
     queryFn: async () => {
       if (!userData?.id) return [];
 
-      const { data, error } = await supabase
-        .from("ai_prompt_log")
-        .select("id, function_name, model, tokens_in, tokens_out, tokens_total, cost_usd, created_at")
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const { data, error } = await findRecentTokenUsageRows(20);
 
       if (error) {
         log.error("Error fetching table data:", { error: error });

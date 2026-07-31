@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findTokenTotalsSince, findTokenLimitSettings } from "@/data/tokenCockpit";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTokenCount } from "@/lib/tokenFormat";
 
@@ -72,20 +73,10 @@ export function TokenBudgetGauge() {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const [{ data: dailyData }, { data: monthlyData }, { data: settingsData }] = await Promise.all([
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfDay.toISOString()),
-        supabase
-          .from("ai_prompt_log")
-          .select("tokens_total")
-          .gte("created_at", startOfMonth.toISOString()),
-        supabase
-          .from("app_settings")
-          .select("key, value")
-          .eq("user_id", userData.id)
-          .in("key", ["ai_daily_token_limit", "ai_monthly_token_limit"]),
+      const [dailyData, monthlyData, settingsData] = await Promise.all([
+        findTokenTotalsSince(startOfDay.toISOString()),
+        findTokenTotalsSince(startOfMonth.toISOString()),
+        findTokenLimitSettings(userData.id),
       ]);
 
       const dailyUsed = (dailyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
