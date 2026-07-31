@@ -61,6 +61,10 @@ function toContactUpdate(updates: Record<string, unknown>): ImportedContactUpdat
     if (!(key in updates)) continue;
     out[key] = toJsonValue(updates[key]);
   }
+  const dropped = Object.keys(updates).filter((k) => !CONTACT_UPDATABLE_COLUMNS.includes(k));
+  if (dropped.length > 0) {
+    log.warn("[toContactUpdate] chiavi ignorate (non aggiornabili)", { keys: dropped.join(",") });
+  }
   return out;
 }
 
