@@ -14,10 +14,11 @@ test.describe("App Routing Access [A01]", () => {
     expect(response?.status()).toBeLessThan(400);
     await expect(page.locator("body")).toBeVisible();
   });
-  test("/auth has form inputs", async ({ page }) => {
+  // TMWE-only auth: la login espone solo l'ingresso OAuth, nessun input credenziali.
+  test("/auth espone l'ingresso TMWE", async ({ page }) => {
     await page.goto("/auth");
-    const emailInput = page.locator('input[type="email"]');
-    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Entra con TMWE|Preparazione login/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
   });
   test("/auth has no ErrorBoundary", async ({ page }) => {
     await page.goto("/auth");

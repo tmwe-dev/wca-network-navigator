@@ -34,7 +34,12 @@ export function LoginPage(): React.ReactElement {
 
   const [tmweLoginUrl, setTmweLoginUrl] = useState<string | null>(null);
   const [tmwePreparing, setTmwePreparing] = useState(false);
-  const [tmweError, setTmweError] = useState<string | null>(null);
+  // Errori del callback OAuth (?tmwe=error&reason=...) e errori di avvio login
+  // sono separati: il refresh periodico dell'URL di login non deve cancellare
+  // il motivo di rifiuto mostrato all'utente.
+  const [callbackError, setCallbackError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+  const tmweError = callbackError ?? startError;
   const [isEmbedded] = useState(() => {
     try {
       return window.self !== window.top;
@@ -45,13 +50,13 @@ export function LoginPage(): React.ReactElement {
 
   const prepareTmweLogin = useCallback(async () => {
     setTmwePreparing(true);
-    setTmweError(null);
+    setStartError(null);
     try {
       const url = await tmweLoginStart();
       setTmweLoginUrl(url);
     } catch (err) {
       setTmweLoginUrl(null);
-      setTmweError(err instanceof Error ? err.message : String(err));
+      setStartError(err instanceof Error ? err.message : String(err));
     } finally {
       setTmwePreparing(false);
     }
@@ -69,7 +74,9 @@ export function LoginPage(): React.ReactElement {
     const params = new URLSearchParams(location.search);
     if (params.get("tmwe") === "error") {
       const reason = params.get("reason") ?? "unknown";
-      setTmweError(REASON_MESSAGES[reason] ?? `Login TMWE fallito: ${reason}`);
+      setCallbackError(REASON_MESSAGES[reason] ?? `Login TMWE fallito: ${reason}`);
+    } else {
+      setCallbackError(null);
     }
   }, [location.search]);
 

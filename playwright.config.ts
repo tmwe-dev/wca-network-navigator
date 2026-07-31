@@ -15,7 +15,15 @@
  */
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = Number(process.env.E2E_PORT ?? 4173);
+/**
+ * Modalità server (versionata, nessun file di config temporaneo):
+ *   E2E_SERVER_MODE=preview (default) → build statica su :4173
+ *   E2E_SERVER_MODE=dev               → vite dev server su :8080
+ *   E2E_SERVER_MODE=external          → nessun webServer, usa E2E_BASE_URL
+ */
+const SERVER_MODE = process.env.E2E_SERVER_MODE ?? "preview";
+const DEFAULT_PORT = SERVER_MODE === "dev" ? 8080 : 4173;
+const PORT = Number(process.env.E2E_PORT ?? DEFAULT_PORT);
 const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 
 export default defineConfig({
@@ -39,14 +47,30 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Opzionale: permette di puntare a un Chromium di sistema quando i
+        // binari scaricati da Playwright non sono eseguibili (sandbox senza
+        // librerie di sistema). Nessun path è hardcodato nel repo.
+        ...(process.env.E2E_CHROMIUM_PATH
+          ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM_PATH } }
+          : {}),
+      },
+    },
   ],
 
-  webServer: {
-    // Avvia la build statica già prodotta da `vite build`
-    command: "npm run preview -- --port " + PORT + " --strictPort",
-    url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer:
+    SERVER_MODE === "external"
+      ? undefined
+      : {
+          command:
+            SERVER_MODE === "dev"
+              ? `npm run dev -- --port ${PORT} --strictPort`
+              : `npm run preview -- --port ${PORT} --strictPort`,
+          url: BASE_URL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
 });

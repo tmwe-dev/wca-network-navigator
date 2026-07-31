@@ -9,10 +9,12 @@ test.describe("Auth Guard [AUTH]", () => {
       expect(page.url()).toContain("/auth");
     });
   }
-  test("auth page renders login form", async ({ page }) => {
+  // TMWE-only auth (mem://auth/tmwe-only-auth-2026-05-05): niente form credenziali.
+  test("auth page mostra l'ingresso TMWE e nessun campo credenziali", async ({ page }) => {
     await page.goto("/auth");
-    const inputs = page.locator("input");
-    expect(await inputs.count()).toBeGreaterThan(0);
+    await expect(page.getByText(/Entra con TMWE|Preparazione login/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
+    await expect(page.locator('input[type="email"]')).toHaveCount(0);
   });
   test("auth page has no ErrorBoundary", async ({ page }) => {
     await page.goto("/auth");
