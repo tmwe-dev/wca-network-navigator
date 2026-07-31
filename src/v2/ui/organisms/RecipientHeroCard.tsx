@@ -127,8 +127,7 @@ export function RecipientHeroCard({
     queryKey: ["compose-recipient-hero", partnerId],
     queryFn: async (): Promise<PartnerSnapshot | null> => {
       if (!partnerId) return null;
-      const row = await findPartnerHeroSnapshot(partnerId);
-      return (row as unknown as PartnerSnapshot) ?? null;
+      return await findPartnerHeroSnapshot(partnerId);
     },
     enabled: !!partnerId,
     staleTime: 30_000,
