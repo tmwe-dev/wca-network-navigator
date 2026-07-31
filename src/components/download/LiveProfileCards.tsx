@@ -43,13 +43,10 @@ export function LiveProfileCards() {
     queryFn: async () => {
       const lastIds = processedIds.slice(-20);
       if (lastIds.length === 0) return [];
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, email, phone, website, wca_id, partner_networks(network_name), partner_contacts(name, email, title)")
-        .in("wca_id", lastIds);
+      const data = await findLiveProfilePartners(lastIds);
       // Sort by processedIds order (most recent last)
       const idOrder = new Map(lastIds.map((id, i) => [id, i]));
-      return ((data || []) as ProfileData[]).sort((a, b) =>
+      return (data as ProfileData[]).sort((a, b) =>
         (idOrder.get(b.wca_id!) ?? 0) - (idOrder.get(a.wca_id!) ?? 0)
       );
     },

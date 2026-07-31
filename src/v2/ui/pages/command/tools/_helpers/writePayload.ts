@@ -8,7 +8,12 @@
  * Merge policy: chiave per chiave, il valore del planner vince quando
  * non è vuoto; altrimenti si prende il fallback dal prompt.
  */
-import { supabase } from "@/integrations/supabase/client";
+import {
+  resolvePartnerRefById,
+  resolvePartnerRefByTerm,
+  resolveContactRefById,
+  resolveContactRefByTerm,
+} from "@/data/commandRefResolvers";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,20 +57,9 @@ export async function resolvePartnerRef(
   const term = (ref ?? "").trim();
   if (!term) return null;
   if (isUuid(term)) {
-    const { data } = await supabase
-      .from("partners")
-      .select("id, company_name")
-      .eq("id", term)
-      .maybeSingle();
-    return data ? { id: data.id as string, company_name: (data.company_name ?? "") as string } : null;
+    return await resolvePartnerRefById(term);
   }
-  const { data } = await supabase
-    .from("partners")
-    .select("id, company_name")
-    .or(`company_name.ilike.%${term}%,company_alias.ilike.%${term}%`)
-    .limit(1)
-    .maybeSingle();
-  return data ? { id: data.id as string, company_name: (data.company_name ?? "") as string } : null;
+  return await resolvePartnerRefByTerm(term);
 }
 
 /**
@@ -77,18 +71,7 @@ export async function resolveContactRef(
   const term = (ref ?? "").trim();
   if (!term) return null;
   if (isUuid(term)) {
-    const { data } = await supabase
-      .from("imported_contacts")
-      .select("id, name")
-      .eq("id", term)
-      .maybeSingle();
-    return data ? { id: data.id as string, name: (data.name ?? "") as string } : null;
+    return await resolveContactRefById(term);
   }
-  const { data } = await supabase
-    .from("imported_contacts")
-    .select("id, name")
-    .or(`name.ilike.%${term}%,email.ilike.%${term}%`)
-    .limit(1)
-    .maybeSingle();
-  return data ? { id: data.id as string, name: (data.name ?? "") as string } : null;
+  return await resolveContactRefByTerm(term);
 }

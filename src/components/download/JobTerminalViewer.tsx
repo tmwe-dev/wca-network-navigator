@@ -197,12 +197,8 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
   const { data: logs } = useQuery({
     queryKey: queryKeys.downloads.terminalLog(jobId),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("download_jobs")
-        .select("terminal_log")
-        .eq("id", jobId)
-        .single();
-      return (data?.terminal_log as unknown as LogEntry[] | null) || [];
+      const terminalLog = await getDownloadJobTerminalLog(jobId);
+      return (terminalLog as LogEntry[] | null) || [];
     },
     refetchInterval: isActive ? 2000 : false,
     enabled: open && !!jobId,
