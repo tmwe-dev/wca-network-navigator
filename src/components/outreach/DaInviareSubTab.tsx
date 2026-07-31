@@ -15,10 +15,9 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
-import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry } from "@/data/outreachPipeline";
+import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry, findPendingBulkQueue, cancelBulkQueueItem } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 import { EmailPreviewPane, type EmailPreviewItem } from "./EmailPreviewPane";
-import { supabase } from "@/integrations/supabase/client";
 
 const CHANNEL_ICON: Record<string, typeof Mail> = { send_email: Mail, email: Mail, outreach: Mail, send_whatsapp: MessageCircle, whatsapp: MessageCircle, linkedin: Linkedin, phone: Phone };
 const SOURCE_BADGE: Record<string, { label: string; color: string }> = {
@@ -59,13 +58,7 @@ export function DaInviareSubTab() {
   const { data: bulkPending } = useQuery({
     queryKey: ["outreach", "pending", "bulk"],
     queryFn: async () => {
-      const { data: rows } = await supabase
-        .from("email_campaign_queue")
-        .select("id, recipient_email, recipient_name, subject, html_body, status, scheduled_at, created_at, partner_id, draft_id")
-        .in("status", ["pending", "sending", "scheduled"])
-        .order("created_at", { ascending: false })
-        .limit(200);
-      return rows ?? [];
+      return findPendingBulkQueue(200);
     },
     refetchInterval: 30000,
   });
@@ -142,8 +135,7 @@ export function DaInviareSubTab() {
     const realId = item.id.split("-").slice(1).join("-");
     try {
       if (item.type === "bulk_queue") {
-        const { error } = await supabase.from("email_campaign_queue").update({ status: "cancelled" }).eq("id", realId);
-        if (error) throw error;
+        await cancelBulkQueueItem(realId);
       } else if (item.type === "activity") await cancelActivity(realId);
       else if (item.type === "mission_action") await cancelMissionAction(realId);
       else await cancelPendingAction(realId);

@@ -33,3 +33,9 @@ export async function findAgentTasksList(agentId?: string, limit = 100): Promise
   if (error) throw error;
   return (data ?? []) as unknown as AgentTaskRow[];
 }
+
+/** Insert generico su agent_tasks (usato dai tool Command / harmonize orchestrator). */
+export async function insertAgentTask(task: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from("agent_tasks").insert(task as never);
+  if (error) throw error;
+}

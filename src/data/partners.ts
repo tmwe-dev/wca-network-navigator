@@ -805,3 +805,110 @@ export async function findActivePartnerIdsByCountries(countryCodes: string[], li
   const { data } = await supabase.from("partners").select("id").in("country_code", countryCodes).eq("is_active", true).limit(limit);
   return data ?? [];
 }
+
+// ── Enrichment / Globe bulk loaders (LOVABLE-DAL) ──
+
+export interface EnrichmentPartnerRow {
+  id: string;
+  company_name: string;
+  email: string | null;
+  website: string | null;
+  country_code: string | null;
+  logo_url: string | null;
+  enrichment_data: Record<string, unknown> | null;
+}
+
+/** Carica TUTTI i partner per la vista di enrichment (bypass cap 1000 righe). */
+export async function loadAllPartnersForEnrichment(): Promise<EnrichmentPartnerRow[]> {
+  const all: EnrichmentPartnerRow[] = [];
+  const batchSize = 1000;
+  let page = 0;
+  while (page < 200) {
+    const from = page * batchSize;
+    const to = from + batchSize - 1;
+    const { data, error } = await supabase
+      .from("partners")
+      .select("id, company_name, email, website, country_code, logo_url, enrichment_data")
+      .range(from, to)
+      .limit(batchSize);
+    if (error) throw error;
+    if (data && data.length) all.push(...(data as unknown as EnrichmentPartnerRow[]));
+    if (!data || data.length < batchSize) break;
+    page++;
+  }
+  return all;
+}
+
+export interface GlobePartnerRow {
+  id: string;
+  company_name: string;
+  city: string;
+  country_code: string;
+  country_name: string;
+  email: string | null;
+  partner_type: string | null;
+}
+
+/** Carica TUTTI i partner attivi per il globo 3D (pagina fino a esaurimento). */
+export async function fetchAllPartnersForGlobe(): Promise<GlobePartnerRow[]> {
+  const PAGE_SIZE = 2000;
+  let all: GlobePartnerRow[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("id, company_name, city, country_code, country_name, email, partner_type")
+      .eq("is_active", true)
+      .order("company_name")
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all = all.concat(data as unknown as GlobePartnerRow[]);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
+}
+
+/** Carica TUTTI i partner attivi di un paese per il globo 3D. */
+export async function fetchPartnersByCountryForGlobe(countryCode: string): Promise<GlobePartnerRow[]> {
+  const PAGE_SIZE = 2000;
+  let all: GlobePartnerRow[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("id, company_name, city, country_code, country_name, email, partner_type")
+      .eq("is_active", true)
+      .eq("country_code", countryCode)
+      .order("company_name")
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all = all.concat(data as unknown as GlobePartnerRow[]);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
+}
+
+export interface PickerPartnerRow {
+  id: string;
+  company_name: string;
+  company_alias: string | null;
+  country_code: string | null;
+  city: string;
+  lead_status: string | null;
+}
+
+/** Ricerca partner attivi per il picker contatti email (search + country). */
+export async function searchPartnersForPicker(search: string, countryCode: string | null): Promise<PickerPartnerRow[]> {
+  let q = supabase
+    .from("partners")
+    .select("id, company_name, company_alias, country_code, city, lead_status");
+  if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
+  if (countryCode) q = q.eq("country_code", countryCode);
+  q = q.eq("is_active", true);
+  const { data } = await q.order("company_name").limit(200);
+  return (data ?? []) as PickerPartnerRow[];
+}

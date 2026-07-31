@@ -64,3 +64,8 @@ export async function upsertAgentPersona(input: AgentPersonaUpsert): Promise<voi
     .upsert(payload as never, { onConflict: "agent_id" });
   if (error) throw error;
 }
+/** Update arbitrario della persona di un agente, per agent_id (usato dai tool Command). */
+export async function updateAgentPersonaByAgentId(agentId: string, updates: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from("agent_personas").update(updates as never).eq("agent_id", agentId);
+  if (error) throw error;
+}

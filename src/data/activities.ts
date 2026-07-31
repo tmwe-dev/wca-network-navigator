@@ -377,3 +377,32 @@ export async function updateActivityDescription(id: string, description: string)
     .eq("id", id);
   if (error) throw error;
 }
+
+/** Risolve un riferimento attività (UUID esatto o titolo fuzzy, non completate) → {id, title}. */
+export async function findActivityRef(ref: string, byId: boolean): Promise<{ id: string; title: string } | null> {
+  if (byId) {
+    const { data } = await supabase.from("activities").select("id, title").eq("id", ref).maybeSingle();
+    return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+  }
+  const { data } = await supabase
+    .from("activities")
+    .select("id, title")
+    .ilike("title", `%${ref}%`)
+    .neq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? { id: data.id as string, title: (data.title ?? "") as string } : null;
+}
+
+/** Patch arbitrario di un'attività per id (usato dai tool Command). */
+export async function patchActivity(id: string, patch: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from("activities").update(patch as ActivityUpdate).eq("id", id);
+  if (error) throw error;
+}
+
+/** Insert di un'attività human con campi custom (usato dal tool Command schedule-activity). */
+export async function insertHumanActivity(activity: ActivityInsert): Promise<void> {
+  const { error } = await supabase.from("activities").insert(activity);
+  if (error) throw error;
+}

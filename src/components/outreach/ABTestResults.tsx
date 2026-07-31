@@ -1,34 +1,15 @@
 /**
- * ABTestResults — Dashboard showing A/B test results with comparison
+ * ABTestRowResults — Dashboard showing A/B test results with comparison
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAbTests, completeAbTest, type ABTestRowRow } from "@/data/abTests";
 import { toast } from "sonner";
 import { FlaskConical, Star, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ABTestCreator } from "./ABTestCreator";
-
-interface ABTest {
-  id: string;
-  test_name: string;
-  test_type: string;
-  status: string;
-  variant_a: Record<string, string>;
-  variant_b: Record<string, string>;
-  total_sent_a: number;
-  total_sent_b: number;
-  responses_a: number;
-  responses_b: number;
-  open_rate_a: number;
-  open_rate_b: number;
-  winner: string | null;
-  confidence_level: number;
-  started_at: string;
-  completed_at: string | null;
-}
+import { ABTestRowCreator } from "./ABTestRowCreator";
 
 function VariantColumn({ label, sent, responses, rate, isWinner }: {
   label: string; sent: number; responses: number; rate: number; isWinner: boolean;
@@ -66,7 +47,7 @@ function VariantColumn({ label, sent, responses, rate, isWinner }: {
   );
 }
 
-function TestCard({ test, onComplete }: { test: ABTest; onComplete: (id: string) => void }) {
+function TestCard({ test, onComplete }: { test: ABTestRow; onComplete: (id: string) => void }) {
   const variantAText = Object.values(test.variant_a)[0] || "—";
   const variantBText = Object.values(test.variant_b)[0] || "—";
   const isSignificant = test.confidence_level >= 95;
@@ -120,19 +101,13 @@ function TestCard({ test, onComplete }: { test: ABTest; onComplete: (id: string)
   );
 }
 
-export function ABTestResults() {
+export function ABTestRowResults() {
   const qc = useQueryClient();
 
   const { data: tests = [], isLoading } = useQuery({
     queryKey: ["ab-tests"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ab_tests")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return (data || []) as ABTest[];
+      return findAbTests(50);
     },
     staleTime: 30_000,
   });
@@ -141,13 +116,8 @@ export function ABTestResults() {
     mutationFn: async (testId: string) => {
       const test = tests.find(t => t.id === testId);
       if (!test) return;
-      const winner = test.open_rate_a >= test.open_rate_b ? "a" : "b";
-      const { error } = await supabase.from("ab_tests").update({
-        status: "completed",
-        winner,
-        completed_at: new Date().toISOString(),
-      }).eq("id", testId);
-      if (error) throw error;
+      const winner: "a" | "b" = test.open_rate_a >= test.open_rate_b ? "a" : "b";
+      await completeAbTest(testId, winner);
     },
     onSuccess: () => {
       toast.success("Test completato");
@@ -176,7 +146,7 @@ export function ABTestResults() {
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <FlaskConical className="w-4 h-4 text-primary" /> A/B Test ({tests.length})
           </h2>
-          <ABTestCreator />
+          <ABTestRowCreator />
         </div>
         {tests.map(t => (
           <TestCard key={t.id} test={t} onComplete={(id) => completeMutation.mutate(id)} />
