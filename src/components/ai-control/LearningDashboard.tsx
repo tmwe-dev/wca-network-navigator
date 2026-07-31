@@ -4,47 +4,25 @@
  * Visual: Progress bars, TrendingUp/Down, problematic senders, yellow suggestion card.
  */
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { findLearningDecisions, findRecentFeedbackDecisions } from '@/data/aiDecisionLog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface DecisionRow {
-  decision_type: string;
-  email_address: string | null;
-  confidence: number | null;
-  user_review: string | null;
-  was_auto_executed: boolean;
-}
-
 export function LearningDashboard() {
   const { data: decisions = [], isLoading } = useQuery({
     queryKey: ['learning-decisions'],
     queryFn: async () => {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-      const { data, error } = await supabase
-        .from('ai_decision_log')
-        .select('decision_type, email_address, confidence, user_review, was_auto_executed')
-        .gte('created_at', thirtyDaysAgo);
-      if (error) throw error;
-      return (data || []) as DecisionRow[];
+      return findLearningDecisions(thirtyDaysAgo);
     },
   });
 
   const { data: recentFeedback = [] } = useQuery({
     queryKey: ['recent-feedback-decisions'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ai_decision_log')
-        .select('id, decision_type, ai_reasoning, confidence, user_review, user_correction, email_address, created_at')
-        .not('user_review', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => findRecentFeedbackDecisions(10),
   });
 
   // Compute classification accuracy
