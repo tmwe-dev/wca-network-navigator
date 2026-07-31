@@ -8,12 +8,11 @@
  * Il kill-switch globale `system_flags.cron_paused` NON è reimplementato qui:
  * è l'unica implementazione condivisa in `cronGate.ts` (`isCronPaused`).
  */
-import { isCronPaused } from "./cronGate.ts";
+import { isCronPausedWith } from "./cronGate.ts";
+import { cronTable, type SupabaseCronClient } from "./supabaseCronClient.ts";
 
-// Generic supabase-js client interface (avoids type imports across deno boundary)
-interface SupabaseLike {
-  from: (table: string) => any;
-}
+/** Tipo condiviso con cronGate: nessun cast necessario. */
+type SupabaseLike = SupabaseCronClient;
 
 export interface CronGuardConfig {
   /** Job key in cron_run_log (es: "outreach_scheduler"). */
@@ -35,7 +34,10 @@ export async function cronGuardCheck(
   config: CronGuardConfig
 ): Promise<CronGuardResult> {
   // 0. Global kill-switch (system_flags.cron_paused) — implementazione unica in cronGate
-  if (await isCronPaused(supabase as never)) {
+  const cronPaused = await isCronPausedWith(() =>
+    cronTable(supabase, "system_flags").select("value").eq("key", "cron_paused").maybeSingle()
+  );
+  if (cronPaused) {
     console.warn(JSON.stringify({
       level: "warn",
       event: "cron_paused_skip",
@@ -56,15 +58,15 @@ export async function cronGuardCheck(
   if (Number.isFinite(parsed) && parsed > 0) intervalMin = parsed;
 
   try {
-    const { data: lastRun } = await supabase
-      .from("cron_run_log")
+    const { data: lastRun } = await cronTable(supabase, "cron_run_log")
       .select("ran_at")
       .eq("job_name", config.jobName)
       .order("ran_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (lastRun?.ran_at) {
-      const elapsedMin = (Date.now() - new Date(lastRun.ran_at).getTime()) / 60000;
+    const ranAt = lastRun?.ran_at;
+    if (typeof ranAt === "string") {
+      const elapsedMin = (Date.now() - new Date(ranAt).getTime()) / 60000;
       if (elapsedMin < intervalMin) {
         return { skip: true, reason: "throttled", nextInMin: Math.ceil(intervalMin - elapsedMin) };
       }
@@ -79,8 +81,7 @@ export async function cronGuardCheck(
 /** Legge una `app_settings` globale (user_id NULL). Fail-open: null su errore. */
 async function readGlobalSetting(supabase: SupabaseLike, key: string): Promise<string | null> {
   try {
-    const { data } = await supabase
-      .from("app_settings")
+    const { data } = await cronTable(supabase, "app_settings")
       .select("value")
       .eq("key", key)
       .is("user_id", null)
@@ -100,7 +101,7 @@ export async function cronGuardLogRun(
   error?: string | null
 ): Promise<void> {
   try {
-    await supabase.from("cron_run_log").insert({
+    await cronTable(supabase, "cron_run_log").insert({
       job_name: jobName,
       ran_at: new Date().toISOString(),
       result,

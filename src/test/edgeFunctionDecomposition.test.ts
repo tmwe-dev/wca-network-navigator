@@ -5,8 +5,17 @@ import * as path from "path";
 describe("Edge Function Decomposition — ai-assistant", () => {
   const sharedDir = path.resolve("supabase/functions/_shared");
 
+  const readModules = [
+    "toolHandlersRead.ts",
+    "toolHandlersReadPartners.ts",
+    "toolHandlersReadCrm.ts",
+    "toolHandlersReadJobs.ts",
+  ];
+  const readAll = () =>
+    readModules.map((f) => fs.readFileSync(path.join(sharedDir, f), "utf-8")).join("\n");
+
   it("toolHandlersRead.ts esiste e esporta createReadHandlers", () => {
-    const content = fs.readFileSync(path.join(sharedDir, "toolHandlersRead.ts"), "utf-8");
+    const content = readAll();
     expect(content).toContain("export function createReadHandlers");
     expect(content).toContain("executeSearchPartners");
     expect(content).toContain("executePartnerDetail");
@@ -30,7 +39,7 @@ describe("Edge Function Decomposition — ai-assistant", () => {
   });
 
   it("ogni modulo shared è sotto 800 righe", () => {
-    const files = ["toolHandlersRead.ts", "toolHandlersWrite.ts", "toolHandlersEnterprise.ts"];
+    const files = [...readModules, "toolHandlersWrite.ts", "toolHandlersEnterprise.ts"];
     for (const file of files) {
       const content = fs.readFileSync(path.join(sharedDir, file), "utf-8");
       const lines = content.split("\n").length;
@@ -39,7 +48,7 @@ describe("Edge Function Decomposition — ai-assistant", () => {
   });
 
   it("i tool handler condivisi coprono tutti i case del dispatcher", () => {
-    const readContent = fs.readFileSync(path.join(sharedDir, "toolHandlersRead.ts"), "utf-8");
+    const readContent = readAll();
     const writeContent = fs.readFileSync(path.join(sharedDir, "toolHandlersWrite.ts"), "utf-8");
     const enterpriseContent = fs.readFileSync(path.join(sharedDir, "toolHandlersEnterprise.ts"), "utf-8");
     const allContent = readContent + writeContent + enterpriseContent;

@@ -4,42 +4,52 @@
  */
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { cronGuardCheck, cronGuardLogRun } from "./cronGuard.ts";
+import type {
+  CronSelectBuilder,
+  CronTableBuilder,
+  SupabaseCronClient,
+} from "./supabaseCronClient.ts";
 
 type Row = Record<string, unknown> | null;
 
-/** Client fake: risolve per tabella+key, registra le insert. */
+/** Client fake tipizzato: risolve per tabella+key, registra le insert. */
 function fakeClient(rows: Record<string, Row>, opts: { throwOn?: string } = {}) {
   const inserts: Array<{ table: string; payload: unknown }> = [];
-  const client = {
-    from(table: string) {
-      const builder: Record<string, unknown> = {};
+
+  const client: SupabaseCronClient = {
+    from(table: string): CronTableBuilder {
       let lookupKey = table;
-      const chain = new Proxy(builder, {
-        get(_t, prop: string) {
-          if (prop === "eq") {
-            return (_col: string, value: string) => {
-              lookupKey = `${table}:${value}`;
-              return chain;
-            };
-          }
-          if (prop === "maybeSingle") {
-            return () => {
-              if (opts.throwOn && lookupKey.startsWith(opts.throwOn)) throw new Error("db down");
-              return Promise.resolve({ data: rows[lookupKey] ?? null, error: null });
-            };
-          }
-          if (prop === "insert") {
-            return (payload: unknown) => {
-              inserts.push({ table, payload });
-              return Promise.resolve({ error: null });
-            };
-          }
-          return () => chain;
+      const selectBuilder: CronSelectBuilder = {
+        eq(_column: string, value: string) {
+          lookupKey = `${table}:${value}`;
+          return selectBuilder;
         },
-      });
-      return chain;
+        is() {
+          return selectBuilder;
+        },
+        order() {
+          return selectBuilder;
+        },
+        limit() {
+          return selectBuilder;
+        },
+        maybeSingle() {
+          if (opts.throwOn && lookupKey.startsWith(opts.throwOn)) throw new Error("db down");
+          return Promise.resolve({ data: rows[lookupKey] ?? null });
+        },
+      };
+      return {
+        select() {
+          return selectBuilder;
+        },
+        insert(payload: Record<string, unknown>) {
+          inserts.push({ table, payload });
+          return Promise.resolve({ error: null });
+        },
+      };
     },
   };
+
   return { client, inserts };
 }
 

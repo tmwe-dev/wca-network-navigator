@@ -11,19 +11,25 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "./cors.ts";
 
-export async function isCronPaused(admin: SupabaseClient): Promise<boolean> {
+/** Lettura minima della flag: permette di condividere la logica senza cast. */
+export type CronFlagReader = () => PromiseLike<{ data: Record<string, unknown> | null }>;
+
+/** Implementazione unica del kill-switch, indipendente dal tipo di client. */
+export async function isCronPausedWith(read: CronFlagReader): Promise<boolean> {
   try {
-    const { data } = await admin
-      .from("system_flags")
-      .select("value")
-      .eq("key", "cron_paused")
-      .maybeSingle();
-    const raw = (data as { value: unknown } | null)?.value;
+    const { data } = await read();
+    const raw = data?.value;
     return raw === true || raw === "true";
   } catch {
     // Fail-open: meglio non bloccare per errore di lettura
     return false;
   }
+}
+
+export async function isCronPaused(admin: SupabaseClient): Promise<boolean> {
+  return isCronPausedWith(() =>
+    admin.from("system_flags").select("value").eq("key", "cron_paused").maybeSingle()
+  );
 }
 
 export async function cronPausedResponse(admin: SupabaseClient, fn: string): Promise<Response | null> {

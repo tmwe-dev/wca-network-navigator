@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { ApiError } from "@/lib/api/apiError";
 import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_BASE64,
@@ -93,6 +92,7 @@ async function bytesToShortHash(bytes: ArrayBuffer): Promise<string> {
 
 async function readManifestVersionFromZip(blob: Blob): Promise<string | null> {
   try {
+    const { default: JSZip } = await import("jszip");
     const zip = await JSZip.loadAsync(await blob.arrayBuffer());
     const manifest = zip.file("manifest.json");
     if (!manifest) return null;
