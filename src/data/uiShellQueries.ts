@@ -61,7 +61,7 @@ export async function updateActivityById(
   return { error };
 }
 
-export async function searchNetworkPartners(term: string): Promise<unknown[]> {
+export async function searchNetworkPartners(term: string) {
   const { data } = await supabase
     .from("partners")
     .select("id, company_name, company_alias, country_code, city, email, partner_contacts(id, name, email, contact_alias, title)")
@@ -82,7 +82,7 @@ export async function findImportedContactsFacetPage(
   return { data, error };
 }
 
-export async function searchImportedContacts(term: string): Promise<unknown[]> {
+export async function searchImportedContacts(term: string) {
   const { data } = await supabase
     .from("imported_contacts")
     .select("id, name, company_name, company_alias, country, email, position")
@@ -91,7 +91,7 @@ export async function searchImportedContacts(term: string): Promise<unknown[]> {
   return data ?? [];
 }
 
-export async function searchRecipientPartners(pattern: string): Promise<unknown[]> {
+export async function searchRecipientPartners(pattern: string) {
   const { data, error } = await supabase
     .from("partners")
     .select("id, company_name, country_name, city, email, enriched_at")
@@ -102,7 +102,7 @@ export async function searchRecipientPartners(pattern: string): Promise<unknown[
   return data ?? [];
 }
 
-export async function getPartnerSnapshot(partnerId: string): Promise<unknown> {
+export async function getPartnerSnapshot(partnerId: string) {
   const { data } = await supabase
     .from("partners")
     .select("company_name, company_alias, country_name, city, last_interaction_at, interaction_count, enrichment_data, lead_status")
