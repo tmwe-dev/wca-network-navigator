@@ -118,3 +118,57 @@ export async function createCampaignDraftQueue(
 
   return { draftId, queued: items.length };
 }
+
+export interface CampaignDraftListRow {
+  readonly id: string;
+  readonly subject: string | null;
+  readonly status: string;
+  readonly total_count: number;
+  readonly sent_count: number;
+  readonly queue_status: string;
+  readonly queue_delay_seconds: number;
+  readonly created_at: string;
+}
+
+export async function findCampaignDrafts(limit = 50): Promise<CampaignDraftListRow[]> {
+  const { data, error } = await supabase
+    .from("email_drafts")
+    .select("id, subject, status, total_count, sent_count, queue_status, queue_delay_seconds, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as CampaignDraftListRow[];
+}
+
+export interface CampaignQueueItemRow {
+  readonly id: string;
+  readonly recipient_email: string;
+  readonly recipient_name: string | null;
+  readonly status: string;
+  readonly sent_at: string | null;
+  readonly error_message: string | null;
+}
+
+export async function findCampaignQueueItemsForDraft(draftId: string, limit = 200): Promise<CampaignQueueItemRow[]> {
+  const { data, error } = await supabase
+    .from("email_campaign_queue")
+    .select("id, recipient_email, recipient_name, status, sent_at, error_message")
+    .eq("draft_id", draftId)
+    .order("position", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as CampaignQueueItemRow[];
+}
+
+export async function setCampaignDraftQueueStatus(draftId: string, queueStatus: string): Promise<void> {
+  const { error } = await supabase.from("email_drafts").update({ queue_status: queueStatus }).eq("id", draftId);
+  if (error) throw error;
+}
+
+export async function findCampaignQueueStatuses(draftId?: string): Promise<Array<{ status: string }>> {
+  let q = supabase.from("email_campaign_queue").select("status");
+  if (draftId) q = q.eq("draft_id", draftId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}

@@ -59,3 +59,27 @@ export async function updateAgentCapabilities(
     .eq("id", id);
   if (error) throw error;
 }
+export interface AgentCapabilityAgentRow {
+  readonly id: string;
+  readonly name: string;
+  readonly role: string;
+  readonly avatar_emoji: string;
+  readonly is_active: boolean;
+  readonly assigned_tools: unknown;
+}
+
+export async function findActiveAgentsForCapabilities(): Promise<AgentCapabilityAgentRow[]> {
+  const { data, error } = await supabase
+    .from("agents")
+    .select("id, name, role, avatar_emoji, is_active, assigned_tools")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as AgentCapabilityAgentRow[];
+}
+
+export async function findAgentTasksForCapabilities(): Promise<Array<{ agent_id: string; task_type: string; status: string }>> {
+  const { data, error } = await supabase.from("agent_tasks").select("agent_id, task_type, status");
+  if (error) throw error;
+  return data ?? [];
+}
