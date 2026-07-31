@@ -8,6 +8,9 @@ import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 
 type KbInsert = Database["public"]["Tables"]["kb_entries"]["Insert"];
+type KbUpdate = Database["public"]["Tables"]["kb_entries"]["Update"];
+/** Riga grezza `kb_entries` (contratto canonico per i mapper v2). */
+export type KbEntryRow = Database["public"]["Tables"]["kb_entries"]["Row"];
 
 export interface KbEntry {
   id: string;
@@ -44,6 +47,44 @@ export async function countKbEntries(): Promise<number> {
     .select("id", { count: "exact", head: true });
   if (error) throw error;
   return count || 0;
+}
+
+/**
+ * Righe grezze `kb_entries` ordinate per priorità (contratto usato dal layer
+ * IO v2, che applica i propri mapper di dominio).
+ */
+export async function findKbEntryRowsByPriority(): Promise<KbEntryRow[]> {
+  const { data, error } = await supabase
+    .from("kb_entries")
+    .select("*")
+    .order("priority", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Ricerca full-text semplice su titolo/contenuto, righe grezze. */
+export async function searchKbEntryRows(query: string, limit = 50): Promise<KbEntryRow[]> {
+  const { data, error } = await supabase
+    .from("kb_entries")
+    .select("*")
+    .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+    .order("priority", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Insert con ritorno della riga creata (contratto usato dal layer IO v2). */
+export async function insertKbEntryReturningRow(input: KbInsert): Promise<KbEntryRow> {
+  const { data, error } = await supabase.from("kb_entries").insert(input).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/** Update tipizzato di una KB entry per id. */
+export async function updateKbEntryRow(id: string, updates: KbUpdate): Promise<void> {
+  const { error } = await supabase.from("kb_entries").update(updates).eq("id", id);
+  if (error) throw error;
 }
 
 // ── Writes ──
