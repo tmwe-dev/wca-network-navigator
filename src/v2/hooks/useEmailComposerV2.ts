@@ -8,8 +8,9 @@ import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import { invokeEdge } from "@/lib/api/invokeEdge";
-import { createCampaignDraftQueue } from "@/data/emailCampaigns";
+import { createCampaignDraftQueue, updateEmailDraft } from "@/data/emailCampaigns";
 import { pickDefaultEmailTypeId } from "@/data/pickDefaultEmailType";
+import { findActiveEmailPrompts } from "@/data/emailTemplates";
 
 export interface EmailRecipient {
   readonly email: string;
@@ -109,13 +110,7 @@ export function useEmailComposerV2() {
   const templates = useQuery({
     queryKey: queryKeys.v2.emailTemplates,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("email_prompts")
-        .select("id, title, instructions, scope")
-        .eq("is_active", true)
-        .order("priority", { ascending: false })
-        .limit(20);
-      return data ?? [];
+      return findActiveEmailPrompts(20);
     },
   });
 
@@ -218,14 +213,13 @@ Contesto: outreach commerciale logistica WCA.`,
     mutationFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
-      const { error } = await supabase.from("email_drafts").insert({
+      await insertEmailDraft({
         subject,
         html_body: body,
         recipient_type: "manual",
         status: "draft",
         user_id: user.id,
       });
-      if (error) throw error;
     },
     onSuccess: () => toast.success("Bozza salvata"),
     onError: (e: Error) => toast.error(e.message),

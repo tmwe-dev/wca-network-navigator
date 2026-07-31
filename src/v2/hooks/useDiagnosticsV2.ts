@@ -2,8 +2,9 @@
  * useDiagnosticsV2 — Real system health checks
  */
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeAi } from "@/lib/ai/invokeAi";
+import { pingAppSettings, listStorageBucketsCount } from "@/data/diagnostics";
+import { supabase } from "@/integrations/supabase/client";
 
 export type CheckStatus = "idle" | "checking" | "ok" | "error";
 
@@ -44,8 +45,7 @@ export function useDiagnosticsV2() {
 
     // 1) Database ping
     const dbCheck = await timedCheck("Database", async () => {
-      const { error } = await supabase.from("app_settings").select("id").limit(1);
-      if (error) throw error;
+      await pingAppSettings();
       return "Connesso";
     });
     results.push(dbCheck);
@@ -101,9 +101,8 @@ export function useDiagnosticsV2() {
 
     // 5) Storage
     const storageCheck = await timedCheck("Storage", async () => {
-      const { data, error } = await supabase.storage.listBuckets();
-      if (error) throw error;
-      return `${data.length} bucket disponibili`;
+      const count = await listStorageBucketsCount();
+      return `${count} bucket disponibili`;
     });
     results.push(storageCheck);
     setChecks([...results]);

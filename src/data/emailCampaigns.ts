@@ -172,3 +172,16 @@ export async function findCampaignQueueStatuses(draftId?: string): Promise<Array
   if (error) throw error;
   return data ?? [];
 }
+
+export interface InsertEmailDraftInput {
+  readonly subject: string;
+  readonly html_body: string;
+  readonly recipient_type: string;
+  readonly status: string;
+  readonly user_id: string;
+}
+
+export async function insertEmailDraft(input: InsertEmailDraftInput): Promise<void> {
+  const { error } = await supabase.from("email_drafts").insert(input);
+  if (error) throw error;
+}
