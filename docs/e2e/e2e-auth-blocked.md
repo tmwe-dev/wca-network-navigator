@@ -1,3 +1,29 @@
+
+## Esecuzione correttiva 2026-07-31 (aggiornamento)
+
+Comando riproducibile in sandbox:
+
+```bash
+E2E_CHROMIUM_PATH=/nix/store/<chromium>/bin/chromium npx playwright test --reporter=list
+```
+
+Risultato suite completa: **317 passed / 156 failed / 123 skipped** (era 257/194).
+
+Correzioni applicate:
+- `index.html` + `src/lib/csp.ts`: nuovo `CSP_META_CONTENT` senza `frame-ancestors`
+  (direttiva ignorata nel `<meta>`, generava console error). L'header HTTP resta completo.
+- `LoginPage.tsx`: separati `callbackError` (da `?tmwe=error&reason=`) e `startError`,
+  così il motivo di rifiuto non veniva più cancellato dal refresh dell'URL OAuth.
+- `auth-guard.spec.ts`, `app-routing-access.spec.ts`, `smoke/01-auth-flow.spec.ts`:
+  allineate al flusso TMWE-only (nessun input email/password).
+
+Classificazione dei 156 fallimenti residui: **tutti su rotte protette** che richiedono
+una sessione TMWE reale (token-cockpit 31, calendar 20, deals 14, email-composer 9, …).
+Non sono difetti applicativi ma indisponibilità di credenziali E2E: sbloccabili solo
+iniettando `E2E_SUPABASE_SESSION_JSON` (harness già pronto in `e2e/fixtures/auth.ts`).
+
+Nota: i warning React `forwardRef` osservati in precedenza provengono dal tagger del
+dev server Vite e non compaiono sulla build preview usata dalla CI.
 # E2E autenticati — stato BLOCKED (2026-07-31)
 
 ## Causa verificabile
