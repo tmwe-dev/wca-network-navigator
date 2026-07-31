@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule } from "@/data/emailAddressRules";
+import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule, type AddressRuleUpsertInput } from "@/data/emailAddressRules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

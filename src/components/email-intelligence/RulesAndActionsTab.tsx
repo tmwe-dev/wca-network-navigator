@@ -57,23 +57,7 @@ export default function RulesAndActionsTab() {
   );
 }
 
-interface EditableRule {
-  id?: string;
-  email_address: string;
-  display_name?: string | null;
-  group_id?: string | null;
-  group_name?: string | null;
-  group_color?: string | null;
-  group_icon?: string | null;
-  auto_action?: string | null;
-  auto_execute?: boolean | null;
-  ai_confidence_threshold?: number | null;
-  tone_override?: string | null;
-  custom_prompt?: string | null;
-  notes?: string | null;
-  is_active?: boolean | null;
-  [key: string]: unknown;
-}
+type EditableRule = AddressRuleUpsertInput & { id?: string };
 
 interface EditablePrompt {
   id?: string;
@@ -108,10 +92,9 @@ function AddressRulesSection() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (rule: Record<string, unknown>) => {
+    mutationFn: async (rule: EditableRule) => {
       const { id, ...payload } = rule;
       if (id) {
-        if (typeof id !== "string" || !id) throw new Error("ID regola mancante: aggiornamento annullato");
         await updateAddressRuleById(id, payload);
       } else {
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;

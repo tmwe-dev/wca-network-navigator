@@ -49,6 +49,7 @@ export interface AddressRuleUpsertInput {
   display_name?: string | null;
   category?: string | null;
   auto_action?: string | null;
+  auto_action_params?: unknown;
   auto_execute?: boolean | null;
   ai_confidence_threshold?: number | null;
   preferred_channel?: string | null;
@@ -68,6 +69,7 @@ function toRuleWrite(input: Partial<AddressRuleUpsertInput>): RuleUpdate {
   if (input.display_name !== undefined) out.display_name = input.display_name;
   if (input.category !== undefined) out.category = input.category;
   if (input.auto_action !== undefined) out.auto_action = input.auto_action;
+  if (input.auto_action_params !== undefined) out.auto_action_params = serializeJson(input.auto_action_params);
   if (input.auto_execute !== undefined) out.auto_execute = input.auto_execute;
   if (input.ai_confidence_threshold !== undefined) out.ai_confidence_threshold = input.ai_confidence_threshold;
   if (input.preferred_channel !== undefined) out.preferred_channel = input.preferred_channel;
