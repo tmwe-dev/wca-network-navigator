@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/data/chatAttachments";
 import { toast } from "sonner";
 import { sendWhatsApp as sendWhatsAppUnified } from "@/lib/inbox/sendMessage";
 import { useLogAction } from "@/hooks/useLogAction";
@@ -78,10 +78,10 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
     try {
       const ext = file.name.split(".").pop() || "bin";
       const path = `wa/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("chat-attachments").upload(path, file, { contentType: file.type });
+      const { error: uploadError } = await uploadChatAttachment(path, file, { contentType: file.type });
       if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(path);
-      const text = `📎 ${file.name}\n${urlData.publicUrl}`;
+      const publicUrl = getChatAttachmentPublicUrl(path);
+      const text = `📎 ${file.name}\n${publicUrl}`;
       const contactToSend = normalizeContact(thread.contact);
       const result = await sendWhatsAppUnified({ recipient: contactToSend, text }, createBridgeSender(contactToSend));
       if (!result.success) {

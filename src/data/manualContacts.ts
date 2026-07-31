@@ -103,5 +103,3 @@ export async function insertManualPartnerContact(input: ManualPartnerContactInpu
   if (error) throw error;
   return data.id;
 }
-
-}

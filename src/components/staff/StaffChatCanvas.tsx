@@ -6,7 +6,7 @@ import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { FileDropZone } from "./FileDropZone";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/data/chatAttachments";
 import type { Agent } from "@/hooks/useAgents";
 import { createLogger } from "@/lib/log";
 
@@ -45,10 +45,9 @@ export function StaffChatCanvas({ agent }: Props) {
     if (!files) return;
     for (const file of Array.from(files)) {
       const path = `staff/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from("chat-attachments").upload(path, file);
+      const { error } = await uploadChatAttachment(path, file);
       if (!error) {
-        const { data } = supabase.storage.from("chat-attachments").getPublicUrl(path);
-        setPendingFiles((prev) => [...prev, { url: data.publicUrl, name: file.name }]);
+        setPendingFiles((prev) => [...prev, { url: getChatAttachmentPublicUrl(path), name: file.name }]);
       }
     }
   }, []);
