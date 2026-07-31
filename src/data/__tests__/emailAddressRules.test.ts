@@ -45,13 +45,13 @@ describe("DAL — emailAddressRules", () => {
 
   describe("updateEmailAddressRule", () => {
     it("updates a rule by id", async () => {
-      mockUntypedFrom.mockReturnValue(chain({ error: null }));
+      mockFrom.mockReturnValue(chain({ error: null }));
       await updateEmailAddressRule("r1", { email_address: "new@b.com" });
-      expect(mockUntypedFrom).toHaveBeenCalledWith("email_address_rules");
+      expect(mockFrom).toHaveBeenCalledWith("email_address_rules");
     });
 
     it("throws on update error", async () => {
-      mockUntypedFrom.mockReturnValue(chain({ error: { message: "not found" } }));
+      mockFrom.mockReturnValue(chain({ error: { message: "not found" } }));
       await expect(updateEmailAddressRule("r1", {})).rejects.toEqual({ message: "not found" });
     });
   });
