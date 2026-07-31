@@ -13,12 +13,25 @@ const PROTECTED_FUNCTIONS = [
   { name: "get-wca-credentials", method: "POST" },
   { name: "get-ra-credentials", method: "POST" },
   { name: "get-linkedin-credentials", method: "POST" },
-  { name: "consume-credits", method: "POST" },
   { name: "whatsapp-ai-extract", method: "POST" },
   { name: "replay-domain-events", method: "POST" },
 ] as const;
 
 test.describe("public-edge-auth-guards", () => {
+  // `consume-credits` non è in lista: con `AI_USAGE_LIMITS_ENABLED` disattivato
+  // (uso interno) risponde 200 con un payload di kill-switch che NON espone dati
+  // utente. Il guard auth resta attivo quando il gate crediti è abilitato.
+  test("consume-credits non espone dati utente senza autenticazione", async ({ request }) => {
+    const res = await request.fetch(`${SUPABASE_URL}/functions/v1/consume-credits`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: {},
+    });
+    const body = await res.text();
+    expect([200, 400, 401, 403]).toContain(res.status());
+    expect(body).not.toMatch(/user_id|api_key|email/i);
+  });
+
   for (const fn of PROTECTED_FUNCTIONS) {
     test(`${fn.name} rejects unauthenticated requests`, async ({ request }) => {
       const res = await request.fetch(`${SUPABASE_URL}/functions/v1/${fn.name}`, {

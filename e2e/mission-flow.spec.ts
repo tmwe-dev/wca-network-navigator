@@ -4,16 +4,15 @@
  */
 import { protectedTest as test, expect } from "./fixtures/auth";
 
-const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:5173";
 
 test.describe("Mission Flow E2E", () => {
   test("should navigate to Command page", async ({ page }) => {
-    await page.goto(`${BASE_URL}/v2/command`);
+    await page.goto(`/v2/command`);
     await expect(page.locator("text=Command")).toBeVisible({ timeout: 10000 });
   });
 
   test("should send a single-action command", async ({ page }) => {
-    await page.goto(`${BASE_URL}/v2/command`);
+    await page.goto(`/v2/command`);
     await page.waitForTimeout(2000);
 
     const composer = page.locator("textarea, input[placeholder*='scrivi']").first();
@@ -29,7 +28,7 @@ test.describe("Mission Flow E2E", () => {
   });
 
   test("should toggle mission mode", async ({ page }) => {
-    await page.goto(`${BASE_URL}/v2/command`);
+    await page.goto(`/v2/command`);
     await page.waitForTimeout(2000);
 
     // Look for mission toggle
@@ -41,7 +40,7 @@ test.describe("Mission Flow E2E", () => {
   });
 
   test("should show observability page", async ({ page }) => {
-    await page.goto(`${BASE_URL}/v2/observability`);
+    await page.goto(`/v2/observability`);
     await expect(page.locator("text=Observability")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("text=Token AI")).toBeVisible();
     await expect(page.locator("text=Caratteri TTS")).toBeVisible();
@@ -49,7 +48,7 @@ test.describe("Mission Flow E2E", () => {
   });
 
   test("should export audit CSV", async ({ page }) => {
-    await page.goto(`${BASE_URL}/v2/observability`);
+    await page.goto(`/v2/observability`);
     await page.waitForTimeout(2000);
 
     const exportBtn = page.locator("button:has-text('Esporta')");
@@ -65,7 +64,7 @@ test.describe("Mission Flow E2E", () => {
   });
 
   test("mission flow: create contact, scrape, compose", async ({ page }) => {
-    await page.goto(`${BASE_URL}/v2/command`);
+    await page.goto(`/v2/command`);
     await page.waitForTimeout(2000);
 
     // Activate mission mode
