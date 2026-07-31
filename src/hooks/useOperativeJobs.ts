@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { findWorkPlans, createWorkPlan, updateWorkPlan, deleteWorkPlan } from "@/data/workPlans";
 import { getAppSetting } from "@/data/appSettings";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 export interface OperativeJob {
   id: string;
