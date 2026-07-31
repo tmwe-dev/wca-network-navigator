@@ -5,6 +5,7 @@
  * incrementalmente così il run sopravvive a refresh, crash, errori di rete.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface GlobalRunProposal {
@@ -47,7 +48,7 @@ export async function createRun(
   systemMission: string,
 ): Promise<GlobalRun> {
   const { data, error } = await supabase
-    .from("prompt_lab_global_runs" as never)
+    .from("prompt_lab_global_runs")
     .insert({
       user_id: userId,
       goal,
@@ -58,7 +59,7 @@ export async function createRun(
       system_map: systemMap,
       doctrine_full: doctrineFull,
       system_mission: systemMission,
-    } as never)
+    })
     .select("*")
     .single();
 
@@ -79,16 +80,16 @@ export async function updateRun(
     completed_at?: string;
   },
 ): Promise<void> {
-  const payload: Record<string, unknown> = {};
+  const payload: Database["public"]["Tables"]["prompt_lab_global_runs"]["Update"] = {};
   if (updates.status !== undefined) payload.status = updates.status;
   if (updates.progress_current !== undefined) payload.progress_current = updates.progress_current;
   if (updates.proposals !== undefined) payload.proposals = JSON.stringify(updates.proposals);
   if (updates.completed_at !== undefined) payload.completed_at = updates.completed_at;
 
   const { error } = await supabase
-    .from("prompt_lab_global_runs" as never)
-    .update(payload as never)
-    .eq("id" as never, runId as never);
+    .from("prompt_lab_global_runs")
+    .update(payload)
+    .eq("id", runId);
 
   if (error) throw new Error(`updateRun failed: ${error.message}`);
 }
@@ -104,9 +105,9 @@ export async function appendProposal(
 ): Promise<void> {
   // Leggi proposte correnti
   const { data, error: readErr } = await supabase
-    .from("prompt_lab_global_runs" as never)
-    .select("proposals" as never)
-    .eq("id" as never, runId as never)
+    .from("prompt_lab_global_runs")
+    .select("proposals")
+    .eq("id", runId)
     .single();
 
   if (readErr || !data) throw new Error(`appendProposal read failed: ${readErr?.message}`);
@@ -131,9 +132,9 @@ export async function appendProposal(
  */
 export async function markProposalSaved(runId: string, blockId: string): Promise<void> {
   const { data, error: readErr } = await supabase
-    .from("prompt_lab_global_runs" as never)
-    .select("proposals" as never)
-    .eq("id" as never, runId as never)
+    .from("prompt_lab_global_runs")
+    .select("proposals")
+    .eq("id", runId)
     .single();
 
   if (readErr || !data) return;
@@ -158,12 +159,12 @@ export async function markProposalSaved(runId: string, blockId: string): Promise
  */
 export async function findActiveRun(userId: string): Promise<GlobalRun | null> {
   const { data, error } = await supabase
-    .from("prompt_lab_global_runs" as never)
-    .select("*" as never)
-    .eq("user_id" as never, userId as never)
-    .is("deleted_at" as never, null as never)
-    .in("status" as never, ["improving", "review"] as never)
-    .order("updated_at" as never, { ascending: false } as never)
+    .from("prompt_lab_global_runs")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .in("status", ["improving", "review"])
+    .order("updated_at", { ascending: false })
     .limit(1);
 
   if (error || !data || (data as unknown[]).length === 0) return null;
@@ -176,11 +177,11 @@ export async function findActiveRun(userId: string): Promise<GlobalRun | null> {
  */
 export async function findLastRuns(userId: string, limit = 5): Promise<GlobalRun[]> {
   const { data, error } = await supabase
-    .from("prompt_lab_global_runs" as never)
-    .select("*" as never)
-    .eq("user_id" as never, userId as never)
-    .is("deleted_at" as never, null as never)
-    .order("updated_at" as never, { ascending: false } as never)
+    .from("prompt_lab_global_runs")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false })
     .limit(limit);
 
   if (error || !data) return [];
@@ -192,9 +193,9 @@ export async function findLastRuns(userId: string, limit = 5): Promise<GlobalRun
  */
 export async function cancelRun(runId: string): Promise<void> {
   const { error } = await supabase
-    .from("prompt_lab_global_runs" as never)
-    .update({ status: "cancelled", deleted_at: new Date().toISOString() } as never)
-    .eq("id" as never, runId as never);
+    .from("prompt_lab_global_runs")
+    .update({ status: "cancelled", deleted_at: new Date().toISOString() })
+    .eq("id", runId);
 
   if (error) throw new Error(`cancelRun failed: ${error.message}`);
 }
@@ -206,9 +207,9 @@ export async function cancelRun(runId: string): Promise<void> {
 export async function rollbackSavedProposals(runId: string): Promise<number> {
   // Carica il run
   const { data, error } = await supabase
-    .from("prompt_lab_global_runs" as never)
-    .select("proposals" as never)
-    .eq("id" as never, runId as never)
+    .from("prompt_lab_global_runs")
+    .select("proposals")
+    .eq("id", runId)
     .single();
 
   if (error || !data) throw new Error(`rollbackSavedProposals: run non trovato`);
@@ -256,9 +257,9 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
 
   // Aggiorna status run a "rolled_back"
   await supabase
-    .from("prompt_lab_global_runs" as never)
-    .update({ status: "rolled_back" } as never)
-    .eq("id" as never, runId as never);
+    .from("prompt_lab_global_runs")
+    .update({ status: "rolled_back" })
+    .eq("id", runId);
 
   return restored;
 }

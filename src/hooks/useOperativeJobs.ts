@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { findWorkPlans, createWorkPlan, updateWorkPlan, deleteWorkPlan } from "@/data/workPlans";
 import { getAppSetting } from "@/data/appSettings";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 export interface OperativeJob {
   id: string;
@@ -90,9 +91,10 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
         context: "useOperativeJobs.generatePrompt",
       });
 
-      const prompt = res?.response || res?.content || "Prompt non generato";
+      const raw = res?.response ?? res?.content;
+      const prompt = typeof raw === "string" && raw.length > 0 ? raw : "Prompt non generato";
       await updateWorkPlan(job.id, {
-        metadata: { ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() },
+        metadata: toJsonValue({ ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() }),
       });
       return prompt;
     },
@@ -103,7 +105,7 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
   const savePrompt = useMutation({
     mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: Record<string, unknown> | null }) => {
       await updateWorkPlan(id, {
-        metadata: { ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() },
+        metadata: toJsonValue({ ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() }),
       });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt salvato"); },

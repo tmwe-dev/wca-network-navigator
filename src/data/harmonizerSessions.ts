@@ -10,6 +10,7 @@
  * Tabella: public.harmonizer_sessions (migration 20260424123735).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { toJsonValue } from "@/lib/jsonGuards";
 
 export type HarmonizerSessionStatus =
   | "pending"
@@ -116,7 +117,7 @@ export async function createHarmonizerSession(input: {
   bootstrapEntities?: EntityCreatedEntry[];
 }): Promise<HarmonizerSession> {
   const { data, error } = await supabase
-    .from("harmonizer_sessions" as never)
+    .from("harmonizer_sessions")
     .insert({
       user_id: input.userId,
       source_file: input.sourceFile,
@@ -125,8 +126,8 @@ export async function createHarmonizerSession(input: {
       harmonize_run_id: input.harmonizeRunId ?? null,
       status: "in_progress",
       started_at: new Date().toISOString(),
-      entities_created: input.bootstrapEntities ?? [],
-    } as never)
+      entities_created: toJsonValue(input.bootstrapEntities ?? []),
+    })
     .select()
     .single();
   if (error) throw error;
@@ -135,9 +136,9 @@ export async function createHarmonizerSession(input: {
 
 export async function loadHarmonizerSession(id: string): Promise<HarmonizerSession | null> {
   const { data, error } = await supabase
-    .from("harmonizer_sessions" as never)
-    .select("*" as never)
-    .eq("id" as never, id as never)
+    .from("harmonizer_sessions")
+    .select("*")
+    .eq("id", id)
     .maybeSingle();
   if (error) throw error;
   return (data as unknown as HarmonizerSession) ?? null;
@@ -145,11 +146,11 @@ export async function loadHarmonizerSession(id: string): Promise<HarmonizerSessi
 
 export async function findActiveHarmonizerSession(userId: string): Promise<HarmonizerSession | null> {
   const { data, error } = await supabase
-    .from("harmonizer_sessions" as never)
-    .select("*" as never)
-    .eq("user_id" as never, userId as never)
-    .in("status" as never, ["pending", "in_progress"] as never)
-    .order("updated_at" as never, { ascending: false } as never)
+    .from("harmonizer_sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .in("status", ["pending", "in_progress"])
+    .order("updated_at", { ascending: false })
     .limit(1);
   if (error) throw error;
   const rows = data as unknown as HarmonizerSession[] | null;
@@ -169,9 +170,9 @@ export async function appendFacts(
   }
   const compacted = compactFacts(reg);
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
-    .update({ facts_registry: compacted, updated_at: new Date().toISOString() } as never)
-    .eq("id" as never, sessionId as never);
+    .from("harmonizer_sessions")
+    .update({ facts_registry: toJsonValue(compacted), updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
   if (error) throw error;
 }
 
@@ -184,9 +185,9 @@ export async function appendConflicts(
   if (!session) throw new Error("session not found");
   const merged = [...session.conflicts_found, ...newConflicts];
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
-    .update({ conflicts_found: merged, updated_at: new Date().toISOString() } as never)
-    .eq("id" as never, sessionId as never);
+    .from("harmonizer_sessions")
+    .update({ conflicts_found: toJsonValue(merged), updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
   if (error) throw error;
 }
 
@@ -199,9 +200,9 @@ export async function appendCrossReferences(
   if (!session) throw new Error("session not found");
   const merged = [...session.cross_references, ...refs];
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
-    .update({ cross_references: merged, updated_at: new Date().toISOString() } as never)
-    .eq("id" as never, sessionId as never);
+    .from("harmonizer_sessions")
+    .update({ cross_references: toJsonValue(merged), updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
   if (error) throw error;
 }
 
@@ -214,22 +215,22 @@ export async function appendEntities(
   if (!session) throw new Error("session not found");
   const merged = [...session.entities_created, ...entities];
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
-    .update({ entities_created: merged, updated_at: new Date().toISOString() } as never)
-    .eq("id" as never, sessionId as never);
+    .from("harmonizer_sessions")
+    .update({ entities_created: toJsonValue(merged), updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
   if (error) throw error;
 }
 
 /** Avanza al prossimo chunk e aggiorna timestamp. */
 export async function advanceChunk(sessionId: string, nextChunkIndex: number): Promise<void> {
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
+    .from("harmonizer_sessions")
     .update({
       current_chunk: nextChunkIndex,
       last_chunk_completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id" as never, sessionId as never);
+    })
+    .eq("id", sessionId);
   if (error) throw error;
 }
 
@@ -241,31 +242,31 @@ export async function markSessionError(
   if (!session) throw new Error("session not found");
   const merged = [...session.errors, err];
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
-    .update({ errors: merged, updated_at: new Date().toISOString() } as never)
-    .eq("id" as never, sessionId as never);
+    .from("harmonizer_sessions")
+    .update({ errors: toJsonValue(merged), updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
   if (error) throw error;
 }
 
 export async function completeHarmonizerSession(sessionId: string): Promise<void> {
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
+    .from("harmonizer_sessions")
     .update({
       status: "completed",
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id" as never, sessionId as never);
+    })
+    .eq("id", sessionId);
   if (error) throw error;
 }
 
 export async function cancelHarmonizerSession(sessionId: string): Promise<void> {
   const { error } = await supabase
-    .from("harmonizer_sessions" as never)
+    .from("harmonizer_sessions")
     .update({
       status: "cancelled",
       updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id" as never, sessionId as never);
+    })
+    .eq("id", sessionId);
   if (error) throw error;
 }
