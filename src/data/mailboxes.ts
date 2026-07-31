@@ -2,8 +2,12 @@
  * DAL — Mailboxes (personali + condivise aziendali).
  * Solo letture e mutations CRUD; nessuna logica di business qui.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type SharedMailboxRow = Database["public"]["Tables"]["shared_mailboxes"]["Row"];
+type SharedMailboxInsert = Database["public"]["Tables"]["shared_mailboxes"]["Insert"];
+type SharedMailboxUpdate = Database["public"]["Tables"]["shared_mailboxes"]["Update"];
 
 export type MailboxKind = "personal" | "shared";
 
@@ -36,31 +40,65 @@ export interface SharedMailbox {
   updated_at: string;
 }
 
+function toMailboxKind(value: string): MailboxKind {
+  return value === "shared" ? "shared" : "personal";
+}
+
 export async function listAccessibleMailboxes(operatorId?: string): Promise<AccessibleMailbox[]> {
-  const { data, error } = await (supabase as unknown as {
-    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: AccessibleMailbox[] | null; error: unknown }>;
-  }).rpc("get_accessible_mailboxes", { p_operator_id: operatorId ?? null });
-  if (error) throw error as Error;
-  return data ?? [];
+  const { data, error } = await supabase.rpc(
+    "get_accessible_mailboxes",
+    operatorId ? { p_operator_id: operatorId } : {},
+  );
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    kind: toMailboxKind(row.kind),
+    mailbox_id: row.mailbox_id,
+    email: row.email,
+    label: row.label,
+    department: row.department,
+    is_default: row.is_default,
+  }));
+}
+
+function mapSharedMailbox(row: SharedMailboxRow): SharedMailbox {
+  return {
+    id: row.id,
+    slug: row.slug,
+    label: row.label,
+    email: row.email,
+    department: row.department,
+    imap_host: row.imap_host,
+    imap_port: row.imap_port,
+    imap_user: row.imap_user,
+    smtp_host: row.smtp_host,
+    smtp_port: row.smtp_port,
+    smtp_user: row.smtp_user,
+    reply_to: row.reply_to,
+    is_active: row.is_active,
+    auto_grant: row.auto_grant,
+    description: row.description,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
 }
 
 export async function listSharedMailboxes(): Promise<SharedMailbox[]> {
-  const { data, error } = await untypedFrom("shared_mailboxes")
-    .select(
-      "id, slug, label, email, department, imap_host, imap_port, imap_user, smtp_host, smtp_port, smtp_user, reply_to, is_active, auto_grant, description, created_at, updated_at"
-    )
+  const { data, error } = await supabase
+    .from("shared_mailboxes")
+    .select("*")
     .is("deleted_at", null)
     .order("label", { ascending: true });
-  if (error) throw error as Error;
-  return (data ?? []) as SharedMailbox[];
+  if (error) throw error;
+  return (data ?? []).map(mapSharedMailbox);
 }
 
 export async function listOperatorMailboxAccess(operatorId: string): Promise<string[]> {
-  const { data, error } = await untypedFrom("operator_mailbox_access")
+  const { data, error } = await supabase
+    .from("operator_mailbox_access")
     .select("shared_mailbox_id")
     .eq("operator_id", operatorId);
-  if (error) throw error as Error;
-  return ((data ?? []) as { shared_mailbox_id: string }[]).map((r) => r.shared_mailbox_id);
+  if (error) throw error;
+  return (data ?? []).map((r) => r.shared_mailbox_id);
 }
 
 export async function setOperatorMailboxAccess(
@@ -72,17 +110,18 @@ export async function setOperatorMailboxAccess(
   const toRemove = current.filter((id) => !mailboxIds.includes(id));
 
   if (toAdd.length) {
-    const { error } = await untypedFrom("operator_mailbox_access").insert(
+    const { error } = await supabase.from("operator_mailbox_access").insert(
       toAdd.map((id) => ({ operator_id: operatorId, shared_mailbox_id: id })),
     );
-    if (error) throw error as Error;
+    if (error) throw error;
   }
   if (toRemove.length) {
-    const { error } = await untypedFrom("operator_mailbox_access")
+    const { error } = await supabase
+      .from("operator_mailbox_access")
       .delete()
       .eq("operator_id", operatorId)
       .in("shared_mailbox_id", toRemove);
-    if (error) throw error as Error;
+    if (error) throw error;
   }
 }
 
@@ -105,16 +144,32 @@ export interface SharedMailboxUpsert {
 }
 
 export async function upsertSharedMailbox(input: SharedMailboxUpsert): Promise<SharedMailbox> {
-  const payload = { ...input, updated_at: new Date().toISOString() };
-  const query = input.id
-    ? untypedFrom("shared_mailboxes").update(payload).eq("id", input.id).select().maybeSingle()
-    : untypedFrom("shared_mailboxes").insert(payload).select().maybeSingle();
-  const { data, error } = await query;
-  if (error) throw error as Error;
-  return data as SharedMailbox;
+  const { id, ...fields } = input;
+  const updated_at = new Date().toISOString();
+  if (id) {
+    const patch: SharedMailboxUpdate = { ...fields, updated_at };
+    const { data, error } = await supabase
+      .from("shared_mailboxes")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("Mailbox non trovata");
+    return mapSharedMailbox(data);
+  }
+  const row: SharedMailboxInsert = { ...fields, updated_at };
+  const { data, error } = await supabase
+    .from("shared_mailboxes")
+    .insert(row)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Inserimento mailbox fallito");
+  return mapSharedMailbox(data);
 }
 
 export async function deleteSharedMailbox(id: string): Promise<void> {
-  const { error } = await untypedFrom("shared_mailboxes").delete().eq("id", id);
-  if (error) throw error as Error;
+  const { error } = await supabase.from("shared_mailboxes").delete().eq("id", id);
+  if (error) throw error;
 }
