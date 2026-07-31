@@ -47,7 +47,18 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Opzionale: permette di puntare a un Chromium di sistema quando i
+        // binari scaricati da Playwright non sono eseguibili (sandbox senza
+        // librerie di sistema). Nessun path è hardcodato nel repo.
+        ...(process.env.E2E_CHROMIUM_PATH
+          ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM_PATH } }
+          : {}),
+      },
+    },
   ],
 
   webServer:
