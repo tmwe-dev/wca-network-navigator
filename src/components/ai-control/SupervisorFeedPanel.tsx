@@ -232,7 +232,9 @@ function AuditCard({ entry }: { entry: AuditRow }) {
               {originStyle.label}
             </Badge>
             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-              {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: it })}
+              {entry.created_at
+                ? formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: it })
+                : "—"}
             </span>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
@@ -320,7 +322,7 @@ function AuditTableView({ feed, isLoading, onLoadMore, canLoadMore }: AuditTable
                     <>
                       <TableRow className="hover:bg-muted/30 cursor-pointer">
                         <TableCell className="px-3 py-2 text-[10px] text-muted-foreground whitespace-nowrap">
-                          {format(new Date(entry.created_at), "HH:mm:ss")}
+                          {entry.created_at ? format(new Date(entry.created_at), "HH:mm:ss") : "—"}
                         </TableCell>
                         <TableCell className="px-3 py-2">
                           <div className="flex items-center gap-1.5">

@@ -129,7 +129,9 @@ export interface LiveIntrospectTable {
 
 /** Introspezione live dello schema DB (colonne + enum) per un set di tabelle. */
 export async function rpcIntrospectSchema(tableNames: readonly string[]): Promise<LiveIntrospectTable[] | null> {
-  const { data, error } = await supabase.rpc("ai_introspect_schema", { table_names: tableNames });
+  const { data, error } = await supabase.rpc("ai_introspect_schema", { table_names: [...tableNames] });
   if (error || !Array.isArray(data)) return null;
-  return data as LiveIntrospectTable[];
+  // Il RPC restituisce `Json`: si normalizza al contratto tipizzato al confine DAL.
+  const raw: unknown = data;
+  return raw as LiveIntrospectTable[];
 }
