@@ -65,6 +65,14 @@ export async function getTraceTimeline(traceId: string): Promise<PipelineTraceRo
   return (data ?? []) as PipelineTraceRow[];
 }
 
+export async function getTraceStepsOrdered(traceId: string): Promise<PipelineTraceRow[]> {
+  const { data } = await supabase.from("pipeline_traces")
+    .select("*")
+    .eq("trace_id", traceId)
+    .order("step_order", { ascending: true });
+  return (data ?? []) as PipelineTraceRow[];
+}
+
 export async function listDistinctEntityTypes(): Promise<string[]> {
   const { data, error } = await supabase.from("pipeline_traces").select("entity_type").limit(1000);
   if (error) throw error;

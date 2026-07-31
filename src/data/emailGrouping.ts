@@ -93,6 +93,30 @@ export async function fetchSenderGroupsOrdered(): Promise<EmailSenderGroup[]> {
  * (`group_name` non nullo), ordinate per `created_at` decrescente.
  * Errori propagati (throw).
  */
+export interface SenderGroupBrief {
+  nome_gruppo: string;
+  colore: string | null;
+  icon: string | null;
+}
+
+/** Legge nome/colore/icona di tutti i gruppi mittente ordinati per sort_order. */
+export async function fetchSenderGroupsBrief(): Promise<SenderGroupBrief[]> {
+  const { data } = await supabase
+    .from("email_sender_groups")
+    .select("nome_gruppo, colore, icon")
+    .order("sort_order", { ascending: true });
+  return (data ?? []) as SenderGroupBrief[];
+}
+
+/** Legge nome/colore/icona di tutti i gruppi mittente (nessun ordinamento). */
+export async function fetchSenderGroupsColorIcon(): Promise<SenderGroupBrief[]> {
+  const { data, error } = await supabase
+    .from("email_sender_groups")
+    .select("nome_gruppo, colore, icon");
+  if (error) return [];
+  return (data ?? []) as SenderGroupBrief[];
+}
+
 export async function fetchAssignedAddressRules(): Promise<AssignedAddressRuleRow[]> {
   return fetchAllRows<AssignedAddressRuleRow>((from, to) =>
     supabase

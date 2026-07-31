@@ -2,7 +2,8 @@
  * AgentTasksPage — Mostra i task proposti dagli agenti in attesa di conferma
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPendingAgentTasksFull, updateAgentTaskStatus } from "@/data/agentTasks";
+import { findAgentsByIds } from "@/data/agents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,25 +37,14 @@ function useAgentTasks() {
   return useQuery({
     queryKey: ["v2", "agent-tasks-pending"],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: tasks, error } = await (supabase as unknown as { from: (t: string) => any })
-        .from("agent_tasks")
-        .select("*")
-        .in("status", ["proposed", "pending"])
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
+      const tasks = await findPendingAgentTasksFull(200);
 
       // Fetch agent names
-      const agentIds = [...new Set((tasks || []).map((t: AgentTask) => t.agent_id))];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: agents } = await (supabase as unknown as { from: (t: string) => any })
-        .from("agents")
-        .select("id, name, avatar_emoji, role")
-        .in("id", agentIds.length ? agentIds : ["__none__"]);
+      const agentIds = [...new Set(tasks.map((t) => t.agent_id))];
+      const agents = await findAgentsByIds(agentIds);
 
-      const agentMap = new Map((agents || []).map((a: Agent) => [a.id, a]));
-      return (tasks || []).map((t: AgentTask) => ({
+      const agentMap = new Map(agents.map((a) => [a.id, a]));
+      return tasks.map((t) => ({
         ...t,
         agent: agentMap.get(t.agent_id) || { name: "Sconosciuto", avatar_emoji: "🤖", role: "agent" },
       }));
@@ -134,10 +124,7 @@ export function AgentTasksPage() {
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("agent_tasks")
-        .update({ status, started_at: status === "running" ? new Date().toISOString() : undefined })
-        .eq("id", id);
-      if (error) throw error;
+      await updateAgentTaskStatus(id, status, status === "running" ? new Date().toISOString() : undefined);
     },
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["v2", "agent-tasks-pending"] });

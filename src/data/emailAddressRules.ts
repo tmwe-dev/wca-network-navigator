@@ -115,6 +115,42 @@ export async function findEmailAddressRules(_userId: string): Promise<EmailAddre
   return (data ?? []) as EmailAddressRule[];
 }
 
+export interface AutoActionRuleRow {
+  auto_action: string | null;
+  auto_action_params: Record<string, unknown> | null;
+}
+
+/** Legge auto_action/auto_action_params per un utente e un set di indirizzi. */
+export async function findAutoActionRulesForEmails(
+  userId: string,
+  emails: string[],
+): Promise<AutoActionRuleRow[]> {
+  const { data, error } = await supabase
+    .from("email_address_rules")
+    .select("auto_action, auto_action_params")
+    .eq("user_id", userId)
+    .in("email_address", emails);
+  if (error) throw error;
+  return (data ?? []) as AutoActionRuleRow[];
+}
+
+export interface AiSuggestedGroupRow {
+  email_address: string;
+  ai_suggested_group: string | null;
+}
+
+/** Legge il gruppo suggerito dall'AI per una lista di indirizzi email. */
+export async function findAiSuggestedGroupsForEmails(
+  emails: string[],
+): Promise<AiSuggestedGroupRow[]> {
+  const { data, error } = await supabase
+    .from("email_address_rules")
+    .select("email_address,ai_suggested_group")
+    .in("email_address", emails);
+  if (error) return [];
+  return (data ?? []) as AiSuggestedGroupRow[];
+}
+
 export async function updateEmailAddressRule(id: string, patch: Partial<EmailAddressRule>): Promise<void> {
   const { error } = await supabase
     .from("email_address_rules")

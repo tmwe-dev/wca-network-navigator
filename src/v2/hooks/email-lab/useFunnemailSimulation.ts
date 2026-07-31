@@ -7,7 +7,7 @@
  */
 import * as React from "react";
 import { invokeAi } from "@/lib/ai/invokeAi";
-import { supabase } from "@/integrations/supabase/client";
+import { getTraceStepsOrdered } from "@/data/pipelineTraces";
 
 export interface SimulationInput {
   from: string;
@@ -68,10 +68,7 @@ export function useFunnemailSimulation(): UseFunnemailSimulationState {
   }, []);
 
   const fetchSteps = React.useCallback(async (tid: string) => {
-    const { data } = await supabase.from("pipeline_traces")
-      .select("*")
-      .eq("trace_id", tid)
-      .order("step_order", { ascending: true });
+    const data = await getTraceStepsOrdered(tid);
     if (mountedRef.current && Array.isArray(data)) {
       setSteps(data.map((row) => ({
         id: row.id,

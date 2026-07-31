@@ -29,3 +29,15 @@ export async function findAiRequestLogsSince(sinceIso: string, limit = 500): Pro
   if (error) throw error;
   return data ?? [];
 }
+
+/** Eventi di pagina dal periodo indicato, più recenti prima. */
+export async function findPageEventsSince(sinceIso: string, limit = 500): Promise<unknown[]> {
+  const { data, error } = await supabase
+    .from("page_events")
+    .select("*")
+    .gte("created_at", sinceIso)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as unknown[];
+}

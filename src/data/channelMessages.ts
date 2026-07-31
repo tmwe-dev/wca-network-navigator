@@ -758,3 +758,33 @@ export async function countEmailMessagesByMailbox(mailboxFilter?: MailboxQueryFi
   return count ?? 0;
 }
 
+
+export interface RecentInboundMessageRow {
+  id: string;
+  channel: string | null;
+  from_name: string | null;
+  from_address: string | null;
+  subject: string | null;
+  email_date: string | null;
+  created_at: string | null;
+  read_at: string | null;
+  category: string | null;
+}
+
+/** Messaggi inbound più recenti (esclusi soft-deleted), per il tool "read-inbox". */
+export async function findRecentInboundMessages(
+  limit = 30,
+): Promise<{ rows: RecentInboundMessageRow[]; count: number | null }> {
+  const { data, error, count } = await supabase
+    .from("channel_messages")
+    .select(
+      "id,channel,from_name,from_address,subject,email_date,created_at,read_at,category",
+      { count: "exact" },
+    )
+    .eq("direction", "inbound")
+    .is("deleted_at", null)
+    .order("email_date", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw error;
+  return { rows: (data ?? []) as RecentInboundMessageRow[], count: count ?? null };
+}

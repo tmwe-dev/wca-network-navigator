@@ -5,6 +5,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toJsonValue } from "@/lib/jsonGuards";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { getCachedScrapePayload } from "@/data/commandScrapePartner";
+import { findProspectBySearchTerm } from "@/data/prospects";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:prospect\s+)?/i;
@@ -12,13 +14,8 @@ const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|websit
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
-  const { data } = await supabase.from("scrape_cache")
-    .select("payload, scraped_at")
-    .eq("url", url)
-    .maybeSingle();
-
-  if (!data) return null;
-  const rec = data as { payload: Record<string, unknown>; scraped_at: string };
+  const rec = await getCachedScrapePayload(url);
+  if (!rec) return null;
   const age = Date.now() - new Date(rec.scraped_at).getTime();
   if (age > CACHE_TTL_MS) return null;
   return rec.payload;
@@ -69,20 +66,16 @@ export const scrapeProspectTool: Tool = {
       return { kind: "result", title: "Errore", message: "Specifica il nome del prospect da analizzare." };
     }
 
-    const { data: prospect, error: pErr } = await supabase.from("prospects")
-      .select("id, company_name, website, email, phone")
-      .or(`company_name.ilike.%${searchTerm}%`)
-      .limit(1)
-      .maybeSingle();
+    const prospect = await findProspectBySearchTerm(searchTerm);
 
-    if (pErr || !prospect) {
+    if (!prospect) {
       return { kind: "result", title: "Prospect Non Trovato", message: `Nessun prospect trovato per "${searchTerm}".` };
     }
 
-    const rec = prospect as Record<string, unknown>;
-    const website = rec.website as string | undefined;
+    const rec = prospect;
+    const website = rec.website ?? undefined;
     if (!website) {
-      return { kind: "result", title: "Nessun Sito", message: `${rec.company_name as string} non ha un sito web registrato.` };
+      return { kind: "result", title: "Nessun Sito", message: `${rec.company_name} non ha un sito web registrato.` };
     }
 
     // Cache lookup
@@ -125,18 +118,18 @@ export const scrapeProspectTool: Tool = {
     if (details.length === 0) {
       return {
         kind: "result",
-        title: `Analisi ${rec.company_name as string}`,
+        title: `Analisi ${rec.company_name}`,
         message: `Sito analizzato (${website}) ma nessun dato nuovo trovato.`,
       };
     }
 
     return {
       kind: "approval",
-      title: `Aggiorna ${rec.company_name as string}`,
+      title: `Aggiorna ${rec.company_name}`,
       description: `Dati estratti da ${website}. Vuoi aggiornare il prospect?`,
       details,
       governance: { role: "operator", permission: "update:prospect", policy: "approval_required" },
-      pendingPayload: { prospectId: rec.id as string, ...proposedUpdates },
+      pendingPayload: { prospectId: rec.id, ...proposedUpdates },
       toolId: "scrape-prospect-website",
     };
   },

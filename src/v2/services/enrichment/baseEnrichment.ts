@@ -21,8 +21,8 @@
 import { updatePartner, getPartnerEnrichmentData } from "@/data/partners";
 import { updateContactEnrichment } from "@/data/contacts";
 import { updateBusinessCard, getBusinessCardRawData } from "@/data/businessCards";
-import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { getScrapeCacheEntry } from "@/data/scrapeCache";
 
 
 import { createLogger } from "@/lib/log";
@@ -86,15 +86,12 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function checkCache(url: string): Promise<string | null> {
   try {
-    const { data } = await supabase.from("scrape_cache")
-      .select("payload, scraped_at")
-      .eq("url", url)
-      .maybeSingle();
+    const data = await getScrapeCacheEntry(url);
     if (!data) return null;
-    const scrapedAt = (data as { scraped_at: string }).scraped_at;
+    const scrapedAt = data.scraped_at;
     const age = Date.now() - new Date(scrapedAt).getTime();
     if (age > CACHE_TTL_MS) return null;
-    const payload = (data as { payload: { markdown?: string } }).payload;
+    const payload = data.payload as { markdown?: string };
     return payload?.markdown ?? null;
   } catch {
     return null;

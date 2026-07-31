@@ -2,7 +2,7 @@
  * Tool: mission-control — Pause / resume / stop an autopilot mission (requires approval).
  * Write tool: updates agent_missions.status. Does NOT run mission rounds (that's launch-mission).
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findAgentMissionTitleById, findAgentMissionByTitleLike, updateAgentMissionFields } from "@/data/agentMissions";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 type MissionAction = "paused" | "active" | "cancelled";
@@ -43,12 +43,11 @@ export const missionControlTool: Tool = {
       let missionName: string | null = ref;
       if (ref && /^[0-9a-f-]{36}$/i.test(ref)) {
         missionId = ref;
-        const { data } = await supabase.from("agent_missions").select("title").eq("id", ref).maybeSingle();
-        missionName = (data as { title?: string } | null)?.title ?? ref;
+        const data = await findAgentMissionTitleById(ref);
+        missionName = data?.title ?? ref;
       } else if (ref) {
-        const { data } = await supabase.from("agent_missions").select("id,title").ilike("title", `%${ref}%`).limit(1).maybeSingle();
-        if (data) {
-          const row = data as { id: string; title: string };
+        const row = await findAgentMissionByTitleLike(ref);
+        if (row) {
           missionId = row.id;
           missionName = row.title;
         }
@@ -90,8 +89,10 @@ export const missionControlTool: Tool = {
       };
     }
 
-    const { error } = await supabase.from("agent_missions").update({ status: action }).eq("id", missionId);
-    if (error) {
+    try {
+      await updateAgentMissionFields(missionId, { status: action });
+    } catch (e) {
+      const error = e as { message: string };
       return {
         kind: "result",
         title: "Controllo missione fallito",

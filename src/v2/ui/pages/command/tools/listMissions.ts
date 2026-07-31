@@ -1,7 +1,7 @@
 /**
  * Tool: list-missions — Read-only overview of autopilot missions with KPI/budget progress.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findAgentMissionsOverview } from "@/data/agentMissions";
 import type { Tool, ToolResult } from "./types";
 
 interface MissionRow {
@@ -25,15 +25,14 @@ export const listMissionsTool: Tool = {
     !/\b(avvia|esegui|lancia|fai\s+partire|trigger|ferma|pausa|stoppa)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const { data, error, count } = await supabase.from("agent_missions")
-      .select(
-        "id,title,goal_type,status,autopilot,kpi_target,kpi_current,budget,budget_consumed",
-        { count: "exact" },
-      )
-      .order("created_at", { ascending: false })
-      .limit(40);
-
-    if (error) {
+    let rows: MissionRow[];
+    let count: number | null;
+    try {
+      const res = await findAgentMissionsOverview(40);
+      rows = res.rows;
+      count = res.count;
+    } catch (e) {
+      const error = e as { message: string };
       return {
         kind: "result",
         title: "Missioni non disponibili",
@@ -43,7 +42,6 @@ export const listMissionsTool: Tool = {
       };
     }
 
-    const rows = (data ?? []) as MissionRow[];
     if (rows.length === 0) {
       return {
         kind: "result",

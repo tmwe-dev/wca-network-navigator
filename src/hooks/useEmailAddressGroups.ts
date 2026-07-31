@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
 import { findEmailAddressRules } from "@/data/emailAddressRules";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSenderGroupsColorIcon } from "@/data/emailGrouping";
 
 export interface EmailGroupInfo {
   groupName: string | null;
@@ -35,12 +35,9 @@ export function useEmailAddressGroups() {
     enabled: !!userId,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("email_sender_groups")
-        .select("nome_gruppo, colore, icon")
-        ;
-      if (error) return new Map<string, { color: string | null; icon: string | null }>();
+      const data = await fetchSenderGroupsColorIcon();
       const map = new Map<string, { color: string | null; icon: string | null }>();
-      (data ?? []).forEach((g: { nome_gruppo: string; colore: string | null; icon: string | null }) => {
+      data.forEach((g) => {
         map.set(g.nome_gruppo, { color: g.colore, icon: g.icon });
       });
       return map;

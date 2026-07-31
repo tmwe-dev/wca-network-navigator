@@ -2,7 +2,7 @@
  * Tool: read-inbox — Read-only view of inbound messages (Funnemail/Inreach).
  * Queries channel_messages WHERE direction='inbound', most recent first.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findRecentInboundMessages } from "@/data/channelMessages";
 import type { Tool, ToolResult } from "./types";
 
 interface InboundRow {
@@ -25,17 +25,14 @@ export const readInboxTool: Tool = {
     /\b(posta\s+in\s+arrivo|inbox|messaggi\s+ricevut|email\s+ricevut|email\s+in\s+entrata|inbound|in\s+entrata|non\s+letti|da\s+leggere|risposte\s+ricevut)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const { data, error, count } = await supabase.from("channel_messages")
-      .select(
-        "id,channel,from_name,from_address,subject,email_date,created_at,read_at,category",
-        { count: "exact" },
-      )
-      .eq("direction", "inbound")
-      .is("deleted_at", null)
-      .order("email_date", { ascending: false, nullsFirst: false })
-      .limit(30);
-
-    if (error) {
+    let rows: InboundRow[];
+    let count: number | null;
+    try {
+      const res = await findRecentInboundMessages(30);
+      rows = res.rows;
+      count = res.count;
+    } catch (e) {
+      const error = e as { message: string };
       return {
         kind: "result",
         title: "Posta in arrivo non disponibile",
@@ -45,7 +42,6 @@ export const readInboxTool: Tool = {
       };
     }
 
-    const rows = (data ?? []) as InboundRow[];
     if (rows.length === 0) {
       return {
         kind: "result",

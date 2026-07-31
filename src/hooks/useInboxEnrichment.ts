@@ -8,12 +8,14 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
-import type {
-  FunnemailPartnerSnapshot,
-  SenderIntelRow,
+import {
+  listPartnerSnapshotsByIds,
+  listSenderIntelByDomains,
+  type FunnemailPartnerSnapshot,
+  type SenderIntelRow,
 } from "@/data/funnemailInbox";
+import { findAiSuggestedGroupsForEmails } from "@/data/emailAddressRules";
 
 function extractEmail(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -77,13 +79,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     enabled: partnerIds.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<FunnemailPartnerSnapshot[]> => {
-      const { data, error } = await supabase.from("partners")
-        .select(
-          "id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website",
-        )
-        .in("id", partnerIds);
-      if (error) return [];
-      return (data ?? []) as FunnemailPartnerSnapshot[];
+      return listPartnerSnapshotsByIds(partnerIds);
     },
   });
 
@@ -92,13 +88,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     enabled: domains.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<SenderIntelRow[]> => {
-      const { data, error } = await supabase.from("funnemail_sender_intel")
-        .select(
-          "email_domain,is_known_partner,partner_id,company_type,country,website,role_guess",
-        )
-        .in("email_domain", domains);
-      if (error) return [];
-      return (data ?? []) as SenderIntelRow[];
+      return listSenderIntelByDomains(domains);
     },
   });
 
@@ -121,13 +111,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     enabled: intelPartnerIds.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<FunnemailPartnerSnapshot[]> => {
-      const { data, error } = await supabase.from("partners")
-        .select(
-          "id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website",
-        )
-        .in("id", intelPartnerIds);
-      if (error) return [];
-      return (data ?? []) as FunnemailPartnerSnapshot[];
+      return listPartnerSnapshotsByIds(intelPartnerIds);
     },
   });
 
@@ -138,14 +122,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     queryFn: async (): Promise<
       Array<{ email_address: string; ai_suggested_group: string | null }>
     > => {
-      const { data, error } = await supabase.from("email_address_rules")
-        .select("email_address,ai_suggested_group")
-        .in("email_address", addresses);
-      if (error) return [];
-      return (data ?? []) as Array<{
-        email_address: string;
-        ai_suggested_group: string | null;
-      }>;
+      return findAiSuggestedGroupsForEmails(addresses);
     },
   });
 
