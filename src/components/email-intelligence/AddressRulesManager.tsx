@@ -37,21 +37,7 @@ const TONES = [
   { value: "friendly", label: "Amichevole" },
 ];
 
-interface EditableRule {
-  id?: string;
-  email_address: string;
-  display_name?: string | null;
-  category?: string | null;
-  auto_action?: string | null;
-  auto_action_params?: unknown;
-  auto_execute?: boolean | null;
-  ai_confidence_threshold?: number | null;
-  preferred_channel?: string | null;
-  tone_override?: string | null;
-  notes?: string | null;
-  is_active?: boolean | null;
-  [key: string]: unknown;
-}
+type EditableRule = AddressRuleUpsertInput & { id?: string };
 
 export function AddressRulesManager() {
   const qc = useQueryClient();
@@ -67,10 +53,10 @@ export function AddressRulesManager() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (rule: Record<string, unknown>) => {
+    mutationFn: async (rule: EditableRule) => {
       const { id, ...payload } = rule;
       if (id) {
-        await updateAddressRuleById(String(id), payload);
+        await updateAddressRuleById(id, payload);
       } else {
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         await insertAddressRule(payload, user!.id);

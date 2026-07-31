@@ -36,7 +36,49 @@ function toRuleUpdate(patch: Partial<EmailAddressRule>): RuleUpdate {
   }
   if (patch.applied_count !== undefined) out.applied_count = patch.applied_count;
   if (patch.last_applied_at !== undefined) out.last_applied_at = patch.last_applied_at;
-  if (patch.is_blocked !== undefined) out.is_blocked = patch.is_blocked;
+  if (patch.is_blocked !== undefined && patch.is_blocked !== null) out.is_blocked = patch.is_blocked;
+  return out;
+}
+
+/**
+ * Payload di dominio usato dalle form UI (AddressRulesManager / RulesAndActionsTab).
+ * Elenca esplicitamente i soli campi editabili: niente index signature, niente cast.
+ */
+export interface AddressRuleUpsertInput {
+  email_address: string;
+  display_name?: string | null;
+  category?: string | null;
+  auto_action?: string | null;
+  auto_execute?: boolean | null;
+  ai_confidence_threshold?: number | null;
+  preferred_channel?: string | null;
+  tone_override?: string | null;
+  custom_prompt?: string | null;
+  notes?: string | null;
+  group_id?: string | null;
+  group_name?: string | null;
+  group_color?: string | null;
+  group_icon?: string | null;
+  is_active?: boolean | null;
+}
+
+function toRuleWrite(input: Partial<AddressRuleUpsertInput>): RuleUpdate {
+  const out: RuleUpdate = {};
+  if (input.email_address !== undefined) out.email_address = input.email_address;
+  if (input.display_name !== undefined) out.display_name = input.display_name;
+  if (input.category !== undefined) out.category = input.category;
+  if (input.auto_action !== undefined) out.auto_action = input.auto_action;
+  if (input.auto_execute !== undefined) out.auto_execute = input.auto_execute;
+  if (input.ai_confidence_threshold !== undefined) out.ai_confidence_threshold = input.ai_confidence_threshold;
+  if (input.preferred_channel !== undefined) out.preferred_channel = input.preferred_channel;
+  if (input.tone_override !== undefined) out.tone_override = input.tone_override;
+  if (input.custom_prompt !== undefined) out.custom_prompt = input.custom_prompt;
+  if (input.notes !== undefined) out.notes = input.notes;
+  if (input.group_id !== undefined) out.group_id = input.group_id;
+  if (input.group_name !== undefined) out.group_name = input.group_name;
+  if (input.group_color !== undefined) out.group_color = input.group_color;
+  if (input.group_icon !== undefined) out.group_icon = input.group_icon;
+  if (input.is_active !== undefined) out.is_active = input.is_active;
   return out;
 }
 
@@ -178,16 +220,28 @@ export async function findAddressRulesForUi(
 }
 
 /** Update by id (semantica AddressRulesManager). */
-export async function updateAddressRuleById(id: string, payload: RuleUpdate): Promise<void> {
-  const { error } = await supabase.from("email_address_rules").update(payload).eq("id", id);
+export async function updateAddressRuleById(
+  id: string,
+  payload: Partial<AddressRuleUpsertInput>,
+): Promise<void> {
+  const { error } = await supabase.from("email_address_rules").update(toRuleWrite(payload)).eq("id", id);
   if (error) throw error;
 }
 
 /** Insert nuova regola con user_id esplicito. */
-export async function insertAddressRule(payload: RuleInsert, userId: string): Promise<void> {
+export async function insertAddressRule(
+  payload: AddressRuleUpsertInput & { exclusive_agent_id?: string | null },
+  userId: string,
+): Promise<void> {
+  const row: RuleInsert = {
+    ...toRuleWrite(payload),
+    email_address: payload.email_address,
+    user_id: userId,
+  };
+  if (payload.exclusive_agent_id !== undefined) row.exclusive_agent_id = payload.exclusive_agent_id;
   const { error } = await supabase
     .from("email_address_rules")
-    .insert({ ...payload, user_id: userId });
+    .insert(row);
   if (error) throw error;
 }
 
