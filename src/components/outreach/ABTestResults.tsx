@@ -1,15 +1,15 @@
 /**
- * ABTestRowResults — Dashboard showing A/B test results with comparison
+ * ABTestResults — Dashboard showing A/B test results with comparison
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { findAbTests, completeAbTest, type ABTestRowRow } from "@/data/abTests";
+import { findAbTests, completeAbTest, type ABTestRow } from "@/data/abTests";
 import { toast } from "sonner";
 import { FlaskConical, Star, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ABTestRowCreator } from "./ABTestRowCreator";
+import { ABTestCreator } from "./ABTestCreator";
 
 function VariantColumn({ label, sent, responses, rate, isWinner }: {
   label: string; sent: number; responses: number; rate: number; isWinner: boolean;
@@ -101,7 +101,7 @@ function TestCard({ test, onComplete }: { test: ABTestRow; onComplete: (id: stri
   );
 }
 
-export function ABTestRowResults() {
+export function ABTestResults() {
   const qc = useQueryClient();
 
   const { data: tests = [], isLoading } = useQuery({
@@ -146,7 +146,7 @@ export function ABTestRowResults() {
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <FlaskConical className="w-4 h-4 text-primary" /> A/B Test ({tests.length})
           </h2>
-          <ABTestRowCreator />
+          <ABTestCreator />
         </div>
         {tests.map(t => (
           <TestCard key={t.id} test={t} onComplete={(id) => completeMutation.mutate(id)} />
