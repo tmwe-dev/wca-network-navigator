@@ -253,3 +253,22 @@ export async function setAddressRuleExclusiveAgent(ruleId: string, agentId: stri
     .eq("id", ruleId);
   if (error) throw error;
 }
+
+export interface AddressRuleSummary {
+  email_address: string;
+  auto_action: string | null;
+  preferred_channel: string | null;
+  ai_confidence_threshold: number | null;
+  success_rate: number | null;
+  display_name: string | null;
+  is_active: boolean | null;
+}
+
+/** Riepilogo regole indirizzo per la vista profili sender. */
+export async function findAddressRuleSummaries(): Promise<AddressRuleSummary[]> {
+  const { data, error } = await supabase
+    .from("email_address_rules")
+    .select("email_address, auto_action, preferred_channel, ai_confidence_threshold, success_rate, display_name, is_active");
+  if (error) throw error;
+  return data ?? [];
+}

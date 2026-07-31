@@ -331,3 +331,49 @@ export function invalidateActivityCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: activityKeys.all });
   qc.invalidateQueries({ queryKey: queryKeys.activities.all });
 }
+
+// ─── AI Generated Activities ────────────────────────────
+
+export interface AIActivity {
+  id: string;
+  activity_type: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  priority: string;
+  created_at: string;
+  partner_id: string | null;
+  source_meta: Record<string, unknown> | null;
+}
+
+const AI_ACTIVITY_SELECT = "id, activity_type, title, description, status, due_date, priority, created_at, partner_id, source_meta";
+
+/** Attività pendenti generate dall'AI (ultime N). */
+export async function findAIGeneratedActivities(limit = 10): Promise<AIActivity[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select(AI_ACTIVITY_SELECT)
+    .eq("status", "pending")
+    .eq("source_type", "ai_generated")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as AIActivity[];
+}
+
+export async function setActivityStatus(activityId: string, status: string): Promise<void> {
+  const { error } = await supabase
+    .from("activities")
+    .update({ status } as unknown as ActivityUpdate)
+    .eq("id", activityId);
+  if (error) throw error;
+}
+
+export async function updateActivityDescription(id: string, description: string): Promise<void> {
+  const { error } = await supabase
+    .from("activities")
+    .update({ description })
+    .eq("id", id);
+  if (error) throw error;
+}

@@ -3,7 +3,8 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findConversationContextsOrdered } from "@/data/emailClassifications";
+import { findAddressRuleSummaries } from "@/data/emailAddressRules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,19 +33,18 @@ export function SenderProfilesView() {
     queryKey: queryKeys.email.senderProfiles,
     queryFn: async () => {
       // Combine conversation context with rules
-      const [ctxRes, rulesRes] = await Promise.all([
-        supabase.from("contact_conversation_context").select("*").order(
+      const [ctxData, rulesData] = await Promise.all([
+        findConversationContextsOrdered(
           sortBy === "last_interaction" ? "last_interaction_at" : sortBy === "response_rate" ? "response_rate" : "interaction_count",
-          { ascending: false }
-        ).limit(50),
-        supabase.from("email_address_rules").select("email_address, auto_action, preferred_channel, ai_confidence_threshold, success_rate, display_name, is_active"),
+          50,
+        ),
+        findAddressRuleSummaries(),
       ]);
-      if (ctxRes.error) throw ctxRes.error;
 
       const rulesMap = new Map<string, Record<string, unknown>>();
-      for (const r of rulesRes.data ?? []) rulesMap.set(r.email_address, r as unknown as Record<string, unknown>);
+      for (const r of rulesData) rulesMap.set(r.email_address, r as unknown as Record<string, unknown>);
 
-      return (ctxRes.data ?? []).map(ctx => ({
+      return ctxData.map(ctx => ({
         ...ctx,
         rules: rulesMap.get(ctx.email_address) ?? null,
       }));
