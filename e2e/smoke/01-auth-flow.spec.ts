@@ -1,46 +1,40 @@
 /**
- * Smoke Test 1: Auth flow — signup attempt, login, logout
+ * Smoke Test 1: Auth flow — TMWE OAuth (unica porta d'ingresso).
+ *
+ * Allineato al flusso corrente (`mem://auth/tmwe-only-auth-2026-05-05`):
+ * niente form email/password, niente signup, niente reset.
+ * Le assertion di sicurezza sono rafforzate, non indebolite: verifichiamo
+ * che NON esista un percorso credenziali alternativo.
  */
 import { test, expect } from "@playwright/test";
 
-test.describe("smoke: auth flow", () => {
-  test("login page loads and form is visible", async ({ page }) => {
+test.describe("smoke: auth flow (TMWE)", () => {
+  test("/auth reindirizza alla login V2", async ({ page }) => {
     await page.goto("/auth");
-    await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    await page.waitForURL(/\/v2\/login/, { timeout: 15_000 });
+    expect(page.url()).toContain("/v2/login");
   });
 
-  test("login with invalid credentials shows error", async ({ page }) => {
-    await page.goto("/auth");
-    await page.fill('input[type="email"]', "invalid@test.com");
-    await page.fill('input[type="password"]', "wrong-password");
-    await page.click('button[type="submit"]');
-    // Should show error or stay on auth page
-    await page.waitForTimeout(3000);
-    const url = page.url();
-    // Either shows error toast or remains on auth page
-    const stayedOnAuth = url.includes("/auth");
-    const hasError = await page.locator('[role="alert"], [data-sonner-toast], .text-destructive').count() > 0;
-    expect(stayedOnAuth || hasError).toBeTruthy();
+  test("la login mostra il solo ingresso TMWE", async ({ page }) => {
+    await page.goto("/v2/login");
+    const tmwe = page.getByText(/Entra con TMWE|Preparazione login/i);
+    await expect(tmwe.first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("signup tab is accessible", async ({ page }) => {
-    await page.goto("/auth");
-    const signupTab = page.getByRole("tab", { name: /registr|sign.?up|crea/i });
-    if (await signupTab.count() > 0) {
-      await signupTab.click();
-      await expect(page.locator('input[type="email"]')).toBeVisible();
-    } else {
-      // Single form mode — just verify email input exists
-      await expect(page.locator('input[type="email"]')).toBeVisible();
-    }
+  test("nessun form credenziali esposto (guardia di sicurezza)", async ({ page }) => {
+    await page.goto("/v2/login");
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
+    await expect(page.locator('input[type="email"]')).toHaveCount(0);
   });
 
-  test("reset password link exists", async ({ page }) => {
-    await page.goto("/auth");
-    const resetLink = page.getByRole("link", { name: /password|dimenticata|forgot/i })
-      .or(page.getByText(/password|dimenticata|forgot/i));
-    await expect(resetLink.first()).toBeVisible({ timeout: 5_000 });
+  test("errore TMWE dal callback viene mostrato all'utente", async ({ page }) => {
+    await page.goto("/v2/login?tmwe=error&reason=not_whitelisted");
+    await expect(page.getByText(/Email non autorizzata/i).first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("la pagina intermedia TMWE non espone credenziali", async ({ page }) => {
+    await page.goto("/v2/tmwe-login-popup");
+    await expect(page.getByRole("heading", { name: /Accesso TMWE/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
   });
 });
