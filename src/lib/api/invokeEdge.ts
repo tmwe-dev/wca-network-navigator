@@ -20,6 +20,7 @@ import { ApiError } from "@/lib/api/apiError";
 import { createLogger } from "@/lib/log";
 import { checkBudget, trackCost } from "@/lib/api/costTracker";
 import { validateResponse, type ResponseSchema } from "@/lib/api/responseValidator";
+import { parseEdgeErrorBody } from "@/lib/api/edgeErrorContract";
 import { Sentry } from "@/lib/sentry";
 import { traceCollector } from "@/v2/observability/traceCollector";
 
@@ -124,10 +125,8 @@ export async function invokeEdge<T = unknown>(
       typeof status === "number" && status >= 500 ? "SERVER_ERROR" :
       "UNKNOWN_ERROR";
 
-    const messageFromBody =
-      typeof body?.message === "string" ? (body.message as string) :
-      typeof body?.error === "string" ? (body.error as string) :
-      undefined;
+    const parsed = parseEdgeErrorBody(body);
+    const messageFromBody = parsed?.message ?? undefined;
 
     log.warn("invoke returned error", { functionName, context, status, name: errAny?.name });
     Sentry.addBreadcrumb({ category: "edge-function", message: `${functionName} failed: ${status}`, level: "error", data: { functionName, context, status } });
@@ -146,7 +145,13 @@ export async function invokeEdge<T = unknown>(
       code,
       message: messageFromBody ?? errAny?.message ?? `Edge function "${functionName}" failed`,
       httpStatus: status,
-      details: { context, functionName, body },
+      details: {
+        context,
+        functionName,
+        body,
+        ...(parsed?.rawCode ? { edgeCode: parsed.rawCode } : {}),
+        ...(parsed?.details ? { edgeDetails: parsed.details } : {}),
+      },
     });
   }
 
