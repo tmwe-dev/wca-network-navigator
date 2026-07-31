@@ -105,10 +105,9 @@ export async function insertBlacklistEntry(entry: {
 
 /** Rimuove voci blacklist per partner_id esatto o company_name fuzzy; ritorna il conteggio rimosso. */
 export async function deleteBlacklistByRef(ref: string, byPartnerId: boolean): Promise<number> {
-  const base = supabase.from("blacklist_entries").delete({ count: "exact" });
   const { error, count } = byPartnerId
-    ? await base.eq("matched_partner_id", ref)
-    : await base.ilike("company_name", `%${ref}%`);
+    ? await supabase.from("blacklist_entries").delete({ count: "exact" }).eq("matched_partner_id", ref)
+    : await supabase.from("blacklist_entries").delete({ count: "exact" }).ilike("company_name", `%${ref}%`);
   if (error) throw error;
   return count ?? 0;
 }
