@@ -11,15 +11,6 @@ import { Loader2, Briefcase, Crown, Circle } from "lucide-react";
 import { StaffChatCanvas } from "@/components/staff/StaffChatCanvas";
 import { queryKeys } from "@/lib/queryKeys";
 
-interface JobRow {
-  id: string;
-  title: string;
-  status: string;
-  created_at: string;
-  current_step: number;
-  steps: Record<string, unknown>;
-}
-
 const STAFF_ROLES = ["director", "account_manager", "strategist", "sales", "outreach", "research"];
 
 export function KnowledgeBasePage() {
@@ -40,7 +31,7 @@ export function KnowledgeBasePage() {
   const { data: jobs } = useQuery({
     queryKey: queryKeys.downloads.staffJobs(),
     queryFn: async () => {
-      return (await findRecentWorkPlansOverview(20)) as unknown as JobRow[];
+      return await findRecentWorkPlansOverview(20);
     },
   });
 
