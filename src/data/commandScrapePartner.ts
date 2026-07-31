@@ -3,6 +3,9 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import type { Database } from "@/integrations/supabase/types";
+
+type PartnerUpdate = Database["public"]["Tables"]["partners"]["Update"];
 
 export interface ScrapePartnerRow {
   id: string;
@@ -25,7 +28,7 @@ export async function setCachedScrapePayload(url: string, payload: Record<string
     .upsert({ url, payload, scraped_at: new Date().toISOString() });
 }
 
-export async function updatePartnerFields(partnerId: string, updateData: Record<string, string>): Promise<{ error: { message: string } | null }> {
+export async function updatePartnerFields(partnerId: string, updateData: PartnerUpdate): Promise<{ error: { message: string } | null }> {
   return await supabase
     .from("partners")
     .update(updateData)

@@ -2,9 +2,11 @@
  * DAL — Queries for useContactMerge.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { tFrom } from "@/lib/typedSupabase";
 import type { Database } from "@/integrations/supabase/types";
 
 type ImportedContactsRow = Database["public"]["Tables"]["imported_contacts"]["Row"];
+type ImportedContactsUpdate = Database["public"]["Tables"]["imported_contacts"]["Update"];
 
 export async function getImportedContactById(id: string): Promise<ImportedContactsRow> {
   const { data, error } = await supabase.from("imported_contacts").select("*").eq("id", id).single();
@@ -12,18 +14,22 @@ export async function getImportedContactById(id: string): Promise<ImportedContac
   return data as ImportedContactsRow;
 }
 
-export async function updateImportedContact(id: string, patch: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("imported_contacts").update(patch as never).eq("id", id);
+export async function updateImportedContact(id: string, patch: ImportedContactsUpdate): Promise<void> {
+  const { error } = await supabase.from("imported_contacts").update(patch).eq("id", id);
   if (error) throw error;
 }
 
+/**
+ * `activities.contact_id` / `emails` non sono nei tipi generati: si mantiene
+ * l'accesso untyped centralizzato (`tFrom`) usato in origine dal chiamante.
+ */
 export async function reassignActivitiesContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
-  const { error } = await supabase.from("activities").update({ contact_id: toContactId } as never).eq("contact_id", fromContactId);
+  const { error } = await tFrom("activities").update({ contact_id: toContactId }).eq("contact_id", fromContactId);
   return { error };
 }
 
 export async function reassignEmailsContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
-  const { error } = await supabase.from("emails").update({ contact_id: toContactId } as never).eq("contact_id", fromContactId);
+  const { error } = await tFrom("emails").update({ contact_id: toContactId }).eq("contact_id", fromContactId);
   return { error };
 }
 

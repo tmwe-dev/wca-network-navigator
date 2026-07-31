@@ -3,6 +3,7 @@
  * Wraps existing scrape-website edge function with scrape_cache.
  */
 import { getCachedScrapePayload, setCachedScrapePayload, updatePartnerFields, findPartnerBySearchTerm } from "@/data/commandScrapePartner";
+import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:partner\s+)?/i;
