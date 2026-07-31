@@ -19,6 +19,20 @@ export type AiInteractionType =
 
 export type AiInteractionRole = "user" | "assistant" | "system" | "tool";
 
+const INTERACTION_TYPES: readonly AiInteractionType[] = [
+  "chat_text", "voice_tts", "voice_conversation", "voice_stt", "edge_ai",
+];
+
+/** Narrowing runtime della colonna libera `interaction_type`. */
+export function toAiInteractionType(value: string): AiInteractionType | null {
+  return INTERACTION_TYPES.includes(value as AiInteractionType) ? (value as AiInteractionType) : null;
+}
+
+/** Narrowing runtime del rating (-1 | 1) memorizzato come integer. */
+export function toFeedbackRating(value: number | null | undefined): -1 | 1 {
+  return value === 1 ? 1 : -1;
+}
+
 export interface AiInteractionLogInput {
   interaction_type: AiInteractionType;
   role: AiInteractionRole;
