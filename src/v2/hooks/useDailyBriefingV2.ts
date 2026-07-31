@@ -2,7 +2,7 @@
  * useDailyBriefingV2 — AI daily briefing for staff
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchDailyBriefingsRaw } from "@/v2/io/supabase/queries/daily-briefing";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface DailyBriefing {
@@ -17,11 +17,7 @@ export function useDailyBriefingV2() {
   return useQuery({
     queryKey: queryKeys.v2.dailyBriefing,
     queryFn: async (): Promise<readonly DailyBriefing[]> => {
-      const { data, error } = await supabase
-        .from("ai_session_briefings")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const { data, error } = await fetchDailyBriefingsRaw();
       if (error) return [];
       return (data ?? []).map((r) => ({
         id: r.id,
