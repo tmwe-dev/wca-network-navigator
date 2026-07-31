@@ -2,7 +2,7 @@
  * Tool: cancel-outreach-item — cancella o posticipa un item della coda outreach.
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { updateOutreachItem } from "@/data/outreachQueue";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = { item_id?: string; action?: "cancel" | "postpone"; new_scheduled_at?: string; [k: string]: unknown };
@@ -41,8 +41,7 @@ export const cancelOutreachItemTool: Tool = {
       action === "cancel"
         ? { status: "cancelled" }
         : { scheduled_at: payload.new_scheduled_at ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString() };
-    const { error } = await supabase.from("outreach_queue").update(patch as never).eq("id", itemId);
-    if (error) throw new Error(error.message);
+    await updateOutreachItem(itemId, patch);
     return {
       kind: "result",
       title: action === "cancel" ? "🚫 Outreach annullato" : "⏰ Outreach riprogrammato",

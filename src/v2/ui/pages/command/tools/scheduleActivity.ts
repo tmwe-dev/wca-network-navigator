@@ -10,6 +10,8 @@
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
 import { supabase } from "@/integrations/supabase/client";
+import { insertAgentTask } from "@/data/agentTasks";
+import { insertHumanActivity } from "@/data/activities";
 
 interface SchedulePayload {
   kind?: "agent_task" | "human_activity";
@@ -111,24 +113,25 @@ export const scheduleActivityTool: Tool = {
           meta: { count: 0, sourceLabel: "agent_tasks" },
         };
       }
-      const { error } = await supabase.from("agent_tasks").insert({
-        agent_id: data.agentId,
-        user_id: userId,
-        task_type: data.taskType ?? "outreach",
-        description: `${data.title}${data.description ? `\n${data.description}` : ""}`,
-        target_filters: data.partnerId
-          ? { partner_id: data.partnerId }
-          : data.contactId
-            ? { contact_id: data.contactId }
-            : {},
-        status: "pending",
-        scheduled_at: data.dueAt ?? null,
-      });
-      if (error) {
+      try {
+        await insertAgentTask({
+          agent_id: data.agentId,
+          user_id: userId,
+          task_type: data.taskType ?? "outreach",
+          description: `${data.title}${data.description ? `\n${data.description}` : ""}`,
+          target_filters: data.partnerId
+            ? { partner_id: data.partnerId }
+            : data.contactId
+              ? { contact_id: data.contactId }
+              : {},
+          status: "pending",
+          scheduled_at: data.dueAt ?? null,
+        });
+      } catch (e) {
         return {
           kind: "result",
           title: "Errore creazione agent_task",
-          message: error.message,
+          message: e instanceof Error ? e.message : String(e),
           meta: { count: 0, sourceLabel: "agent_tasks" },
         };
       }
@@ -141,25 +144,26 @@ export const scheduleActivityTool: Tool = {
     }
 
     // human_activity
-    const { error } = await supabase.from("activities").insert({
-      user_id: userId,
-      activity_type: "other",
-      title: data.title,
-      description: data.description ?? null,
-      due_date: data.dueAt ? data.dueAt.slice(0, 10) : null,
-      scheduled_at: data.dueAt ?? null,
-      partner_id: data.partnerId ?? null,
-      selected_contact_id: data.contactId ?? null,
-      source_type: data.partnerId ? "partner" : "manual",
-      source_id: data.partnerId ?? userId,
-      status: "pending",
-      priority: "medium",
-    });
-    if (error) {
+    try {
+      await insertHumanActivity({
+        user_id: userId,
+        activity_type: "other",
+        title: data.title,
+        description: data.description ?? null,
+        due_date: data.dueAt ? data.dueAt.slice(0, 10) : null,
+        scheduled_at: data.dueAt ?? null,
+        partner_id: data.partnerId ?? null,
+        selected_contact_id: data.contactId ?? null,
+        source_type: data.partnerId ? "partner" : "manual",
+        source_id: data.partnerId ?? userId,
+        status: "pending",
+        priority: "medium",
+      });
+    } catch (e) {
       return {
         kind: "result",
         title: "Errore creazione activity",
-        message: error.message,
+        message: e instanceof Error ? e.message : String(e),
         meta: { count: 0, sourceLabel: "activities" },
       };
     }
