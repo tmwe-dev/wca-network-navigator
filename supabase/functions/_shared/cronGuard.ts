@@ -4,7 +4,11 @@
  *
  * Usato dai 4 worker automatici (outreach-scheduler, email-cron-sync,
  * agent-autonomous-cycle, agent-autopilot-worker).
+ *
+ * Il kill-switch globale `system_flags.cron_paused` NON è reimplementato qui:
+ * è l'unica implementazione condivisa in `cronGate.ts` (`isCronPaused`).
  */
+import { isCronPaused } from "./cronGate.ts";
 
 // Generic supabase-js client interface (avoids type imports across deno boundary)
 interface SupabaseLike {
@@ -30,56 +34,26 @@ export async function cronGuardCheck(
   supabase: SupabaseLike,
   config: CronGuardConfig
 ): Promise<CronGuardResult> {
-  // 0. Global kill-switch (system_flags.cron_paused)
-  try {
-    const { data: pausedRow } = await supabase
-      .from("system_flags")
-      .select("value")
-      .eq("key", "cron_paused")
-      .maybeSingle();
-    const raw = pausedRow?.value;
-    if (raw === true || raw === "true") {
-      console.warn(JSON.stringify({
-        level: "warn",
-        event: "cron_paused_skip",
-        function: config.jobName,
-        timestamp: new Date().toISOString(),
-      }));
-      return { skip: true, reason: "cron_paused" };
-    }
-  } catch {
-    // fail-open
+  // 0. Global kill-switch (system_flags.cron_paused) — implementazione unica in cronGate
+  if (await isCronPaused(supabase as never)) {
+    console.warn(JSON.stringify({
+      level: "warn",
+      event: "cron_paused_skip",
+      function: config.jobName,
+      timestamp: new Date().toISOString(),
+    }));
+    return { skip: true, reason: "cron_paused" };
   }
 
   // 1. Toggle
-  try {
-    const { data: enabledRow } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", config.enabledKey)
-      .is("user_id", null)
-      .maybeSingle();
-    if (enabledRow?.value === "false") {
-      return { skip: true, reason: "disabled_by_user" };
-    }
-  } catch {
-    // se la query fallisce non blocchiamo il run
+  if ((await readGlobalSetting(supabase, config.enabledKey)) === "false") {
+    return { skip: true, reason: "disabled_by_user" };
   }
 
   // 2. Throttle
   let intervalMin = config.defaultIntervalMin;
-  try {
-    const { data: intervalRow } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", config.intervalKey)
-      .is("user_id", null)
-      .maybeSingle();
-    const parsed = parseInt(intervalRow?.value || "", 10);
-    if (Number.isFinite(parsed) && parsed > 0) intervalMin = parsed;
-  } catch {
-    // ignore
-  }
+  const parsed = parseInt((await readGlobalSetting(supabase, config.intervalKey)) || "", 10);
+  if (Number.isFinite(parsed) && parsed > 0) intervalMin = parsed;
 
   try {
     const { data: lastRun } = await supabase
@@ -100,6 +74,23 @@ export async function cronGuardCheck(
   }
 
   return { skip: false };
+}
+
+/** Legge una `app_settings` globale (user_id NULL). Fail-open: null su errore. */
+async function readGlobalSetting(supabase: SupabaseLike, key: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", key)
+      .is("user_id", null)
+      .maybeSingle();
+    const value = data?.value;
+    return typeof value === "string" ? value : null;
+  } catch {
+    // se la query fallisce non blocchiamo il run
+    return null;
+  }
 }
 
 export async function cronGuardLogRun(
