@@ -5,6 +5,7 @@
  * agent_id null = global (applies to all personas as fallback).
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export type RoutingPriority = "low" | "normal" | "high" | "critical";
 
@@ -52,7 +53,7 @@ export async function listAgentRoutingRules(): Promise<AgentRoutingRule[]> {
     .select(COLS)
     .order("priority", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as AgentRoutingRule[];
+  return (data ?? []) as AgentRoutingRule[];
 }
 
 export async function createAgentRoutingRule(
@@ -63,11 +64,11 @@ export async function createAgentRoutingRule(
 ): Promise<AgentRoutingRule> {
   const { data, error } = await supabase
     .from("agent_routing_rules")
-    .insert(input as never)
+    .insert(input satisfies Database["public"]["Tables"]["agent_routing_rules"]["Insert"])
     .select(COLS)
     .single();
   if (error) throw error;
-  return data as unknown as AgentRoutingRule;
+  return data as AgentRoutingRule;
 }
 
 export async function updateAgentRoutingRule(
@@ -76,7 +77,7 @@ export async function updateAgentRoutingRule(
 ): Promise<void> {
   const { error } = await supabase
     .from("agent_routing_rules")
-    .update(patch as never)
+    .update(patch satisfies Database["public"]["Tables"]["agent_routing_rules"]["Update"])
     .eq("id", id);
   if (error) throw error;
 }
