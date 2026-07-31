@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Mail, Phone, MapPin, Building2, User, ArrowLeft, ExternalLink, Users, ChevronRight, Shield, Send as SendIcon, Loader2, ClipboardList } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { queryProspects, findProspectContactsByProspectId, type ProspectContactRow } from "@/data/prospects";
+import { queryProspects, findProspectContactsByProspectId } from "@/data/prospects";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { t } from "@/components/download/theme";
