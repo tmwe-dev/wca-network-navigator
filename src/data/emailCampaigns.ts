@@ -216,12 +216,12 @@ export async function findRecentEmailQueue<T = Record<string, unknown>>(limit = 
   return (data || []) as unknown as T[];
 }
 
-/** Conteggio email in coda per stato (pending/sending), per il tracker processi attivi. */
-export async function findEmailQueueStatusCounts(): Promise<{ status: string }[]> {
+/** Righe status di email_campaign_queue pending/sending; null in caso di errore (nessun throw). */
+export async function findEmailQueueStatusRows(): Promise<{ status: string }[] | null> {
   const { data, error } = await supabase
     .from("email_campaign_queue")
     .select("status", { count: "exact", head: false })
     .in("status", ["pending", "sending"]);
-  if (error) throw error;
+  if (error) return null;
   return (data || []) as { status: string }[];
 }

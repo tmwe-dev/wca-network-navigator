@@ -33,3 +33,13 @@ export async function upsertChannelBackfillState(row: Record<string, unknown>): 
     .upsert(row as never, { onConflict: "operator_id,channel,external_chat_id" });
   if (error) throw error;
 }
+
+/** Operatore associato a un utente, per il flusso di backfill WhatsApp deprecato. */
+export async function findOperatorIdByUserId(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("operators")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data?.id ?? null;
+}

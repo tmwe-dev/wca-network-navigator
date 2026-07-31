@@ -77,3 +77,13 @@ export async function findProspectInteractionsForRecord(prospectId: string, limi
     .limit(limit);
   return (data ?? []) as unknown as ProspectInteractionRecordRow[];
 }
+
+/** Tutti i prospect ordinati per company_name. Estratto da `useProspects`. */
+export async function findAllProspects(): Promise<Prospect[]> {
+  const { data, error } = await supabase
+    .from("prospects")
+    .select("*")
+    .order("company_name");
+  if (error) throw error;
+  return data ?? [];
+}

@@ -515,3 +515,31 @@ export async function findTodayActivities(sinceIso: string): Promise<TodayActivi
   if (error) throw error;
   return (data ?? []) as unknown as TodayActivityRow[];
 }
+
+export interface PartnerContactRow {
+  id: string;
+  partner_id: string;
+  name: string;
+  email: string | null;
+  direct_phone: string | null;
+  mobile: string | null;
+  title: string | null;
+  is_primary: boolean | null;
+  contact_alias: string | null;
+}
+
+/** Contatti di un set di partner (chunked a 100), usato dagli hook di activities per liste/campagne. */
+export async function findPartnerContactsForPartnerIds(partnerIds: string[]): Promise<PartnerContactRow[]> {
+  const CHUNK = 100;
+  const allData: PartnerContactRow[] = [];
+  for (let i = 0; i < partnerIds.length; i += CHUNK) {
+    const chunk = partnerIds.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from("partner_contacts")
+      .select("id, partner_id, name, email, direct_phone, mobile, title, is_primary, contact_alias")
+      .in("partner_id", chunk);
+    if (error) throw error;
+    if (data) allData.push(...(data as PartnerContactRow[]));
+  }
+  return allData;
+}

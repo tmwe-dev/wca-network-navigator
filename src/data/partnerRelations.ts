@@ -147,3 +147,22 @@ export async function findPartnerContactsByPartnerIds(
   }
   return results;
 }
+
+export interface PartnerSocialLinkRow {
+  id: string;
+  partner_id: string;
+  contact_id: string | null;
+  platform: string;
+  url: string;
+  created_at: string;
+}
+
+/** Social link di un partner. Estratto da `useSocialLinks`. */
+export async function findPartnerSocialLinks(partnerId: string): Promise<PartnerSocialLinkRow[]> {
+  const { data, error } = await supabase
+    .from("partner_social_links")
+    .select("*")
+    .eq("partner_id", partnerId);
+  if (error) throw error;
+  return data as PartnerSocialLinkRow[];
+}

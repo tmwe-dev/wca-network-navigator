@@ -5,7 +5,9 @@ import { Mail, Phone, MessageCircle, Users, Search, Megaphone, StickyNote, Bot, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { findContactInteractionsRange } from "@/data/contactInteractions";
+import { findChannelMessagesForContactEmail } from "@/data/channelMessages";
+import { findActivitiesForSelectedContact } from "@/data/activities";
 import { cn } from "@/lib/utils";
 
 const TYPE_CONFIG: Record<string, { icon: typeof Mail; color: string; label: string }> = {
@@ -61,12 +63,11 @@ export function ContactInteractionTimeline({ contactId, contactEmail }: Props) {
       const allItems: TimelineItem[] = append ? [...items] : [];
 
       // 1. contact_interactions
-      const { data: interactions } = await supabase
-        .from("contact_interactions")
-        .select("*")
-        .eq("contact_id", contactId)
-        .order("created_at", { ascending: false })
-        .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
+      const interactions = await findContactInteractionsRange(
+        contactId,
+        pageNum * PAGE_SIZE,
+        (pageNum + 1) * PAGE_SIZE - 1,
+      );
 
       for (const i of interactions || []) {
         allItems.push({
@@ -82,12 +83,11 @@ export function ContactInteractionTimeline({ contactId, contactEmail }: Props) {
 
       // 2. channel_messages by email
       if (contactEmail) {
-        const { data: msgs } = await supabase
-          .from("channel_messages")
-          .select("id, channel, direction, subject, body_text, created_at, from_address, to_address")
-          .or(`from_address.ilike.%${contactEmail}%,to_address.ilike.%${contactEmail}%`)
-          .order("created_at", { ascending: false })
-          .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
+        const msgs = await findChannelMessagesForContactEmail(
+          contactEmail,
+          pageNum * PAGE_SIZE,
+          (pageNum + 1) * PAGE_SIZE - 1,
+        );
 
         for (const m of msgs || []) {
           const isInbound = m.from_address?.toLowerCase().includes(contactEmail.toLowerCase());
@@ -104,12 +104,11 @@ export function ContactInteractionTimeline({ contactId, contactEmail }: Props) {
       }
 
       // 3. activities linked to this contact
-      const { data: activities } = await supabase
-        .from("activities")
-        .select("id, activity_type, title, description, status, created_at, response_received")
-        .eq("selected_contact_id", contactId)
-        .order("created_at", { ascending: false })
-        .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
+      const activities = await findActivitiesForSelectedContact(
+        contactId,
+        pageNum * PAGE_SIZE,
+        (pageNum + 1) * PAGE_SIZE - 1,
+      );
 
       for (const a of activities || []) {
         allItems.push({

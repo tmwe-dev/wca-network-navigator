@@ -188,3 +188,12 @@ export async function findElevenLabsVoiceSettings(userId: string) {
     .in("key", ["elevenlabs_default_voice_id", "elevenlabs_custom_voice_id", "elevenlabs_language"]);
   return Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
 }
+
+/** Ore di lavoro agent (start/end) per la night pause. Estratto da `useGlobalAutoSync`. */
+export async function findAgentWorkHoursSettings(): Promise<Array<{ key: string; value: string | null }>> {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .in("key", ["agent_work_start_hour", "agent_work_end_hour"]);
+  return data ?? [];
+}

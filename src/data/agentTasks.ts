@@ -67,3 +67,14 @@ export async function findProposedOrPendingAgentTasks(limit = 100): Promise<Prop
   if (error) throw error;
   return (data ?? []) as unknown as ProposedAgentTaskRow[];
 }
+
+/** Numero di task pending/proposed di un utente, per il badge task count. */
+export async function countPendingAgentTasksForUser(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("agent_tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .in("status", ["pending", "proposed"]);
+  if (error) return 0;
+  return count ?? 0;
+}

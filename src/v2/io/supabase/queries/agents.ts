@@ -34,3 +34,20 @@ export async function fetchAgents(): Promise<Result<Agent[], AppError>> {
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchAgents"));
   }
 }
+
+/* ── Raw single-agent fetch (chat hub) ─────────────────── */
+import type { Database } from "@/integrations/supabase/types";
+import type { PostgrestError } from "@supabase/supabase-js";
+
+export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
+
+export async function fetchAgentByIdRaw(agentId: string): Promise<{
+  data: AgentRow | null;
+  error: PostgrestError | null;
+}> {
+  return supabase
+    .from("agents")
+    .select("*")
+    .eq("id", agentId)
+    .maybeSingle();
+}
