@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Users, FileSpreadsheet, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { insertOnboardingContacts } from "@/data/onboardingImport";
 import { toast } from "sonner";
 import Papa from "papaparse";
 
@@ -72,16 +73,13 @@ export function StepImport({ onFinish, onSkip, loading }: StepImportProps) {
       }
 
       const contacts = rows.map(row => ({
-        user_id: user.id,
         name: row[reverseMap.name] || row[reverseMap.surname]
           ? `${row[reverseMap.name] || ""} ${row[reverseMap.surname] || ""}`.trim()
           : null,
         email: row[reverseMap.email] || null,
         phone: row[reverseMap.phone] || null,
         company_name: row[reverseMap.company_name] || null,
-        country_code: row[reverseMap.country] || null,
-        source: "csv_onboarding",
-        lead_status: "new" as const,
+        country: row[reverseMap.country] || null,
       })).filter(c => c.email || c.name);
 
       if (contacts.length === 0) {
@@ -89,12 +87,7 @@ export function StepImport({ onFinish, onSkip, loading }: StepImportProps) {
         return;
       }
 
-      const BATCH = 50;
-      for (let i = 0; i < contacts.length; i += BATCH) {
-        const batch = contacts.slice(i, i + BATCH);
-        const { error } = await supabase.from("imported_contacts").insert(batch as never);
-        if (error) throw error;
-      }
+      await insertOnboardingContacts(user.id, contacts);
 
       toast.success(`${contacts.length} contatti importati`);
       onFinish();

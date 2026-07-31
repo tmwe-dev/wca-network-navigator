@@ -2,8 +2,7 @@
  * scrapePartner tool — Scrapes a partner's website and proposes updates.
  * Wraps existing scrape-website edge function with scrape_cache.
  */
-import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { getCachedScrapePayload, setCachedScrapePayload, updatePartnerFields, findPartnerBySearchTerm } from "@/data/commandScrapePartner";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:partner\s+)?/i;
@@ -11,21 +10,15 @@ const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|websit
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function getCachedScrape(url: string): Promise<Record<string, unknown> | null> {
-  const { data } = await untypedFrom("scrape_cache")
-    .select("payload, scraped_at")
-    .eq("url", url)
-    .maybeSingle();
-
-  if (!data) return null;
-  const rec = data as { payload: Record<string, unknown>; scraped_at: string };
+  const rec = await getCachedScrapePayload(url);
+  if (!rec) return null;
   const age = Date.now() - new Date(rec.scraped_at).getTime();
   if (age > CACHE_TTL_MS) return null;
   return rec.payload;
 }
 
 async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
-  await untypedFrom("scrape_cache")
-    .upsert({ url, payload, scraped_at: new Date().toISOString() });
+  await setCachedScrapePayload(url, payload);
 }
 
 export const scrapePartnerTool: Tool = {
@@ -46,10 +39,7 @@ export const scrapePartnerTool: Tool = {
       for (const [k, v] of Object.entries(payload)) {
         if (k !== "partnerId") updateData[k] = v;
       }
-      const { error } = await supabase
-        .from("partners")
-        .update(updateData as unknown as Record<string, never>)
-        .eq("id", partnerId);
+      const { error } = await updatePartnerFields(partnerId, updateData);
 
       if (error) {
         return { kind: "result", title: "Errore", message: `Errore aggiornamento: ${error.message}` };
@@ -66,14 +56,9 @@ export const scrapePartnerTool: Tool = {
     }
 
     // Find partner
-    const { data: partner, error: pErr } = await supabase
-      .from("partners")
-      .select("id, company_name, website, email, phone")
-      .or(`company_name.ilike.%${searchTerm}%,company_alias.ilike.%${searchTerm}%`)
-      .limit(1)
-      .maybeSingle();
+    const partner = await findPartnerBySearchTerm(searchTerm);
 
-    if (pErr || !partner) {
+    if (!partner) {
       return { kind: "result", title: "Partner Non Trovato", message: `Nessun partner trovato per "${searchTerm}".` };
     }
 
