@@ -6,14 +6,15 @@ import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase as supabaseAuth } from '@/integrations/supabase/client';
-import { untypedFrom } from '@/lib/supabaseUntyped';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  findPromptTemplatesForUser,
+  hasSystemPromptTemplates,
+  insertSystemPromptTemplates,
+} from '@/data/emailPrompts';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("PromptTemplateSelector");
-// `prompt_templates` non è nei tipi generati (DEBT-EMAIL-INTEL-PROMPT-TEMPLATES).
-// Bypass via untypedFrom; auth.getSession passa dal client tipato.
-const supabase = { from: untypedFrom, auth: supabaseAuth.auth };
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 
@@ -73,15 +74,7 @@ export function PromptTemplateSelector({
       await ensureSystemTemplates(user.id);
 
       // Fetch all templates for current user
-      const { data, error } = await supabase
-        .from('prompt_templates')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('is_system', { ascending: false })
-        .order('category', { ascending: true })
-        .order('name', { ascending: true });
-
-      if (error) throw error;
+      const data = await findPromptTemplatesForUser(user.id);
       setTemplates(data || []);
     } catch (err) {
       toast.error('Errore caricamento template');
@@ -94,14 +87,8 @@ export function PromptTemplateSelector({
   const ensureSystemTemplates = async (userId: string) => {
     try {
       // Check if system templates already exist
-      const { data: existing } = await supabase
-        .from('prompt_templates')
-        .select('name')
-        .eq('user_id', userId)
-        .eq('is_system', true)
-        .limit(1);
-
-      if (existing && existing.length > 0) {
+      const exists = await hasSystemPromptTemplates(userId);
+      if (exists) {
         return; // Templates already created
       }
 
@@ -112,14 +99,7 @@ export function PromptTemplateSelector({
         is_system: true
       }));
 
-      const { error } = await supabase
-        .from('prompt_templates')
-        .insert(templatesWithUserId);
-
-      if (error && error.code !== '23505') {
-        // 23505 is unique constraint violation, which is expected if templates already exist
-        throw error;
-      }
+      await insertSystemPromptTemplates(templatesWithUserId);
     } catch (err) {
       log.error('Error ensuring system templates:', { error: err });
       // Don't throw - templates might already exist

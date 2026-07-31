@@ -2,7 +2,7 @@
  * useAdminUsersV2 — Authorized users management
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAuthorizedUsersRaw } from "@/v2/io/supabase/queries/admin-users";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface AuthorizedUser {
@@ -19,10 +19,7 @@ export function useAdminUsersV2() {
   return useQuery({
     queryKey: queryKeys.v2.authorizedUsers,
     queryFn: async (): Promise<readonly AuthorizedUser[]> => {
-      const { data, error } = await supabase
-        .from("authorized_users")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAuthorizedUsersRaw();
       if (error) return [];
       return (data ?? []).map((r) => ({
         id: r.id,

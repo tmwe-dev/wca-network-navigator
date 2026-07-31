@@ -4,6 +4,7 @@
 
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findChannelMessagesPage } from "@/data/channelMessages";
 import { useEffect } from "react";
 import { createLogger } from "@/lib/log";
 import { queryKeys } from "@/lib/queryKeys";
@@ -105,40 +106,15 @@ export function useChannelMessages(
   const query = useQuery({
     queryKey: queryKeys.channelMessages.list(channel, searchQuery, page, operatorUserId, mailboxKey),
     queryFn: async () => {
-      let q = supabase
-        .from("channel_messages")
-        .select(MESSAGE_LIST_SELECT)
-        .order("email_date", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-      if (channel && channel !== "all") {
-        q = q.eq("channel", channel);
-      }
-
-      // Admin filtering by specific operator
-      if (operatorUserId) {
-        q = q.eq("user_id", operatorUserId);
-      }
-
-      // Mailbox filter (Step "selettore casella attiva"):
-      // personal => mailbox_id IS NULL  (legacy + caselle non taggate)
-      // shared   => mailbox_id = id
-      // null/undefined => nessun filtro (vista aggregata)
-      if (mailboxFilter?.kind === "personal") {
-        q = q.is("mailbox_id", null);
-      } else if (mailboxFilter?.kind === "shared") {
-        q = q.eq("mailbox_id", mailboxFilter.id);
-      }
-
-      if (searchQuery && searchQuery.trim()) {
-        const terms = searchQuery.trim().split(/\s+/).map(t => `${t}:*`).join(" & ");
-        q = q.textSearch("search_vector", terms);
-      }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data || []) as unknown as ChannelMessage[];
+      const data = await findChannelMessagesPage({
+        channel,
+        searchQuery,
+        page,
+        pageSize: PAGE_SIZE,
+        operatorUserId,
+        mailboxFilter,
+      });
+      return data as unknown as ChannelMessage[];
     },
     staleTime: 30_000,
   });

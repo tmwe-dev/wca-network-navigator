@@ -2,7 +2,7 @@
  * useBlacklistV2 — Blacklist entries
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchBlacklistEntriesRaw } from "@/v2/io/supabase/queries/blacklist";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface BlacklistEntry {
@@ -20,10 +20,7 @@ export function useBlacklistV2() {
   return useQuery({
     queryKey: queryKeys.v2.blacklist,
     queryFn: async (): Promise<readonly BlacklistEntry[]> => {
-      const { data, error } = await supabase
-        .from("blacklist_entries")
-        .select("*")
-        .order("company_name");
+      const { data, error } = await fetchBlacklistEntriesRaw();
       if (error) return [];
       return (data ?? []).map((r) => ({
         id: r.id,

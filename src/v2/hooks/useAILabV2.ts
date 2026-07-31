@@ -3,7 +3,7 @@
  */
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchOperativePromptsRaw } from "@/v2/io/supabase/queries/ai-lab";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 
 export function useAILabV2() {
@@ -15,11 +15,7 @@ export function useAILabV2() {
   const promptsQuery = useQuery({
     queryKey: ["v2", "operative-prompts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_prompts")
-        .select("id, title, instructions, is_active, scope")
-        .order("priority", { ascending: false })
-        .limit(20);
+      const { data, error } = await fetchOperativePromptsRaw();
       if (error) return [];
       return data ?? [];
     },
