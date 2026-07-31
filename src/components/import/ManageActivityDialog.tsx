@@ -87,11 +87,7 @@ export function ManageActivityDialog({
         updates.completed_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
-        .from("activities")
-        .update(updates as never)
-        .eq("id", activity.id);
-
+      const { error } = await updateActivityById(activity.id, updates);
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });

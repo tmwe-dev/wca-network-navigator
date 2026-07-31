@@ -34,10 +34,11 @@ function usePartnerContacts() {
   return useQuery({
     queryKey: queryKeys.contacts.proto.partnerContacts(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("partner_contacts")
-        .select("id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)")
-        .limit(200);
+      const { data, error } = await findPrototypeContacts(
+        "id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)",
+        200,
+        false,
+      );
       if (error) throw error;
       return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),

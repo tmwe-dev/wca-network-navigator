@@ -52,12 +52,8 @@ export function RecipientSnapshotHeader({
     queryKey: ["composer-snapshot", partnerId],
     queryFn: async (): Promise<PartnerSnapshot | null> => {
       if (!partnerId) return null;
-      const { data: row } = await supabase
-        .from("partners")
-        .select("company_name, company_alias, country_name, city, last_interaction_at, interaction_count, enrichment_data, lead_status")
-        .eq("id", partnerId)
-        .maybeSingle();
-      return (row as unknown as PartnerSnapshot) ?? null;
+      const row = await getPartnerSnapshot(partnerId);
+      return (row as PartnerSnapshot | null) ?? null;
     },
     enabled: !!partnerId && recipientCount === 1,
     staleTime: 30_000,

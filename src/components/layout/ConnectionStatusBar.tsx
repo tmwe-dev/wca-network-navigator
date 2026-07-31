@@ -110,11 +110,7 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
         waOk = true;
       } else {
         try {
-          const { data } = await supabase
-            .from("app_settings")
-            .select("value")
-            .eq("key", "whatsapp_sender")
-            .maybeSingle();
+          const data = await getAppSettingByKey("whatsapp_sender");
           if (data?.value) waOk = true;
         } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
       }

@@ -26,11 +26,11 @@ function usePartnerContactsList() {
   return useQuery({
     queryKey: queryKeys.contacts.proto.convContacts(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partner_contacts")
-        .select("id, first_name, last_name, email, phone, partners(id, company_name, country_code)")
-        .order("created_at", { ascending: false })
-        .limit(150);
+      const { data } = await findPrototypeContacts(
+        "id, first_name, last_name, email, phone, partners(id, company_name, country_code)",
+        150,
+        true,
+      );
       return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),
         name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
