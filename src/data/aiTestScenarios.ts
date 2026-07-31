@@ -2,6 +2,7 @@
  * DAL: ai_test_scenarios + ai-test-runner.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { invokeAi } from "@/lib/ai/invokeAi";
 
 export interface AiTestAssertion {
@@ -47,24 +48,26 @@ export async function listScenarios(): Promise<AiTestScenario[]> {
     .order("category", { ascending: true })
     .order("priority", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as AiTestScenario[];
+  return (data ?? []) as AiTestScenario[];
 }
 
 export async function upsertScenario(input: Partial<AiTestScenario>): Promise<AiTestScenario> {
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) throw new Error("Auth richiesta");
-  const row = {
+  const row: Database["public"]["Tables"]["ai_test_scenarios"]["Insert"] = {
     ...input,
     owner_id: input.owner_id ?? userId,
+    name: input.name ?? "",
+    target_function: input.target_function ?? "",
   };
   const { data, error } = await supabase
     .from("ai_test_scenarios")
-    .upsert(row as never)
+    .upsert(row)
     .select("*")
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as AiTestScenario;
+  return data as AiTestScenario;
 }
 
 export async function deleteScenario(id: string): Promise<void> {

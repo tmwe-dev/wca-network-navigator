@@ -11,7 +11,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { toJsonValue } from "@/lib/jsonGuards";
+import { toJsonValue, readJsonArray, readString, readNumber, isRecord } from "@/lib/jsonGuards";
 
 export type HarmonizerSessionStatus =
   | "pending"
@@ -105,6 +105,67 @@ function compactFacts(reg: Record<string, FactEntry>): Record<string, FactEntry>
 }
 
 
+
+function mapConflictEntry(o: Record<string, unknown>): ConflictEntry {
+  const a = isRecord(o.source_a) ? o.source_a : {};
+  const b = isRecord(o.source_b) ? o.source_b : {};
+  return {
+    id: readString(o, "id") ?? "",
+    topic: readString(o, "topic") ?? "",
+    source_a: { ref: readString(a, "ref") ?? "", value: readString(a, "value") ?? "" },
+    source_b: { ref: readString(b, "ref") ?? "", value: readString(b, "value") ?? "" },
+    status: (readString(o, "status") as ConflictEntry["status"]) ?? "pending",
+    detected_in_chunk: readNumber(o, "detected_in_chunk") ?? 0,
+    notes: readString(o, "notes") ?? undefined,
+  };
+}
+
+function mapCrossRefEntry(o: Record<string, unknown>): CrossRefEntry {
+  const from = isRecord(o.from) ? o.from : {};
+  const to = isRecord(o.to) ? o.to : {};
+  return {
+    from: {
+      table: readString(from, "table") ?? "",
+      id: readString(from, "id") ?? "",
+      label: readString(from, "label") ?? "",
+    },
+    to: {
+      table: readString(to, "table") ?? "",
+      id: readString(to, "id") ?? "",
+      label: readString(to, "label") ?? "",
+    },
+    relation: readString(o, "relation") ?? "",
+    detected_in_chunk: readNumber(o, "detected_in_chunk") ?? 0,
+  };
+}
+
+function mapEntityCreatedEntry(o: Record<string, unknown>): EntityCreatedEntry {
+  return {
+    table: readString(o, "table") ?? "",
+    id: readString(o, "id") ?? undefined,
+    title: readString(o, "title") ?? "",
+    created_in_chunk: readNumber(o, "created_in_chunk") ?? 0,
+    proposal_id: readString(o, "proposal_id") ?? undefined,
+  };
+}
+
+function mapChunkErrorEntry(o: Record<string, unknown>): ChunkErrorEntry {
+  return {
+    chunk_index: readNumber(o, "chunk_index") ?? 0,
+    message: readString(o, "message") ?? "",
+    occurred_at: readString(o, "occurred_at") ?? "",
+  };
+}
+
+function mapFactEntry(o: Record<string, unknown>): FactEntry {
+  return {
+    key: readString(o, "key") ?? "",
+    value: readString(o, "value") ?? "",
+    source_chunk: readNumber(o, "source_chunk") ?? 0,
+    evidence: readString(o, "evidence") ?? undefined,
+  };
+}
+
 type HarmonizerSessionRow = Database["public"]["Tables"]["harmonizer_sessions"]["Row"];
 
 /** Converte una riga grezza del DB (Json generici) nel tipo applicativo tipizzato. */
@@ -117,11 +178,18 @@ function toHarmonizerSession(row: HarmonizerSessionRow): HarmonizerSession {
     total_chunks: row.total_chunks,
     current_chunk: row.current_chunk,
     status: row.status as HarmonizerSessionStatus,
-    facts_registry: (row.facts_registry ?? {}) as Record<string, FactEntry>,
-    conflicts_found: (row.conflicts_found ?? []) as unknown as ConflictEntry[],
-    cross_references: (row.cross_references ?? []) as unknown as CrossRefEntry[],
-    entities_created: (row.entities_created ?? []) as unknown as EntityCreatedEntry[],
-    errors: (row.errors ?? []) as unknown as ChunkErrorEntry[],
+    facts_registry: (() => {
+      const reg = isRecord(row.facts_registry) ? row.facts_registry : {};
+      const out: Record<string, FactEntry> = {};
+      for (const [k, v] of Object.entries(reg)) {
+        if (isRecord(v)) out[k] = mapFactEntry(v);
+      }
+      return out;
+    })(),
+    conflicts_found: readJsonArray(row.conflicts_found, mapConflictEntry),
+    cross_references: readJsonArray(row.cross_references, mapCrossRefEntry),
+    entities_created: readJsonArray(row.entities_created, mapEntityCreatedEntry),
+    errors: readJsonArray(row.errors, mapChunkErrorEntry),
     harmonize_run_id: row.harmonize_run_id,
     started_at: row.started_at,
     last_chunk_completed_at: row.last_chunk_completed_at,

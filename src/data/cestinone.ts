@@ -499,7 +499,7 @@ export async function cancelCestinoItem(item: CestinoItem): Promise<void> {
     case "email_campaign_queue": {
       const { error } = await supabase
         .from("email_campaign_queue")
-        .update({ status: "cancelled" } as never)
+        .update({ status: "cancelled" })
         .eq("id", realId);
       if (error) throw error;
       break;
@@ -522,7 +522,7 @@ export async function cancelCestinoItem(item: CestinoItem): Promise<void> {
     case "outreach_queue": {
       const { error } = await supabase
         .from("outreach_queue")
-        .update({ status: "cancelled" } as never)
+        .update({ status: "cancelled" })
         .eq("id", realId);
       if (error) throw error;
       break;
@@ -544,7 +544,7 @@ export async function snoozeCestinoItem(item: CestinoItem, minutes = 60): Promis
   if (item.source === "email_campaign_queue") {
     const { error } = await supabase
       .from("email_campaign_queue")
-      .update({ scheduled_at: newAt, status: "scheduled" } as never)
+      .update({ scheduled_at: newAt, status: "scheduled" })
       .eq("id", realId);
     if (error) throw error;
   } else if (item.source === "campaign_jobs") {
