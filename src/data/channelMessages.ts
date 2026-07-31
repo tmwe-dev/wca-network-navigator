@@ -758,29 +758,3 @@ export async function countEmailMessagesByMailbox(mailboxFilter?: MailboxQueryFi
   return count ?? 0;
 }
 
-export interface SenderEmailPageRow {
-  id: string;
-  subject: string | null;
-  email_date: string | null;
-  direction: string | null;
-  from_address: string | null;
-  to_address: string | null;
-}
-
-/** Pagina di messaggi email per un indirizzo (from o to). Usata da SenderEmailsDialog. */
-export async function findSenderEmailsPage(
-  emailAddress: string,
-  from: number,
-  pageSize: number,
-): Promise<SenderEmailPageRow[]> {
-  const { data, error } = await supabase
-    .from("channel_messages")
-    .select("id, subject, email_date, direction, from_address, to_address")
-    .eq("channel", "email")
-    .or(`from_address.ilike.%${emailAddress}%,to_address.ilike.%${emailAddress}%`)
-    .order("email_date", { ascending: false })
-    .order("id", { ascending: false })
-    .range(from, from + pageSize - 1);
-  if (error) throw error;
-  return (data ?? []) as SenderEmailPageRow[];
-}
