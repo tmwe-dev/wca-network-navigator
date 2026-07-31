@@ -256,10 +256,7 @@ export default function GlobalVoiceFAB() {
     try {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (user) {
-        await supabase.from("app_settings").upsert(
-          { user_id: user.id, key: "elevenlabs_language", value: next },
-          { onConflict: "user_id,key" },
-        );
+        await upsertUserAppSetting(user.id, "elevenlabs_language", next);
       }
     } catch {
       // best effort

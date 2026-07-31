@@ -38,10 +38,7 @@ export function OperativeBriefing({
     try {
       let agentId: string | null = null;
       if (action.agentName) {
-        const { data: agents } = await supabase
-          .from("agents")
-          .select("id, name")
-          .eq("is_active", true);
+        const agents = await findActiveAgentNames();
         const match = agents?.find(a =>
           a.name.toLowerCase() === action.agentName!.toLowerCase()
         );
@@ -52,23 +49,16 @@ export function OperativeBriefing({
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         if (!user) throw new Error("Non autenticato");
 
-        const { data: task, error: taskErr } = await supabase
-          .from("agent_tasks")
-          .insert({
-            agent_id: agentId,
-            user_id: user.id,
-            task_type: "briefing_action",
-            description: action.prompt,
-            status: "pending",
-          })
-          .select("id")
-          .single();
-        if (taskErr) throw taskErr;
+        const task = await insertBriefingAgentTask({
+          agentId,
+          userId: user.id,
+          description: action.prompt,
+        });
 
         await invokeAi("agent-execute", {
           scope: "agent",
           context: { source: "OperativeBriefing.agent_execute", mode: "briefing-action" },
-          body: { agent_id: agentId, task_id: (task as Record<string, string>).id },
+          body: { agent_id: agentId, task_id: task.id },
         });
 
         toast.success(`Task assegnato a ${action.agentName}`);

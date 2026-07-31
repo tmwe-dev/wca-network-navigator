@@ -33,12 +33,7 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
         if (!data?.user?.id) return;
         setUserId(data.user.id);
 
-        const { data: settings, error } = await supabase
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'ai_automations_paused')
-          .eq('user_id', data.user.id)
-          .maybeSingle();
+        const { data: settings, error } = await getUserAppSetting('ai_automations_paused', data.user.id);
 
         if (error) {
           log.error('Error loading AI pause state:', { error: error });
@@ -63,12 +58,7 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
       setLoading(true);
       const newPausedState = !isPaused;
 
-      const { error } = await supabase
-        .from('app_settings')
-        .upsert(
-          { user_id: userId, key: 'ai_automations_paused', value: newPausedState ? 'true' : 'false' },
-          { onConflict: 'user_id,key' }
-        );
+      const { error } = await upsertUserAppSetting(userId, 'ai_automations_paused', newPausedState ? 'true' : 'false');
 
       if (error) {
         toast.error('Errore aggiornamento stato AI');
