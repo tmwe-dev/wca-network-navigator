@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { fetchProspectById, updateProspect } from "@/data/prospectEnrichment";
 import { invokeEdgeRaw } from "@/v2/io/edge/client";
 import type { Tool, ToolResult } from "./types";
 
@@ -47,11 +47,7 @@ export const enrichProspectFromWebsiteTool: Tool = {
     }
 
     // Step 1: fetch prospect
-    const { data: prospect, error: fetchErr } = await supabase
-      .from("prospects")
-      .select("*")
-      .eq("id", prospectId)
-      .maybeSingle();
+    const { data: prospect, error: fetchErr } = await fetchProspectById(prospectId);
 
     if (fetchErr || !prospect)
       throw new Error(fetchErr?.message ?? "Prospect non trovato");
@@ -79,10 +75,7 @@ export const enrichProspectFromWebsiteTool: Tool = {
 
     if (Object.keys(updates).length > 0) {
       const typedUpdates = updates as { email?: string; phone?: string };
-      const { error: upErr } = await supabase
-        .from("prospects")
-        .update(typedUpdates)
-        .eq("id", prospectId);
+      const { error: upErr } = await updateProspect(prospectId, typedUpdates);
       if (upErr) throw new Error(upErr.message ?? "Update prospect fallito");
     }
 

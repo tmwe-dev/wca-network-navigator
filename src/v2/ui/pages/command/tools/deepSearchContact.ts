@@ -3,7 +3,7 @@
  * Sherlock (Scout/Detective/Sherlock) è il motore unico di Deep Search.
  * Questo tool mostra lo stato; l'esecuzione si fa da Email Forge → tab Deep Search.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findDeepSearchContacts } from "@/data/commandDeepSearchContact";
 import type { Tool, ToolResult } from "./types";
 
 export const deepSearchContactTool: Tool = {
@@ -16,18 +16,7 @@ export const deepSearchContactTool: Tool = {
     // Estrai eventuale nome contatto dal prompt (best-effort)
     const nameMatch = prompt.match(/contatto\s+["']?([^"'\n]+?)["']?$/i);
     const term = nameMatch?.[1]?.trim();
-    let query = supabase
-      .from("imported_contacts")
-      .select("id, name, email, company_name, deep_search_at, wca_partner_id")
-      .order("deep_search_at", { ascending: false, nullsFirst: false })
-      .limit(20);
-    if (term) query = query.ilike("name", `%${term}%`);
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    const results = (data ?? []) as Array<{
-      id: string; name: string | null; email: string | null;
-      company_name: string | null; deep_search_at: string | null;
-    }>;
+    const results = await findDeepSearchContacts(term);
 
     return {
       kind: "table",
