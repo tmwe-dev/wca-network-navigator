@@ -14,7 +14,6 @@ import {
   getLastInboundOrOutboundForContact,
 } from "@/data/channelMessages";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
-import { toJsonValue } from "@/lib/jsonGuards";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 type BackfillPhase = "idle" | "discovery" | "deep";

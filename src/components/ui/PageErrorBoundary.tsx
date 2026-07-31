@@ -1,7 +1,8 @@
 /**
  * PageErrorBoundary — Catches render errors per-section,
  * shows recovery UI instead of crashing the whole app.
- * Re-exported from V2 atom for V1 compatibility.
+ * Implementazione CANONICA (usata anche dalle pagine v2): logga su Sentry
+ * e offre fallback opzionale. Il vecchio atom v2 duplicato è stato rimosso.
  */
 import * as React from "react";
 import { AlertTriangle } from "lucide-react";
