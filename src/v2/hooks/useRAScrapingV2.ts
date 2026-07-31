@@ -2,8 +2,8 @@
  * useRAScrapingV2 — RA scraping engine state
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { findRAScrapingJobs } from "@/data/raScrapingJobsV2";
 
 interface RAScrapingJob {
   readonly id: string;
@@ -20,14 +20,8 @@ export function useRAScrapingV2() {
   return useQuery({
     queryKey: queryKeys.v2.raScrapingJobs(),
     queryFn: async (): Promise<readonly RAScrapingJob[]> => {
-      const { data, error } = await supabase
-        .from("download_jobs")
-        .select("*")
-        .eq("job_type", "ra_scraping")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) return [];
-      return (data ?? []).map((r) => ({
+      const data = await findRAScrapingJobs(20);
+      return data.map((r) => ({
         id: r.id,
         status: r.status,
         countryCode: r.country_code,

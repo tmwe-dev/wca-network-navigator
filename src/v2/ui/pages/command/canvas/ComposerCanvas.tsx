@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
+import { insertPendingAction } from "@/data/aiPendingActions";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
@@ -284,14 +285,14 @@ export default function ComposerCanvas({
       return;
     }
     for (const d of sendable) {
-      const { error } = await supabase.from("ai_pending_actions").insert({
+      const { error } = await insertPendingAction({
         user_id: userId,
         action_type: "send_email",
         action_payload: {
           to: d.contactEmail,
           subject: d.subject,
           html: d.body,
-        } as never,
+        },
         suggested_content: d.body,
         email_address: d.contactEmail,
         reasoning: "Batch composer: in attesa di approvazione umana.",

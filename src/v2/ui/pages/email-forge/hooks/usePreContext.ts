@@ -5,8 +5,9 @@
  */
 import * as React from "react";
 import { useUnifiedEnrichmentSnapshot } from "@/hooks/useUnifiedEnrichmentSnapshot";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { findPartnerRelationshipSnapshot } from "@/data/partners";
+import { findPartnerRelationshipMessages } from "@/data/channelMessages";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 import type { PreGenerationContext } from "../components/ContextSummary";
 import type { ResolvedEmailType } from "../types/contract";
@@ -27,14 +28,9 @@ function useRelationshipSnap(partnerId: string | null | undefined) {
     staleTime: 30_000,
     queryFn: async (): Promise<RelationshipSnap> => {
       if (!partnerId) throw new Error("partnerId required");
-      const [{ data: partner }, { data: messages, count }] = await Promise.all([
-        supabase.from("partners").select("lead_status, country").eq("id", partnerId).maybeSingle(),
-        supabase
-          .from("channel_messages")
-          .select("direction, channel, created_at", { count: "exact" })
-          .eq("partner_id", partnerId)
-          .order("created_at", { ascending: false })
-          .limit(20),
+      const [partner, { data: messages, count }] = await Promise.all([
+        findPartnerRelationshipSnapshot(partnerId),
+        findPartnerRelationshipMessages(partnerId),
       ]);
       const list = (messages ?? []) as Array<{ direction: string; channel: string | null; created_at: string }>;
       const last = list[0];

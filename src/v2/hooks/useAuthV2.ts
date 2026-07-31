@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { rpcRecordUserLogin } from "@/data/rpc";
+import { fetchAuthProfile, fetchUserRoles } from "@/data/authRolesProfileV2";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -44,11 +45,7 @@ export type UseAuthV2Return = AuthState & AuthActions;
 // ── Helper: load profile ─────────────────────────────────────────────
 
 async function loadProfile(userId: string): Promise<UserProfile | null> {
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, display_name, user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const data = await fetchAuthProfile(userId);
 
   if (!data) return null;
 
@@ -63,13 +60,8 @@ async function loadProfile(userId: string): Promise<UserProfile | null> {
 // ── Helper: load roles ───────────────────────────────────────────────
 
 async function loadRoles(userId: string): Promise<AppRole[]> {
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId);
-
-  if (!data || data.length === 0) return ["user"];
-  return data.map((row) => row.role as AppRole);
+  const roles = await fetchUserRoles(userId);
+  return roles as AppRole[];
 }
 
 // ── Helper: record login ─────────────────────────────────────────────

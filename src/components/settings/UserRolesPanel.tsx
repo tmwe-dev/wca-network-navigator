@@ -4,7 +4,8 @@
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAuthorizedUsersDirectory } from "@/data/authorizedUsersDirectory";
+import { findUserRolesForUsers } from "@/data/userRolesLookup";
 import { useRoles, useAssignUserRole, useRemoveUserRole, type Role } from "@/hooks/useRBAC";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,11 +24,6 @@ interface UserWithRoles {
   roles: { id: string; name: string }[];
 }
 
-interface UserRoleJoin {
-  user_id: string;
-  roles: { id: string; name: string } | null;
-}
-
 export default function UserRolesPanel() {
   const qc = useQueryClient();
   const { data: rolesData } = useRoles();
@@ -43,14 +39,7 @@ export default function UserRolesPanel() {
   // Fetch authorized users
   const { data: allUsers = [], isLoading: usersLoading } = useQuery({
     queryKey: ["authorized-users"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("authorized_users")
-        .select("id, email, display_name")
-        .order("email");
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => findAuthorizedUsersDirectory(),
   });
 
   // Fetch user roles
@@ -58,17 +47,10 @@ export default function UserRolesPanel() {
     queryKey: ["user-roles-all"],
     queryFn: async () => {
       if (!allUsers.length) return {};
-      const { data, error } = (await supabase
-        .from("user_roles")
-        .select("user_id, roles(id, name)")
-        .in(
-          "user_id",
-          allUsers.map((u) => u.id),
-        )) as unknown as { data: UserRoleJoin[] | null; error: unknown };
-      if (error) throw error;
+      const data = await findUserRolesForUsers(allUsers.map((u) => u.id));
 
       const map: Record<string, { id: string; name: string }[]> = {};
-      (data as UserRoleJoin[] || []).forEach((ur) => {
+      data.forEach((ur) => {
         if (!map[ur.user_id]) map[ur.user_id] = [];
         if (ur.roles) map[ur.user_id].push(ur.roles);
       });

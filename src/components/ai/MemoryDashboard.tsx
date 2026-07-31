@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findUserMemories, promoteMemoryToL3, rejectMemoryPromotion } from "@/data/aiMemoryOps";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,14 +43,7 @@ export default function MemoryDashboard() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("ai_memory")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("level", { ascending: false })
-        .order("confidence", { ascending: false })
-        .limit(100);
-      if (error) throw error;
+      const data = await findUserMemories(user.id, 100);
       return (data || []) as unknown as MemoryRow[];
     },
   });
@@ -57,22 +51,9 @@ export default function MemoryDashboard() {
   const promoteMutation = useMutation({
     mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
       if (approve) {
-        const { error } = await supabase
-          .from("ai_memory")
-          .update({
-            level: 3,
-            pending_promotion: false,
-            decay_rate: 0,
-            promoted_at: new Date().toISOString(),
-          } as never)
-          .eq("id", id);
-        if (error) throw error;
+        await promoteMemoryToL3(id);
       } else {
-        const { error } = await supabase
-          .from("ai_memory")
-          .update({ pending_promotion: false } as never)
-          .eq("id", id);
-        if (error) throw error;
+        await rejectMemoryPromotion(id);
       }
     },
     onSuccess: (_, { approve }) => {

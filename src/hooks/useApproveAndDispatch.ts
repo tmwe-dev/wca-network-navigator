@@ -12,8 +12,8 @@
  */
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { getPendingActionById, markPendingActionStatus, insertSupervisorAuditLog } from "@/data/approveDispatchQueries";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { reviewMessage } from "@/lib/messaging/reviewMessage";
@@ -62,12 +62,7 @@ export function useApproveAndDispatch() {
     setDispatching(true);
     try {
       // 1. Carica l'azione
-      // eslint-disable-next-line no-restricted-syntax
-      const { data: action, error: fetchErr } = await supabase
-        .from("ai_pending_actions")
-        .select("*")
-        .eq("id", pendingActionId)
-        .maybeSingle();
+      const { data: action, error: fetchErr } = await getPendingActionById(pendingActionId);
 
       if (fetchErr || !action) {
         const msg = fetchErr?.message ?? "Action not found";
@@ -141,8 +136,7 @@ export function useApproveAndDispatch() {
       await markAction(pendingActionId, result.success ? "executed" : "failed", result.detail);
 
       try {
-        // eslint-disable-next-line no-restricted-syntax
-        await supabase.from("supervisor_audit_log").insert({
+        await insertSupervisorAuditLog({
           user_id: action.user_id,
           actor_type: "user",
           actor_name: "approve-and-dispatch",
@@ -152,7 +146,7 @@ export function useApproveAndDispatch() {
           target_type: "pending_action",
           decision_origin: "user_approved",
           metadata: { pending_action_id: pendingActionId, action_type: actionType, result },
-        } as never);
+        });
       } catch (auditErr) {
         log.warn("audit.failed", { error: auditErr instanceof Error ? auditErr.message : String(auditErr) });
       }
@@ -172,15 +166,7 @@ export function useApproveAndDispatch() {
 }
 
 async function markAction(id: string, status: "executed" | "failed", detail: string) {
-  // eslint-disable-next-line no-restricted-syntax
-  await supabase
-    .from("ai_pending_actions")
-    .update({
-      status,
-      executed_at: new Date().toISOString(),
-      last_error: status === "failed" ? detail : null,
-    } as never)
-    .eq("id", id);
+  await markPendingActionStatus(id, status, status === "failed" ? detail : null);
 }
 
 async function dispatchEmail(

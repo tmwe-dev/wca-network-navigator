@@ -3,8 +3,8 @@
  */
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeAi } from "@/lib/ai/invokeAi";
+import { findRecentWorkPlansPreview } from "@/data/workPlansPreviewV2";
 
 interface ChatMessage {
   readonly role: "user" | "assistant";
@@ -24,15 +24,7 @@ export function useStaffV2() {
 
   const plansQuery = useQuery({
     queryKey: ["v2", "work-plans"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_work_plans")
-        .select("id, title, status, current_step, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) return [];
-      return data ?? [];
-    },
+    queryFn: () => findRecentWorkPlansPreview(10),
   });
 
   const switchAgent = useCallback((code: string) => {

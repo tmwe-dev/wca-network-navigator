@@ -9,6 +9,7 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
+import { getChannelBackfillCursor, upsertChannelMessageIgnoreDup, upsertChannelBackfillState } from "@/data/whatsappBackfillQueries";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 
@@ -136,12 +137,7 @@ export function useWhatsAppBackfill() {
 
       for (const chat of chatList) {
         const chatId = chat.name.toLowerCase();
-        const { data: cursor } = await supabase
-          .from("channel_backfill_state")
-          .select("oldest_message_external_id, oldest_message_at, reached_beginning, messages_imported")
-          .eq("channel", "whatsapp")
-          .eq("external_chat_id", chatId)
-          .maybeSingle();
+        const cursor = await getChannelBackfillCursor(chatId);
 
         if (cursor?.reached_beginning) continue;
 
@@ -262,19 +258,17 @@ export function useWhatsAppBackfill() {
           if (!oldestAt || timestamp < oldestAt) { oldestAt = timestamp; oldestExtId = extId; }
           if (!newestAt || timestamp > newestAt) { newestAt = timestamp; newestExtId = extId; }
 
-          const { error, status } = await supabase
-            .from("channel_messages")
-            .upsert({
-              user_id: user.id,
-              operator_id: operatorId,
-              channel: "whatsapp",
-              direction: finalDirection,
-              from_address: finalDirection === "outbound" ? undefined : contact,
-              to_address: finalDirection === "outbound" ? contact : undefined,
-              body_text: text,
-              message_id_external: extId,
-              raw_payload: msg as never,
-            } as never, { onConflict: "message_id_external", ignoreDuplicates: true });
+          const { error, status } = await upsertChannelMessageIgnoreDup({
+            user_id: user.id,
+            operator_id: operatorId,
+            channel: "whatsapp",
+            direction: finalDirection,
+            from_address: finalDirection === "outbound" ? undefined : contact,
+            to_address: finalDirection === "outbound" ? contact : undefined,
+            body_text: text,
+            message_id_external: extId,
+            raw_payload: msg,
+          });
 
           if (!error && status === 201) chatRecovered++;
           else chatDupes++;
@@ -304,7 +298,7 @@ export function useWhatsAppBackfill() {
               ? "ok"
               : "partial";
 
-        await supabase.from("channel_backfill_state").upsert({
+        await upsertChannelBackfillState({
           operator_id: operatorId,
           channel: "whatsapp",
           external_chat_id: chatId,
@@ -316,7 +310,7 @@ export function useWhatsAppBackfill() {
           last_attempt_at: new Date().toISOString(),
           last_attempt_status: attemptStatus,
           last_error: attemptError,
-        } as never, { onConflict: "operator_id,channel,external_chat_id" });
+        });
 
         totalRecovered += chatRecovered;
         totalDupes += chatDupes;

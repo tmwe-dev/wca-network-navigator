@@ -3,9 +3,8 @@
  */
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
-import { upsertAppSetting } from "@/data/appSettings";
+import { upsertAppSetting, findAiSettingsForUser } from "@/data/appSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,10 +35,7 @@ export function SenderProfileTab() {
     queryKey: ["forge-sender-settings", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data } = await supabase.from("app_settings").select("key, value").eq("user_id", userId!).like("key", "ai_%");
-      const map: Record<string, string> = {};
-      (data as SettingRow[] | null ?? []).forEach((r) => { if (r.value != null) map[r.key] = r.value; });
-      return map;
+      return findAiSettingsForUser(userId!);
     },
   });
 

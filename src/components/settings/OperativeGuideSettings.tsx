@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getOperativeStrategyValue, upsertOperativeStrategy } from "@/data/operativeGuideSettings";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("OperativeGuideSettings");
@@ -60,14 +61,10 @@ export default function OperativeGuideSettings() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "operative_strategy")
-        .maybeSingle();
-      if (data?.value) {
+      const value = await getOperativeStrategyValue();
+      if (value) {
         try {
-          setStrategy({ ...DEFAULT_STRATEGY, ...JSON.parse(data.value) });
+          setStrategy({ ...DEFAULT_STRATEGY, ...JSON.parse(value) });
         } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); }
       }
       setLoading(false);
@@ -79,10 +76,7 @@ export default function OperativeGuideSettings() {
     try {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({ key: "operative_strategy", value: JSON.stringify(strategy), updated_at: new Date().toISOString(), user_id: user.id }, { onConflict: "user_id,key" });
-      if (error) throw error;
+      await upsertOperativeStrategy(user.id, JSON.stringify(strategy));
       toast.success("Guida Operativa salvata");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Errore nel salvataggio");

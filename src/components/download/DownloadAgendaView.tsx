@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgendaPartnersByCountry } from "@/data/downloadViews";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -40,12 +40,8 @@ export function DownloadAgendaView() {
     queryKey: queryKeys.partners.downloadAgenda(activeJob?.country_code),
     queryFn: async () => {
       if (!activeJob) return [];
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, email, phone, wca_id, partner_networks(network_name), partner_contacts(name, email, mobile)")
-        .eq("country_code", activeJob.country_code)
-        .order("company_name");
-      return (data || []) as PartnerRow[];
+      const data = await findAgendaPartnersByCountry(activeJob.country_code);
+      return data as PartnerRow[];
     },
     enabled: !!activeJob?.country_code,
   });

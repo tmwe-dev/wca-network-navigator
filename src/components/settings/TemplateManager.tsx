@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Trash2, FileText, FileSpreadsheet, Image, File, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailTemplateAdmin } from "@/hooks/useEmailTemplateAdmin";
+import { removeTemplateFile, uploadTemplateFile, createTemplateSignedUrl } from "@/data/templatesStorage";
 
 const FILE_ICONS: Record<string, React.ReactNode> = {
   pdf: <FileText className="w-8 h-8 text-destructive" />,
@@ -52,7 +52,7 @@ export default function TemplateManager() {
       // Delete from storage
       const path = template.file_url.split("/templates/")[1];
       if (path) {
-        await supabase.storage.from("templates").remove([decodeURIComponent(path)]);
+        await removeTemplateFile(decodeURIComponent(path));
       }
       // Delete from db
       await deleteTemplate(template.id);
@@ -72,16 +72,13 @@ export default function TemplateManager() {
     try {
       for (const file of Array.from(files)) {
         const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const { error: uploadError } = await supabase.storage
-          .from("templates")
-          .upload(safeName, file);
-        if (uploadError) throw uploadError;
+        await uploadTemplateFile(safeName, file);
 
-        const { data: urlData } = await supabase.storage.from("templates").createSignedUrl(safeName, 60 * 60 * 24 * 365);
+        const signedUrl = await createTemplateSignedUrl(safeName, 60 * 60 * 24 * 365);
 
         await createTemplate({
           name: file.name.replace(/\.[^/.]+$/, ""),
-          file_url: urlData?.signedUrl || safeName,
+          file_url: signedUrl || safeName,
           file_name: file.name,
           file_size: file.size,
           file_type: file.type || "application/octet-stream",

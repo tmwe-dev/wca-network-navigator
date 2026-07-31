@@ -156,3 +156,24 @@ export async function findContactInteractionsTimeline(contactId: string, limit =
     .limit(limit);
   return (data ?? []) as TimelineInteractionRow[];
 }
+
+export interface ProspectInteractionRecordRow {
+  id: string;
+  interaction_type: string;
+  title: string;
+  description: string | null;
+  outcome: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** Interazioni prospect per il drawer contatto (Circuito di Attesa). */
+export async function findProspectInteractionsForRecord(prospectId: string, limit = 20): Promise<ProspectInteractionRecordRow[]> {
+  const { data } = await supabase
+    .from("prospect_interactions")
+    .select("id, interaction_type, title, description, outcome, created_by, created_at")
+    .eq("prospect_id", prospectId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as ProspectInteractionRecordRow[];
+}

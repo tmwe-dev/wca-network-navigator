@@ -4,6 +4,8 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { insertActivity } from "@/data/activities";
+import { insertBlacklistBatch } from "@/data/blacklist";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -147,22 +149,22 @@ export function useArenaSession() {
     setUsedLanguages((prev) => new Set(prev).add(current.target_language));
     setExcludedIds((prev) => [...prev, current.partner_id]);
 
-    const { error } = await supabase.from("activities").insert({
-      activity_type: "send_email" as const,
-      title: `AI Arena: ${editing ? editSubject : current.draft_subject}`,
-      description: editing ? editBody : current.draft_body,
-      email_subject: editing ? editSubject : current.draft_subject,
-      email_body: editing ? editBody : current.draft_body,
-      partner_id: current.partner_id,
-      source_id: current.partner_id,
-      source_type: "ai_arena",
-      status: "pending" as const,
-      priority: "medium",
-    });
-    if (error) {
-      toast.error(`Errore creazione attività: ${error.message}`);
-    } else {
+    try {
+      await insertActivity({
+        activity_type: "send_email" as const,
+        title: `AI Arena: ${editing ? editSubject : current.draft_subject}`,
+        description: editing ? editBody : current.draft_body,
+        email_subject: editing ? editSubject : current.draft_subject,
+        email_body: editing ? editBody : current.draft_body,
+        partner_id: current.partner_id,
+        source_id: current.partner_id,
+        source_type: "ai_arena",
+        status: "pending" as const,
+        priority: "medium",
+      });
       toast.success(`✅ Email programmata per ${current.company_name}`);
+    } catch (error) {
+      toast.error(`Errore creazione attività: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     setEditing(false);
@@ -189,16 +191,16 @@ export function useArenaSession() {
     setExcludedIds((prev) => [...prev, current.partner_id]);
     setEditing(false);
 
-    const { error } = await supabase.from("blacklist_entries").insert([{
-      company_name: current.company_name,
-      country: current.country_name || current.country_code,
-      source: "ai_arena",
-      status: "active",
-    }]);
-    if (error) {
-      toast.error(`Errore blacklist: ${error.message}`);
-    } else {
+    try {
+      await insertBlacklistBatch([{
+        company_name: current.company_name,
+        country: current.country_name || current.country_code,
+        source: "ai_arena",
+        status: "active",
+      }]);
       toast.error(`🚫 ${current.company_name} aggiunto alla blacklist`);
+    } catch (error) {
+      toast.error(`Errore blacklist: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     setTimeout(() => { setEffectTrigger(null); advanceToNext(); }, 700);

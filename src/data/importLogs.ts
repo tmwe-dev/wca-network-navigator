@@ -82,3 +82,24 @@ export function getImportFilePublicUrl(path: string): string | null {
   const { data } = supabase.storage.from("import-files").getPublicUrl(path);
   return data?.publicUrl ?? null;
 }
+
+export interface RecentImportLogRow {
+  id: string;
+  file_name: string;
+  total_rows: number;
+  imported_rows: number;
+  error_rows: number;
+  status: string;
+  created_at: string;
+}
+
+/** Ultime N importazioni di un utente (storico in Settings). */
+export async function findRecentImportLogs(userId: string, limit = 10): Promise<RecentImportLogRow[]> {
+  const { data } = await supabase
+    .from("import_logs")
+    .select("id, file_name, total_rows, imported_rows, error_rows, status, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as RecentImportLogRow[];
+}

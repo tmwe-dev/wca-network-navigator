@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, Image, Link2, Eye } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadTemplateFile, getTemplatePublicUrl } from "@/data/templatesStorage";
 import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { ROBIN_VOICE_CALL_URL } from "@/constants/agentTemplates";
 import { toast } from "sonner";
@@ -41,10 +41,9 @@ export function AgentSignatureConfig({ agent }: Props) {
     try {
       const ext = file.name.split(".").pop();
       const path = `agent-signatures/${agent.id}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("templates").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("templates").getPublicUrl(path);
-      setSignatureImageUrl(urlData.publicUrl);
+      await uploadTemplateFile(path, file, { upsert: true });
+      const publicUrl = getTemplatePublicUrl(path);
+      setSignatureImageUrl(publicUrl);
       toast.success("Immagine caricata");
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });

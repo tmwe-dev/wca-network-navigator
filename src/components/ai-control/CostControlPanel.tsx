@@ -10,7 +10,7 @@
 import { useMemo } from "react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPromptLogUsageSince } from "@/data/aiPromptLogUsage";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +35,7 @@ export function CostControlPanel() {
     queryFn: async (): Promise<{ rows: TodayRow[]; totalCalls: number; totalCost: number }> => {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
-      const { data, error } = await supabase
-        .from("ai_prompt_log")
-        .select("function_name, cost_usd")
-        .gte("created_at", start.toISOString())
-        .limit(5000);
-      if (error) throw error;
+      const data = await findPromptLogUsageSince(start.toISOString(), 5000);
       const acc: Record<string, TodayRow> = {};
       let totalCalls = 0;
       let totalCost = 0;

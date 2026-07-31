@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgendaPartnerCards } from "@/data/agendaPartners";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -45,12 +45,8 @@ export default function AgendaCardView() {
   const { data: partners, isLoading } = useQuery({
     queryKey: queryKeys.partners.agendaCard(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, phone, website, wca_id, lead_status, partner_networks(network_name), partner_contacts(name, email, mobile, title)")
-        .order("updated_at", { ascending: false })
-        .limit(200);
-      return (data || []) as PartnerCard[];
+      const data = await findAgendaPartnerCards(200);
+      return data as PartnerCard[];
     },
   });
 

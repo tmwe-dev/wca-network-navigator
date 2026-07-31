@@ -6,7 +6,7 @@
  * cosa l'AI ha a disposizione PRIMA di generare l'email.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getPartnerEnrichmentData, getLatestCompletedSherlockInvestigation } from "@/data/unifiedEnrichmentSnapshotQueries";
 
 export interface EnrichmentSnapshot {
   base: { available: boolean; age_days: number | null; fields: string[] };
@@ -29,13 +29,7 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null | undefine
     queryFn: async (): Promise<EnrichmentSnapshot> => {
       if (!partnerId) throw new Error("partnerId required");
 
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("enrichment_data")
-        .eq("id", partnerId)
-        .maybeSingle();
-
-      const ed = ((partner as { enrichment_data?: Record<string, unknown> } | null)?.enrichment_data ?? {}) as Record<string, unknown>;
+      const ed = ((await getPartnerEnrichmentData(partnerId)) ?? {}) as Record<string, unknown>;
 
       // ── Base ──
       const baseFields: string[] = [];
@@ -57,14 +51,7 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null | undefine
       if (ed.contact_mentions) deepFields.push("Mentions");
 
       // ── Sherlock ──
-      const { data: sherlock } = await supabase
-        .from("sherlock_investigations")
-        .select("created_at, level")
-        .eq("partner_id", partnerId)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const sherlock = await getLatestCompletedSherlockInvestigation(partnerId);
 
       const baseEnrichedAt = typeof ed.base_enriched_at === "string"
         ? ed.base_enriched_at

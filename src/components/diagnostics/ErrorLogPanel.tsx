@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAppErrorLogs, deleteAppErrorLogsBefore } from "@/data/appErrorLogsQuery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,16 +23,7 @@ export function ErrorLogPanel() {
 
   const { data: errors, refetch } = useQuery({
     queryKey: queryKeys.system.errorLogs,
-    queryFn: async () => {
-      let q = supabase
-        .from("app_error_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (filterType !== "all") q = q.eq("error_type", filterType);
-      const { data } = await q;
-      return data ?? [];
-    },
+    queryFn: () => findAppErrorLogs(filterType, 50),
   });
 
   const count24h = errors?.filter(e =>
@@ -45,7 +36,7 @@ export function ErrorLogPanel() {
 
   const handleCleanup = async () => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-    await supabase.from("app_error_logs").delete().lt("created_at", thirtyDaysAgo);
+    await deleteAppErrorLogsBefore(thirtyDaysAgo);
     refetch();
   };
 

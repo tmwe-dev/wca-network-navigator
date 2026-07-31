@@ -132,3 +132,22 @@ export async function findAgentRef(ref: string, byId: boolean): Promise<{ id: st
   const { data } = await supabase.from("agents").select("id, name").ilike("name", `%${ref}%`).limit(1).maybeSingle();
   return data ? { id: data.id as string, name: (data.name ?? "") as string } : null;
 }
+
+export interface AgentVoiceRef {
+  id: string;
+  voiceId: string | null;
+}
+
+/** Risolve l'agente attivo per nome esatto (usato per il lookup della voce di "Gordon"). */
+export async function findActiveAgentVoiceByName(name: string): Promise<AgentVoiceRef | null> {
+  const { data } = await supabase
+    .from("agents")
+    .select("id, elevenlabs_voice_id")
+    .eq("name", name)
+    .eq("is_active", true)
+    .is("deleted_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return { id: data.id, voiceId: data.elevenlabs_voice_id ?? null };
+}

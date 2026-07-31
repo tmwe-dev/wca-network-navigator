@@ -13,8 +13,9 @@ import { QuickFilters, type FilterChip } from "./shared/QuickFilters";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { StatsBar } from "./shared/StatsBar";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/data/uiShellQueries";
 
 const TABS = [
   { key: "outreach", label: "Outreach", icon: Radar },
@@ -34,10 +35,11 @@ function usePartnerContacts() {
   return useQuery({
     queryKey: queryKeys.contacts.proto.partnerContacts(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("partner_contacts")
-        .select("id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)")
-        .limit(200);
+      const { data, error } = await findPrototypeContacts(
+        "id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)",
+        200,
+        false,
+      );
       if (error) throw error;
       return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),

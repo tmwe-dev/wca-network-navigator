@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgendaPartnerRelations } from "@/data/agendaPartners";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -53,10 +53,7 @@ export default function AgendaListView() {
       if (viewRows.length === 0) return [];
 
       const partnerIds = viewRows.map(r => r.partner_id);
-      const { data: enrichedData } = await supabase
-        .from("partners")
-        .select("id, partner_networks(network_name), partner_contacts(name, email, mobile)")
-        .in("id", partnerIds);
+      const enrichedData = await findAgendaPartnerRelations(partnerIds);
 
       const enrichmentMap = new Map(
         (enrichedData || []).map(e => [e.id, { networks: e.partner_networks, contacts: e.partner_contacts }])

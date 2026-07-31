@@ -305,3 +305,15 @@ export async function setEmailAddressRuleActive(ruleId: string, isActive: boolea
     .eq("id", ruleId);
   if (error) throw error;
 }
+
+/** Regole di archiviazione automatica (bounce hard) per un set di indirizzi. */
+export async function findArchiveBounceRulesForEmails(emails: string[]): Promise<Array<{ email_address: string; notes: string | null }>> {
+  if (emails.length === 0) return [];
+  const { data, error } = await supabase
+    .from("email_address_rules")
+    .select("email_address, notes")
+    .in("email_address", emails)
+    .eq("auto_action", "archive");
+  if (error) throw error;
+  return data ?? [];
+}

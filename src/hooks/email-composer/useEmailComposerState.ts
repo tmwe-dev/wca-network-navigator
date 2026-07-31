@@ -18,8 +18,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { findPartnerByEmail } from "@/data/partners";
 import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
-import { supabase } from "@/integrations/supabase/client";
 import { insertEditPattern } from "@/data/aiEditPatterns";
+import { findPartnerForComposerPrefill, findFirstPartnerContactWithEmail } from "@/data/emailComposerLookupQueries";
 import type { OracleConfig } from "@/types/email-composer";
 import type { OracleContextSummary } from "@/types/email-composer";
 import type { EditAnalysis } from "@/types/email-composer";
@@ -129,19 +129,8 @@ export function useEmailComposerState() {
               countryCode: r.countryCode || "", isEnriched: r.found,
             });
           } else if (qPartner) {
-            const { data } = await supabase
-              .from("partners")
-              .select("id, company_name, company_alias, country_code, city")
-              .eq("id", qPartner)
-              .maybeSingle();
-            const { data: contact } = await supabase
-              .from("partner_contacts")
-              .select("name, contact_alias, email")
-              .eq("partner_id", qPartner)
-              .not("email", "is", null)
-              .order("created_at", { ascending: true })
-              .limit(1)
-              .maybeSingle();
+            const data = await findPartnerForComposerPrefill(qPartner);
+            const contact = await findFirstPartnerContactWithEmail(qPartner);
             addRecipient({
               partnerId: qPartner,
               companyName: data?.company_alias || data?.company_name || "",

@@ -2,7 +2,7 @@
  * Tool: restore-contact — ripristina un contatto soft-deleted.
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { restoreContactById, restoreContactByTerm } from "@/data/commandRestoreContact";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = { contact_id?: string; contact_ref?: string; [k: string]: unknown };
@@ -29,12 +29,9 @@ export const restoreContactTool: Tool = {
       };
     }
     if (!ref) throw new Error("Riferimento contatto mancante");
-    const base = supabase
-      .from("imported_contacts")
-      .update({ deleted_at: null, deleted_by: null } as never, { count: "exact" });
     const { error, count } = isUuid(ref)
-      ? await base.eq("id", ref)
-      : await base.or(`email.ilike.%${ref}%,name.ilike.%${ref}%`);
+      ? await restoreContactById(ref)
+      : await restoreContactByTerm(ref);
     if (error) throw new Error(error.message);
     return {
       kind: "result",

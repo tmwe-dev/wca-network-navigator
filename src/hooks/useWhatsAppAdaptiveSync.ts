@@ -27,6 +27,7 @@ import {
   getChannelContactCursors,
   upsertChannelMessageDedup,
 } from "@/data/channelMessages";
+import { findOperatorByUserId } from "@/data/operators";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 const log = createLogger("useWhatsAppAdaptiveSync");
@@ -178,11 +179,7 @@ export function useWhatsAppAdaptiveSync() {
       if (!session) return;
       const userId = session.user.id;
 
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
+      const opRow = await findOperatorByUserId(userId);
       const operatorId = opRow?.id;
       if (!operatorId) {
         toast.error("Nessun operatore associato");
@@ -326,11 +323,7 @@ export function useWhatsAppAdaptiveSync() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return 0;
       const userId = session.user.id;
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
+      const opRow = await findOperatorByUserId(userId);
       const operatorId = opRow?.id;
       if (!operatorId) return 0;
 

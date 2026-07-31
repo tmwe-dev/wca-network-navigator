@@ -423,3 +423,63 @@ export async function patchChannelMessage(id: string, patch: Record<string, unkn
   const { error } = await supabase.from("channel_messages").update(patch as never).eq("id", id);
   if (error) throw error;
 }
+
+export interface InboundReplyRow {
+  id: string;
+  from_address: string | null;
+  created_at: string;
+  subject: string | null;
+  body_text: string | null;
+  category: string | null;
+}
+
+/** Messaggi inbound provenienti da un set di indirizzi mittente (per matching risposte). */
+export async function findInboundMessagesByAddresses(emails: string[]): Promise<InboundReplyRow[]> {
+  if (emails.length === 0) return [];
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("id, from_address, created_at, subject, body_text, category")
+    .eq("direction", "inbound")
+    .in("from_address", emails)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as InboundReplyRow[];
+}
+
+export interface ContactTimelineMessageRow {
+  id: string;
+  channel: string;
+  direction: string;
+  subject: string | null;
+  body_text: string | null;
+  created_at: string;
+  from_address: string | null;
+  to_address: string | null;
+}
+
+/** Messaggi (inbound o outbound) coinvolgenti un indirizzo email, per la timeline contatto. */
+export async function findChannelMessagesForContactEmail(
+  email: string,
+  from: number,
+  to: number,
+): Promise<ContactTimelineMessageRow[]> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("id, channel, direction, subject, body_text, created_at, from_address, to_address")
+    .or(`from_address.ilike.%${email}%,to_address.ilike.%${email}%`)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return (data ?? []) as ContactTimelineMessageRow[];
+}
+
+/** Snapshot relazione (touch count + ultimo messaggio) per un partner, usato da usePreContext. */
+export async function findPartnerRelationshipMessages(partnerId: string) {
+  const { data, count } = await supabase
+    .from("channel_messages")
+    .select("direction, channel, created_at", { count: "exact" })
+    .eq("partner_id", partnerId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  return { data: data ?? [], count: count ?? 0 };
+}

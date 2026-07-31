@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadWorkspaceDocFile, createWorkspaceDocSignedUrl } from "@/data/workspaceDocsStorage";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useWorkspacePresets } from "@/hooks/useWorkspacePresets";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
@@ -317,11 +317,10 @@ export default function ContentManager() {
     try {
       for (const file of Array.from(files)) {
         const path = `${crypto.randomUUID()}.${file.name.split(".").pop() || "bin"}`;
-        const { error: upErr } = await supabase.storage.from("workspace-docs").upload(path, file);
-        if (upErr) throw upErr;
-        const { data: urlData } = await supabase.storage.from("workspace-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
+        await uploadWorkspaceDocFile(path, file);
+        const signedUrl = await createWorkspaceDocSignedUrl(path, 60 * 60 * 24 * 365);
         await createDoc({
-          file_name: file.name, file_url: urlData?.signedUrl || path, file_size: file.size,
+          file_name: file.name, file_url: signedUrl || path, file_size: file.size,
         });
       }
       toast.success(`${files.length} documento/i caricato/i`);

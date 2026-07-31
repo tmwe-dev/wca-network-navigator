@@ -2,10 +2,17 @@
  * useContactMerge — Hook for contact deduplication and merging
  * Provides utilities for finding duplicate contacts and merging them
  */
-import { tFrom } from "@/lib/typedSupabase";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  getImportedContactById,
+  updateImportedContact,
+  reassignActivitiesContact,
+  reassignEmailsContact,
+  deleteImportedContact,
+  findContactsForDuplicateScan,
+  countImportedContactsForMerge,
+} from "@/data/contactMergeQueries";
 import { extractDomain, calculateSimilarity } from "@/lib/contactSimilarity";
 
 
@@ -50,14 +57,7 @@ export function useFindDuplicates() {
   return useQuery({
     queryKey: queryKeys.contactMerge.duplicates,
     queryFn: async () => {
-      const { data: contacts, error } = await tFrom("imported_contacts")
-        .select(
-          "id, name, email, phone, mobile, company_name, company_id, title, country, created_at, interaction_count"
-        )
-        .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
-        .limit(2000);
-
-      if (error) throw error;
+      const contacts = await findContactsForDuplicateScan();
       if (!contacts || contacts.length === 0) return [];
 
       const pairs: DuplicatePair[] = [];
@@ -163,16 +163,10 @@ export function useMergeContacts() {
       fieldChoices: MergeFieldChoice[];
     }) => {
       // Get both contacts
-      const [keepRes, deleteRes] = await Promise.all([
-        supabase.from("imported_contacts").select("*").eq("id", keepId).single(),
-        supabase.from("imported_contacts").select("*").eq("id", deleteId).single(),
+      const [keepContact, _deleteContact] = await Promise.all([
+        getImportedContactById(keepId),
+        getImportedContactById(deleteId),
       ]);
-
-      if (keepRes.error) throw keepRes.error;
-      if (deleteRes.error) throw deleteRes.error;
-
-      const keepContact = keepRes.data;
-      const _deleteContact = deleteRes.data;
 
       // Build merged record
       const merged = { ...keepContact };
@@ -183,31 +177,20 @@ export function useMergeContacts() {
       }
 
       // 1. Update the surviving contact
-      const { error: updateError } = await supabase
-        .from("imported_contacts")
-        .update(merged)
-        .eq("id", keepId);
-
-      if (updateError) throw updateError;
+      await updateImportedContact(keepId, merged);
 
       // 2. Reassign activities to surviving contact
-      const { error: activityError } = await tFrom("activities")
-        .update({ contact_id: keepId })
-        .eq("contact_id", deleteId);
+      const { error: activityError } = await reassignActivitiesContact(deleteId, keepId);
 
       if (activityError) log.warn("Activity reassignment warning:", { error: activityError });
 
       // 3. Reassign emails to surviving contact
-      const { error: emailError } = await tFrom("emails")
-        .update({ contact_id: keepId })
-        .eq("contact_id", deleteId);
+      const { error: emailError } = await reassignEmailsContact(deleteId, keepId);
 
       if (emailError) log.warn("Email reassignment warning:", { error: emailError });
 
       // 4. Delete the duplicate
-      const { error: deleteError } = await supabase.from("imported_contacts").delete().eq("id", deleteId);
-
-      if (deleteError) throw deleteError;
+      await deleteImportedContact(deleteId);
 
       return { mergedId: keepId, deletedId: deleteId };
     },
@@ -220,9 +203,7 @@ export function useDuplicateCount() {
   return useQuery({
     queryKey: queryKeys.contactMerge.duplicateCount,
     queryFn: async () => {
-      const result = await tFrom("imported_contacts")
-        .select("id", { count: "exact", head: true });
-      return result.count || 0;
+      return countImportedContactsForMerge();
     },
   });
 }

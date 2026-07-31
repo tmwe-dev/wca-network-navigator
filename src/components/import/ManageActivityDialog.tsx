@@ -14,10 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarIcon, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
+import { updateActivityById } from "@/data/uiShellQueries";
 
 interface Activity {
   id: string;
@@ -87,11 +88,7 @@ export function ManageActivityDialog({
         updates.completed_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
-        .from("activities")
-        .update(updates as never)
-        .eq("id", activity.id);
-
+      const { error } = await updateActivityById(activity.id, updates);
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });

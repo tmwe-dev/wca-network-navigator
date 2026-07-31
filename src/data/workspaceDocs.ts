@@ -13,8 +13,9 @@ export async function findWorkspaceDocs() {
 }
 
 export async function createWorkspaceDoc(doc: DocInsert) {
-  const { error } = await supabase.from("workspace_documents").insert(doc);
+  const { data, error } = await supabase.from("workspace_documents").insert(doc).select().single();
   if (error) throw error;
+  return data;
 }
 
 export async function deleteWorkspaceDoc(id: string) {

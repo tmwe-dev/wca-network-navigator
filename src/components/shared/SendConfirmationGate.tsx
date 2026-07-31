@@ -5,7 +5,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -23,6 +23,7 @@ import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { queryKeys } from "@/lib/queryKeys";
+import { getConversationContextByEmail, getAddressRuleByEmail } from "@/data/uiShellQueries";
 
 const CHANNEL_ICONS: Record<string, React.ReactNode> = {
   email: <Mail className="h-4 w-4 text-blue-400" />,
@@ -75,12 +76,7 @@ export function SendConfirmationGate({
     queryKey: queryKeys.sendGate.context(payload?.recipientEmail),
     queryFn: async () => {
       if (!payload?.recipientEmail) return null;
-      const { data } = await supabase
-        .from("contact_conversation_context")
-        .select("interaction_count, last_interaction_at, dominant_sentiment, response_rate, avg_response_time_hours")
-        .eq("email_address", payload.recipientEmail)
-        .maybeSingle();
-      return data;
+      return await getConversationContextByEmail(payload.recipientEmail);
     },
     enabled: open && !!payload?.recipientEmail,
   });
@@ -90,12 +86,7 @@ export function SendConfirmationGate({
     queryKey: queryKeys.sendGate.rules,
     queryFn: async () => {
       if (!payload?.recipientEmail) return null;
-      const { data } = await supabase
-        .from("email_address_rules")
-        .select("id, is_active, success_rate")
-        .eq("email_address", payload.recipientEmail)
-        .maybeSingle();
-      return data;
+      return await getAddressRuleByEmail(payload.recipientEmail);
     },
     enabled: open && !!payload?.recipientEmail,
   });

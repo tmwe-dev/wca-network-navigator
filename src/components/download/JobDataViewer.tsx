@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPartnersWithContactsByWcaIds, findDirectoryCacheMembers } from "@/data/downloadViews";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -68,16 +68,8 @@ export function JobDataViewer({
       }
       const allPartners: PartnerWithContacts[] = [];
       for (const chunk of chunks) {
-        const { data, error } = await supabase
-          .from("partners")
-          .select(`
-            id, wca_id, company_name, city, country_code, email, phone,
-            partner_contacts (id, name, title, email, direct_phone, mobile, is_primary)
-          `)
-          .in("wca_id", chunk)
-          .order("company_name");
-        if (error) throw error;
-        if (data) allPartners.push(...(data as unknown as PartnerWithContacts[]));
+        const data = await findPartnersWithContactsByWcaIds(chunk);
+        allPartners.push(...(data as PartnerWithContacts[]));
       }
       const idOrder = new Map(processedIds.map((id, idx) => [id, idx]));
       allPartners.sort((a, b) => (idOrder.get(a.wca_id!) ?? 999) - (idOrder.get(b.wca_id!) ?? 999));
@@ -92,8 +84,7 @@ export function JobDataViewer({
     queryKey: queryKeys.downloads.failedIdsNames(failedIds),
     queryFn: async () => {
       if (!failedIds.length) return new Map<number, string>();
-      const { data: cacheEntries } = await supabase
-        .from("directory_cache").select("members").eq("country_code", countryCode);
+      const cacheEntries = await findDirectoryCacheMembers(countryCode);
       const nameMap = new Map<number, string>();
       for (const entry of cacheEntries || []) {
         const members = (entry.members || []) as Array<{ wca_id?: number; company_name?: string }>;

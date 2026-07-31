@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useTeams, useTeamMembers, useCreateTeam, useUpdateTeam, useDeleteTeam, useAddTeamMember, useRemoveTeamMember, useUpdateMemberRole } from "@/hooks/useRBAC";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAuthorizedUsersDirectory } from "@/data/authorizedUsersDirectory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,11 +42,7 @@ export default function TeamManagementPanel() {
   // Fetch all users for member assignment
   const { data: allUsers = [] } = useQuery({
     queryKey: ["authorized-users"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("authorized_users").select("id, email, display_name").order("email");
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => findAuthorizedUsersDirectory(),
   });
 
   const handleCreateTeam = async () => {

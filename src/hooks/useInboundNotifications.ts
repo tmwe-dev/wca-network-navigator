@@ -13,6 +13,7 @@ import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
+import { countUnreadInboundEmails, markChannelMessageAsRead } from "@/data/inboundNotificationsQueries";
 
 const log = createLogger("useInboundNotifications");
 
@@ -48,12 +49,7 @@ export function useInboundNotifications() {
   useEffect(() => {
     const fetchInitialCount = async () => {
       try {
-        const { count, error } = await supabase
-          .from("channel_messages")
-          .select("id", { count: "planned", head: true })
-          .eq("direction", "inbound")
-          .eq("channel", "email")
-          .is("read_at", null);
+        const { count, error } = await countUnreadInboundEmails();
 
         if (error) {
           log.warn("failed to fetch initial unread count", { error: error.message });
@@ -167,12 +163,7 @@ export function useInboundNotifications() {
 
   const markAsRead = async (messageId: string) => {
     try {
-      const { error } = await supabase
-        .from("channel_messages")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", messageId);
-
-      if (error) throw error;
+      await markChannelMessageAsRead(messageId);
 
       // Decrement unread count if it was unread
       setState((prev) => ({

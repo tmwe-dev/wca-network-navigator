@@ -3,8 +3,15 @@
  */
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { extractDomainFromEmail, isPersonalEmail } from "@/components/ui/CompanyLogo";
+import {
+  getEnrichmentPartners,
+  getEnrichmentContacts,
+  getEnrichmentBusinessCards,
+  getEnrichmentEmailSenders,
+  getEnrichmentCockpitQueue,
+  getPartnersLookupByIds,
+} from "@/data/enrichmentDataQueries";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { toast } from "@/hooks/use-toast";
@@ -53,50 +60,6 @@ export function getEnrichStatus(r: EnrichedRow): EnrichStatus {
   return "complete";
 }
 
-// ── DB row interfaces ──
-
-interface PartnerRow {
-  id: string;
-  company_name: string;
-  email: string | null;
-  website: string | null;
-  country_code: string | null;
-  logo_url: string | null;
-  enrichment_data: Record<string, unknown> | null;
-}
-
-interface ContactRow {
-  id: string;
-  name: string | null;
-  company_name: string | null;
-  email: string | null;
-  enrichment_data: Record<string, unknown> | null;
-  country: string | null;
-}
-
-interface BcaRow {
-  id: string;
-  company_name: string | null;
-  contact_name: string | null;
-  email: string | null;
-  phone: string | null;
-  mobile: string | null;
-  location: string | null;
-  matched_partner_id: string | null;
-}
-
-interface EmailSenderRow {
-  from_address: string | null;
-}
-
-interface CockpitQueueRow {
-  id: string;
-  source_id: string;
-  source_type: string;
-  partner_id: string | null;
-  status: string;
-}
-
 interface PartnerLookupRow {
   id: string;
   company_name: string;
@@ -109,36 +72,6 @@ interface ContactLookupRow {
   name: string | null;
   company_name: string | null;
   email: string | null;
-}
-
-/**
- * Iterative batch loader — fetches ALL rows from a table.
- * Supabase impone un cap implicito di 1000 righe per query: usiamo limit() esplicito
- * + range() per paginare e raccogliere il dataset reale (non più cappato a 1000).
- */
-async function loadAllRows<T>(
-  table: string,
-  select: string,
-  filters?: (q: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>,
-  batchSize = 1000
-): Promise<T[]> {
-  const all: T[] = [];
-  let page = 0;
-  // Hard safety stop: 200 pagine = 200k righe max
-  while (page < 200) {
-    let q = supabase.from(table as "partners").select(select) as unknown as ReturnType<typeof supabase.from>;
-    if (filters) q = filters(q);
-    const from = page * batchSize;
-    const to = from + batchSize - 1;
-    const { data, error } = await (q as unknown as {
-      range: (a: number, b: number) => { limit: (n: number) => Promise<{ data: T[] | null; error: { message: string } | null }> }
-    }).range(from, to).limit(batchSize);
-    if (error) throw error;
-    if (data && data.length) all.push(...data);
-    if (!data || data.length < batchSize) break;
-    page++;
-  }
-  return all;
 }
 
 export function useEnrichmentData() {
@@ -166,7 +99,7 @@ export function useEnrichmentData() {
   const { data: partners = [], refetch: refetchPartners } = useQuery({
     queryKey: queryKeys.partners.enrichment(),
     queryFn: async () => {
-      const data = await loadAllRows<PartnerRow>("partners", "id, company_name, email, website, country_code, logo_url, enrichment_data");
+      const data = await getEnrichmentPartners();
       return data.map((p): EnrichedRow => {
         const ed = (p.enrichment_data || {}) as Record<string, unknown>;
         const liUrl = (ed.linkedin_url as string) || null;
@@ -193,11 +126,7 @@ export function useEnrichmentData() {
   const { data: contacts = [], refetch: refetchContacts } = useQuery({
     queryKey: queryKeys.enrichment.contacts(),
     queryFn: async () => {
-      const data = await loadAllRows<ContactRow>(
-        "imported_contacts",
-        "id, name, company_name, email, enrichment_data, country",
-        (q) => (q as unknown as { or: (f: string) => typeof q }).or("name.not.is.null,company_name.not.is.null,email.not.is.null") as unknown as typeof q
-      );
+      const data = await getEnrichmentContacts();
       return data.map((c): EnrichedRow => {
         const ed = (c.enrichment_data || {}) as Record<string, string | Record<string, string>>;
         const liUrl = (ed.linkedin_profile_url as string) || (ed.linkedin_url as string) || (ed.social_links as Record<string, string>)?.linkedin || null;
@@ -216,24 +145,10 @@ export function useEnrichmentData() {
   const { data: bcaItems = [] } = useQuery({
     queryKey: queryKeys.enrichment.bca(),
     queryFn: async () => {
-      const data = await loadAllRows<BcaRow>(
-        "business_cards",
-        "id, company_name, contact_name, email, phone, mobile, location, matched_partner_id"
-      );
+      const data = await getEnrichmentBusinessCards();
       // Join sui partner matchati per ricavare country + logo
       const partnerIds = [...new Set(data.filter(b => b.matched_partner_id).map(b => b.matched_partner_id!))];
-      const pMap = new Map<string, { country_code: string | null; website: string | null; logo_url: string | null }>();
-      if (partnerIds.length > 0) {
-        // Batch in chunk da 200 per evitare URL troppo lunghi
-        for (let i = 0; i < partnerIds.length; i += 200) {
-          const slice = partnerIds.slice(i, i + 200);
-          const { data: pData } = await supabase
-            .from("partners")
-            .select("id, country_code, website, logo_url")
-            .in("id", slice);
-          (pData || []).forEach(p => pMap.set(p.id, { country_code: p.country_code, website: p.website, logo_url: p.logo_url }));
-        }
-      }
+      const pMap = partnerIds.length > 0 ? await getPartnersLookupByIds(partnerIds) : new Map<string, { country_code: string | null; website: string | null; logo_url: string | null }>();
       return data.map((b): EnrichedRow => {
         const p = b.matched_partner_id ? pMap.get(b.matched_partner_id) : null;
         // Estrai country da location (es. "Bangkok, Thailand" → ultimo segmento)
@@ -254,10 +169,7 @@ export function useEnrichmentData() {
   const { data: emailSenders = [] } = useQuery({
     queryKey: queryKeys.enrichment.emailSenders(),
     queryFn: async () => {
-      const data = await loadAllRows<EmailSenderRow>(
-        "channel_messages", "from_address",
-        (q) => (q as unknown as { not: (col: string, op: string, val: null) => typeof q }).not("from_address", "is", null) as unknown as typeof q
-      );
+      const data = await getEnrichmentEmailSenders();
       const addressMap = new Map<string, number>();
       for (const row of data) {
         const addr = (row.from_address || "").toLowerCase().trim();
@@ -286,7 +198,7 @@ export function useEnrichmentData() {
   const { data: cockpitItems = [] } = useQuery({
     queryKey: queryKeys.enrichment.cockpit(),
     queryFn: async () => {
-      const queue = await loadAllRows<CockpitQueueRow>("cockpit_queue", "id, source_id, source_type, partner_id, status");
+      const queue = await getEnrichmentCockpitQueue();
       if (!queue.length) return [];
       const partnerIds = [...new Set(queue.filter(q => q.partner_id).map(q => q.partner_id!))];
       const contactIds = [...new Set(queue.filter(q => q.source_type === "contact").map(q => q.source_id))];

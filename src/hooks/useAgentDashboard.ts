@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { queryKeys } from "@/lib/queryKeys";
+import { getActiveAgentsForUser, getAgentTasksForUser } from "@/data/agentDashboardQueries";
 
 export interface AgentWithTasks {
   id: string;
@@ -33,14 +34,8 @@ export function useAgentDashboard() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data: agents } = await supabase
-        .from("agents")
-        .select("id, name, role, avatar_emoji, is_active")
-        .is("deleted_at", null)
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .order("created_at");
-      return (agents ?? []) as Array<{ id: string; name: string; role: string; avatar_emoji: string; is_active: boolean }>;
+      const agents = await getActiveAgentsForUser(user.id);
+      return agents as Array<{ id: string; name: string; role: string; avatar_emoji: string; is_active: boolean }>;
     },
     staleTime: 5 * 60_000,
   });
@@ -50,13 +45,8 @@ export function useAgentDashboard() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data } = await supabase
-        .from("agent_tasks")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(200);
-      return (data ?? []) as AgentTaskRow[];
+      const data = await getAgentTasksForUser(user.id);
+      return data as AgentTaskRow[];
     },
     refetchInterval: 15_000,
   });

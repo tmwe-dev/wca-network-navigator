@@ -6,13 +6,14 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
 import { downloadPartnerConnectExtensionZip } from "@/lib/whatsappExtensionZip";
+import { getAppSettingByKey } from "@/data/uiShellQueries";
 
 const log = createLogger("ConnectionStatusBar");
 
@@ -110,11 +111,7 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
         waOk = true;
       } else {
         try {
-          const { data } = await supabase
-            .from("app_settings")
-            .select("value")
-            .eq("key", "whatsapp_sender")
-            .maybeSingle();
+          const data = await getAppSettingByKey("whatsapp_sender");
           if (data?.value) waOk = true;
         } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
       }

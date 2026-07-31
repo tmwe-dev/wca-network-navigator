@@ -13,6 +13,7 @@ import { createLogger } from "@/lib/log";
 import { useQueryClient } from "@tanstack/react-query";
 import { bulkUpdateContactsByOrigins, contactKeys } from "@/data/contacts";
 import { BulkMergeOriginsDialog } from "@/v2/ui/organisms/BulkMergeOriginsDialog";
+import { findImportedContactsFacetPage, searchImportedContacts } from "@/data/uiShellQueries";
 
 const log = createLogger("CRMFiltersSection");
 
@@ -34,10 +35,7 @@ export function CRMFiltersSection() {
         const allRows: Array<{ country: string | null; origin: string | null }> = [];
         let from = 0;
         while (true) {
-          const { data: page, error } = await supabase
-            .from("imported_contacts")
-            .select("country, origin")
-            .range(from, from + pageSize - 1);
+          const { data: page, error } = await findImportedContactsFacetPage(from, pageSize);
           if (error || !page || page.length === 0) break;
           allRows.push(...page);
           if (page.length < pageSize) break;
@@ -135,12 +133,8 @@ export function CRMFiltersSection() {
     const doSearch = async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("id, name, company_name, company_alias, country, email, position")
-          .or(`name.ilike.%${searchValue}%,company_name.ilike.%${searchValue}%,company_alias.ilike.%${searchValue}%,email.ilike.%${searchValue}%`)
-          .limit(30);
-        setSearchResults(data || []);
+        const data = await searchImportedContacts(searchValue);
+        setSearchResults(data);
       } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setSearchResults([]); }
       finally { setSearching(false); }
     };

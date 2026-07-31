@@ -2,7 +2,7 @@
  * useOperationsV2 — Operations center (download queue, alias, batch jobs)
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findDownloadQueueItems } from "@/data/downloadQueueV2";
 
 interface DownloadQueueItem {
   readonly id: string;
@@ -19,12 +19,8 @@ export function useOperationsV2() {
   return useQuery({
     queryKey: ["v2", "operations-queue"],
     queryFn: async (): Promise<readonly DownloadQueueItem[]> => {
-      const { data, error } = await supabase
-        .from("download_queue")
-        .select("*")
-        .order("priority", { ascending: false });
-      if (error) return [];
-      return (data ?? []).map((r) => ({
+      const data = await findDownloadQueueItems();
+      return data.map((r) => ({
         id: r.id,
         countryCode: r.country_code,
         countryName: r.country_name,

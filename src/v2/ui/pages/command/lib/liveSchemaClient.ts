@@ -6,7 +6,7 @@
  * validare le colonne in modo sempre allineato al DB (no più array statico
  * disallineato).
  */
-import { supabase } from "@/integrations/supabase/client";
+import { rpcIntrospectSchema } from "@/data/rpc";
 
 export interface LiveColumn {
   name: string;
@@ -35,14 +35,9 @@ export async function getLiveColumns(
 
   inflight = (async () => {
     try {
-      const { data, error } = await (
-        supabase.rpc as unknown as (
-          fn: string,
-          args: Record<string, unknown>,
-        ) => Promise<{ data: LiveTable[] | null; error: unknown }>
-      )("ai_introspect_schema", { table_names: tables });
+      const data = await rpcIntrospectSchema(tables);
 
-      if (error || !Array.isArray(data)) {
+      if (!Array.isArray(data)) {
         // fail-open: ritorna mappa vuota, il chiamante può degradare
         return new Map();
       }

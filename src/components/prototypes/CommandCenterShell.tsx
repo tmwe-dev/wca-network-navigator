@@ -11,12 +11,13 @@ import { useProspectStats } from "@/hooks/useProspectStats";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDailyBriefing } from "@/hooks/useDailyBriefing";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { countActivePartners } from "@/data/partners";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
 import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/data/uiShellQueries";
 
 const NAV_ITEMS = [
   { key: "home", icon: Home, label: "Home" },
@@ -41,11 +42,11 @@ function useRecentContacts() {
   return useQuery({
     queryKey: queryKeys.contacts.proto.recentContacts(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partner_contacts")
-        .select("id, first_name, last_name, email, phone, partners(id, company_name, country_code)")
-        .order("created_at", { ascending: false })
-        .limit(100);
+      const { data } = await findPrototypeContacts(
+        "id, first_name, last_name, email, phone, partners(id, company_name, country_code)",
+        100,
+        true,
+      );
       return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),
         name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",

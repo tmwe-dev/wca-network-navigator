@@ -32,3 +32,27 @@ export async function updateProspect(id: string, updates: Record<string, unknown
   const { error } = await supabase.from("prospects").update(safeUpdates as never).eq("id", id);
   if (error) throw error;
 }
+
+/** Contatti management di un prospect. */
+export async function findProspectContacts(prospectId: string): Promise<Array<Record<string, unknown>>> {
+  const { data, error } = await supabase
+    .from("prospect_contacts")
+    .select("*")
+    .eq("prospect_id", prospectId);
+  if (error) throw error;
+  return (data ?? []) as Array<Record<string, unknown>>;
+}
+
+export interface ProspectDedupRow {
+  partita_iva: string | null;
+  company_name: string;
+}
+
+/** Partita IVA + ragione sociale esistenti, per il dedup import scraping. */
+export async function findProspectsForDedup(): Promise<ProspectDedupRow[]> {
+  const { data } = await supabase
+    .from("prospects")
+    .select("partita_iva, company_name")
+    .not("partita_iva", "is", null);
+  return (data ?? []) as ProspectDedupRow[];
+}

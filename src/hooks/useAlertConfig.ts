@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { getAlertConfig, upsertAlertConfig } from "@/data/alertConfigQueries";
 
 export interface AlertConfig {
   id: string;
@@ -21,10 +22,7 @@ export function useAlertConfig() {
   const { data: config, isLoading } = useQuery({
     queryKey: queryKeys.alertConfig.all,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("alert_config")
-        .select("*")
-        .maybeSingle();
+      const data = await getAlertConfig();
       return data as AlertConfig | null;
     },
   });
@@ -34,16 +32,11 @@ export function useAlertConfig() {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase
-        .from("alert_config")
-        .upsert({
-          ...updates,
-          user_id: user.id,
-          ...(config?.id ? { id: config.id } : {}),
-        })
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await upsertAlertConfig({
+        ...updates,
+        user_id: user.id,
+        ...(config?.id ? { id: config.id } : {}),
+      });
       return data;
     },
     onSuccess: () => {

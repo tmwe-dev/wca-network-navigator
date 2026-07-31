@@ -35,3 +35,14 @@ export async function findActiveWorkPlans(userId: string, select = "id, title, s
   if (error) throw error;
   return data ?? [];
 }
+
+/** Job (ai_work_plans) recenti per l'overview Staff/Knowledge Base, senza filtro utente. */
+export async function findRecentWorkPlansOverview(limit = 20) {
+  const { data, error } = await supabase
+    .from("ai_work_plans")
+    .select("id, title, status, created_at, current_step, steps")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}

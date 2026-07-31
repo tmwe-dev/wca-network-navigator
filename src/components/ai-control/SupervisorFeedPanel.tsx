@@ -5,7 +5,7 @@
 import * as React from "react";
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findSupervisorKpisSince, findSupervisorFeed, type AuditRow } from "@/data/supervisorFeed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,24 +29,6 @@ import {
 } from "@/components/ui/table";
 
 // ── Types ──
-
-interface AuditRow {
-  id: string;
-  actor_type: string;
-  actor_id: string | null;
-  actor_name: string | null;
-  action_category: string;
-  action_detail: string;
-  target_type: string | null;
-  target_id: string | null;
-  target_label: string | null;
-  partner_id: string | null;
-  email_address: string | null;
-  decision_origin: string;
-  ai_decision_log_id: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-}
 
 // ── Constants ──
 
@@ -87,43 +69,14 @@ export function SupervisorFeedPanel(): React.ReactElement {
   // KPI query (today)
   const { data: kpis } = useQuery({
     queryKey: queryKeys.supervisor.kpis,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("supervisor_audit_log")
-        .select("decision_origin", { count: "exact" })
-        .gte("created_at", todayStart);
-      if (error) throw error;
-      const rows = (data || []) as { decision_origin: string }[];
-      return {
-        total: rows.length,
-        aiAuto: rows.filter((r) => r.decision_origin === "ai_auto").length,
-        approved: rows.filter((r) => r.decision_origin === "ai_approved").length,
-        manual: rows.filter((r) => r.decision_origin === "manual").length,
-      };
-    },
+    queryFn: () => findSupervisorKpisSince(todayStart),
     refetchInterval: 30000,
   });
 
   // Feed query
   const { data: feed, isLoading } = useQuery({
     queryKey: queryKeys.supervisor.feed(actorFilter, originFilter, search, page),
-    queryFn: async () => {
-      let q = supabase
-        .from("supervisor_audit_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-      if (actorFilter !== "all") q = q.eq("actor_type", actorFilter);
-      if (originFilter !== "all") q = q.eq("decision_origin", originFilter);
-      if (search.trim()) {
-        q = q.or(`email_address.ilike.%${search}%,action_detail.ilike.%${search}%,target_label.ilike.%${search}%`);
-      }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data || []) as AuditRow[];
-    },
+    queryFn: () => findSupervisorFeed({ actorFilter, originFilter, search, page, pageSize: PAGE_SIZE }),
     refetchInterval: 15000,
   });
 
@@ -279,7 +232,9 @@ function AuditCard({ entry }: { entry: AuditRow }) {
               {originStyle.label}
             </Badge>
             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-              {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: it })}
+              {entry.created_at
+                ? formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: it })
+                : "—"}
             </span>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
@@ -367,7 +322,7 @@ function AuditTableView({ feed, isLoading, onLoadMore, canLoadMore }: AuditTable
                     <>
                       <TableRow className="hover:bg-muted/30 cursor-pointer">
                         <TableCell className="px-3 py-2 text-[10px] text-muted-foreground whitespace-nowrap">
-                          {format(new Date(entry.created_at), "HH:mm:ss")}
+                          {entry.created_at ? format(new Date(entry.created_at), "HH:mm:ss") : "—"}
                         </TableCell>
                         <TableCell className="px-3 py-2">
                           <div className="flex items-center gap-1.5">

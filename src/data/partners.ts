@@ -912,3 +912,69 @@ export async function searchPartnersForPicker(search: string, countryCode: strin
   const { data } = await q.order("company_name").limit(200);
   return (data ?? []) as PickerPartnerRow[];
 }
+
+/** Massimo wca_id presente in DB (per suggerire il range di sync). */
+export async function findMaxWcaId(): Promise<number> {
+  const { data } = await supabase
+    .from("partners")
+    .select("wca_id")
+    .not("wca_id", "is", null)
+    .order("wca_id", { ascending: false })
+    .limit(1)
+    .single();
+  return data?.wca_id || 0;
+}
+
+export interface CsvPartnerInsertRow {
+  company_name: string;
+  country_code: string;
+  country_name: string;
+  city: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  partner_type: string;
+  wca_id: number | null;
+  is_active: boolean;
+}
+
+/** Insert batch di partner da import CSV. Ritorna le righe inserite. */
+export async function insertPartnersBatch(rows: CsvPartnerInsertRow[]) {
+  const { data, error } = await supabase
+    .from("partners")
+    .insert(rows as unknown as PartnerInsert[])
+    .select();
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Lead status + country di un partner, usato da usePreContext (Email Forge). */
+export async function findPartnerRelationshipSnapshot(partnerId: string) {
+  const { data } = await supabase
+    .from("partners")
+    .select("lead_status, country")
+    .eq("id", partnerId)
+    .maybeSingle();
+  return data;
+}
+
+/** Snapshot enrichment testuale per il tab Deep Search di Email Forge. */
+export async function findPartnerDeepSearchSnapshot(id: string) {
+  const { data } = await supabase
+    .from("partners")
+    .select("id, enrichment_data, profile_description, raw_profile_html, raw_profile_markdown, ai_parsed_at")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
+}
+
+/** Snapshot compatto per l'hero card del destinatario in Compose. */
+export async function findPartnerHeroSnapshot(id: string) {
+  const { data } = await supabase
+    .from("partners")
+    .select("company_name, company_alias, country_name, country_code, city, logo_url, last_interaction_at, interaction_count, enrichment_data, lead_status")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
+}

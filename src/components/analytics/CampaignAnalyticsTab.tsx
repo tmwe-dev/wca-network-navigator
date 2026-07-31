@@ -2,7 +2,7 @@
  * CampaignAnalyticsTab — Stats + charts for campaign performance
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findCampaignJobsForAnalytics } from "@/data/analyticsOverview";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -37,10 +37,7 @@ export function CampaignAnalyticsTab() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.campaigns.analytics(),
     queryFn: async () => {
-      const { data: jobs } = await supabase
-        .from("campaign_jobs")
-        .select("id, status, country_code, country_name, created_at, completed_at")
-        .order("created_at", { ascending: false });
+      const jobs = await findCampaignJobsForAnalytics();
 
       const all = jobs || [];
       const stats = {

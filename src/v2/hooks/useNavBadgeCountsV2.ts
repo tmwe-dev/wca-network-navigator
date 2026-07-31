@@ -13,7 +13,7 @@
  * SOLO READ. Polling 30s. Non crea side-effect, non tocca pipeline esistenti.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchNavBadgeCountsRaw } from "@/data/navBadgeCountsV2";
 import { fetchFunnemailUnreadCount } from "@/v2/io/supabase/queries/channel-messages";
 
 export interface NavBadgeCounts {
@@ -36,41 +36,19 @@ export function useNavBadgeCountsV2() {
   return useQuery({
     queryKey: ["v2", "nav-badge-counts"],
     queryFn: async (): Promise<NavBadgeCounts> => {
-      const PENDING = ["pending", "queued", "scheduled"];
-      // campaign_jobs.status enum: pending|in_progress|completed|skipped (no 'queued')
-      const COCKPIT = ["pending"];
-
-      const [cestRes, cockpitRes, inboxRes, funnemailRes, agendaRes] =
-        await Promise.all([
-          supabase
-            .from("email_campaign_queue")
-            .select("id", { count: "exact", head: true })
-            .in("status", PENDING as never),
-          supabase
-            .from("campaign_jobs")
-            .select("id", { count: "exact", head: true })
-            .in("status", COCKPIT as never),
-          supabase
-            .from("channel_messages")
-            .select("id", { count: "exact", head: true })
-            .is("read_at", null)
-            .eq("direction", "inbound"),
-          // B4.5 — SSOT canonica: view `message_intelligence_v` con fallback
-          // trasparente su `channel_messages` centralizzato nel DAL.
-          fetchFunnemailUnreadCount(),
-          supabase
-            .from("activities")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "pending")
-            .is("deleted_at", null),
-        ]);
+      const [raw, funnemailRes] = await Promise.all([
+        fetchNavBadgeCountsRaw(),
+        // B4.5 — SSOT canonica: view `message_intelligence_v` con fallback
+        // trasparente su `channel_messages` centralizzato nel DAL.
+        fetchFunnemailUnreadCount(),
+      ]);
 
       return {
-        cestinone: cestRes.count ?? 0,
-        cockpit: cockpitRes.count ?? 0,
-        inbox: inboxRes.count ?? 0,
+        cestinone: raw.cestinone,
+        cockpit: raw.cockpit,
+        inbox: raw.inbox,
         funnemailInbox: funnemailRes._tag === "Ok" ? funnemailRes.value : 0,
-        agenda: agendaRes.count ?? 0,
+        agenda: raw.agenda,
       };
     },
     refetchInterval: 30_000,

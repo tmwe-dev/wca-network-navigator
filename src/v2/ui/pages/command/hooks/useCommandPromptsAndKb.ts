@@ -6,49 +6,18 @@
  * are active, and which KB cards inform its reasoning.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  findCommandHelpPromptsAndKb,
+  type CommandHelpPromptRow as CommandPromptRow,
+  type CommandHelpKbRow as CommandKbRow,
+} from "@/data/commandPromptsV2";
 
-export interface CommandPromptRow {
-  readonly id: string;
-  readonly name: string;
-  readonly objective: string | null;
-  readonly priority: number | null;
-  readonly is_active: boolean | null;
-  readonly tags: readonly string[] | null;
-}
-
-export interface CommandKbRow {
-  readonly id: string;
-  readonly title: string;
-  readonly category: string;
-  readonly chapter: string | null;
-  readonly priority: number | null;
-  readonly is_active: boolean | null;
-}
+export type { CommandPromptRow, CommandKbRow };
 
 export function useCommandPromptsAndKb() {
   return useQuery({
     queryKey: ["v2", "command", "help", "prompts-and-kb"],
-    queryFn: async () => {
-      const [promptsRes, kbRes] = await Promise.all([
-        supabase
-          .from("operative_prompts")
-          .select("id, name, objective, priority, is_active, tags")
-          .eq("context", "command")
-          .order("priority", { ascending: false }),
-        supabase
-          .from("kb_entries")
-          .select("id, title, category, chapter, priority, is_active")
-          .or("category.eq.command_tools,category.eq.ai_memory")
-          .eq("is_active", true)
-          .order("priority", { ascending: false })
-          .limit(50),
-      ]);
-      return {
-        prompts: (promptsRes.data ?? []) as CommandPromptRow[],
-        kb: (kbRes.data ?? []) as CommandKbRow[],
-      };
-    },
+    queryFn: findCommandHelpPromptsAndKb,
     staleTime: 60_000,
   });
 }

@@ -64,3 +64,17 @@ export async function findActiveMissionActions(userId: string, limit = 50): Prom
   if (error) throw error;
   return data ?? [];
 }
+
+/** Mission actions con cadenza attiva (planned/approved/executing) per un utente. */
+export async function findScheduledMissionActionsWithCadence(userId: string, limit = 50): Promise<MissionActionRow[]> {
+  const { data, error } = await supabase
+    .from("mission_actions")
+    .select("*")
+    .eq("user_id", userId)
+    .not("cadence_rule", "is", null)
+    .in("status", ["planned", "approved", "executing"])
+    .order("scheduled_at", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}

@@ -4,6 +4,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { fetchUserSettingsMap } from "@/data/settingsMapV2";
+import { saveAppSettingForUser } from "@/data/appSettings";
 
 export interface SettingsMap {
   readonly [key: string]: string;
@@ -15,16 +17,7 @@ export function useSettingsV2() {
     queryFn: async (): Promise<SettingsMap> => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return {};
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .eq("user_id", user.id);
-      if (error) throw error;
-      const map: Record<string, string> = {};
-      data?.forEach((row) => {
-        if (row.value) map[row.key] = row.value;
-      });
-      return map;
+      return fetchUserSettingsMap(user.id);
     },
   });
 }
@@ -35,25 +28,7 @@ export function useUpdateSettingV2() {
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
-      const { data: existing } = await supabase
-        .from("app_settings")
-        .select("id")
-        .eq("key", key)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (existing) {
-        const { error } = await supabase
-          .from("app_settings")
-          .update({ value })
-          .eq("key", key)
-          .eq("user_id", user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("app_settings")
-          .insert({ key, value, user_id: user.id });
-        if (error) throw error;
-      }
+      await saveAppSettingForUser(user.id, key, value);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.v2.settings }),
   });

@@ -3,8 +3,8 @@
  * LOVABLE-93: audit trail viewer
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { findAuditTrail, countAuditTrail } from "@/data/auditTrailQueries";
 
 // ── Types ──
 
@@ -53,41 +53,7 @@ export function useAuditTrail(filters: AuditTrailFilters) {
       Math.floor(filters.offset / filters.limit)
     ),
     queryFn: async () => {
-      let query = supabase
-        .from("supervisor_audit_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .range(filters.offset, filters.offset + filters.limit - 1);
-
-      // Apply filters
-      if (filters.actorType && filters.actorType !== "all") {
-        query = query.eq("actor_type", filters.actorType);
-      }
-
-      if (filters.actionCategory && filters.actionCategory !== "all") {
-        query = query.eq("action_category", filters.actionCategory);
-      }
-
-      if (filters.dateRange) {
-        query = query
-          .gte("created_at", filters.dateRange.from)
-          .lte("created_at", filters.dateRange.to);
-      }
-
-      if (filters.domain) {
-        query = query.eq("email_address", filters.domain);
-      }
-
-      if (filters.searchText && filters.searchText.trim()) {
-        const searchTerm = `%${filters.searchText.trim()}%`;
-        query = query.or(
-          `target_label.ilike.${searchTerm},action_detail.ilike.${searchTerm},email_address.ilike.${searchTerm}`
-        );
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as AuditTrailRow[];
+      return findAuditTrail(filters);
     },
     refetchInterval: 15000,
     staleTime: 5000,
@@ -98,38 +64,7 @@ export function useAuditTrailCount(filters: Omit<AuditTrailFilters, "offset" | "
   return useQuery({
     queryKey: ["audit-trail-count", filters],
     queryFn: async () => {
-      let query = supabase
-        .from("supervisor_audit_log")
-        .select("id", { count: "exact" });
-
-      if (filters.actorType && filters.actorType !== "all") {
-        query = query.eq("actor_type", filters.actorType);
-      }
-
-      if (filters.actionCategory && filters.actionCategory !== "all") {
-        query = query.eq("action_category", filters.actionCategory);
-      }
-
-      if (filters.dateRange) {
-        query = query
-          .gte("created_at", filters.dateRange.from)
-          .lte("created_at", filters.dateRange.to);
-      }
-
-      if (filters.domain) {
-        query = query.eq("email_address", filters.domain);
-      }
-
-      if (filters.searchText && filters.searchText.trim()) {
-        const searchTerm = `%${filters.searchText.trim()}%`;
-        query = query.or(
-          `target_label.ilike.${searchTerm},action_detail.ilike.${searchTerm},email_address.ilike.${searchTerm}`
-        );
-      }
-
-      const { count, error } = await query;
-      if (error) throw error;
-      return count || 0;
+      return countAuditTrail(filters);
     },
     staleTime: 10000,
   });

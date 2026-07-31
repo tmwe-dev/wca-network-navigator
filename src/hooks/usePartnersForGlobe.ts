@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { WCA_COUNTRIES, type WCACountry } from "@/data/wcaCountries";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  getAllActivePartnersForGlobe,
+  getActivePartnersByCountryForGlobe,
+  getBusinessCardsForCampaignRaw,
+  getBcaCountryCountsRaw,
+} from "@/data/globePartnersQueries";
 
 export interface GlobePartner {
   id: string;
@@ -44,31 +49,13 @@ export function usePartnersForGlobe() {
   return useQuery({
     queryKey: queryKeys.partners.globe,
     queryFn: async () => {
-      // Paginate to fetch ALL partners (bypass 1000-row default limit)
-      const PAGE_SIZE = 2000;
-      let allPartners: Array<Record<string, unknown>> = [];
-      let offset = 0;
-
-      while (true) {
-        const { data, error } = await supabase
-          .from("partners")
-          .select("id, company_name, city, country_code, country_name, email, partner_type")
-          .eq("is_active", true)
-          .order("company_name")
-          .range(offset, offset + PAGE_SIZE - 1);
-
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        allPartners = allPartners.concat(data);
-        if (data.length < PAGE_SIZE) break;
-        offset += PAGE_SIZE;
-      }
+      const allPartners = await getAllActivePartnersForGlobe();
 
       // Reset counts efficiently
       const countryCounts: Record<string, number> = {};
-      
+
       // Add lat/lng from country data with O(1) lookups
-      const globePartners: GlobePartner[] = (allPartners as unknown as Record<string, unknown>[]).map((p) => {
+      const globePartners: GlobePartner[] = allPartners.map((p) => {
         const cc = String(p.country_code || "");
         countryCounts[cc] = (countryCounts[cc] || 0) + 1;
         const country = PRECOMPUTED_COUNTRIES_MAP[cc];
@@ -109,29 +96,9 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
     queryFn: async () => {
       if (!countryCode) return [];
 
-      // Paginate to get all partners for the country
-      const PAGE_SIZE = 2000;
-      let allData: Array<{ id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; partner_type: string | null }> = [];
-      let offset = 0;
-
-      while (true) {
-        const { data, error } = await supabase
-          .from("partners")
-          .select("id, company_name, city, country_code, country_name, email, partner_type")
-          .eq("is_active", true)
-          .eq("country_code", countryCode)
-          .order("company_name")
-          .range(offset, offset + PAGE_SIZE - 1);
-
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        allData = allData.concat(data);
-        if (data.length < PAGE_SIZE) break;
-        offset += PAGE_SIZE;
-      }
-
+      const allData = await getActivePartnersByCountryForGlobe(countryCode);
       const country = PRECOMPUTED_COUNTRIES_MAP[countryCode];
-      
+
       return allData.map((p): GlobePartner => ({
         ...p,
         lat: country?.lat || 0,
@@ -151,13 +118,7 @@ export function useBusinessCardsForCampaign(countryCode: string | null) {
     queryFn: async () => {
       if (!countryCode) return [];
 
-      const { data, error } = await supabase
-        .from("business_cards")
-        .select("id, company_name, contact_name, email, event_name, met_at, location, matched_partner_id, partner:matched_partner_id(id, company_name, city, country_code, country_name, email, logo_url)")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-
-      if (error) throw error;
+      const data = await getBusinessCardsForCampaignRaw();
 
       return (data ?? [])
         .filter((bc) => {
@@ -190,12 +151,7 @@ export function useBcaCountryCounts() {
   return useQuery({
     queryKey: queryKeys.businessCards.countryCounts,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_cards")
-        .select("matched_partner_id, partner:matched_partner_id(country_code)")
-        .not("matched_partner_id", "is", null);
-
-      if (error) throw error;
+      const data = await getBcaCountryCountsRaw();
 
       const counts: Record<string, number> = {};
       (data ?? []).forEach((row) => {

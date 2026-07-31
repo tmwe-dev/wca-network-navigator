@@ -4,7 +4,7 @@
 import { useState, useRef, useCallback } from "react";
 import { runAgentLoop, type AgentState, type AgentStep } from "@/v2/agent/runtime/agentLoop";
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { insertCommandMessage, insertAgentActionLogEntries } from "@/data/agentLoopTranscript";
 import { Sentry } from "@/lib/sentry";
 
 export interface UseAgentLoopReturn {
@@ -107,7 +107,7 @@ async function saveTranscript(goal: string, transcript: AgentStep[]) {
         })),
       }),
     };
-    await supabase.from("command_messages").insert(summary);
+    await insertCommandMessage(summary);
 
     // Save each step to agent_action_log for audit
     const logEntries = transcript.map((s) => ({
@@ -118,9 +118,7 @@ async function saveTranscript(goal: string, transcript: AgentStep[]) {
       result: { success: s.result.success, error: s.result.error ?? null },
     }));
 
-    if (logEntries.length > 0) {
-      await untypedFrom("agent_action_log").insert(logEntries);
-    }
+    await insertAgentActionLogEntries(logEntries);
   } catch {
     // Non-critical — don't break the agent
   }

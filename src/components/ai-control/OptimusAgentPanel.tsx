@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { invalidateOptimusMemoryPlan, deleteOptimusMemory } from "@/data/optimusMemoryAdmin";
 import { useOptimusOverview, useOptimusLogs, type OptimusOverviewRow } from "@/hooks/useOptimusStatus";
 import { cn } from "@/lib/utils";
 
@@ -74,12 +74,7 @@ export function OptimusAgentPanel() {
     try {
       // Note: requires an active DOM snapshot from the extension; without it,
       // we can only mark the memory as stale and let the next "Leggi" rebuild.
-      const { error } = await supabase
-        .from("scraper_agent_memory")
-        .update({ consecutive_failures: 99, dom_structure_hash: null })
-        .eq("channel", channel)
-        .eq("page_type", pageType);
-      if (error) throw error;
+      await invalidateOptimusMemoryPlan(channel, pageType);
       toast({ title: "Piano marcato come scaduto", description: `Al prossimo "Leggi" Optimus rigenererà il piano per ${CHANNEL_LABELS[channel]} · ${PAGETYPE_LABELS[pageType]}.` });
       qc.invalidateQueries({ queryKey: ["optimus-overview"] });
       qc.invalidateQueries({ queryKey: ["optimus-status"] });
@@ -94,12 +89,7 @@ export function OptimusAgentPanel() {
     const key = `reset:${channel}:${pageType}`;
     setBusy(key);
     try {
-      const { error } = await supabase
-        .from("scraper_agent_memory")
-        .delete()
-        .eq("channel", channel)
-        .eq("page_type", pageType);
-      if (error) throw error;
+      await deleteOptimusMemory(channel, pageType);
       toast({ title: "Memoria azzerata", description: `Optimus ripartirà da zero al prossimo "Leggi" per ${CHANNEL_LABELS[channel]} · ${PAGETYPE_LABELS[pageType]}.` });
       qc.invalidateQueries({ queryKey: ["optimus-overview"] });
       qc.invalidateQueries({ queryKey: ["optimus-status"] });

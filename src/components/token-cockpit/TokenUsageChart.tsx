@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findTokenSeriesSince } from "@/data/tokenCockpit";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -34,11 +35,7 @@ export function TokenUsageChart() {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data, error } = await supabase
-        .from("ai_prompt_log")
-        .select("tokens_total, created_at")
-        .gte("created_at", thirtyDaysAgo.toISOString())
-        .order("created_at", { ascending: true });
+      const { data, error } = await findTokenSeriesSince(thirtyDaysAgo.toISOString());
 
       if (error) {
         log.error("Error fetching chart data:", { error: error });

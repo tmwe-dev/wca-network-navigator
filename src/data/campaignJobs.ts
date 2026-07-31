@@ -37,3 +37,14 @@ export async function deleteCampaignJobsByIds(ids: string[]): Promise<void> {
   const { error } = await supabase.from("campaign_jobs").delete().in("id", ids);
   if (error) throw error;
 }
+
+/** Ultimi campaign_jobs (per dashboard "Coda"). */
+export async function findRecentCampaignJobs<T = Record<string, unknown>>(limit = 50): Promise<T[]> {
+  const { data, error } = await supabase
+    .from("campaign_jobs")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as unknown as T[];
+}

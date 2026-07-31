@@ -3,8 +3,8 @@
  * Calls enrich-partner-website edge function and tracks status.
  */
 import { useState, useCallback, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { getPartnerEnrichmentDataForDeepSearch } from "@/data/deepSearchTriggerQueries";
 import { toast } from "sonner";
 import { asEnrichmentData } from "@/lib/types/enrichmentData";
 
@@ -36,13 +36,9 @@ export function useDeepSearchTrigger(partnerId: string | null) {
     }
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("enrichment_data")
-        .eq("id", partnerId)
-        .maybeSingle();
+      const enrichmentData = await getPartnerEnrichmentDataForDeepSearch(partnerId);
       if (!active) return;
-      const enr = asEnrichmentData(data?.enrichment_data);
+      const enr = asEnrichmentData(enrichmentData);
       const scrapedAt = (enr.deep_search_at as string | undefined) || (enr.scraped_at as string | undefined) || null;
       const { status, ageDays } = computeStatus(scrapedAt);
       setState({ status, ageDays, scrapedAt });

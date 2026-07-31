@@ -4,6 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findRecentImportLogs } from "@/data/importLogs";
 import { FormSection } from "../../organisms/FormSection";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, Loader2 } from "lucide-react";
@@ -19,13 +20,7 @@ export function ImportSettingsTab(): React.ReactElement {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data } = await supabase
-        .from("import_logs")
-        .select("id, file_name, total_rows, imported_rows, error_rows, status, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data ?? [];
+      return findRecentImportLogs(user.id, 10);
     },
   });
 

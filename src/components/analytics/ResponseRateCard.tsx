@@ -2,7 +2,7 @@
  * ResponseRateCard — Global response rate with channel breakdown and trend
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findResponsePatternStats } from "@/data/analyticsOverview";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +17,7 @@ export function ResponseRateCard() {
   const { data } = useQuery({
     queryKey: ["response-rate-card"],
     queryFn: async () => {
-      const { data: patterns } = await supabase
-        .from("response_patterns")
-        .select("channel, response_rate, total_sent, total_responses, updated_at")
-        .gt("total_sent", 0);
+      const patterns = await findResponsePatternStats();
 
       if (!patterns?.length) return null;
 

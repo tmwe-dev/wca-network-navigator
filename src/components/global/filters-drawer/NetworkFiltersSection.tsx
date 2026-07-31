@@ -18,6 +18,7 @@ import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection } from "./shared";
 import { NETWORK_QUALITY_TOGGLES } from "./constants";
 import { createLogger } from "@/lib/log";
+import { searchNetworkPartners } from "@/data/uiShellQueries";
 
 const log = createLogger("NetworkFiltersSection");
 
@@ -133,17 +134,8 @@ export function NetworkFiltersSection() {
     const doSearch = async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        const { data } = await supabase
-          .from("partners")
-          .select(
-            "id, company_name, company_alias, country_code, city, email, partner_contacts(id, name, email, contact_alias, title)"
-          )
-          .or(
-            `company_name.ilike.%${networkSearchValue}%,company_alias.ilike.%${networkSearchValue}%,email.ilike.%${networkSearchValue}%`
-          )
-          .eq("is_active", true)
-          .limit(30);
-        setSearchResults(data || []);
+        const data = await searchNetworkPartners(networkSearchValue);
+        setSearchResults(data);
       } catch (e) {
         log.warn("operation failed, state reset", {
           error: e instanceof Error ? e.message : String(e),

@@ -14,6 +14,8 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("useLinkedInSync");
 import { toast } from "sonner";
 import { upsertChannelMessageDedup } from "@/data/channelMessages";
+import { findOperatorByUserId } from "@/data/operators";
+import { upsertLinkedInAddress } from "@/data/linkedinAddressRpc";
 import { queryKeys } from "@/lib/queryKeys";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
@@ -132,11 +134,7 @@ export function useLinkedInSync() {
       }
 
       // Resolve operator_id
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const opRow = await findOperatorByUserId(user.id);
       const operatorId = opRow?.id ?? null;
       if (!operatorId) {
         log.warn("No operator found for user, skipping sync");
@@ -239,7 +237,7 @@ export function useLinkedInSync() {
             // P0.4 — Rubrica LinkedIn (best-effort).
             if (profileSlug) {
               try {
-                await supabase.rpc("upsert_linkedin_address" as never, {
+                await upsertLinkedInAddress({
                   p_user_id: user.id,
                   p_operator_id: operatorId,
                   p_profile_slug: profileSlug,
@@ -248,7 +246,7 @@ export function useLinkedInSync() {
                   p_headline: null,
                   p_direction: "inbound",
                   p_message_at: tsIso,
-                } as never);
+                });
               } catch (e) {
                 log.warn("upsert_linkedin_address failed", { error: errMsg(e) });
               }
@@ -315,7 +313,7 @@ export function useLinkedInSync() {
                     if (typeof m.confidence === "number") { stats.confidenceSum += m.confidence; stats.confidenceCount++; }
                     if (profileSlug) {
                       try {
-                        await supabase.rpc("upsert_linkedin_address" as never, {
+                        await upsertLinkedInAddress({
                           p_user_id: user.id,
                           p_operator_id: operatorId,
                           p_profile_slug: profileSlug,
@@ -324,7 +322,7 @@ export function useLinkedInSync() {
                           p_headline: null,
                           p_direction: direction,
                           p_message_at: msgIso,
-                        } as never);
+                        });
                       } catch (e) {
                         log.warn("upsert_linkedin_address (msg) failed", { error: errMsg(e) });
                       }
