@@ -1,27 +1,28 @@
 /**
- * IO Queries: KB Entries — Result-based
+ * IO Queries: KB Entries — Result-based.
+ *
+ * Unico punto di accesso ai dati: il DAL canonico `src/data/kbEntries.ts`.
+ * Qui restano solo mapping di dominio e conversione errori → Result.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findKbEntryRowsByPriority, searchKbEntryRows } from "@/data/kbEntries";
 import { type Result, ok, err } from "../../../core/domain/result";
-import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
+import { fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type KbEntry } from "../../../core/domain/entities";
 import { mapKbEntryRow } from "../../../core/mappers/kb-entry-mapper";
 
+function mapRows(rows: readonly unknown[]): Result<KbEntry[], AppError> {
+  const entries: KbEntry[] = [];
+  for (const row of rows) {
+    const mapped = mapKbEntryRow(row);
+    if (mapped._tag === "Err") return mapped;
+    entries.push(mapped.value);
+  }
+  return ok(entries);
+}
+
 export async function fetchKbEntries(): Promise<Result<KbEntry[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("kb_entries")
-      .select("*")
-      .order("priority", { ascending: false });
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "kb_entries" }, "fetchKbEntries"));
-    if (!data) return ok([]);
-    const entries: KbEntry[] = [];
-    for (const row of data) {
-      const mapped = mapKbEntryRow(row);
-      if (mapped._tag === "Err") return mapped;
-      entries.push(mapped.value);
-    }
-    return ok(entries);
+    return mapRows(await findKbEntryRowsByPriority());
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchKbEntries"));
   }
@@ -29,21 +30,7 @@ export async function fetchKbEntries(): Promise<Result<KbEntry[], AppError>> {
 
 export async function searchKbEntries(query: string): Promise<Result<KbEntry[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("kb_entries")
-      .select("*")
-      .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
-      .order("priority", { ascending: false })
-      .limit(50);
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "kb_entries", query }, "searchKbEntries"));
-    if (!data) return ok([]);
-    const entries: KbEntry[] = [];
-    for (const row of data) {
-      const mapped = mapKbEntryRow(row);
-      if (mapped._tag === "Err") return mapped;
-      entries.push(mapped.value);
-    }
-    return ok(entries);
+    return mapRows(await searchKbEntryRows(query, 50));
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "searchKbEntries"));
   }
