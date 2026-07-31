@@ -168,3 +168,21 @@ export async function findAgentBasicById(id: string): Promise<AgentBasicRow | nu
     .single();
   return data ?? null;
 }
+
+export interface AgentDetailForEditor {
+  id: string;
+  name: string;
+  role: string;
+  avatar_emoji: string | null;
+  system_prompt: string | null;
+}
+
+/** Dettaglio agente per l'editor persona V2 (nome, ruolo, avatar, system prompt). */
+export async function findAgentDetailForEditor(agentId: string): Promise<AgentDetailForEditor | null> {
+  const { data } = await supabase
+    .from("agents")
+    .select("id, name, role, avatar_emoji, system_prompt")
+    .eq("id", agentId)
+    .maybeSingle();
+  return data as AgentDetailForEditor | null;
+}
