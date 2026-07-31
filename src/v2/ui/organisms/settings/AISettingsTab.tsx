@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchKbEntriesCount, fetchAiMemoryCount } from "@/data/aiSettingsCounts";
 import { useSettingsV2, useUpdateSettingV2 } from "@/v2/hooks/useSettingsV2";
 import { useState, useEffect } from "react";
 import { Button } from "../../atoms/Button";
@@ -25,18 +25,14 @@ export function AISettingsTab(): React.ReactElement {
   const { data: kbCount } = useQuery({
     queryKey: queryKeys.v2.kbCount,
     queryFn: async () => {
-      const { count, error } = await supabase.from("kb_entries").select("id", { count: "exact", head: true });
-      if (error) throw error;
-      return count ?? 0;
+      return await fetchKbEntriesCount();
     },
   });
 
   const { data: memoryCount } = useQuery({
     queryKey: queryKeys.v2.memoryCount,
     queryFn: async () => {
-      const { count, error } = await supabase.from("ai_memory").select("id", { count: "exact", head: true });
-      if (error) throw error;
-      return count ?? 0;
+      return await fetchAiMemoryCount();
     },
   });
 

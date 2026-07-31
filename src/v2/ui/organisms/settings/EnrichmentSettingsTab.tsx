@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchEnrichmentSourceCounts } from "@/data/enrichmentSourceCounts";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2 } from "lucide-react";
 import { queryKeys } from "@/lib/queryKeys";
@@ -18,18 +18,13 @@ export function EnrichmentSettingsTab(): React.ReactElement {
   const { data: counts, isLoading } = useQuery({
     queryKey: queryKeys.v2.enrichmentCounts,
     queryFn: async () => {
-      const [partners, contacts, emails, bca] = await Promise.all([
-        supabase.from("partners").select("id", { count: "exact", head: true }),
-        supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
-        supabase.from("channel_messages").select("id", { count: "exact", head: true }).eq("channel", "email"),
-        supabase.from("business_cards").select("id", { count: "exact", head: true }),
-      ]);
+      const counts = await fetchEnrichmentSourceCounts();
 
       return [
-        { label: "WCA Partners", count: partners.count ?? 0, color: "bg-blue-500" },
-        { label: "Contatti", count: contacts.count ?? 0, color: "bg-emerald-500" },
-        { label: "Email", count: emails.count ?? 0, color: "bg-amber-500" },
-        { label: "Business Cards", count: bca.count ?? 0, color: "bg-violet-500" },
+        { label: "WCA Partners", count: counts.partners, color: "bg-blue-500" },
+        { label: "Contatti", count: counts.contacts, color: "bg-emerald-500" },
+        { label: "Email", count: counts.emails, color: "bg-amber-500" },
+        { label: "Business Cards", count: counts.businessCards, color: "bg-violet-500" },
       ] as SourceCount[];
     },
   });
