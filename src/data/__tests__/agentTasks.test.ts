@@ -11,13 +11,27 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import { countCompletedAgentTasks, findAgentTasksByUser } from "@/data/agentTasks";
 
+/** Terminal risultato query che supporta anche `.returns<T>()` come il client reale. */
+function res(value: any) {
+  const node: any = {
+    returns: () => node,
+    then: (onOk: (v: any) => void, onErr?: (e: any) => void) => Promise.resolve(value).then(onOk, onErr),
+  };
+  node.eq = () => node;
+  node.in = () => node;
+  node.order = () => node;
+  node.limit = () => node;
+  return node;
+}
+
+
 describe("DAL — agentTasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFrom.mockReturnValue({ select: mockSelect });
     mockSelect.mockReturnValue({ eq: mockEq });
     mockEq.mockReturnValue({ in: mockIn, count: 5, error: null });
-    mockIn.mockResolvedValue({ data: [], error: null });
+    mockIn.mockReturnValue(res({ data: [], error: null }));
   });
 
   describe("countCompletedAgentTasks", () => {
@@ -43,20 +57,20 @@ describe("DAL — agentTasks", () => {
   describe("findAgentTasksByUser", () => {
     it("returns tasks for user", async () => {
       const tasks = [{ agent_id: "a1", status: "pending" }];
-      mockIn.mockResolvedValue({ data: tasks, error: null });
+      mockIn.mockReturnValue(res({ data: tasks, error: null }));
       const result = await findAgentTasksByUser("u1", ["pending", "approved"]);
       expect(mockFrom).toHaveBeenCalledWith("agent_tasks");
       expect(result).toEqual(tasks);
     });
 
     it("returns empty array when null", async () => {
-      mockIn.mockResolvedValue({ data: null, error: null });
+      mockIn.mockReturnValue(res({ data: null, error: null }));
       const result = await findAgentTasksByUser("u1", ["pending"]);
       expect(result).toEqual([]);
     });
 
     it("throws on error", async () => {
-      mockIn.mockResolvedValue({ data: null, error: { message: "denied" } });
+      mockIn.mockReturnValue(res({ data: null, error: { message: "denied" } }));
       await expect(findAgentTasksByUser("u1", ["x"])).rejects.toEqual({ message: "denied" });
     });
   });

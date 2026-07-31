@@ -81,13 +81,44 @@ export function mergeJsonObject<T extends Record<string, unknown>>(
 
 /**
  * Normalizza un valore applicativo in `JsonValue` serializzabile.
- * Round-trip via JSON: rimuove `undefined`, funzioni e riferimenti non
- * serializzabili, così il risultato è assegnabile alle colonne `Json`.
+ * Conversione ricorsiva esplicita (nessun `JSON.parse`, nessun implicit any):
+ * ogni nodo viene ispezionato e ricostruito. `undefined`, funzioni e symbol
+ * sono omessi dagli oggetti e mappati a `null` dentro gli array; `Date` è
+ * serializzata in ISO string. I cicli sono interrotti con `null`.
  */
-export function toJsonValue(value: unknown): JsonValue {
-  try {
-    return JSON.parse(JSON.stringify(value ?? null));
-  } catch {
-    return null;
+export function toJsonValue(value: unknown, seen: Set<object> = new Set()): JsonValue {
+  if (value === null || value === undefined) return null;
+  const t = typeof value;
+  if (t === "string") return value as string;
+  if (t === "boolean") return value as boolean;
+  if (t === "number") return Number.isFinite(value as number) ? (value as number) : null;
+  if (t === "bigint") return Number(value as bigint);
+  if (t === "function" || t === "symbol") return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") {
+    if (seen.has(value)) return null;
+    seen.add(value);
+    if (Array.isArray(value)) {
+      const arr: JsonValue[] = [];
+      for (const item of value) arr.push(toJsonValue(item, seen));
+      seen.delete(value);
+      return arr;
+    }
+    const maybeToJson = (value as { toJSON?: unknown }).toJSON;
+    if (typeof maybeToJson === "function") {
+      const converted = toJsonValue((maybeToJson as () => unknown).call(value), seen);
+      seen.delete(value);
+      return converted;
+    }
+    const out: { [k: string]: JsonValue } = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (item === undefined) continue;
+      const it = typeof item;
+      if (it === "function" || it === "symbol") continue;
+      out[key] = toJsonValue(item, seen);
+    }
+    seen.delete(value);
+    return out;
   }
+  return null;
 }

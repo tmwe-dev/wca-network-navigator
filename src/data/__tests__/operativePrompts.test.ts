@@ -14,6 +14,7 @@ function chain(terminal: { data?: any; error?: any } = { data: [], error: null }
   c.eq = vi.fn().mockReturnValue(c);
   c.order = vi.fn().mockReturnValue(c);
   c.update = vi.fn().mockReturnValue(c);
+  c.returns = vi.fn().mockReturnValue(c);
   c.then = (resolve: (v: any) => void) => resolve(terminal);
   return c;
 }

@@ -27,6 +27,20 @@ import {
   findPartnerSocialLinks,
 } from "@/data/partnerRelations";
 
+/** Terminal risultato query che supporta anche `.returns<T>()` come il client reale. */
+function res(value: any) {
+  const node: any = {
+    returns: () => node,
+    then: (onOk: (v: any) => void, onErr?: (e: any) => void) => Promise.resolve(value).then(onOk, onErr),
+  };
+  node.eq = () => node;
+  node.in = () => node;
+  node.order = () => node;
+  node.limit = () => node;
+  return node;
+}
+
+
 describe("DAL — partnerRelations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -37,33 +51,33 @@ describe("DAL — partnerRelations", () => {
     });
     mockSelect.mockReturnValue({ eq: mockEq, in: mockIn, ilike: mockIlike });
     mockEq.mockReturnValue({ eq: mockEq, in: mockIn });
-    mockEq.mockResolvedValue({ data: [], error: null });
+    mockEq.mockReturnValue(res({ data: [], error: null }));
     mockInsert.mockReturnValue({ select: mockSelect });
     mockUpdate.mockReturnValue({ eq: mockEq });
     mockIlike.mockReturnValue({ limit: mockLimit });
     mockLimit.mockReturnValue({ maybeSingle: mockMaybeSingle });
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
     mockSingle.mockResolvedValue({ data: { id: "c1" }, error: null });
-    mockIn.mockResolvedValue({ data: [], error: null });
+    mockIn.mockReturnValue(res({ data: [], error: null }));
   });
 
   describe("findPartnerContacts", () => {
     it("returns contacts for partner", async () => {
       const contacts = [{ id: "c1", name: "Test" }];
-      mockEq.mockResolvedValue({ data: contacts, error: null });
+      mockEq.mockReturnValue(res({ data: contacts, error: null }));
       const result = await findPartnerContacts("p1");
       expect(mockFrom).toHaveBeenCalledWith("partner_contacts");
       expect(result).toEqual(contacts);
     });
 
     it("returns empty on null data", async () => {
-      mockEq.mockResolvedValue({ data: null, error: null });
+      mockEq.mockReturnValue(res({ data: null, error: null }));
       const result = await findPartnerContacts("p1");
       expect(result).toEqual([]);
     });
 
     it("throws on error", async () => {
-      mockEq.mockResolvedValue({ data: null, error: { message: "fail" } });
+      mockEq.mockReturnValue(res({ data: null, error: { message: "fail" } }));
       await expect(findPartnerContacts("p1")).rejects.toEqual({ message: "fail" });
     });
   });
@@ -94,7 +108,7 @@ describe("DAL — partnerRelations", () => {
 
   describe("updatePartnerContact", () => {
     it("updates contact", async () => {
-      mockEq.mockResolvedValue({ error: null });
+      mockEq.mockReturnValue(res({ error: null }));
       await updatePartnerContact("c1", { name: "Updated" });
       expect(mockFrom).toHaveBeenCalledWith("partner_contacts");
     });
@@ -116,7 +130,7 @@ describe("DAL — partnerRelations", () => {
 
   describe("findPartnerNetworks", () => {
     it("returns networks", async () => {
-      mockEq.mockResolvedValue({ data: [{ network_name: "WCA" }], error: null });
+      mockEq.mockReturnValue(res({ data: [{ network_name: "WCA" }], error: null }));
       const result = await findPartnerNetworks("p1");
       expect(result).toEqual([{ network_name: "WCA" }]);
     });
@@ -124,7 +138,7 @@ describe("DAL — partnerRelations", () => {
 
   describe("findPartnerServices", () => {
     it("returns services", async () => {
-      mockEq.mockResolvedValue({ data: [{ service_category: "freight" }], error: null });
+      mockEq.mockReturnValue(res({ data: [{ service_category: "freight" }], error: null }));
       const result = await findPartnerServices("p1");
       expect(result).toEqual([{ service_category: "freight" }]);
     });
@@ -132,7 +146,7 @@ describe("DAL — partnerRelations", () => {
 
   describe("findPartnerCertifications", () => {
     it("returns certifications", async () => {
-      mockEq.mockResolvedValue({ data: [{ certification: "ISO9001" }], error: null });
+      mockEq.mockReturnValue(res({ data: [{ certification: "ISO9001" }], error: null }));
       const result = await findPartnerCertifications("p1");
       expect(result).toEqual([{ certification: "ISO9001" }]);
     });
@@ -140,7 +154,7 @@ describe("DAL — partnerRelations", () => {
 
   describe("findPartnerSocialLinks", () => {
     it("returns social links", async () => {
-      mockEq.mockResolvedValue({ data: [{ platform: "linkedin", url: "https://linkedin.com" }], error: null });
+      mockEq.mockReturnValue(res({ data: [{ platform: "linkedin", url: "https://linkedin.com" }], error: null }));
       const result = await findPartnerSocialLinks("p1");
       expect(result).toEqual([{ platform: "linkedin", url: "https://linkedin.com" }]);
     });
