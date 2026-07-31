@@ -36,8 +36,15 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 import { useImapFolders, useCreateRuleFromSender } from "@/hooks/useEmailFolderActions";
+import { findActiveEmailPromptTemplates } from "@/data/emailPrompts";
+import {
+  findReusablePromptRules,
+  findAddressRuleIdForUserEmail,
+  updateAddressRulePrompt,
+  insertAddressRuleWithPrompt,
+} from "@/data/emailAddressRules";
+import { findChannelMessagesForExport } from "@/data/channelMessages";
 import type { SenderAnalysis } from "@/types/email-management";
 
 
@@ -84,22 +91,10 @@ export function SenderActionsDialog({
         if (!user) return;
 
         // 1) Template ufficiali da email_prompts
-        const { data: prompts } = await supabase
-          .from("email_prompts")
-          .select("id, title, instructions, scope, scope_value")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .not("instructions", "is", null)
-          .order("priority", { ascending: false })
-          .limit(50);
+        const prompts = await findActiveEmailPromptTemplates(user.id);
 
         // 2) Prompt custom già usati su altri mittenti (uniti per testo)
-        const { data: rules } = await untypedFrom("email_address_rules")
-          .select("id, email_address, display_name, custom_prompt")
-          .eq("user_id", user.id)
-          .not("custom_prompt", "is", null)
-          .order("last_applied_at", { ascending: false, nullsFirst: false })
-          .limit(100);
+        const rules = await findReusablePromptRules(user.id);
 
         const list: PromptTemplate[] = [];
         for (const p of prompts ?? []) {
@@ -203,15 +198,7 @@ export function SenderActionsDialog({
     setBusy("export");
     try {
       // Esportazione semplice: scarica CSV con header dei messaggi.
-      const { data, error } = await supabase
-        .from("channel_messages")
-        .select("email_date, subject, from_address, to_address")
-        .eq("from_address", sender.email)
-        .eq("channel", "email")
-        .order("email_date", { ascending: false })
-        .limit(2000);
-      if (error) throw error;
-      const rows = data ?? [];
+      const rows = await findChannelMessagesForExport(sender.email);
       const csv = [
         "data,oggetto,from,to",
         ...rows.map((r) => [
@@ -246,31 +233,19 @@ export function SenderActionsDialog({
     try {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Sessione scaduta");
-      const { data: existing } = await supabase
-        .from("email_address_rules")
-        .select("id")
-        .eq("email_address", sender.email)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (existing?.id) {
-        const { error } = await supabase
-          .from("email_address_rules")
-          .update({ custom_prompt: prompt, notes: prompt, is_active: true })
-          .eq("id", existing.id);
-        if (error) throw error;
+      const existingId = await findAddressRuleIdForUserEmail(sender.email, user.id);
+      if (existingId) {
+        await updateAddressRulePrompt(existingId, prompt);
       } else {
-        const { error } = await supabase
-          .from("email_address_rules")
-          .insert({
-            user_id: user.id,
-            email_address: sender.email,
-            address: sender.email,
-            display_name: sender.companyName,
-            custom_prompt: prompt,
-            notes: prompt,
-            is_active: true,
-          });
-        if (error) throw error;
+        await insertAddressRuleWithPrompt({
+          user_id: user.id,
+          email_address: sender.email,
+          address: sender.email,
+          display_name: sender.companyName,
+          custom_prompt: prompt,
+          notes: prompt,
+          is_active: true,
+        });
       }
       toast.success("Prompt regola salvato");
       onActionDone?.();

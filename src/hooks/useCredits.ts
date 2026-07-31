@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findUserCreditsById } from "@/data/credits";
 import { useEffect } from "react";
 import { getSessionStats, type SessionStats } from "@/lib/api/costTracker";
 import { useAuth } from "@/providers/AuthProvider";
@@ -18,11 +18,7 @@ export function useCredits() {
     queryFn: async () => {
       if (!user) return { balance: 0, totalConsumed: 0 };
 
-      const { data: credits } = await supabase
-        .from("user_credits")
-        .select("balance, total_consumed")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const credits = await findUserCreditsById(user.id);
 
       return {
         balance: credits?.balance ?? 0,

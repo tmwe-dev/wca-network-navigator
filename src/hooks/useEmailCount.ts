@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { countEmailMessagesByMailbox } from "@/data/channelMessages";
 import { queryKeys } from "@/lib/queryKeys";
 
 export type MailboxFilter =
@@ -22,15 +22,7 @@ export function useEmailCount(isSyncing = false, mailboxFilter?: MailboxFilter) 
   return useQuery({
     queryKey: queryKeys.email.countByMailbox(mailboxKey),
     queryFn: async () => {
-      let q = supabase
-        .from("channel_messages")
-        .select("id", { count: "planned", head: true })
-        .eq("channel", "email");
-      if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
-      else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
-      const { count, error } = await q;
-      if (error) throw error;
-      return count ?? 0;
+      return countEmailMessagesByMailbox(mailboxFilter);
     },
     refetchInterval: isSyncing ? 3000 : 30000,
     refetchOnWindowFocus: false,

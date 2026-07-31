@@ -12,7 +12,7 @@ import {
   Search, FolderOpen, Globe, MapPin, Tag, CalendarIcon, Plane, PlaneLanding, List,
   ArrowUpAZ, X, Filter, ChevronDown, Sparkles, Handshake, Download
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { findContactsForExport } from "@/data/contacts";
 import { toast } from "sonner";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
@@ -222,17 +222,12 @@ export function ContactFiltersBar({
             className="h-6 px-1.5 gap-1 text-[10px]"
             onClick={async () => {
               try {
-                let q = supabase
-                  .from("imported_contacts")
-                  .select("name, company_name, email, phone, country, lead_status, lead_score, origin, created_at")
-                  .or("company_name.not.is.null,name.not.is.null,email.not.is.null")
-                  .order("lead_score", { ascending: false })
-                  .limit(1000);
-                if (filters.country) q = q.eq("country", filters.country);
-                if (filters.origin) q = q.eq("origin", filters.origin);
-                if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
-                if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
-                const { data } = await q;
+                const data = await findContactsForExport({
+                  country: filters.country,
+                  origin: filters.origin,
+                  leadStatus: filters.leadStatus,
+                  importLogId: filters.importLogId,
+                });
                 if (!data?.length) { toast.info("Nessun contatto da esportare"); return; }
                 const headers = ["Nome","Azienda","Email","Telefono","Paese","Stato","Score","Origine","Data"];
                 const rows = data.map((c) => [

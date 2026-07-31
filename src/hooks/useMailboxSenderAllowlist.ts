@@ -15,7 +15,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
-import { supabase } from "@/integrations/supabase/client";
+import { findInboundEmailFromAddressesPage } from "@/data/channelMessages";
 
 const PAGE = 1000;
 
@@ -36,24 +36,12 @@ export function useMailboxSenderAllowlist() {
       // Eseguiamo SELECT ridotto a from_address e dedupliamo client-side.
        
       while (true) {
-        let q = supabase
-          .from("channel_messages")
-          .select("from_address")
-          .eq("channel", "email")
-          .eq("direction", "inbound")
-          .not("from_address", "is", null)
-          .order("id", { ascending: true })
-          .range(offset, offset + PAGE - 1);
-
-        if (activeMailbox?.kind === "personal") {
-          q = q.is("mailbox_id", null);
-        } else if (activeMailbox?.kind === "shared") {
-          q = q.eq("mailbox_id", activeMailbox.mailbox_id);
-        }
-
-        const { data, error } = await q;
-        if (error) throw error;
-        const batch = (data ?? []) as Array<{ from_address: string | null }>;
+        const batch = await findInboundEmailFromAddressesPage({
+          mailboxFilter: activeMailbox?.kind === "personal" ? "personal" : activeMailbox?.kind === "shared" ? "shared" : null,
+          mailboxId: activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null,
+          offset,
+          pageSize: PAGE,
+        });
         for (const row of batch) {
           const k = (row.from_address || "").toLowerCase().trim();
           if (k && k.includes("@")) set.add(k);

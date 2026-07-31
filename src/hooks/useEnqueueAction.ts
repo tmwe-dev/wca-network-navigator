@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { insertPendingActionReturningId } from "@/data/aiPendingActions";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("useEnqueueAction");
@@ -50,23 +51,19 @@ export function useEnqueueAction() {
         return { id: null, ok: false, error: "no_session" };
       }
 
-      const { data, error } = await supabase
-        .from("ai_pending_actions")
-        .insert({
-          user_id: userId,
-          action_type: args.action_type,
-          action_payload: args.payload as never,
-          partner_id: args.partner_id ?? null,
-          contact_id: args.contact_id ?? null,
-          email_address: args.email_address ?? null,
-          suggested_content: args.suggested_content ?? null,
-          reasoning: args.reasoning ?? `Manual ${args.action_type} dal cockpit. In attesa di autorizzazione.`,
-          confidence: 1.0,
-          source: args.source ?? "manual",
-          status: "pending",
-        })
-        .select("id")
-        .maybeSingle();
+      const { id, error } = await insertPendingActionReturningId({
+        user_id: userId,
+        action_type: args.action_type,
+        action_payload: args.payload as never,
+        partner_id: args.partner_id ?? null,
+        contact_id: args.contact_id ?? null,
+        email_address: args.email_address ?? null,
+        suggested_content: args.suggested_content ?? null,
+        reasoning: args.reasoning ?? `Manual ${args.action_type} dal cockpit. In attesa di autorizzazione.`,
+        confidence: 1.0,
+        source: args.source ?? "manual",
+        status: "pending",
+      });
 
       if (error) {
         log.error("enqueue.failed", { error: error.message, action_type: args.action_type });
@@ -78,7 +75,7 @@ export function useEnqueueAction() {
         title: "📥 In coda di approvazione",
         description: "Apri il pannello AI Control per approvare e inviare.",
       });
-      return { id: data?.id ?? null, ok: true };
+      return { id, ok: true };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error("enqueue.exception", { error: msg, action_type: args.action_type });

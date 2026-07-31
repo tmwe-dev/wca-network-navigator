@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { insertPartnersBatch } from "@/data/partners";
 import { useQueryClient } from "@tanstack/react-query";
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -216,9 +216,8 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
       for (let i = 0; i < partners.length; i += batchSize) {
         const batch = partners.slice(i, i + batchSize);
         
-        const { data, error } = await supabase
-          .from("partners")
-          .insert(batch.map(p => ({
+        try {
+          const data = await insertPartnersBatch(batch.map(p => ({
             company_name: p.company_name,
             country_code: p.country_code,
             country_name: p.country_name,
@@ -230,15 +229,12 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             partner_type: p.partner_type as string,
             wca_id: p.wca_id,
             is_active: true,
-          })) as never)
-          .select();
-
-        if (error) {
+          })));
+          successCount += data?.length || 0;
+        } catch (error) {
           log.error("batch insert error", { message: error instanceof Error ? error.message : String(error) });
           failedCount += batch.length;
-          errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`);
-        } else {
-          successCount += data?.length || 0;
+          errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         setProgress(Math.round(((i + batch.length) / partners.length) * 100));

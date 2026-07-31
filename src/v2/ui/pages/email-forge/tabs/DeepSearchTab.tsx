@@ -4,7 +4,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchForgePartnerEnrichment, fetchForgeContactEnrichment, fetchForgeBcaEnrichment } from "@/v2/io/supabase/queries/email-forge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -96,27 +96,15 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       if (!recipient) return null;
       if (recipient.source === "partner" || (recipient.source === "bca" && recipient.partnerId)) {
         const id = recipient.partnerId!;
-        const { data } = await supabase
-          .from("partners")
-          .select("id, enrichment_data, profile_description, raw_profile_html, raw_profile_markdown, ai_parsed_at")
-          .eq("id", id)
-          .maybeSingle();
+        const { data } = await fetchForgePartnerEnrichment(id);
         return { kind: "partner" as const, data };
       }
       if (recipient.source === "contact") {
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("id, enrichment_data, deep_search_at")
-          .eq("id", recipient.recordId)
-          .maybeSingle();
+        const { data } = await fetchForgeContactEnrichment(recipient.recordId);
         return { kind: "contact" as const, data };
       }
       if (recipient.source === "bca") {
-        const { data } = await supabase
-          .from("business_cards")
-          .select("id, raw_data, ocr_confidence")
-          .eq("id", recipient.recordId)
-          .maybeSingle();
+        const { data } = await fetchForgeBcaEnrichment(recipient.recordId);
         return { kind: "bca" as const, data };
       }
       return null;
