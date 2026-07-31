@@ -7,6 +7,7 @@
  * Audit 2026-05-07: zero consumer attivi nell'app.
  */
 import { useState, useCallback, useRef } from "react";
+import { toJsonValue } from "@/lib/typedJson";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
 import { getChannelBackfillCursor, upsertChannelMessageIgnoreDup, upsertChannelBackfillState } from "@/data/whatsappBackfillQueries";
@@ -263,7 +264,7 @@ export function useWhatsAppBackfill() {
             to_address: finalDirection === "outbound" ? contact : undefined,
             body_text: text,
             message_id_external: extId,
-            raw_payload: msg,
+            raw_payload: toJsonValue(msg),
           });
 
           if (!error && status === 201) chatRecovered++;
