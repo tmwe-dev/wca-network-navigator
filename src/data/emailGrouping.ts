@@ -339,3 +339,23 @@ export async function findDomainPatternKbEntryId(userId: string, domain: string)
 export async function insertKbEntry(row: KbEntryInsert): Promise<void> {
   await supabase.from("kb_entries").insert(row);
 }
+
+/** Risultato del check pattern-dominio per il learning loop. */
+export interface DomainGroupPatternRow {
+  group_name: string;
+  [key: string]: unknown;
+}
+
+/** Verifica se un dominio ha un pattern di gruppo dominante (RPC). */
+export async function checkDomainGroupPattern(
+  userId: string,
+  domain: string,
+  minCount: number,
+): Promise<DomainGroupPatternRow[] | null> {
+  const { data } = await supabase.rpc("check_domain_group_pattern", {
+    p_user_id: userId,
+    p_domain: domain,
+    p_min_count: minCount,
+  });
+  return data as DomainGroupPatternRow[] | null;
+}
