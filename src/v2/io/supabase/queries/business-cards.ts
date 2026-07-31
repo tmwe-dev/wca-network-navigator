@@ -47,3 +47,13 @@ export async function fetchBusinessCardsByPartner(partnerId: string): Promise<Re
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchBusinessCardsByPartner"));
   }
 }
+
+/* ── Raw exact count (Explore tab counters) ────────────── */
+export async function fetchBusinessCardsCountRaw(): Promise<{
+  count: number | null;
+  error: { message: string } | null;
+}> {
+  return supabase
+    .from("business_cards")
+    .select("*", { count: "exact", head: true });
+}

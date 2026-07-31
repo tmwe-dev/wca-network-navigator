@@ -15,10 +15,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import {
   listPromptChangeProposals,
   reviewPromptChangeProposal,
+  updateOperativePromptBlockPatch,
+  markPromptChangeProposalApplied,
   type PromptChangeProposal,
 } from "@/data/promptChangeProposals";
 import {
@@ -26,6 +27,7 @@ import {
   reviewKbEntryProposal,
   type KbEntryProposal,
 } from "@/data/kbProposals";
+import { insertKbEntryForApproval } from "@/data/kbEntries";
 import { useAuth } from "@/providers/AuthProvider";
 import { DiffViewer } from "./components/DiffViewer";
 
@@ -109,18 +111,10 @@ function PromptProposalsList() {
     setBusyId(p.id);
     try {
       const patch: Record<string, string> = { [p.block_name]: p.proposed_content };
-      const { error: upErr } = await supabase
-        .from("operative_prompts")
-        .update(patch as never)
-        .eq("id", p.prompt_id);
-      if (upErr) throw upErr;
+      await updateOperativePromptBlockPatch(p.prompt_id, patch);
       await reviewPromptChangeProposal(p.id, "approved", `applied by ${user?.email ?? "operator"}`);
       // Mark as applied (separate state to distinguish da semplici approvazioni)
-      const { error: appliedErr } = await supabase
-        .from("prompt_change_proposals")
-        .update({ status: "applied" } as never)
-        .eq("id", p.id);
-      if (appliedErr) throw appliedErr;
+      await markPromptChangeProposalApplied(p.id);
       toast.success("Proposta applicata al prompt");
       void load();
     } catch (e) {
@@ -298,22 +292,16 @@ function KbProposalsList() {
     }
     setBusyId(p.id);
     try {
-      const { data, error } = await supabase
-        .from("kb_entries")
-        .insert({
-          user_id: user.id,
-          category: p.suggested_category,
-          chapter: p.suggested_chapter,
-          title: p.suggested_title,
-          content: p.suggested_content,
-          tags: p.suggested_tags ?? [],
-          priority: p.suggested_priority ?? 50,
-          is_active: true,
-        } as never)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      const newId = (data as { id: string } | null)?.id;
+      const newId = await insertKbEntryForApproval({
+        user_id: user.id,
+        category: p.suggested_category,
+        chapter: p.suggested_chapter,
+        title: p.suggested_title,
+        content: p.suggested_content,
+        tags: p.suggested_tags ?? [],
+        priority: p.suggested_priority ?? 50,
+        is_active: true,
+      });
       await reviewKbEntryProposal(p.id, "approved", `inserted by ${user.email ?? "operator"}`, newId);
       toast.success("Materiale inserito in KB");
       void load();

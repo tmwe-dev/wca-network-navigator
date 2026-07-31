@@ -481,7 +481,12 @@ export async function findActivitiesForSourceId(sourceId: string, limit = 20): P
  */
 export async function updateActivityEmailDraft(
   activityId: string,
-  patch: { email_subject: string; email_body: string; scheduled_at: string; status: string },
+  patch: {
+    email_subject: string;
+    email_body: string;
+    scheduled_at: string;
+    status: Database["public"]["Enums"]["activity_status"];
+  },
 ): Promise<{ error: { message: string } | null }> {
   const { error } = await supabase
     .from("activities")

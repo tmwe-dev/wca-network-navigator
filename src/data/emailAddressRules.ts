@@ -317,3 +317,87 @@ export async function findArchiveBounceRulesForEmails(emails: string[]): Promise
   if (error) throw error;
   return data ?? [];
 }
+
+/* ── Prompt regola per singolo mittente (SenderActionsDialog) ──
+ * Estratte da bypass diretti nel dialog azioni sender. Query, filtri e
+ * semantica errori invariati.
+ */
+
+/** Id regola esistente per (email_address, user_id). */
+export async function findAddressRuleIdForUserEmail(
+  emailAddress: string,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("email_address_rules")
+    .select("id")
+    .eq("email_address", emailAddress)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+/** Aggiorna il prompt regola (custom_prompt + notes) su una regola esistente. */
+export async function updateAddressRulePrompt(id: string, prompt: string): Promise<void> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .update({ custom_prompt: prompt, notes: prompt, is_active: true })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Crea una nuova regola indirizzo con prompt custom per un mittente. */
+export async function insertAddressRuleWithPrompt(row: {
+  user_id: string;
+  email_address: string;
+  address: string;
+  display_name: string;
+  custom_prompt: string;
+  notes: string;
+  is_active: boolean;
+}): Promise<void> {
+  const { error } = await supabase.from("email_address_rules").insert(row);
+  if (error) throw error;
+}
+
+export interface ReusablePromptRuleRow {
+  id: string;
+  email_address: string;
+  display_name: string | null;
+  custom_prompt: string | null;
+}
+
+/** Regole con prompt custom già usato, per il picker "riusa da altri mittenti". */
+export async function findReusablePromptRules(userId: string): Promise<ReusablePromptRuleRow[]> {
+  const { data } = await untypedFrom("email_address_rules")
+    .select("id, email_address, display_name, custom_prompt")
+    .eq("user_id", userId)
+    .not("custom_prompt", "is", null)
+    .order("last_applied_at", { ascending: false, nullsFirst: false })
+    .limit(100);
+  return (data ?? []) as ReusablePromptRuleRow[];
+}
+
+/* ── Assegnazione gruppo (GroupDropZone) ── */
+
+/** Sgancia una singola regola dal gruppo (rimozione mittente da un gruppo). */
+export async function clearAddressRuleGroupAssignment(ruleId: string): Promise<{ error: unknown }> {
+  const { error } = await supabase
+    .from("email_address_rules")
+    .update({ group_name: null, group_color: null, group_icon: null })
+    .eq("id", ruleId);
+  return { error };
+}
+
+/** Sgancia tutte le regole di un gruppo (eliminazione gruppo): conserva i prompt dedicati. */
+export async function clearAddressRuleGroupAssignmentsByGroupName(groupName: string): Promise<void> {
+  await supabase
+    .from("email_address_rules")
+    .update({
+      group_name: null,
+      group_color: null,
+      group_icon: null,
+      category: null,
+    })
+    .eq("group_name", groupName);
+}

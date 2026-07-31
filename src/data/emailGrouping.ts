@@ -359,3 +359,24 @@ export async function checkDomainGroupPattern(
   });
   return data as DomainGroupPatternRow[] | null;
 }
+
+/* ── Write path aggiuntivo (ManualGroupingTab / GroupDropZone) ── */
+
+type SenderGroupInsert = Database["public"]["Tables"]["email_sender_groups"]["Insert"];
+
+/** Crea un nuovo gruppo mittente e ritorna la riga creata. */
+export async function createSenderGroup(row: SenderGroupInsert): Promise<EmailSenderGroup> {
+  const { data, error } = await supabase
+    .from("email_sender_groups")
+    .insert(row)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as EmailSenderGroup;
+}
+
+/** Elimina un gruppo mittente per id. */
+export async function deleteSenderGroup(id: string): Promise<{ error: unknown }> {
+  const { error } = await supabase.from("email_sender_groups").delete().eq("id", id);
+  return { error };
+}

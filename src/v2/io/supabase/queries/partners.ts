@@ -157,3 +157,23 @@ export async function fetchPartnersByCountry(
 ): Promise<Result<PartnerV2[], AppError>> {
   return fetchPartners({ countryCode });
 }
+
+/* ── Raw country_code list (stats aggregation) ─────────── */
+export async function fetchPartnerCountryCodesRaw(): Promise<Result<readonly string[], AppError>> {
+  try {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("country_code")
+      .not("country_code", "is", null);
+
+    if (error) {
+      return err(ioError("DATABASE_ERROR", error.message, {
+        table: "partners",
+      }, "fetchPartnerCountryCodesRaw"));
+    }
+
+    return ok((data ?? []).map((row) => row.country_code as string));
+  } catch (caught: unknown) {
+    return err(fromUnknown(caught, "DATABASE_ERROR", "fetchPartnerCountryCodesRaw"));
+  }
+}
