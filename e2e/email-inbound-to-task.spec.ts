@@ -5,10 +5,11 @@ test.describe("email-inbound-to-task", () => {
     await page.goto("/auth");
     await expect(page.locator("body")).toBeVisible();
   });
-  test("auth page has login form", async ({ page }) => {
+  test("auth page mostra il flusso TMWE (nessun form email/password legacy)", async ({ page }) => {
     await page.goto("/auth");
-    const emailInput = page.locator('input[type="email"]');
-    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    await page.waitForURL(/\/v2\/login/, { timeout: 10000 });
+    await expect(page.getByText(/accesso operatori/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input[type="email"]')).toHaveCount(0);
   });
   test("auth page has no ErrorBoundary", async ({ page }) => {
     await page.goto("/auth");

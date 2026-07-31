@@ -68,7 +68,7 @@ deepTest.describe("Deep invariants: /v2/funnemail", () => {
     deepExpect(res?.status() ?? 0).toBeLessThan(500);
     await page.waitForLoadState("networkidle").catch(() => {});
     const url = new URL(page.url());
-    const isAuthOr = url.pathname.includes("/auth") || url.pathname.startsWith("/v2/funnemail".split("/").slice(0, 3).join("/"));
+    const isAuthOr = url.pathname.includes("/auth") || url.pathname.includes("/v2/login") || url.pathname.startsWith("/v2/funnemail".split("/").slice(0, 3).join("/"));
     deepExpect(isAuthOr, `URL atteso /auth o sotto ramo, got ${url.pathname}`).toBeTruthy();
   });
 

@@ -5,10 +5,11 @@ test.describe("direct-send-vs-queued-send-consistency", () => {
     await page.goto("/auth");
     await expect(page.locator("body")).toBeVisible();
   });
-  test("auth page has login form", async ({ page }) => {
+  test("auth page mostra il flusso TMWE (nessun form email/password legacy)", async ({ page }) => {
     await page.goto("/auth");
-    const emailInput = page.locator('input[type="email"]');
-    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    await page.waitForURL(/\/v2\/login/, { timeout: 10000 });
+    await expect(page.getByText(/accesso operatori/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input[type="email"]')).toHaveCount(0);
   });
   test("auth page has no ErrorBoundary", async ({ page }) => {
     await page.goto("/auth");
@@ -50,7 +51,7 @@ deepTest.describe("Deep invariants: /v2/email-composer", () => {
     deepExpect(res?.status() ?? 0).toBeLessThan(500);
     await page.waitForLoadState("networkidle").catch(() => {});
     const url = new URL(page.url());
-    const isAuthOr = url.pathname.includes("/auth") || url.pathname.startsWith("/v2/email-composer".split("/").slice(0, 3).join("/"));
+    const isAuthOr = url.pathname.includes("/auth") || url.pathname.includes("/v2/login") || url.pathname.startsWith("/v2/email-composer".split("/").slice(0, 3).join("/"));
     deepExpect(isAuthOr, `URL atteso /auth o sotto ramo, got ${url.pathname}`).toBeTruthy();
   });
 
