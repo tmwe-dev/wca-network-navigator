@@ -4,8 +4,9 @@
  * invece di 12 query parallele. 12 round-trip → 1.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { fetchDashboardSnapshot } from "@/v2/io/supabase/queries/dashboard";
+import { isOk } from "@/v2/core/domain/result";
 import type { OperativeMetrics } from "@/v2/io/supabase/queries/dashboard";
 import type { AgentTaskBreakdown } from "@/v2/io/supabase/queries/dashboard";
 import type { SmartSuggestion } from "./useSmartSuggestions";
@@ -65,16 +66,12 @@ interface RpcSnapshot {
 
 async function fetchDashboardData(): Promise<DashboardData> {
   // Single RPC call replaces the previous 12-query Promise.all.
-  // Cast through unknown — the snapshot RPC is not in the generated types yet.
-  const { data, error } = await (supabase.rpc as unknown as (
-    fn: string
-  ) => Promise<{ data: RpcSnapshot | null; error: { message: string } | null }>)(
-    "get_dashboard_snapshot"
-  );
+  const result = await fetchDashboardSnapshot();
 
-  if (error || !data) {
+  if (!isOk(result) || !result.value) {
     return EMPTY;
   }
+  const data: RpcSnapshot = result.value as unknown as RpcSnapshot;
 
   const opMetrics: OperativeMetrics = {
     contacts: {

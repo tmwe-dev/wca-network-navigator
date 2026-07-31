@@ -18,10 +18,9 @@
  * - business_cards.raw_data.enrichment.{linkedin_url, logo_url, website_excerpt}
  * - imported_contacts.enrichment_data.linkedin_url
  */
-import { updatePartner } from "@/data/partners";
+import { updatePartner, getPartnerEnrichmentData } from "@/data/partners";
 import { updateContactEnrichment } from "@/data/contacts";
-import { updateBusinessCard } from "@/data/businessCards";
-import { supabase } from "@/integrations/supabase/client";
+import { updateBusinessCard, getBusinessCardRawData } from "@/data/businessCards";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 
 
@@ -305,15 +304,13 @@ async function persistEnrichmentPatch(
   topLevel: { logo_url?: string } = {},
 ): Promise<void> {
   if (source === "wca") {
-    const { data } = await supabase.from("partners").select("enrichment_data").eq("id", id).single();
-    const existing = (data?.enrichment_data as Record<string, unknown>) || {};
+    const existing = await getPartnerEnrichmentData(id);
     const merged = { ...existing, ...patch };
     await updatePartner(id, { enrichment_data: merged as never, ...(topLevel.logo_url ? { logo_url: topLevel.logo_url } : {}) });
     return;
   }
   if (source === "bca") {
-    const { data } = await supabase.from("business_cards").select("raw_data").eq("id", id).single();
-    const raw = (data?.raw_data as Record<string, unknown>) || {};
+    const raw = await getBusinessCardRawData(id);
     const enr = (raw.enrichment as Record<string, unknown>) || {};
     const mergedEnr = { ...enr, ...patch, ...(topLevel.logo_url ? { logo_url: topLevel.logo_url } : {}) };
     const mergedRaw = { ...raw, enrichment: mergedEnr };

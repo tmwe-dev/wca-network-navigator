@@ -3,7 +3,7 @@
  * Payload: { company_name?: string, partner_id?: string, reason?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { insertBlacklistEntry, deleteBlacklistByRef } from "@/data/blacklist";
 import { mergePayload, isUuid, resolvePartnerRef } from "./_helpers/writePayload";
 
 type Payload = { company_name?: string; partner_id?: string; reason?: string; [k: string]: unknown };
@@ -48,13 +48,12 @@ export const blacklistAddTool: Tool = {
       company = company ?? ref;
     }
     if (!company) throw new Error("Nome azienda mancante");
-    const { error } = await supabase.from("blacklist_entries").insert({
+    await insertBlacklistEntry({
       company_name: company,
       matched_partner_id: matchedPartnerId,
       source: "command",
       status: "active",
-    } as never);
-    if (error) throw new Error(error.message);
+    });
     return {
       kind: "result",
       title: "🚫 Aggiunto in blacklist",
@@ -84,16 +83,12 @@ export const blacklistRemoveTool: Tool = {
       };
     }
     if (!ref) throw new Error("Riferimento mancante");
-    const base = supabase.from("blacklist_entries").delete({ count: "exact" });
-    const { error, count } = isUuid(ref)
-      ? await base.eq("matched_partner_id", ref)
-      : await base.ilike("company_name", `%${ref}%`);
-    if (error) throw new Error(error.message);
+    const count = await deleteBlacklistByRef(ref, isUuid(ref));
     return {
       kind: "result",
       title: "✅ Rimosso da blacklist",
-      message: `${count ?? 0} voce rimossa.`,
-      meta: { count: count ?? 0, sourceLabel: "Supabase · blacklist_entries" },
+      message: `${count} voce rimossa.`,
+      meta: { count, sourceLabel: "Supabase · blacklist_entries" },
     };
   },
 };
