@@ -4,7 +4,7 @@
  * Compone: prompt core leggero + variabili runtime + indice KB + estratti KB selettivi.
  * Filosofia: livello 1 + livello 2 + livello 3 della doctrine prompt.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findKbIndexByCategories, findKbExcerptsByTitles } from "@/data/kbEntries";
 
 import lucaPrompt from "./core/luca";
 import superAssistantPrompt from "./core/super-assistant";
@@ -59,24 +59,14 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   let kbExcerpts = "";
   try {
     const cats = args.kbCategories ?? DEFAULT_KB_CATEGORIES;
-    const { data: indexRows } = await supabase
-      .from("kb_entries")
-      .select("title, category, chapter")
-      .in("category", cats)
-      .eq("is_active", true)
-      .order("category")
-      .order("priority", { ascending: false });
-    if (indexRows && indexRows.length > 0) {
+    const indexRows = await findKbIndexByCategories(cats);
+    if (indexRows.length > 0) {
       kbIndex = indexRows.map((r) => `- [${r.category}] ${r.title}`).join("\n");
     }
 
     if (args.injectExcerpts && args.injectExcerpts.length > 0) {
-      const { data: excerptRows } = await supabase
-        .from("kb_entries")
-        .select("title, content")
-        .in("title", args.injectExcerpts)
-        .eq("is_active", true);
-      if (excerptRows && excerptRows.length > 0) {
+      const excerptRows = await findKbExcerptsByTitles(args.injectExcerpts);
+      if (excerptRows.length > 0) {
         const limit = args.excerptCharLimit ?? EXCERPT_DEFAULT;
         kbExcerpts = excerptRows
           .map((r) => `### ${r.title}\n${(r.content || "").slice(0, limit)}`)

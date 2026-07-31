@@ -1,7 +1,7 @@
 /**
  * KB tools — list and read knowledge base entries for the agent.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findActiveKbEntriesForTool, findKbEntryContentBySlug } from "@/data/kbEntries";
 import type { AgentTool, AgentToolResult } from "./index";
 
 export const listKbTool: AgentTool = {
@@ -13,22 +13,12 @@ export const listKbTool: AgentTool = {
   requiresApproval: false,
   execute: async (args): Promise<AgentToolResult> => {
     try {
-      let query = supabase
-        .from("kb_entries")
-        .select("id, title, category, tags, source_path, priority")
-        .eq("is_active", true)
-        .order("priority", { ascending: false });
-
-      if (args.category && typeof args.category === "string") {
-        query = query.eq("category", args.category);
-      }
-
-      const { data, error } = await query.limit(50);
-      if (error) return { success: false, error: error.message };
+      const category = args.category && typeof args.category === "string" ? args.category : undefined;
+      const data = await findActiveKbEntriesForTool(category, 50);
 
       return {
         success: true,
-        data: (data ?? []).map((e) => ({
+        data: data.map((e) => ({
           id: e.id,
           title: e.title,
           category: e.category,
@@ -52,15 +42,7 @@ export const readKbTool: AgentTool = {
   execute: async (args): Promise<AgentToolResult> => {
     try {
       const slug = String(args.source_path ?? "");
-      const { data, error } = await supabase
-        .from("kb_entries")
-        .select("id, title, content, category, tags")
-        .or(`source_path.ilike.%${slug}%,title.ilike.%${slug}%`)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) return { success: false, error: error.message };
+      const data = await findKbEntryContentBySlug(slug);
       if (!data) return { success: false, error: `KB entry non trovata: ${slug}` };
 
       return {
