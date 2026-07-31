@@ -3,18 +3,17 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 
 type MissionUpdate = Database["public"]["Tables"]["agent_missions"]["Update"];
+type MissionInsert = Database["public"]["Tables"]["agent_missions"]["Insert"];
 
 /**
  * Crea una missione autopilot.
- * DRIFT: l'Insert generato richiede `owner_user_id` (non `user_id`) e il payload
- * del wizard usa campi più larghi della shape generata: resta su `untypedFrom`
- * finché la deriva di colonne non viene riconciliata.
+ * Il payload è tipizzato sull'Insert generato: i campi obbligatori sono
+ * `agent_id`, `title` e `owner_user_id`.
  */
-export async function insertAgentMission(payload: Record<string, unknown>): Promise<void> {
-  const { error } = await untypedFrom("agent_missions").insert(payload);
+export async function insertAgentMission(payload: MissionInsert): Promise<void> {
+  const { error } = await supabase.from("agent_missions").insert(payload);
   if (error) throw error;
 }
 
