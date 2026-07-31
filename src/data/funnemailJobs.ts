@@ -5,11 +5,10 @@
  * unisce status, sub_status, claim attivo, AI decision, prossimo
  * reminder e ultima escalation per ogni message_id Funnemail.
  *
- * NB: la view è creata via migration successiva alla rigenerazione
- * dei tipi Supabase → usiamo cast espliciti `as never` come da
- * convenzione DAL del progetto.
+ * La view è presente nei tipi Supabase generati: nessun cast necessario.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface FunnemailJobRow {
   message_id: string;
@@ -38,6 +37,26 @@ export interface FunnemailJobRow {
 
 const VIEW = "funnemail_jobs_v" as const;
 
+type FunnemailJobViewRow = Database["public"]["Views"]["funnemail_jobs_v"]["Row"];
+
+const ESCALATION_LEVELS = ["L1", "L2", "L3"] as const;
+
+function toEscalationLevel(value: string | null): FunnemailJobRow["last_escalation_level"] {
+  return ESCALATION_LEVELS.find((l) => l === value) ?? null;
+}
+
+/** Normalizza le righe della view al contratto tipizzato (nessun cast opaco). */
+function normalizeJobRows(rows: FunnemailJobViewRow[]): FunnemailJobRow[] {
+  return rows.map((row) => ({
+    ...row,
+    message_id: row.message_id ?? "",
+    user_id: row.user_id ?? "",
+    status: row.status ?? "",
+    has_active_claim: row.has_active_claim ?? false,
+    last_escalation_level: toEscalationLevel(row.last_escalation_level),
+  }));
+}
+
 export interface ListFunnemailJobsFilters {
   status?: string | null;
   ownerId?: string | null;
@@ -51,7 +70,7 @@ export interface ListFunnemailJobsFilters {
 export async function listFunnemailJobs(
   filters: ListFunnemailJobsFilters = {},
 ): Promise<FunnemailJobRow[]> {
-  let q = supabase.from(VIEW as never).select("*");
+  let q = supabase.from(VIEW).select("*");
   if (filters.status) q = q.eq("status", filters.status);
   if (filters.ownerId) q = q.eq("claim_owner", filters.ownerId);
   if (filters.groupId) q = q.eq("group_id", filters.groupId);
@@ -59,18 +78,18 @@ export async function listFunnemailJobs(
   q = q.order("status_changed_at", { ascending: false }).limit(filters.limit ?? 200);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as unknown as FunnemailJobRow[];
+  return normalizeJobRows(data ?? []);
 }
 
 /** Singolo job aggregato per message_id. */
 export async function getFunnemailJob(messageId: string): Promise<FunnemailJobRow | null> {
   const { data, error } = await supabase
-    .from(VIEW as never)
+    .from(VIEW)
     .select("*")
     .eq("message_id", messageId)
     .maybeSingle();
   if (error) throw error;
-  return (data ?? null) as unknown as FunnemailJobRow | null;
+  return data ? normalizeJobRows([data])[0] : null;
 }
 
 /** Aggiorna il sub_status fine-grained sul job. */
@@ -79,8 +98,8 @@ export async function setFunnemailSubStatus(
   subStatus: string | null,
 ): Promise<void> {
   const { error } = await supabase
-    .from("funnemail_message_status" as never)
-    .update({ sub_status: subStatus } as never)
+    .from("funnemail_message_status")
+    .update({ sub_status: subStatus })
     .eq("message_id", messageId);
   if (error) throw error;
 }
