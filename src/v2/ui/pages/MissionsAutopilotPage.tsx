@@ -109,7 +109,24 @@ export function MissionsPage() {
   const createMut = useMutation({
     mutationFn: async (mission: Partial<AgentMission>) => {
       const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
-      await insertAgentMission({ ...mission, user_id: userData.user?.id });
+      const ownerUserId = userData.user?.id;
+      if (!ownerUserId) throw new Error("Sessione non valida: impossibile creare la missione");
+      if (!mission.agent_id) throw new Error("Seleziona un agente per la missione");
+      if (!mission.title) throw new Error("Titolo missione obbligatorio");
+      await insertAgentMission({
+        owner_user_id: ownerUserId,
+        agent_id: mission.agent_id,
+        title: mission.title,
+        goal_type: mission.goal_type,
+        goal_description: mission.goal_description,
+        autopilot: mission.autopilot,
+        status: mission.status,
+        kpi_target: mission.kpi_target,
+        kpi_current: mission.kpi_current,
+        budget: mission.budget,
+        budget_consumed: mission.budget_consumed,
+        approval_only_for: mission.approval_only_for,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["agent-missions"] });
