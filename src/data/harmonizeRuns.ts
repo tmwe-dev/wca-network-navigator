@@ -7,6 +7,10 @@
  * - persiste lo stato di esecuzione per proposta
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { toJsonValue } from "@/lib/jsonGuards";
+
+type HarmonizeRunUpdate = Database["public"]["Tables"]["harmonize_runs"]["Update"];
 
 export type HarmonizeStatus =
   | "collecting"
@@ -144,9 +148,18 @@ export async function createHarmonizeRun(userId: string, goal: string, scope = "
 }
 
 export async function updateHarmonizeRun(runId: string, patch: Partial<HarmonizeRun>): Promise<void> {
+  const { real_inventory_summary, desired_inventory_summary, gap_classification, proposals, uploaded_files, ...rest } = patch;
+  const update: HarmonizeRunUpdate = {
+    ...rest,
+    ...(real_inventory_summary !== undefined ? { real_inventory_summary: toJsonValue(real_inventory_summary) } : {}),
+    ...(desired_inventory_summary !== undefined ? { desired_inventory_summary: toJsonValue(desired_inventory_summary) } : {}),
+    ...(gap_classification !== undefined ? { gap_classification: toJsonValue(gap_classification) } : {}),
+    ...(proposals !== undefined ? { proposals: toJsonValue(proposals) } : {}),
+    ...(uploaded_files !== undefined ? { uploaded_files: toJsonValue(uploaded_files) } : {}),
+  };
   const { error } = await supabase
     .from("harmonize_runs")
-    .update(patch)
+    .update(update)
     .eq("id", runId);
   if (error) throw error;
 }
@@ -165,7 +178,7 @@ export async function appendHarmonizeProposal(runId: string, proposal: Harmonize
     : [...current, proposal];
   const { error } = await supabase
     .from("harmonize_runs")
-    .update({ proposals: next })
+    .update({ proposals: toJsonValue(next) })
     .eq("id", runId);
   if (error) throw error;
 }
@@ -194,7 +207,7 @@ export async function updateHarmonizeProposal(
 
   const { error } = await supabase
     .from("harmonize_runs")
-    .update({ proposals: next })
+    .update({ proposals: toJsonValue(next) })
     .eq("id", runId);
   if (error) throw error;
   return next;
@@ -221,7 +234,7 @@ export async function setProposalStatus(
   const { error } = await supabase
     .from("harmonize_runs")
     .update({
-      proposals,
+      proposals: toJsonValue(proposals),
       executed_count: (row.executed_count ?? 0) + executedDelta,
       failed_count: (row.failed_count ?? 0) + failedDelta,
     })
@@ -292,7 +305,7 @@ export async function appendProposalChat(
 
   const { error } = await supabase
     .from("harmonize_runs")
-    .update({ proposals: next })
+    .update({ proposals: toJsonValue(next) })
     .eq("id", runId);
   if (error) throw error;
   return next;
