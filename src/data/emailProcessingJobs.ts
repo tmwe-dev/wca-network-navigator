@@ -41,22 +41,22 @@ const TABLE = "email_processing_jobs" as const;
 export async function listEmailProcessingJobs(
   filters: ListEmailProcessingJobsFilters = {},
 ): Promise<EmailProcessingJobRow[]> {
-  let q = supabase.from(TABLE as never).select("*");
+  let q = supabase.from(TABLE).select("*");
   if (filters.stage) q = q.eq("stage", filters.stage);
   q = q.order("started_at", { ascending: false }).limit(filters.limit ?? 100);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as unknown as EmailProcessingJobRow[];
+  return (data ?? []) as EmailProcessingJobRow[];
 }
 
 export async function getEmailProcessingJob(
   messageId: string,
 ): Promise<EmailProcessingJobRow | null> {
   const { data, error } = await supabase
-    .from(TABLE as never)
+    .from(TABLE)
     .select("*")
     .eq("message_id", messageId)
     .maybeSingle();
   if (error) throw error;
-  return (data ?? null) as unknown as EmailProcessingJobRow | null;
+  return (data ?? null) as EmailProcessingJobRow | null;
 }

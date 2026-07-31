@@ -32,21 +32,21 @@ export interface E2ERunRow {
 
 export async function listRecentE2ERuns(limit = 20): Promise<E2ERunRow[]> {
   const { data, error } = await supabase
-    .from("e2e_run_results" as never)
+    .from("e2e_run_results")
     .select("*")
     .order("finished_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as E2ERunRow[];
+  return (data ?? []) as E2ERunRow[];
 }
 
 export async function getLatestE2ERun(): Promise<E2ERunRow | null> {
   const { data, error } = await supabase
-    .from("e2e_run_results" as never)
+    .from("e2e_run_results")
     .select("*")
     .order("finished_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return (data as unknown as E2ERunRow) ?? null;
+  return (data as E2ERunRow) ?? null;
 }
