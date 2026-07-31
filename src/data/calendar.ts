@@ -10,8 +10,22 @@ import type { Database } from "@/integrations/supabase/types";
 type CalendarEventDbRow = Database["public"]["Tables"]["calendar_events"]["Row"];
 
 
-type CalendarEventInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
-type CalendarEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
+type Json = Database["public"]["Tables"]["calendar_events"]["Row"]["metadata"];
+type DbInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
+type DbUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
+
+/** Metadata è esposto come oggetto tipizzato all'esterno, serializzato a Json in scrittura. */
+export type CalendarEventInsert = Omit<DbInsert, "metadata"> & {
+  metadata?: Record<string, unknown> | null;
+};
+export type CalendarEventUpdate = Omit<DbUpdate, "metadata"> & {
+  metadata?: Record<string, unknown> | null;
+};
+
+function toJson(value: Record<string, unknown> | null | undefined): Json {
+  if (value === null || value === undefined) return null;
+  return JSON.parse(JSON.stringify(value));
+}
 
 // ─── Types ──────────────────────────────────────────────
 export type EventType = "meeting" | "call" | "task" | "reminder" | "follow_up";
@@ -137,6 +151,8 @@ export async function getEvent(id: string): Promise<CalendarEvent | null> {
  * Create a new event
  */
 export async function createEvent(event: CalendarEventInsert): Promise<CalendarEvent> {
+  const { metadata, ...rest } = event;
+  const payload: DbInsert = metadata === undefined ? rest : { ...rest, metadata: toJson(metadata) };
   const { data, error } = await supabase.from("calendar_events")
     .insert(event)
     .select()
@@ -150,8 +166,10 @@ export async function createEvent(event: CalendarEventInsert): Promise<CalendarE
  * Update an existing event
  */
 export async function updateEvent(id: string, updates: CalendarEventUpdate): Promise<CalendarEvent> {
+  const { metadata, ...rest } = updates;
+  const patch: DbUpdate = metadata === undefined ? rest : { ...rest, metadata: toJson(metadata) };
   const { data, error } = await supabase.from("calendar_events")
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();
