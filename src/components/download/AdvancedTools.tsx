@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { findPartnersForEnrichment, getPartnerWebsite } from "@/data/partners";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { runBulkOp } from "@/v2/services/bulkOps";
 import { toast } from "@/hooks/use-toast";
 import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs";
@@ -99,8 +99,12 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
             } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to server-side fetch */ }
           }
 
-          await invokeEdge("enrich-partner-website", { body: enrichBody, context: "AdvancedTools.enrich_partner_website" });
-          setResults(prev => [...prev, { id: ids[i], success: true }]);
+          const bulkResult = await runBulkOp("enrich.base", [{
+            partnerId: partner.id,
+            markdown: typeof enrichBody.markdown === "string" ? enrichBody.markdown : undefined,
+            sourceUrl: typeof enrichBody.sourceUrl === "string" ? enrichBody.sourceUrl : undefined,
+          }], { sourceView: "AdvancedTools", concurrency: 1 });
+          setResults(prev => [...prev, { id: ids[i], success: bulkResult.errorCount === 0 }]);
         }
       } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); setResults(prev => [...prev, { id: ids[i], success: false }]); }
       if (i < ids.length - 1) await new Promise(r => setTimeout(r, 3000));

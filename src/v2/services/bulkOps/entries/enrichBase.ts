@@ -8,18 +8,23 @@ import { assertCalledFromRunner } from "./_internal";
 
 export interface EnrichBaseItem {
   readonly partnerId: string;
+  readonly markdown?: string;
+  readonly sourceUrl?: string;
 }
 
-export const enrichBaseEntry: BulkEntry<EnrichBaseItem, { ok: boolean }> = {
+export const enrichBaseEntry: BulkEntry<EnrichBaseItem, Record<string, unknown>> = {
   scope: "enrich.base",
   itemId: (i) => i.partnerId,
   continueOnError: true,
   handler: async (item) => {
     assertCalledFromRunner("enrich.base");
-    await invokeEdge("enrich-partner-website", {
-      body: { partner_id: item.partnerId },
+    return await invokeEdge<Record<string, unknown>>("enrich-partner-website", {
+      body: {
+        partnerId: item.partnerId,
+        markdown: item.markdown,
+        sourceUrl: item.sourceUrl,
+      },
       context: "bulkOps.enrichBase",
     });
-    return { ok: true };
   },
 };

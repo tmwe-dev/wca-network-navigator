@@ -23,7 +23,7 @@ export const BUDGET = {
   "no-empty": 0,
   "no-useless-escape": 0,
   "prefer-const": 0,
-  "tmwe/no-direct-bulk-op": 7,
+  "tmwe/no-direct-bulk-op": 0,
   "no-case-declarations": 0,
   "no-var": 0,
   "no-control-regex": 0,

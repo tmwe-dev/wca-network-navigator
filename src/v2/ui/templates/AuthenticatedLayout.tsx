@@ -30,7 +30,7 @@ import { queryClient } from "@/lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 import { ActiveMailboxProvider } from "@/contexts/ActiveMailboxContext";
-import { DeepSearchContext, useDeepSearchRunner } from "@/hooks/useDeepSearchRunner";
+import { BulkDeepSearchContext, useBulkDeepSearchRunner } from "@/v2/services/bulkOps/deepSearchRunner";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
 
@@ -125,7 +125,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     localStorage.setItem("dl_theme", next ? "dark" : "light");
   };
 
-  const deepSearch = useDeepSearchRunner();
+  const deepSearch = useBulkDeepSearchRunner();
 
   // Onboarding check — source of truth is profiles.onboarding_completed
   const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
@@ -245,7 +245,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
         <TooltipProvider>
           <ActiveOperatorProvider>
           <ActiveMailboxProvider>
-            <DeepSearchContext.Provider value={deepSearch}>
+            <BulkDeepSearchContext.Provider value={deepSearch}>
               <GlobalFiltersProvider>
                 <MissionProvider>
                   <NotificationsProvider>
@@ -412,7 +412,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     </NotificationsProvider>
                   </MissionProvider>
                 </GlobalFiltersProvider>
-              </DeepSearchContext.Provider>
+              </BulkDeepSearchContext.Provider>
           </ActiveMailboxProvider>
           </ActiveOperatorProvider>
         </TooltipProvider>

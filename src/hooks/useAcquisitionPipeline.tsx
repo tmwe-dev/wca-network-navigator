@@ -6,6 +6,7 @@
  */
 import { useCallback } from "react";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { runBulkOp } from "@/v2/services/bulkOps";
 import { toast } from "@/hooks/use-toast";
 import { QueueItem, CanvasData, ContactSource } from "@/types/acquisition";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
@@ -205,7 +206,12 @@ export function useAcquisitionPipeline() {
                 if (r.success && r.markdown?.length > 50) { enrichBody.markdown = r.markdown; enrichBody.sourceUrl = r.metadata?.url || url; }
               } catch { /* fallback */ }
             }
-            const enrichResult = await invokeEdge<Record<string, unknown>>("enrich-partner-website", { body: enrichBody, context: "pipeline.enrich" });
+            const bulkResult = await runBulkOp<Record<string, unknown>, Record<string, unknown>>(
+              "enrich.base",
+              [enrichBody],
+              { sourceView: "acquisition.pipeline", concurrency: 1 },
+            );
+            const enrichResult = bulkResult.results[0]?.value;
             if (enrichResult?.enrichment) {
               const ed = enrichResult.enrichment as Record<string, unknown>;
               state.setCanvasData(prev => prev ? {

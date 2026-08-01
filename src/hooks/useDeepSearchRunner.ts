@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import type { DeepSearchResult, DeepSearchCurrent } from "@/types/deep-search";
-import { useDeepSearchLocal } from "./useDeepSearchLocal";
+import { useBulkDeepSearchLocal } from "@/v2/services/bulkOps/deepSearchLocal";
 import { createLogger } from "@/lib/log";
 import { invalidateEnrichmentCaches } from "@/lib/enrichmentCacheInvalidation";
 
@@ -106,7 +106,7 @@ export function useDeepSearchRunner(): DeepSearchState {
   const [current, setCurrent] = useState<DeepSearchCurrent | null>(null);
   const abortRef = useRef(false);
   const queryClient = useQueryClient();
-  const localSearch = useDeepSearchLocal();
+  const localSearch = useBulkDeepSearchLocal();
 
   const start = useCallback(async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
     if (running || ids.length === 0) return;

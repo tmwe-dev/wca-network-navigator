@@ -3,7 +3,7 @@
  */
 import { useCallback } from "react";
 import { useEnrichmentData } from "@/hooks/useEnrichmentData";
-import { useBaseEnrichment } from "@/hooks/useBaseEnrichment";
+import { useBulkBaseEnrichment } from "@/v2/services/bulkOps/baseEnrichment";
 import type { BaseEnrichTarget } from "@/v2/services/enrichment/baseEnrichment";
 import { SourceTabBar } from "./enrichment/SourceTabBar";
 import { EnrichmentToolbar } from "./enrichment/EnrichmentToolbar";
@@ -41,7 +41,7 @@ export default function EnrichmentSettings() {
       });
   }, [d]);
 
-  const { progress, start, stop } = useBaseEnrichment(getTargets);
+  const { progress, start, stop } = useBulkBaseEnrichment(getTargets);
 
   const handleStart = useCallback(async () => {
     await start();
