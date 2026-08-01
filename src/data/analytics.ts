@@ -2,7 +2,6 @@
  * Analytics Data Layer — Functions to query analytics data from Supabase
  * Provides metrics for: emails, partners, outreach, AI usage, pipeline, activities
  */
-import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 
@@ -254,8 +253,8 @@ export async function getAIUsageMetrics(
   dateRange: { from: Date; to: Date }
 ): Promise<AIUsageMetricsData> {
   try {
-    const { data: logs } = await tFrom("supervisor_audit_log")
-      .select("created_at, action")
+    const { data: logs } = await supabase.from("supervisor_audit_log")
+      .select("created_at, action_category")
       .eq("user_id", userId)
       .gte("created_at", dateRange.from.toISOString())
       .lte("created_at", dateRange.to.toISOString());
@@ -266,7 +265,7 @@ export async function getAIUsageMetrics(
     if (logs) {
       for (const log of logs) {
         // Count by type
-        const type = log.action || "other";
+        const type = log.action_category || "other";
         byType[type] = (byType[type] || 0) + 1;
 
         // Count daily
@@ -301,8 +300,8 @@ export async function getAIUsageMetrics(
  */
 export async function getPipelineMetrics(userId: string): Promise<PipelineMetricsData> {
   try {
-    const { data: deals } = await tFrom("deals")
-      .select("stage, value")
+    const { data: deals } = await supabase.from("deals")
+      .select("stage, amount")
       .eq("user_id", userId);
 
     if (!deals || deals.length === 0) {
@@ -332,7 +331,7 @@ export async function getPipelineMetrics(userId: string): Promise<PipelineMetric
 
     for (const deal of deals) {
       const stage = deal.stage || "unknown";
-      const value = deal.value || 0;
+      const value = deal.amount ?? 0;
 
       byStage[stage] = (byStage[stage] || 0) + 1;
       valueByStage[stage] = (valueByStage[stage] || 0) + value;

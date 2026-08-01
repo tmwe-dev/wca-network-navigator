@@ -1,48 +1,81 @@
 /**
- * Confine UNICO di accesso a tabelle il cui nome non è noto ai tipi generati.
+ * Confine UNICO di accesso a tabelle il cui nome non è noto staticamente.
  *
- * Questo file è l'unico punto sanzionato del repository in cui il query
- * builder PostgREST viene usato senza tipizzazione generata. Il builder è
- * fortemente polimorfico (select/eq/in/order/insert/update/delete/upsert…) e
- * non è modellabile a mano; l'unsafe cast è quindi confinato qui.
+ * Serve esclusivamente ai piani di query generati a runtime dal planner AI
+ * (`src/data/validatedQuery.ts`): il nome della tabella arriva da una
+ * whitelist runtime, quindi i tipi generati non sono applicabili.
+ *
+ * A differenza della versione precedente questo modulo NON espone `any`:
+ * il builder è descritto da un contratto strutturale minimo e i risultati
+ * sono `unknown`, da validare dal chiamante. L'unico cast del repository
+ * (`as unknown as`) è confinato qui ed è la frontiera irriducibile
+ * documentata: PostgREST non può essere tipizzato su un nome dinamico.
  *
  * Regole:
  * - nessun altro modulo può replicare il cast;
- * - i chiamanti devono validare tabella/colonne contro una whitelist quando il
- *   nome arriva a runtime (vedi `src/data/validatedQuery.ts`);
- * - una tabella che entra nei tipi generati va rimossa da
- *   `KNOWN_UNTYPED_TABLES` e migrata a `supabase.from(...)`.
+ * - i chiamanti validano tabella/colonne/operatori contro una whitelist;
+ * - una tabella nota ai tipi generati va usata con `supabase.from(...)`.
  */
 import { supabase } from "@/integrations/supabase/client";
 
+export interface RuntimeQueryError {
+  readonly message: string;
+  readonly code?: string;
+}
+
+export interface RuntimeQueryResult {
+  readonly data: unknown;
+  readonly error: RuntimeQueryError | null;
+  readonly count?: number | null;
+}
+
+/** Filtri/modificatori ammessi su una query dinamica. */
+export interface RuntimeQuery extends PromiseLike<RuntimeQueryResult> {
+  eq(column: string, value: unknown): RuntimeQuery;
+  neq(column: string, value: unknown): RuntimeQuery;
+  ilike(column: string, pattern: string): RuntimeQuery;
+  in(column: string, values: readonly unknown[]): RuntimeQuery;
+  is(column: string, value: unknown): RuntimeQuery;
+  gt(column: string, value: unknown): RuntimeQuery;
+  gte(column: string, value: unknown): RuntimeQuery;
+  lt(column: string, value: unknown): RuntimeQuery;
+  lte(column: string, value: unknown): RuntimeQuery;
+  or(filter: string): RuntimeQuery;
+  order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): RuntimeQuery;
+  range(from: number, to: number): RuntimeQuery;
+  limit(n: number): RuntimeQuery;
+  maybeSingle(): PromiseLike<RuntimeQueryResult>;
+  single(): PromiseLike<RuntimeQueryResult>;
+}
+
+export interface RuntimeTable {
+  select(columns: string, options?: { count?: "exact" }): RuntimeQuery;
+  insert(values: Record<string, unknown> | Record<string, unknown>[]): RuntimeQuery;
+  update(values: Record<string, unknown>): RuntimeQuery;
+  delete(): RuntimeQuery;
+}
+
 /**
- * Lista esplicita delle tabelle che richiedono accesso non tipizzato.
- * Documentazione, non vincolo runtime — `tFrom` accetta string.
+ * Lista esplicita delle tabelle raggiungibili solo per nome runtime.
+ * Documentazione del perimetro: `tFrom` accetta comunque `string` perché il
+ * planner può proporre qualsiasi nome e la validazione è del chiamante.
  */
 export const KNOWN_UNTYPED_TABLES = [
-  // Deal pipeline (schema mismatch con i tipi generati)
   "deals",
   "deal_activities",
-  // Audit / supervisor
   "supervisor_audit_log",
-  // Email intel
   "email_prompts",
   "operative_prompts",
   "commercial_playbooks",
-  // Misc settings
   "app_settings",
-  // TMWE integration
-  "tmwe_user_connections_v",
-  "tmwe_partner_links",
-  "tmwe_customer_snapshot",
-  "tmwe_revenue_monthly",
 ] as const;
 
 export type KnownUntypedTable = (typeof KNOWN_UNTYPED_TABLES)[number];
 
-/** Unica funzione di accesso non tipizzato del repository. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function tFrom(table: KnownUntypedTable | string): any {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (supabase as any).from(table);
+/** Client ristretto: `from` su nome dinamico, risultati `unknown`. */
+const runtimeClient = supabase as unknown as { from(table: string): RuntimeTable };
+
+/** Unico accesso dinamico del repository. Nessun `any` nella firma pubblica. */
+export function tFrom(table: KnownUntypedTable | string): RuntimeTable {
+  return runtimeClient.from(table);
 }

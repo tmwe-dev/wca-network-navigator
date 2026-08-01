@@ -39,6 +39,8 @@ vi.mock("@/integrations/supabase/client", () => ({
           case "activities": return mockActivitiesResult;
           case "channel_messages": return mockChannelsResult;
           case "partners": return mockPartnersResult;
+          case "deals": return mockDealsResult;
+          case "supervisor_audit_log": return mockLogsResult;
           default: return { data: null, error: null };
         }
       };
@@ -52,23 +54,6 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-vi.mock("@/lib/typedSupabase", () => ({
-  tFrom: (table: string) => {
-    const b: Record<string, any> = {};
-    b.select = vi.fn().mockReturnValue(b);
-    b.eq = vi.fn().mockReturnValue(b);
-    b.gte = vi.fn().mockReturnValue(b);
-    b.lte = vi.fn().mockReturnValue(b);
-    Object.defineProperty(b, "then", {
-      value: (resolve: any) => {
-        const result = table === "deals" ? mockDealsResult : mockLogsResult;
-        return Promise.resolve(result).then(resolve);
-      },
-      writable: true,
-    });
-    return b;
-  },
-}));
 
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
@@ -159,9 +144,10 @@ describe("DAL — analytics", () => {
     it("calculates pipeline values and weighted forecast", async () => {
       mockDealsResult = {
         data: [
-          { stage: "qualified", value: 1000 },
-          { stage: "won", value: 500 },
-          { stage: "lost", value: 200 },
+          // Schema live: la colonna importo di `deals` è `amount`, non `value`.
+          { stage: "qualified", amount: 1000 },
+          { stage: "won", amount: 500 },
+          { stage: "lost", amount: 200 },
         ],
         error: null,
       };

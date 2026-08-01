@@ -10,7 +10,12 @@
  *
  * NESSUNA logica: solo SELECT.
  */
-import { selectFromValidatedTable } from "@/data/validatedQuery";
+import { readValidatedRows, selectFromValidatedTable } from "@/data/validatedQuery";
+import {
+  parseChannelMessageRow,
+  parseInboxBodyRow,
+  type InboxBodyRow,
+} from "@/data/_shared/channelMessageRowParser";
 import { supabase } from "@/integrations/supabase/client";
 /**
  * Tutte le letture/scritture su tabella LETTERALE usano il client tipizzato
@@ -450,16 +455,16 @@ export async function listMailsByFolder(
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.message_id);
-  const msgs = await readInboxOnce<{ message_id_external: string } & Record<string, unknown>>(
+  const msgs = await readInboxOnce<InboxBodyRow>(
     "listMailsByFolder",
     (source) =>
-      selectFromValidatedTable(
+      readValidatedRows(selectFromValidatedTable(
         source,
         "message_id_external,subject,from_address,body_text,body_html,email_date,partner_id",
       )
         .eq("channel", "email")
         .eq("direction", "inbound")
-        .in("message_id_external", ids),
+        .in("message_id_external", ids), parseInboxBodyRow),
   );
 
   const byId = new Map<string, {
@@ -472,12 +477,12 @@ export async function listMailsByFolder(
   }>();
   for (const m of msgs) {
     byId.set(m.message_id_external, {
-      subject: (m.subject as string | null) ?? null,
-      from_address: (m.from_address as string | null) ?? null,
-      body_text: (m.body_text as string | null) ?? null,
-      body_html: (m.body_html as string | null) ?? null,
-      email_date: (m.email_date as string | null) ?? null,
-      partner_id: (m.partner_id as string | null) ?? null,
+      subject: m.subject,
+      from_address: m.from_address,
+      body_text: m.body_text,
+      body_html: m.body_html,
+      email_date: m.email_date,
+      partner_id: m.partner_id,
     });
   }
 
@@ -566,10 +571,16 @@ export async function listFunnemailGroupedInbox(
         // condivisa = mailbox_id == id specifico. Nessun filtro = vista aggregata.
         if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
         else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
-        return q
-          .order("email_date", { ascending: false, nullsFirst: false })
-          .order(createdAtCol, { ascending: false })
-          .range(from, to);
+        return readValidatedRows(
+          q
+            .order("email_date", { ascending: false, nullsFirst: false })
+            .order(createdAtCol, { ascending: false })
+            .range(from, to),
+          parseChannelMessageRow,
+        ).then((r) => ({
+          data: r.data,
+          error: r.error ? Object.assign(new Error(r.error.message), { code: r.error.code }) : null,
+        }));
       },
       MAX_MESSAGES,
     ),

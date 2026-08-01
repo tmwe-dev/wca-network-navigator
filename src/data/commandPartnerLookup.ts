@@ -3,7 +3,7 @@
  * Estratto 1:1 da `partnerQueries.ts` (stessi filtri, order, limit, select).
  */
 import { supabase } from "@/integrations/supabase/client";
-import { applyValidatedFilters, selectFromValidatedTable } from "@/data/validatedQuery";
+import { applyValidatedFilters, readValidatedRows, selectFromValidatedTable } from "@/data/validatedQuery";
 
 export interface CommandPartnerRow {
   id: string;
@@ -25,6 +25,25 @@ export interface CommandContactRow {
   contact_alias: string | null;
   email: string | null;
   title: string | null;
+}
+
+/** Validatore runtime per le righe partner lette dal confine dinamico. */
+function parseCommandPartnerRow(row: Record<string, unknown>): CommandPartnerRow | null {
+  const id = typeof row.id === "string" ? row.id : null;
+  if (!id) return null;
+  const s = (v: unknown): string | null => (typeof v === "string" ? v : null);
+  return {
+    id,
+    company_name: s(row.company_name),
+    company_alias: s(row.company_alias),
+    country_code: s(row.country_code),
+    city: s(row.city),
+    email: s(row.email),
+    website: s(row.website),
+    lead_status: s(row.lead_status),
+    status_reason: s(row.status_reason),
+    last_interaction_at: s(row.last_interaction_at),
+  };
 }
 
 const PARTNER_COLS = "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";
@@ -131,7 +150,10 @@ export async function fetchPartnersByFilters(
     .eq("is_active", true)
     .neq("lead_status", "blacklisted")
     .limit(50);
-  const { data, error } = await applyValidatedFilters(base, filters, PARTNER_FILTERABLE_COLUMNS);
+  const { data, error } = await readValidatedRows(
+    applyValidatedFilters(base, filters, PARTNER_FILTERABLE_COLUMNS),
+    parseCommandPartnerRow,
+  );
   if (error) return [];
-  return (data ?? []) as CommandPartnerRow[];
+  return data ?? [];
 }
