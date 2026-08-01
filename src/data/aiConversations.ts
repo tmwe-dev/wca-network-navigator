@@ -3,6 +3,34 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Json, Database } from "@/integrations/supabase/types";
+import { asJsonArray, toJsonValue } from "@/lib/typedJson";
+import { toRecordOrNull } from "@/lib/records";
+
+export interface StoredConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp?: string;
+}
+
+/**
+ * Validatore runtime dei messaggi salvati su colonna Json.
+ * I messaggi non conformi vengono scartati (fail closed) invece di essere castati.
+ */
+export function parseConversationMessages(value: unknown): StoredConversationMessage[] {
+  const out: StoredConversationMessage[] = [];
+  for (const item of asJsonArray<unknown>(value)) {
+    const r = toRecordOrNull(item);
+    if (!r) continue;
+    if (r.role !== "user" && r.role !== "assistant") continue;
+    if (typeof r.content !== "string") continue;
+    out.push({
+      role: r.role,
+      content: r.content,
+      timestamp: typeof r.timestamp === "string" ? r.timestamp : undefined,
+    });
+  }
+  return out;
+}
 
 type AiConversationUpdate = Database["public"]["Tables"]["ai_conversations"]["Update"];
 
@@ -31,7 +59,7 @@ export async function getConversation(id: string) {
 export async function createConversation(params: { user_id: string; page_context: string; title: string; messages: unknown[] }) {
   const { data, error } = await supabase
     .from("ai_conversations")
-    .insert([{ ...params, messages: params.messages as unknown as Json[] }])
+    .insert([{ ...params, messages: toJsonValue(params.messages) as Json }])
     .select("id")
     .single();
   if (error) throw error;

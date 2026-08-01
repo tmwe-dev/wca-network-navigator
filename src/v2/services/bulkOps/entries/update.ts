@@ -2,8 +2,6 @@ import { invokeAi } from "@/lib/ai/invokeAi";
 import type { BulkEntry } from "../types";
 import { assertCalledFromRunner } from "./_internal";
 
-type AnyAsync = (...a: unknown[]) => Promise<unknown>;
-
 export interface UpdateOriginItem { readonly contactId: string; readonly origin: string; }
 export const updateOriginEntry: BulkEntry<UpdateOriginItem, { ok: boolean }> = {
   scope: "update.origin",
