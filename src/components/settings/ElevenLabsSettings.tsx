@@ -25,6 +25,39 @@ interface Voice {
   description: string | null;
 }
 
+type ApiStatus = "checking" | "ok" | "invalid_key" | "missing_key" | "error";
+
+const API_STATUSES: readonly ApiStatus[] = [
+  "checking", "ok", "invalid_key", "missing_key", "error",
+] as const;
+
+function parseApiStatus(value: unknown): ApiStatus {
+  return API_STATUSES.includes(value as ApiStatus) ? (value as ApiStatus) : "error";
+}
+
+/** Parser runtime: scarta le voci malformate invece di castare la risposta edge. */
+function parseVoices(value: unknown): Voice[] {
+  if (!Array.isArray(value)) return [];
+  const out: Voice[] = [];
+  for (const raw of value) {
+    const v = toRecordOrNull(raw);
+    if (!v || typeof v.voice_id !== "string" || typeof v.name !== "string") continue;
+    const labels: Record<string, string> = {};
+    for (const [k, lv] of Object.entries(toRecord(v.labels))) {
+      if (typeof lv === "string") labels[k] = lv;
+    }
+    out.push({
+      voice_id: v.voice_id,
+      name: v.name,
+      category: typeof v.category === "string" ? v.category : "premade",
+      labels,
+      preview_url: typeof v.preview_url === "string" ? v.preview_url : null,
+      description: typeof v.description === "string" ? v.description : null,
+    });
+  }
+  return out;
+}
+
 const ACCENT_FLAGS: Record<string, string> = {
   american: "🇺🇸",
   british: "🇬🇧",
