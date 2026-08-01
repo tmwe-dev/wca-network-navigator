@@ -1,5 +1,6 @@
 import { invokeAi } from "@/lib/ai/invokeAi";
 import type { BulkEntry } from "../types";
+import type { LeadStatus } from "@/data/contacts";
 import { assertCalledFromRunner } from "./_internal";
 
 export interface UpdateOriginItem { readonly contactId: string; readonly origin: string; }
@@ -16,7 +17,7 @@ export const updateOriginEntry: BulkEntry<UpdateOriginItem, { ok: boolean }> = {
   },
 };
 
-export interface UpdateLeadStatusItem { readonly contactId: string; readonly newStatus: string; readonly statusReason?: string; }
+export interface UpdateLeadStatusItem { readonly contactId: string; readonly newStatus: LeadStatus; readonly statusReason?: string; }
 export const updateLeadStatusEntry: BulkEntry<UpdateLeadStatusItem, { ok: boolean }> = {
   scope: "update.leadStatus",
   itemId: (i) => i.contactId,
@@ -30,7 +31,7 @@ export const updateLeadStatusEntry: BulkEntry<UpdateLeadStatusItem, { ok: boolea
   },
 };
 
-export interface UpdateEmailRulesItem { readonly emailAddress: string; readonly autoAction?: string; readonly blocked?: boolean; }
+export interface UpdateEmailRulesItem { readonly userId: string; readonly emailAddress: string; readonly autoAction?: string; readonly blocked?: boolean; }
 export const updateEmailRulesEntry: BulkEntry<UpdateEmailRulesItem, { ok: boolean }> = {
   scope: "update.emailRules",
   itemId: (i) => i.emailAddress,
@@ -38,8 +39,8 @@ export const updateEmailRulesEntry: BulkEntry<UpdateEmailRulesItem, { ok: boolea
   handler: async (item) => {
     assertCalledFromRunner("update.emailRules");
     const mod: typeof import("@/data/emailAddressRules") = await import("@/data/emailAddressRules");
-    if (item.autoAction !== undefined && mod.bulkUpdateAutoAction) await mod.bulkUpdateAutoAction([item.emailAddress], item.autoAction);
-    if (item.blocked !== undefined && mod.bulkSetBlocked) await mod.bulkSetBlocked([item.emailAddress], item.blocked);
+    if (item.autoAction !== undefined && mod.bulkUpdateAutoAction) await mod.bulkUpdateAutoAction(item.userId, [item.emailAddress], item.autoAction);
+    if (item.blocked !== undefined && mod.bulkSetBlocked) await mod.bulkSetBlocked(item.userId, [item.emailAddress], item.blocked);
     return { ok: true };
   },
 };
