@@ -2,7 +2,12 @@
  * useExport — Hook for exporting contacts, partners, deals, and emails as CSV or Excel
  */
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchContactsExportRows,
+  fetchPartnersExportRows,
+  fetchDealsExportRows,
+  type ExportFilters,
+} from "@/data/exports";
 
 
 import { createLogger } from "@/lib/log";
@@ -10,15 +15,7 @@ const log = createLogger("useExport");
 export type EntityType = "contacts" | "partners" | "deals" | "emails";
 export type ExportFormat = "csv" | "xlsx";
 
-export interface ExportFilters {
-  dateRange?: {
-    from: string;
-    to: string;
-  };
-  status?: string | string[];
-  tags?: string | string[];
-  search?: string;
-}
+export type { ExportFilters };
 
 export interface ExportOptions {
   entity: EntityType;
@@ -70,86 +67,6 @@ async function convertToExcel(
   }
 }
 
-// ── Export functions ──
-
-async function fetchContactsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  // Colonne verificate sullo schema live (`position`, non `title`).
-  let query = supabase.from("imported_contacts")
-    .select(
-      "id, name, email, phone, mobile, company_name, position, country, lead_status, created_at, interaction_count"
-    );
-
-  if (filters?.dateRange) {
-    query = query
-      .gte("created_at", filters.dateRange.from)
-      .lte("created_at", filters.dateRange.to);
-  }
-
-  if (filters?.status) {
-    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-    query = query.in("lead_status", statuses);
-  }
-
-  if (filters?.search) {
-    const term = `%${filters.search}%`;
-    query = query.or(`name.ilike.${term},email.ilike.${term},company_name.ilike.${term}`);
-  }
-
-  const { data, error } = await query.limit(50000);
-  if (error) throw error;
-  return data ?? [];
-}
-
-async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  // Colonne verificate sullo schema live: company_name / country_name / lead_status.
-  let query = supabase.from("partners")
-    .select(
-      "id, company_name, country_name, website, email, phone, partner_type, lead_status, created_at"
-    );
-
-  if (filters?.dateRange) {
-    query = query
-      .gte("created_at", filters.dateRange.from)
-      .lte("created_at", filters.dateRange.to);
-  }
-
-  if (filters?.status) {
-    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-    query = query.in("lead_status", statuses);
-  }
-
-  if (filters?.search) {
-    const term = `%${filters.search}%`;
-    query = query.or(`company_name.ilike.${term},email.ilike.${term},website.ilike.${term}`);
-  }
-
-  const { data, error } = await query.limit(50000);
-  if (error) throw error;
-  return data ?? [];
-}
-
-async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = supabase.from("deals")
-    .select(
-      "id, title, partner_id, contact_id, stage, amount, probability, expected_close_date, actual_close_date, created_at, updated_at"
-    );
-
-  if (filters?.dateRange) {
-    query = query
-      .gte("created_at", filters.dateRange.from)
-      .lte("created_at", filters.dateRange.to);
-  }
-
-  if (filters?.status) {
-    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-    query = query.in("stage", statuses);
-  }
-
-  const { data, error } = await query.limit(50000);
-  if (error) throw error;
-  return data ?? [];
-}
-
 // ── Hooks ──
 
 export function useExportCSV() {
@@ -161,15 +78,15 @@ export function useExportCSV() {
 
       switch (options.entity) {
         case "contacts":
-          data = await fetchContactsData(options.filters);
+          data = await fetchContactsExportRows(options.filters);
           defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "position", "country", "created_at"];
           break;
         case "partners":
-          data = await fetchPartnersData(options.filters);
+          data = await fetchPartnersExportRows(options.filters);
           defaultColumns = ["id", "company_name", "country_name", "website", "email", "phone", "lead_status", "created_at"];
           break;
         case "deals":
-          data = await fetchDealsData(options.filters);
+          data = await fetchDealsExportRows(options.filters);
           defaultColumns = ["id", "title", "stage", "amount", "probability", "expected_close_date", "created_at"];
           break;
         // TODO: Email export is disabled (dead code - see fetchEmailsData comment)
@@ -204,15 +121,15 @@ export function useExportExcel() {
 
       switch (options.entity) {
         case "contacts":
-          data = await fetchContactsData(options.filters);
+          data = await fetchContactsExportRows(options.filters);
           defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "position", "country", "created_at"];
           break;
         case "partners":
-          data = await fetchPartnersData(options.filters);
+          data = await fetchPartnersExportRows(options.filters);
           defaultColumns = ["id", "company_name", "country_name", "website", "email", "phone", "lead_status", "created_at"];
           break;
         case "deals":
-          data = await fetchDealsData(options.filters);
+          data = await fetchDealsExportRows(options.filters);
           defaultColumns = ["id", "title", "stage", "amount", "probability", "expected_close_date", "created_at"];
           break;
         // TODO: Email export is disabled (dead code - see fetchEmailsData comment)
