@@ -1,5 +1,6 @@
 import { getJobTerminalLog, setJobTerminalLog } from "@/data/downloadJobs";
 import { createLogger } from "@/lib/log";
+import { toRecord } from "@/lib/records";
 
 const log = createLogger("terminalLog");
 
@@ -24,7 +25,7 @@ interface BufferState {
 }
 
 function getBuffer(): BufferState {
-  const w = window as unknown as Record<string, unknown>;
+  const w = toRecord(window);
   if (!w[BUFFER_KEY]) {
     w[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
   }

@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserCircle, Clock, TrendingUp, MessageCircle } from "lucide-react";
 import { queryKeys } from "@/lib/queryKeys";
+import { toRecord } from "@/lib/records";
 
 const SENTIMENTS: Record<string, string> = {
   positive: "bg-emerald-400",
@@ -42,7 +43,7 @@ export function SenderProfilesView() {
       ]);
 
       const rulesMap = new Map<string, Record<string, unknown>>();
-      for (const r of rulesData) rulesMap.set(r.email_address, r as unknown as Record<string, unknown>);
+      for (const r of rulesData) rulesMap.set(r.email_address, toRecord(r));
 
       return ctxData.map(ctx => ({
         ...ctx,

@@ -18,6 +18,7 @@ import type {
   CompanyEntity,
   ContactEntity,
 } from "@/v2/ui/molecules/CompanyCardList";
+import { toRecord } from "@/lib/records";
 
 interface RawContact {
   id: string;
@@ -50,7 +51,7 @@ function normalizeCompanyKey(name: string | null | undefined, email: string | nu
 }
 
 function toContactEntity(c: RawContact, companyId: string): ContactEntity {
-  const row = c as unknown as Record<string, unknown>;
+  const row = toRecord(c);
   const inHolding =
     row.in_holding_pattern === true || row.lead_status === "holding";
   return {

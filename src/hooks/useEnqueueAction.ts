@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { insertPendingActionReturningId } from "@/data/aiPendingActions";
 import { createLogger } from "@/lib/log";
+import { toJsonValue } from "@/lib/typedJson";
 
 const log = createLogger("useEnqueueAction");
 
@@ -54,7 +55,7 @@ export function useEnqueueAction() {
       const { id, error } = await insertPendingActionReturningId({
         user_id: userId,
         action_type: args.action_type,
-        action_payload: args.payload as never,
+        action_payload: toJsonValue(args.payload),
         partner_id: args.partner_id ?? null,
         contact_id: args.contact_id ?? null,
         email_address: args.email_address ?? null,

@@ -85,6 +85,7 @@ function toDuplicateSource(value: string | null): ImportDuplicateMatch["source"]
 
 
 import { createLogger } from "@/lib/log";
+import { toRecords } from "@/lib/records";
 const log = createLogger("queries");
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContactQuery = any;
@@ -185,7 +186,7 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
       .select(select)
       .in("id", batch);
     if (error) throw error;
-    if (data) results.push(...(data as unknown as Record<string, unknown>[]));
+    if (data) results.push(...(toRecords(data)));
   }
   return results;
 }

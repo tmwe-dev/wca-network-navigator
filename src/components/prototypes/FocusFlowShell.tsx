@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/queryKeys";
 import { findPrototypeContacts } from "@/data/uiShellQueries";
+import { toRecords } from "@/lib/records";
 
 const TABS = [
   { key: "outreach", label: "Outreach", icon: Radar },
@@ -41,7 +42,7 @@ function usePartnerContacts() {
         false,
       );
       if (error) throw error;
-      return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
+      return toRecords(data).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),
         name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
         company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",

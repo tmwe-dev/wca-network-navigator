@@ -11,6 +11,7 @@ import { updateProspect } from "@/data/prospects";
 import { updateBusinessCard } from "@/data/businessCards";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 import { queryKeys } from "@/lib/queryKeys";
+import { toRecord } from "@/lib/records";
 
 export interface UnifiedRecord {
   sourceType: RecordSourceType;
@@ -93,7 +94,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           lastInteractionAt: c.last_interaction_at as string | null, interactionCount: c.interaction_count as number,
           linkedinUrl: (ed.linkedin_profile_url as string) || (ed.linkedin_url as string) || null,
           companyAlias: c.company_alias as string | null, contactAlias: c.contact_alias as string | null,
-          partnerId: null, raw: c as unknown as Record<string, unknown>,
+          partnerId: null, raw: toRecord(c),
         };
       }
 

@@ -2,6 +2,7 @@
  * DAL — dati agenda giornaliera (attività + partner con risposta inbound).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { toRecords } from "@/lib/records";
 
 const AGENDA_ACTIVITY_SELECT = `
           *,
@@ -24,7 +25,7 @@ export async function findAgendaDayActivities(
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return toRecords((data ?? []));
 }
 
 /** Partner con almeno un messaggio inbound dal `since` indicato. */

@@ -16,6 +16,7 @@ import {
   type FunnemailRoutingRuleRow,
   type FunnemailRoutingCondition,
 } from "@/data/funnemailRoutingRules";
+import { toJsonValue } from "@/lib/typedJson";
 
 const QK = ["funnemail", "routing-rules"] as const;
 
@@ -41,7 +42,7 @@ export default function RoutingRulesTab() {
       await upsertFunnemailRoutingRule({
         user_id: user.id,
         name: name.trim(),
-        conditions: [{ field, op, value: value.trim() }] as never,
+        conditions: toJsonValue([{ field, op, value: value.trim() }]),
         target_group_id: groupId.trim(),
         priority,
         enabled: true,

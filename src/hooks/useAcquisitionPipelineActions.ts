@@ -13,6 +13,7 @@ import { EMPTY_STATS } from "./useAcquisitionPipelineState";
 
 
 import { createLogger } from "@/lib/log";
+import { toRecords } from "@/lib/records";
 const log = createLogger("useAcquisitionPipelineActions");
 type State = ReturnType<typeof useAcquisitionPipelineState>;
 
@@ -106,7 +107,7 @@ export function useAcquisitionPipelineActions(
       log.error("create/update acquisition job failed", { error: err });
     }
 
-    const localStats = await runExtensionLoop(jobId!, items as unknown as Record<string, unknown>[]);
+    const localStats = await runExtensionLoop(jobId!, toRecords(items));
 
     state.setCanvasPhase("idle");
     state.setCanvasData(null);

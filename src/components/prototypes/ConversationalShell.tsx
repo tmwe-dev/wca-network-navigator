@@ -13,6 +13,7 @@ import { ContactDetail } from "./shared/ContactDetail";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { queryKeys } from "@/lib/queryKeys";
 import { findPrototypeContacts } from "@/data/uiShellQueries";
+import { toRecords } from "@/lib/records";
 
 type PanelType = "none" | "contacts" | "outreach" | "agenda" | "email";
 
@@ -32,7 +33,7 @@ function usePartnerContactsList() {
         150,
         true,
       );
-      return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
+      return toRecords(data).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),
         name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
         company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",

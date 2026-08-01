@@ -18,6 +18,7 @@ import {
   findPendingFlowItems, updateLinkedInFlowItem, insertLinkedInFlowItems,
 } from "@/data/linkedinFlow";
 import { findPartnerByName } from "@/data/partners";
+import { toRecordOrNull } from "@/lib/records";
 
 const log = createLogger("useLinkedInFlow");
 
@@ -113,7 +114,7 @@ export function useLinkedInFlow() {
     const items = await findPendingFlowItems(jobId);
     if (items.length === 0) { await finalizeJob(jobId); return; }
 
-    const jobData = (await getLinkedInFlowJobField(jobId, "config")) as unknown as Record<string, unknown> | null;
+    const jobData = toRecordOrNull((await getLinkedInFlowJobField(jobId, "config")));
     const jobConfig = (jobData?.config as Record<string, unknown>) || {};
 
     for (let idx = 0; idx < items.length; idx++) {
@@ -279,7 +280,7 @@ export function useLinkedInFlow() {
   const resumeFlow = useCallback(async () => {
     if (!activeJobId) return;
     abortRef.current = false; runningRef.current = true; setPhase("scraping");
-    const job = (await getLinkedInFlowJobField(activeJobId, "delay_seconds")) as unknown as Record<string, unknown> | null;
+    const job = toRecordOrNull((await getLinkedInFlowJobField(activeJobId, "delay_seconds")));
     await updateLinkedInFlowJob(activeJobId, { status: "running" });
     processLoop(activeJobId, (job?.delay_seconds as number) || 15);
   }, [activeJobId, processLoop]);

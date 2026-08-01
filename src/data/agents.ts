@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { QueryClient } from "@tanstack/react-query";
+import { toRecords } from "@/lib/records";
 
 export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
 export type AgentInsert = Database["public"]["Tables"]["agents"]["Insert"];
@@ -41,7 +42,7 @@ export async function findActiveAgents(fields = "name, role, avatar_emoji, is_ac
     .is("deleted_at", null)
     .eq("is_active", true);
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return toRecords((data ?? []));
 }
 
 export async function getAgentById(id: string): Promise<Agent | null> {

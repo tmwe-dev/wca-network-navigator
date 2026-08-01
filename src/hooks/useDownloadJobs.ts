@@ -13,13 +13,14 @@ import {
   invalidateDownloadJobs, updateJobItemsByJobIdAndStatus,
   type DownloadJob,
 } from "@/data/downloadJobs";
+import { toRecord } from "@/lib/records";
 
 export type { DownloadJob };
 
 const RT_KEY = '__dlJobsRealtimeState__';
 interface RtState { refCount: number; channel: ReturnType<typeof supabase.channel> | null; queryClient: ReturnType<typeof useQueryClient> | null; }
 function getRtState(): RtState {
-  const w = window as unknown as Record<string, unknown>;
+  const w = toRecord(window);
   if (!w[RT_KEY]) w[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
   return w[RT_KEY] as RtState;
 }

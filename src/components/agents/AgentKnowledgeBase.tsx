@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Save, BookOpen } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
 import { toast } from "sonner";
+import { toJsonValue } from "@/lib/typedJson";
 
 interface KBEntry {
   title: string;
@@ -33,7 +34,7 @@ export function AgentKnowledgeBase({ agent }: Props) {
 
   const save = () => {
     updateAgent.mutate(
-      { id: agent.id, knowledge_base: entries as never },
+      { id: agent.id, knowledge_base: toJsonValue(entries) },
       { onSuccess: () => toast.success("Knowledge Base salvata") }
     );
   };

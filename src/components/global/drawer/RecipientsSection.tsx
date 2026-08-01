@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/queryKeys";
 import { searchRecipientPartners } from "@/data/uiShellQueries";
+import { toRecord } from "@/lib/records";
 
 interface Props {
   search: string;
@@ -54,7 +55,7 @@ export function RecipientsSection({ search, setSearch }: Props) {
       {search.length >= 2 && searchResults.length > 0 && (
         <div className="max-h-[160px] overflow-y-auto space-y-0.5 rounded-lg border border-border/20 p-1">
           {searchResults.map((p) => (
-            <button key={p.id} onClick={() => handleAdd(p as unknown as Record<string, unknown>)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors text-left">
+            <button key={p.id} onClick={() => handleAdd(toRecord(p))} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors text-left">
               <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{p.company_name}</p>

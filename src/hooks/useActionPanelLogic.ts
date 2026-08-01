@@ -9,6 +9,7 @@ import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { createLogger } from "@/lib/log";
 import { queryKeys } from "@/lib/queryKeys";
+import { toJsonValue } from "@/lib/typedJson";
 
 const log = createLogger("useActionPanelLogic");
 
@@ -138,7 +139,7 @@ export function useActionPanelLogic({
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await upsertDirectoryCache({
-      country_code: countryCode, network_name: netKey, members: membersJson as never,
+      country_code: countryCode, network_name: netKey, members: toJsonValue(membersJson),
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });
     queryClient.invalidateQueries({ queryKey: queryKeys.directoryCacheAll });

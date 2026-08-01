@@ -14,6 +14,7 @@ import { adaptImportedContact } from "@/lib/contactActionAdapter";
 import type { ImportedContactRecord } from "@/lib/contactActionAdapter";
 import { EntityRowFlag } from "@/v2/ui/atoms/EntityRowFlag";
 import { ChannelIcons } from "@/v2/ui/atoms/ChannelIcons";
+import { toRecord } from "@/lib/records";
 
 interface ContactCardProps {
   c: ImportedContactRecord;
@@ -55,7 +56,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const cCity = clean(c.city);
   const cOrigin = clean(c.origin);
   const cCountry = clean(c.country);
-  const quality = getContactQuality(c as unknown as Record<string, unknown>);
+  const quality = getContactQuality(toRecord(c));
   const isAiProcessed = !!c.deep_search_at;
   const cCompanyAlias = clean(c.company_alias);
   const cContactAlias = clean(c.contact_alias);

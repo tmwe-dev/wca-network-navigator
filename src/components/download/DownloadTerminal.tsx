@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toRecord } from "@/lib/records";
 
 interface LogEntry {
   ts: string;
@@ -40,7 +41,7 @@ function useTerminalData() {
     : null;
   const targetJob = activeJob || fallbackJob;
   const entries: LogEntry[] = targetJob
-    ? ((targetJob as unknown as Record<string, unknown>).terminal_log as LogEntry[] || [])
+    ? ((toRecord(targetJob)).terminal_log as LogEntry[] || [])
     : [];
   return { activeJob, entries };
 }

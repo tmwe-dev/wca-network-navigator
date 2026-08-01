@@ -9,6 +9,7 @@
 
 import { type Block, type BlockSource, PROMPT_LAB_TABS } from "../types";
 import { resolveBlockAgent, ORPHAN_AGENT_LABEL } from "./agentMapping";
+import { toRecord } from "@/lib/records";
 
 /**
  * Classificazione dell'esito proposto dal Lab Agent.
@@ -127,7 +128,7 @@ export function toRunProposals(proposals: GlobalProposal[]): Array<{
     block_id: p.block.id,
     tab_label: p.tabLabel,
     tab_activation: p.tabActivation,
-    source: p.block.source as unknown as Record<string, unknown>,
+    source: toRecord(p.block.source),
     label: p.block.label,
     before: p.before,
     after: p.after,

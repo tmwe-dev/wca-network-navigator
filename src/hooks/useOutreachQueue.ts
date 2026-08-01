@@ -7,6 +7,8 @@ import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
 import { findPendingOutreachItems, updateOutreachItem, getOutreachItemField } from "@/data/outreachQueue";
 import { insertPendingAction } from "@/data/aiPendingActions";
+import { toRecord } from "@/lib/records";
+import { toJsonValue } from "@/lib/typedJson";
 
 const log = createLogger("useOutreachQueue");
 
@@ -51,7 +53,7 @@ export function useOutreachQueue() {
   const incrementAttempts = async (id: string) => {
     const data = await getOutreachItemField(id, "attempts");
     if (data) {
-      await updateOutreachItem(id, { attempts: ((data as unknown as Record<string, unknown>).attempts as number || 0) + 1 });
+      await updateOutreachItem(id, { attempts: ((toRecord(data)).attempts as number || 0) + 1 });
     }
   };
 
@@ -89,7 +91,7 @@ export function useOutreachQueue() {
       const { error } = await insertPendingAction({
         user_id: userId,
         action_type: actionType,
-        action_payload: payload as never,
+        action_payload: toJsonValue(payload),
         suggested_content: item.body,
         email_address: item.recipient_email ?? null,
         reasoning: `Trasferito da outreach_queue (${item.channel}). In attesa di approvazione umana.`,
