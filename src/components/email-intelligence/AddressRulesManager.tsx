@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule, type AddressRuleUpsertInput } from "@/data/emailAddressRules";
+import { useAddressRulesRepo, type AddressRuleUpsertInput } from "@/hooks/emailIntelligence/useAddressRulesRepo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ const TONES = [
 type EditableRule = AddressRuleUpsertInput & { id?: string };
 
 export function AddressRulesManager() {
+  const { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule } = useAddressRulesRepo();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [editingRule, setEditingRule] = useState<EditableRule | null>(null);
