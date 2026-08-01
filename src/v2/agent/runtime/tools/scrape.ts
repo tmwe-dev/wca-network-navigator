@@ -2,8 +2,7 @@
  * Scrape tool for agent loop — calls scrape-website edge function with cache.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
-import { getScrapeCacheEntry } from "@/data/scrapeCache";
+import { getScrapeCacheEntry, upsertScrapeCacheEntry } from "@/data/scrapeCache";
 import type { AgentTool, AgentToolResult } from "./index";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -29,11 +28,7 @@ async function getCachedScrape(url: string): Promise<Record<string, unknown> | n
 }
 
 async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
-  // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
-  // `.upsert()` overload cannot be resolved even though all columns are real.
-  // Left on untypedFrom (TS overload-resolution limitation, not a schema mismatch).
-  await untypedFrom("scrape_cache")
-    .upsert({ url, payload, scraped_at: new Date().toISOString() });
+  await upsertScrapeCacheEntry({ url, payload });
 }
 
 export const scrapeUrlTool: AgentTool = {
