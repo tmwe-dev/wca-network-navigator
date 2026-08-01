@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/authGuard.ts";
 
 /**
  * Applica un'insight approvata: append dell'hint al gruppo bersaglio
@@ -13,26 +14,13 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(req.headers.get("origin"));
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
+    // Auth — guard condiviso (terse: AUTH_REQUIRED / AUTH_INVALID)
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (auth instanceof Response) return auth;
+    const userId = auth.userId;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
-    const anon = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
-    const { data: userData, error: userErr } = await anon.auth.getUser();
-    if (userErr || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
-    const userId = userData.user.id;
 
     const body = await req.json();
     const insightId: string | undefined = body.insight_id;
