@@ -1,32 +1,21 @@
 /**
- * IO Queries: Agents — Result-based
+ * IO Queries: Agents — facciata Result-based sul DAL canonico `src/data/agents`.
+ * Nessuna query Supabase diretta: qui si applicano solo mapping e semantica Result.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { findAgents, getAgentById, type AgentRow as DalAgentRow } from "@/data/agents";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type Agent } from "../../../core/domain/entities";
 import { mapAgentRow } from "../../../core/mappers/agent-mapper";
-import type { Database } from "@/integrations/supabase/types";
 import type { PostgrestError } from "@supabase/supabase-js";
+
+export type AgentRow = DalAgentRow;
 
 export async function fetchAgents(): Promise<Result<Agent[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("agents")
-      .select("*")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "agents",
-      }, "fetchAgents"));
-    }
-
-    if (!data) return ok([]);
-
+    const rows = await findAgents();
     const agents: Agent[] = [];
-    for (const row of data) {
+    for (const row of rows) {
       const mapped = mapAgentRow(row);
       if (mapped._tag === "Err") return mapped;
       agents.push(mapped.value);
@@ -38,15 +27,25 @@ export async function fetchAgents(): Promise<Result<Agent[], AppError>> {
 }
 
 /* ── Raw single-agent fetch (chat hub) ─────────────────── */
-export type AgentRow = Database["public"]["Tables"]["agents"]["Row"];
-
 export async function fetchAgentByIdRaw(agentId: string): Promise<{
   data: AgentRow | null;
   error: PostgrestError | null;
 }> {
-  return supabase
-    .from("agents")
-    .select("*")
-    .eq("id", agentId)
-    .maybeSingle();
+  try {
+    const row = await getAgentById(agentId);
+    return { data: row, error: null };
+  } catch (caught: unknown) {
+    const appErr = fromUnknown(caught, "DATABASE_ERROR", "fetchAgentByIdRaw");
+    void ioError;
+    return {
+      data: null,
+      error: {
+        message: appErr.message,
+        details: "",
+        hint: "",
+        code: "DATABASE_ERROR",
+        name: "PostgrestError",
+      } as PostgrestError,
+    };
+  }
 }
