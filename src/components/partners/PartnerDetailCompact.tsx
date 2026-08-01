@@ -1,6 +1,5 @@
-import type { PartnerContactActionTarget } from "@/types/partner-views";
 import { useState, useCallback } from "react";
-import type { PartnerViewModel } from "@/types/partner-views";
+import type { PartnerViewModel, PartnerContactActionTarget } from "@/types/partner-views";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +44,6 @@ import { toRecord } from "@/lib/records";
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires?: string | null }
 type ContactItem = PartnerContactActionTarget;
-interface _UnusedContactItem { id: string; name: string; title?: string | null; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
 interface AgentItem { id: string; name: string; avatar_emoji: string; role: string }
 
 interface PartnerDetailCompactProps {
