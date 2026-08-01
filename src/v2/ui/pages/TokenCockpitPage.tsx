@@ -10,10 +10,8 @@ import { TokenByFunctionPie } from "@/components/token-cockpit/TokenByFunctionPi
 import { TokenBudgetGauge } from "@/components/token-cockpit/TokenBudgetGauge";
 import { TokenUsageTable } from "@/components/token-cockpit/TokenUsageTable";
 import { TokenTrendCard } from "@/components/token-cockpit/TokenTrendCard";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { findPromptLogTokens, getTokenSettings } from "@/data/tokenUsage";
-import { formatTokenCount } from "@/data/tokenUsage";
+import { useTokenCockpitUser, useTokenStats } from "@/hooks/useTokenCockpitData";
+import { formatTokenCount } from "@/lib/tokenFormat";
 import { Card } from "@/components/ui/card";
 import { BarChart3, Activity, TrendingUp } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
@@ -44,41 +42,8 @@ function StatCard({
 }
 
 function TokenCockpitContent() {
-  const { data: userData } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
-      return data.user;
-    },
-  });
-
-  const { data: stats } = useQuery({
-    queryKey: ["tokenUsage", "stats", userData?.id],
-    queryFn: async () => {
-      if (!userData?.id) {
-        return { today: 0, month: 0, dailyLimit: 500000, monthlyLimit: 10000000 };
-      }
-
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const [dailyData, monthlyData, settings] = await Promise.all([
-        findPromptLogTokens({ since: startOfDay.toISOString() }),
-        findPromptLogTokens({ since: startOfMonth.toISOString() }),
-        getTokenSettings(userData.id),
-      ]);
-
-      const today = (dailyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const month = (monthlyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-
-      const dailyLimit = parseInt(settings["ai_daily_token_limit"] || "500000", 10);
-      const monthlyLimit = parseInt(settings["ai_monthly_token_limit"] || "10000000", 10);
-
-      return { today, month, dailyLimit, monthlyLimit };
-    },
-    enabled: !!userData?.id,
-  });
+  const { data: userData } = useTokenCockpitUser();
+  const { data: stats } = useTokenStats(userData?.id);
 
   return (
     <div className="space-y-6">
