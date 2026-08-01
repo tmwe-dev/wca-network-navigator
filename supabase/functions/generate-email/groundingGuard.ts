@@ -47,7 +47,7 @@ function escapeRegExp(value: string): string {
 }
 
 function isEvidenceBacked(term: string, normalizedSource: string): boolean {
-  const cleanTerm = term.replace(/[“”"'.,;:!?()\[\]{}]/g, "").trim();
+  const cleanTerm = term.replace(/[“”"'.,;:!?()[\]{}]/g, "").trim();
   if (!cleanTerm || cleanTerm.length < 3) return true;
   if (SAFE_ACRONYMS.has(cleanTerm.toUpperCase())) return true;
   return normalizedSource.includes(normalizeForEvidence(cleanTerm));
@@ -89,7 +89,7 @@ function guardUnverifiedNamedProducts(
   let guarded = text;
   const warnings: GroundingGuardWarning[] = [];
   const contextPattern = PRODUCT_CONTEXT_WORDS.map(escapeRegExp).join("|");
-  const pattern = new RegExp(`\\b(?:${contextPattern})\\s+(?:di\\s+)?[“\"']?([A-Z][A-Za-z0-9&.-]{2,})[”\"']?`, "g");
+  const pattern = new RegExp(`\\b(?:${contextPattern})\\s+(?:di\\s+)?[“"']?([A-Z][A-Za-z0-9&.-]{2,})[”"']?`, "g");
   const matches = Array.from(text.matchAll(pattern));
   for (const match of matches) {
     const term = match[1];

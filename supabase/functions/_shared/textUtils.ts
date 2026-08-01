@@ -78,7 +78,7 @@ export function isLikelyPersonName(value: string): boolean {
     "contabilità", "segreteria", "acquisti", "vendite",
   ];
   if (roleKeywords.some((kw) => lower.includes(kw))) return false;
-  if (/[&\/]/.test(value)) return false;
+  if (/[&/]/.test(value)) return false;
   if (/^[A-Z]{2,4}(\s+[A-Z]{2,4})*$/.test(value.trim())) return false;
   return true;
 }

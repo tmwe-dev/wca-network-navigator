@@ -9,7 +9,7 @@ const OUT = "docs/edge-functions-catalog.md";
 const cfgPath = "supabase/config.toml";
 const cfg = readFileSync(cfgPath, "utf8");
 const jwtOff = new Set(
-  [...cfg.matchAll(/\[functions\.([^\]]+)\][^\[]*verify_jwt\s*=\s*false/g)].map((m) => m[1]),
+  [...cfg.matchAll(/\[functions\.([^\]]+)\][^[]*verify_jwt\s*=\s*false/g)].map((m) => m[1]),
 );
 
 const entries = [];

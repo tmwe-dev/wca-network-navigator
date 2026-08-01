@@ -71,7 +71,7 @@ function extractRouteHighlights(
   const lowerText = textSources.toLowerCase();
 
   // Pattern 1: "Country1-Country2" style routes (e.g., "Jordan-Iraq", "Turkey-Russia")
-  const routePattern = /[a-z\s]+\-[a-z\s]+(?:\s+(?:direct|linea|via|through))?/gi;
+  const routePattern = /[a-z\s]+-[a-z\s]+(?:\s+(?:direct|linea|via|through))?/gi;
   const matches = textSources.match(routePattern) || [];
   matches.forEach((match) => {
     if (match.length > 5 && match.length < 50) {
@@ -83,7 +83,7 @@ function extractRouteHighlights(
   const directLinePatterns = [
     /direct\s+(?:line|service|route)\s+(?:to|via)\s+([a-zA-Z\s]+)(?:,|\.|\s|$)/gi,
     /linea\s+diretta\s+(?:per|a|verso)\s+([a-zA-Z\s]+)(?:,|\.|\s|$)/gi,
-    /servizio\s+diretto\s+([a-zA-Z\s\-]+)(?:,|\.|\s|$)/gi,
+    /servizio\s+diretto\s+([a-zA-Z\s-]+)(?:,|\.|\s|$)/gi,
   ];
 
   for (const pattern of directLinePatterns) {

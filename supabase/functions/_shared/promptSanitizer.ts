@@ -233,6 +233,7 @@ export function sanitizeForPrompt(
   let modified = false;
 
   // 1) Strip control chars (\x00-\x08, \x0B-\x0C, \x0E-\x1F) ma tieni \t \n \r
+  // eslint-disable-next-line no-control-regex -- intentional security filter for C0 controls
   const controlStripped = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
   if (controlStripped !== text) modified = true;
   text = controlStripped;

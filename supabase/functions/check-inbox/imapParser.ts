@@ -89,7 +89,7 @@ export function parseRawHeaders(raw: string): Record<string, string> {
       currentValue += " " + line.trim();
     } else {
       if (currentKey) headers[currentKey.toLowerCase()] = currentValue.trim();
-      const match = line.match(/^([A-Za-z\-]+):\s*(.*)/);
+      const match = line.match(/^([A-Za-z-]+):\s*(.*)/);
       if (match) { currentKey = match[1]; currentValue = match[2]; }
       else { currentKey = ""; currentValue = ""; }
     }
