@@ -184,8 +184,8 @@ async function loadRunMetrics(userId: string): Promise<PromptLabMetrics[]> {
   if (!data) return [];
 
   // Filtra chiavi prompt_lab_metrics_*
-  data.forEach((row: { key: string; value: string }) => {
-    if (row.key.startsWith("prompt_lab_metrics_")) {
+  data.forEach((row) => {
+    if (row.value !== null && row.key.startsWith("prompt_lab_metrics_")) {
       try {
         const m = JSON.parse(row.value) as PromptLabMetrics;
         metrics.push(m);
