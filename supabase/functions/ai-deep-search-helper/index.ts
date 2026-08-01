@@ -11,6 +11,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/authGuard.ts";
 import { aiChat, ALLOWED_MODELS, mapErrorToResponse } from "../_shared/aiGateway.ts";
 
 const DEFAULT_MODEL = "google/gemini-2.5-flash-lite";
@@ -24,26 +25,14 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    // ── Auth (JWT del cliente Supabase) ──
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
+    // ── Auth (guard condiviso, contratto terse) ──
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (auth instanceof Response) return auth;
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: `Bearer ${auth.token}` } } }
     );
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
 
     // LOVABLE-93: global pause check
     const { data: pauseSettings } = await supabase
