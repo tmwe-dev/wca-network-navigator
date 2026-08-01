@@ -9,6 +9,7 @@ import { AgentAvatarCarousel } from "@/components/agents/AgentAvatarCarousel";
 import { AgentVoiceCall } from "@/components/agents/AgentVoiceCall";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
