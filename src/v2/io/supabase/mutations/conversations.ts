@@ -5,7 +5,29 @@ import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown } from "../../../core/domain/errors";
 import type { Conversation, ConversationMessage } from "../queries/conversations";
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { toJsonValue } from "@/lib/typedJson";
+import type { Tables } from "@/integrations/supabase/types";
+
+const MESSAGE_ROLES = ["user", "assistant", "tool", "system"] as const;
+type MessageRole = (typeof MESSAGE_ROLES)[number];
+
+function parseRole(value: string): MessageRole {
+  return (MESSAGE_ROLES as readonly string[]).includes(value)
+    ? (value as MessageRole)
+    : "assistant";
+}
+
+function mapMessage(row: Tables<"command_messages">): ConversationMessage {
+  return {
+    id: row.id,
+    conversation_id: row.conversation_id,
+    role: parseRole(row.role),
+    content: row.content,
+    tool_id: row.tool_id,
+    tool_result: row.tool_result,
+    created_at: row.created_at,
+  };
+}
 
 export async function createConversation(
   userId: string,
@@ -33,16 +55,13 @@ export async function appendMessage(
   },
 ): Promise<Result<ConversationMessage>> {
   try {
-    // DRIFT: TS overload resolution fails to match the generated Insert type for
-    // command_messages even though all fields (conversation_id, role, content, tool_id,
-    // tool_result) are real columns. Left on untypedFrom pending investigation.
-    const { data, error } = await untypedFrom("command_messages")
+    const { data, error } = await supabase.from("command_messages")
       .insert({
         conversation_id: conversationId,
         role: msg.role,
         content: msg.content,
         tool_id: msg.tool_id ?? null,
-        tool_result: msg.tool_result ?? null,
+        tool_result: msg.tool_result == null ? null : toJsonValue(msg.tool_result),
       })
       .select()
       .single();
@@ -53,7 +72,7 @@ export async function appendMessage(
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", conversationId);
 
-    return ok(data as ConversationMessage);
+    return ok(mapMessage(data));
   } catch (e) {
     return err(fromUnknown(e, "DATABASE_ERROR"));
   }
