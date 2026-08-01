@@ -6,7 +6,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { updateValidatedColumn } from "@/data/dynamicQuery";
 
 export interface GlobalRunProposal {
   block_id: string;
@@ -229,22 +229,22 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
     const kind = src.kind as string;
     try {
       if (kind === "app_setting") {
-        await untypedFrom("app_settings").update({ value: p.before }).eq("key", src.key);
+        await supabase
+          .from("app_settings")
+          .update({ value: p.before as never })
+          .eq("key", String(src.key));
         restored++;
       } else if (kind === "kb_entry") {
         await supabase.from("kb_entries").update({ content: p.before as string }).eq("id", src.id as string);
         restored++;
-      } else if (kind === "operative_prompt") {
-        await untypedFrom("operative_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
-        restored++;
-      } else if (kind === "email_prompt") {
-        await untypedFrom("email_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
-        restored++;
-      } else if (kind === "playbook") {
-        await untypedFrom("commercial_playbooks").update({ [src.field as string]: p.before }).eq("id", src.id);
-        restored++;
-      } else if (kind === "agent_persona") {
-        await untypedFrom("agent_personas").update({ [src.field as string]: p.before }).eq("id", src.id);
+      } else {
+        const target = ROLLBACK_TARGETS[kind];
+        const field = String(src.field ?? "");
+        if (!target || !target.fields.has(field)) continue;
+        await updateValidatedColumn(target.table, field, p.before, {
+          column: "id",
+          value: src.id,
+        });
         restored++;
       }
     } catch {
