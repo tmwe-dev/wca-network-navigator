@@ -13,16 +13,11 @@
 import { selectFromValidatedTable } from "@/data/dynamicQuery";
 import { supabase } from "@/integrations/supabase/client";
 /**
- * P001-013 (batch F20-P0.6): le letture/scritture su tabella LETTERALE usano il
- * client tipizzato (`supabase.from`). Restano volutamente su `untypedFrom`:
- *  - `untypedFrom(source)` — la sorgente è dinamica (`message_intelligence_v` |
- *    `channel_messages`) e il client tipizzato non accetta un'unione di tabelle;
- * P0.6b: migrati anche i due call site `funnemail_sender_intel` / `partners`
- * (Row generato compatibile con SenderIntelRow / FunnemailPartnerSnapshot).
- * Restano untyped solo le query passate a `fetchAllPages<T>()`,
- *    dove il Row generato è più largo/stretto del tipo applicativo
- *    (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape):
- *    tiparle richiederebbe cambiare i tipi applicativi = fuori scope P0.
+ * Tutte le letture/scritture su tabella LETTERALE usano il client tipizzato
+ * (`supabase.from`). L'unica eccezione è la sorgente dinamica dell'inbox
+ * (`message_intelligence_v` | `channel_messages`), che passa da
+ * `selectFromValidatedTable`, il confine sanzionato per le query con nome
+ * tabella noto solo a runtime.
  */
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { createLogger } from "@/lib/log";
