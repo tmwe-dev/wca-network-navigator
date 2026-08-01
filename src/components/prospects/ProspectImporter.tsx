@@ -10,7 +10,7 @@ import { SearchResultsTable, type SearchResult } from "./SearchResultsTable";
 import type { ProspectFilters } from "./ProspectAdvancedFilters";
 import { ImportWizard } from "./ImportWizard";
 import { findProspectDedupKeys } from "@/data/prospects";
-import { toJsonValue } from "@/lib/typedJson";
+import { asJsonObject } from "@/lib/typedJson";
 
 interface Props {
   isDark: boolean;
@@ -133,7 +133,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       atecoCodes: ac,
       regions: rg.length > 0 ? rg : undefined,
       provinces: pr.length > 0 ? pr : undefined,
-      filters: toJsonValue(fl),
+      filters: asJsonObject(fl),
       delaySeconds: settings.baseDelay,
     });
 
