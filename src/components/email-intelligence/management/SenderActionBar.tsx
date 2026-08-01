@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { bulkUpdateAutoAction, bulkSetBlocked } from "@/data/emailAddressRules";
+import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
 
 interface SenderActionBarProps {
   selectedSenders: string[];
@@ -40,6 +40,7 @@ export function SenderActionBar({
   onOpenExport,
   onActionComplete,
 }: SenderActionBarProps) {
+  const { bulkUpdateAutoAction, bulkSetBlocked } = useAddressRulesRepo();
   const [busy, setBusy] = useState<string | null>(null);
 
   const withUser = async <T,>(fn: (userId: string) => Promise<T>): Promise<T | null> => {
