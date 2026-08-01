@@ -1,17 +1,17 @@
 /**
  * DAL — Funnemail Eval cases & runs (Sprint 5)
- * Extended in Sprint D with eval dataset + accuracy runs.
  *
- * DRIFT: `funnemail_eval_dataset` e `funnemail_eval_batch_runs` non esistono
- * nei tipi generati (src/integrations/supabase/types.ts) — restano su
- * `untypedFrom` con cast espliciti finché i tipi non vengono rigenerati.
+ * SCHEMA LIVE: esistono `funnemail_eval_cases` e `funnemail_eval_runs`
+ * (case_id / actual_decision / passed / diff / latency_ms / cost_usd / error /
+ * run_at). NON esistono `funnemail_eval_batch_runs` né
+ * `funnemail_eval_dataset`: le funzioni "dataset + accuracy runs" scritte
+ * contro quello schema immaginario sono state rimosse (nessun chiamante di
+ * produzione). L'unica superficie ancora referenziata dalla UI —
+ * `fetchEvalBatchRuns` — espone il contratto di schema non disponibile.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
-import { createLogger } from "@/lib/log";
+import { unavailableRead } from "@/data/_shared/unavailableSchema";
 import type { Json } from "@/integrations/supabase/types";
-
-const log = createLogger("funnemailEval");
 
 /** Narrowing runtime esplicito: converte un Json in Record<string, unknown>. */
 function toRecord(json: Json | null | undefined): Record<string, unknown> {
@@ -138,14 +138,12 @@ export interface EvalBatchRun {
   created_at: string;
 }
 
-/** DRIFT: `funnemail_eval_batch_runs` non è presente nei tipi generati. */
+/**
+ * `funnemail_eval_batch_runs` non esiste nello schema live: nessuna query,
+ * la tab Eval mostra lo stato vuoto invece di un errore PostgREST 42P01.
+ */
 export async function fetchEvalBatchRuns(): Promise<EvalBatchRun[]> {
-  const { data, error } = await untypedFrom("funnemail_eval_batch_runs")
-    .select("id, run_at, dataset_size, passed_count, failed_count, accuracy, prompt_version_id, created_at")
-    .order("run_at", { ascending: false })
-    .limit(50);
-  if (error) throw error;
-  return (data ?? []) as unknown as EvalBatchRun[];
+  return unavailableRead<EvalBatchRun[]>("funnemail_eval_batch_runs", []);
 }
 
 export async function runFunnemailEval(input: {
