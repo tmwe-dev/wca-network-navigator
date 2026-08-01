@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { WCA_COUNTRIES, type WCACountry } from "@/data/wcaCountries";
+import { WCA_COUNTRIES, type WCACountry } from "@/catalogs/wcaCountries";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   getAllActivePartnersForGlobe,

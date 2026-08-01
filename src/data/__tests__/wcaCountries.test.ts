@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 describe("DAL — wcaCountries", () => {
   it("has 200+ countries", () => expect(WCA_COUNTRIES.length).toBeGreaterThan(200));
   it("codes are 2 letters", () => {

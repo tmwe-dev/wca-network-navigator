@@ -13,7 +13,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { useDeals } from "@/hooks/useDeals";
 import type { EventType, RecurrenceType } from "@/data/calendar";
 import type { Partner } from "@/data/partners";
-import type { Deal } from "@/data/deals";
+import type { Deal } from "@/types/deals";
 
 interface Contact {
   id: string;

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useRAExtensionBridge } from "@/hooks/useRAExtensionBridge";
 import { useRAJobs, useCreateRAJob, useUpdateRAJob } from "@/hooks/useRAJobs";
 import { useUpsertRAProspect } from "@/hooks/useRAProspects";
-import { PROVINCE_ITALIANE } from "@/data/italianProvinces";
+import { PROVINCE_ITALIANE } from "@/catalogs/italianProvinces";
 
 export interface SearchResult {
   id: string;

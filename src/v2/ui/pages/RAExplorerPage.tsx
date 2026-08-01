@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRAProspects, useRAProspectContacts } from "@/hooks/useRAProspects";
-import { ATECO_TREE } from "@/data/atecoCategories";
+import { ATECO_TREE } from "@/catalogs/atecoCategories";
 import type { RAProspect, RAContact } from "@/types/ra";
 
 function formatCurrency(n: number | null) {

@@ -11,7 +11,7 @@ import { useDeepSearch, type DeepSearchState } from "@/hooks/useDeepSearchRunner
 
 import { ThemeCtx } from "@/components/download/theme";
 import { type FilterKey } from "@/components/download/CountryGrid";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

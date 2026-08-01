@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ATECO_TREE } from "@/data/atecoCategories";
+import { ATECO_TREE } from "@/catalogs/atecoCategories";
 describe("DAL — atecoCategories", () => {
   it("tree not empty", () => expect(ATECO_TREE.length).toBeGreaterThan(50));
   it("each entry has codice/descrizione/livello", () => {

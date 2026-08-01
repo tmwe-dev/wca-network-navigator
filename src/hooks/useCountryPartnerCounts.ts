@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getPartnerStats } from "@/data/partners";
-import { WCA_COUNTRIES, WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES, WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface CountryPartnerCount {

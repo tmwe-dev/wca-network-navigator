@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAtecoGroups } from "@/hooks/useProspectStats";
-import { ATECO_TREE, type AtecoEntry } from "@/data/atecoCategories";
-import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/data/italianProvinces";
+import { ATECO_TREE, type AtecoEntry } from "@/catalogs/atecoCategories";
+import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/catalogs/italianProvinces";
 import { getAtecoRank, calcScore, type AtecoRank } from "@/data/atecoRanking";
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
 

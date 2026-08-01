@@ -8,8 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Activity, Download, Play, Zap, AlertCircle, CheckCircle, Clock, Search, Pause } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ATECO_TREE } from "@/data/atecoCategories";
-import { REGIONI_ITALIANE } from "@/data/italianProvinces";
+import { ATECO_TREE } from "@/catalogs/atecoCategories";
+import { REGIONI_ITALIANE } from "@/catalogs/italianProvinces";
 import { useRAScrapingState } from "@/hooks/useRAScrapingState";
 
 export function RAScrapingEngine() {

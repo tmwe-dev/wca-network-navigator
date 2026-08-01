@@ -9,8 +9,8 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { getCountryFlag } from "@/lib/countries";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
-import { WCA_NETWORKS } from "@/data/wcaFilters";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
+import { WCA_NETWORKS } from "@/catalogs/wcaFilters";
 
 interface AcquisitionToolbarProps {
   selectedCountries: string[];

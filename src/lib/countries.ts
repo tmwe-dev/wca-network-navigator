@@ -84,7 +84,7 @@ export function getServiceIconColor(category: string): string {
 }
 
 // Resolve a market name (e.g. "UAE", "Saudi Arabia") to ISO country code
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 
 const MARKET_ALIASES: Record<string, string> = {
   uae: "AE", "united arab emirates": "AE", emirates: "AE",

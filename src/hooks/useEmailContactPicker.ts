@@ -8,7 +8,7 @@ import { findPickerPartners, findPickerPartnerContacts, findPickerContacts, find
 import { getCountryCodesBatched } from "@/data/partners";
 import { useMission } from "@/contexts/MissionContext";
 import { getCountryFlag } from "@/lib/countries";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import { createLogger } from "@/lib/log";
 import { pickerReducer, INITIAL_PICKER_STATE, type CountryStat, type PartnerRow, type PartnerContactRow, type ImportedContactRow, type BcaRow } from "@/types/email-picker";
 import { queryKeys } from "@/lib/queryKeys";

@@ -1,5 +1,5 @@
 import { ChevronRight, ChevronLeft, Check, MapPin } from "lucide-react";
-import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/data/italianProvinces";
+import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/catalogs/italianProvinces";
 import { WizardStepBar } from "./WizardStepBar";
 
 interface GeographyStepProps {

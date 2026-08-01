@@ -6,7 +6,7 @@ import { capitalizeFirst } from "@/lib/capitalize";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 import { getCountryFlag, resolveCountryCode } from "@/lib/countries";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { CRM_GROUPBY } from "./constants";
 import { createLogger } from "@/lib/log";

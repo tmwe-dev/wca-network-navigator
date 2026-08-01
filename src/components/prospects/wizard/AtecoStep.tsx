@@ -1,5 +1,5 @@
 import { ChevronRight, Check, SkipForward } from "lucide-react";
-import { ATECO_TREE } from "@/data/atecoCategories";
+import { ATECO_TREE } from "@/catalogs/atecoCategories";
 import { WizardStepBar } from "./WizardStepBar";
 
 const ATECO_SECTIONS = ATECO_TREE.filter(e => e.livello === 1);

@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import type { ContactPaginatedFilters } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
