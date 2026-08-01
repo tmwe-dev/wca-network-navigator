@@ -1,8 +1,7 @@
 /**
  * Scrape cache management — reading and persisting cached scrapes.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
-import { getScrapeCacheEntry } from "@/data/scrapeCache";
+import { getScrapeCacheEntry, upsertScrapeCacheEntry } from "@/data/scrapeCache";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
