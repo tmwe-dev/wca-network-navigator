@@ -36,9 +36,13 @@ export interface RuntimeQuery extends PromiseLike<RuntimeQueryResult> {
   ilike(column: string, pattern: string): RuntimeQuery;
   in(column: string, values: readonly unknown[]): RuntimeQuery;
   is(column: string, value: unknown): RuntimeQuery;
+  gt(column: string, value: unknown): RuntimeQuery;
   gte(column: string, value: unknown): RuntimeQuery;
+  lt(column: string, value: unknown): RuntimeQuery;
   lte(column: string, value: unknown): RuntimeQuery;
-  order(column: string, options?: { ascending?: boolean }): RuntimeQuery;
+  or(filter: string): RuntimeQuery;
+  order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): RuntimeQuery;
+  range(from: number, to: number): RuntimeQuery;
   limit(n: number): RuntimeQuery;
   maybeSingle(): PromiseLike<RuntimeQueryResult>;
   single(): PromiseLike<RuntimeQueryResult>;

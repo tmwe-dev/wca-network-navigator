@@ -7,11 +7,9 @@
  * whitelist; qui si esegue soltanto, tramite il boundary untyped centralizzato.
  * Nessun altro modulo deve importare `tFrom` per lo stesso scopo.
  */
-import { tFrom } from "@/lib/typedSupabase";
+import { tFrom, type RuntimeQuery, type RuntimeQueryResult } from "@/lib/typedSupabase";
 
-export type DynamicSelectBuilder = ReturnType<typeof tFrom> extends { select: infer _S }
-  ? ReturnType<ReturnType<typeof tFrom>["select"]>
-  : never;
+export type DynamicSelectBuilder = RuntimeQuery;
 
 /** Avvia una SELECT su una tabella già validata dal chiamante. */
 export function selectFromValidatedTable(
@@ -91,4 +89,33 @@ export async function updateValidatedColumn(
     .update({ [validatedColumn]: value })
     .eq(match.column, match.value);
   if (error) throw error;
+}
+
+
+/** Risultato di lettura già validato: righe come oggetti tipizzati. */
+export interface ValidatedRowsResult<T> {
+  data: T[] | null;
+  error: { message: string; code?: string } | null;
+}
+
+/**
+ * Converte il risultato `unknown` di una query dinamica in righe validate.
+ *
+ * `parseRow` è un vero validatore runtime: le righe che non lo superano sono
+ * scartate (fail closed) invece di essere castate alla cieca.
+ */
+export async function readValidatedRows<T>(
+  query: PromiseLike<RuntimeQueryResult>,
+  parseRow: (row: Record<string, unknown>) => T | null,
+): Promise<ValidatedRowsResult<T>> {
+  const res = await query;
+  if (res.error) return { data: null, error: res.error };
+  if (!Array.isArray(res.data)) return { data: [], error: null };
+  const out: T[] = [];
+  for (const raw of res.data) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const parsed = parseRow(raw as Record<string, unknown>);
+    if (parsed !== null) out.push(parsed);
+  }
+  return { data: out, error: null };
 }
