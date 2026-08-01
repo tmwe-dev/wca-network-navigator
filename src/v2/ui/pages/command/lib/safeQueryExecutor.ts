@@ -176,9 +176,14 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
   const { data, error, count } = await q;
   if (error) throw new Error(`Query fallita: ${error.message}`);
 
+  // `data` è `unknown` sul confine dinamico: si tengono solo gli oggetti.
+  const rows: Record<string, unknown>[] = Array.isArray(data)
+    ? data.filter((r): r is Record<string, unknown> => typeof r === "object" && r !== null)
+    : [];
+
   return {
-    rows: (data ?? []) as Record<string, unknown>[],
-    count: count ?? (Array.isArray(data) ? data.length : 0),
+    rows,
+    count: count ?? rows.length,
     table: plan.table,
     columnsUsed: plan.columns ?? liveColumns.slice(0, 10),
   };
