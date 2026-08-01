@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { format } from "date-fns";
+import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub,
-  DropdownMenuSubContent, DropdownMenuSubTrigger,
+  DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -12,16 +14,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  MoreVertical, CheckCircle2, StickyNote, CalendarClock,
-  Phone, Users, MoreHorizontal, CalendarIcon,
-} from "lucide-react";
+import { MoreVertical, CheckCircle2, StickyNote, CalendarClock, Phone, Users, MoreHorizontal, CalendarIcon, Mail, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
+import { useCockpitContactActions } from "@/hooks/useCockpitContactActions";
+import { queryKeys } from "@/lib/queryKeys";
 
 type ActivityType = Database["public"]["Enums"]["activity_type"];
 
@@ -37,7 +38,10 @@ interface Props {
 }
 
 export function ContactActionMenu({ contact, children }: Props) {
+  const navigate = useAppNavigate();
   const qc = useQueryClient();
+  const { insertActivity, deleteCockpitQueueItem } = useCockpitContactActions();
+  const { handleSendWhatsApp: bridgeSendWhatsApp, waAvailable: _waAvailable } = useDirectContactActions();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -49,10 +53,10 @@ export function ContactActionMenu({ contact, children }: Props) {
     status: "completed" | "pending",
     extra: { due_date?: string; description?: string; completed_at?: string } = {}
   ) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
 
-    const { error } = await supabase.from("activities").insert({
+    await insertActivity({
       user_id: user.id,
       activity_type: activityType,
       status,
@@ -62,20 +66,14 @@ export function ContactActionMenu({ contact, children }: Props) {
       source_meta: { company: contact.company, email: contact.email, country: contact.country, name: contact.name },
       partner_id: contact.partnerId,
       ...extra,
-    } as any);
+    });
 
-    if (error) {
-      toast.error("Errore creazione attività");
-      return;
-    }
-
-    // Remove from cockpit queue if completed or scheduled
     if (status === "completed" || extra.due_date) {
-      await supabase.from("cockpit_queue").delete().eq("id", contact.queueId);
+      await deleteCockpitQueueItem(contact.queueId);
     }
 
-    qc.invalidateQueries({ queryKey: ["cockpit-queue"] });
-    qc.invalidateQueries({ queryKey: ["activities"] });
+    qc.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+    qc.invalidateQueries({ queryKey: queryKeys.activities.all });
   };
 
   const handleMarkDone = async (type: ActivityType) => {
@@ -106,40 +104,97 @@ export function ContactActionMenu({ contact, children }: Props) {
     setScheduleOpen(false);
   };
 
+  const handleSendEmail = () => {
+    navigate("/v2/email-composer", {
+      state: {
+        partnerIds: contact.partnerId ? [contact.partnerId] : [],
+        prefilledRecipient: {
+          email: contact.email,
+          name: contact.name,
+          company: contact.company,
+          partnerId: contact.partnerId,
+          contactId: contact.sourceId,
+        },
+      },
+    });
+  };
+
+  const handleSendWhatsApp = () => {
+    const phone = contact.phone?.replace(/[^0-9+]/g, "");
+    if (!phone) {
+      toast.info("Numero di telefono non disponibile");
+      return;
+    }
+    bridgeSendWhatsApp({
+      phone,
+      contactName: contact.name,
+      companyName: contact.company,
+      contactId: contact.sourceId,
+      partnerId: contact.partnerId ?? undefined,
+      sourceType: contact.sourceType === "partner_contact" ? "partner" : contact.sourceType === "prospect_contact" ? "prospect" : "contact",
+      sourceId: contact.partnerId || contact.sourceId,
+    });
+  };
+
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {children || (
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md border border-border/50 bg-background/80 backdrop-blur-sm hover:bg-accent">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md border border-border/50 bg-background/80 backdrop-blur-sm hover:bg-accent" aria-label="Altre azioni">
               <MoreVertical className="w-3.5 h-3.5" />
             </Button>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-52">
+          {/* Communication group */}
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
+            Comunicazione
+          </DropdownMenuLabel>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={handleSendEmail} disabled={!contact.email}>
+            <Mail className="w-4 h-4 text-primary" />
+            Invia email ora
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={handleSendWhatsApp} disabled={!contact.phone}>
+            <MessageCircle className="w-4 h-4 text-emerald-500" />
+            Invia WhatsApp
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Organization group */}
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
+            Organizza
+          </DropdownMenuLabel>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={() => setNoteOpen(true)}>
+            <StickyNote className="w-4 h-4 text-amber-500" />
+            Aggiungi nota
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={() => setScheduleOpen(true)}>
+            <CalendarClock className="w-4 h-4 text-blue-500" />
+            Programma contatto
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Completion group */}
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1">
+            Completa
+          </DropdownMenuLabel>
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="gap-2 text-xs">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+            <DropdownMenuSubTrigger className="gap-2.5 text-xs px-3 py-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               Segna come svolta
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               {DONE_TYPES.map(dt => (
-                <DropdownMenuItem key={dt.type} className="gap-2 text-xs" onClick={() => handleMarkDone(dt.type)}>
-                  <dt.icon className="w-3.5 h-3.5" />
+                <DropdownMenuItem key={dt.type} className="gap-2.5 text-xs px-3 py-2" onClick={() => handleMarkDone(dt.type)}>
+                  <dt.icon className="w-4 h-4" />
                   {dt.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <DropdownMenuItem className="gap-2 text-xs" onClick={() => setNoteOpen(true)}>
-            <StickyNote className="w-3.5 h-3.5 text-amber-500" />
-            Aggiungi nota
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="gap-2 text-xs" onClick={() => setScheduleOpen(true)}>
-            <CalendarClock className="w-3.5 h-3.5 text-blue-500" />
-            Programma
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -166,7 +221,7 @@ export function ContactActionMenu({ contact, children }: Props) {
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-sm">Programma — {contact.name}</DialogTitle>
+            <DialogTitle className="text-sm">Programma contatto — {contact.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Popover>

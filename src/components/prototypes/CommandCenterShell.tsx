@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Home, Users, Radar, CalendarCheck, Settings, Search, ArrowLeft, Activity, Mail, Download, Sparkles } from "lucide-react";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
+import { Home, Users, Radar, CalendarCheck, Settings, Search, ArrowLeft, Activity, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,10 +11,14 @@ import { useProspectStats } from "@/hooks/useProspectStats";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDailyBriefing } from "@/hooks/useDailyBriefing";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
+import { countActivePartners } from "@/application/data/partners";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
+import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/application/data/uiShellQueries";
+import { toRecords } from "@/lib/records";
 
 const NAV_ITEMS = [
   { key: "home", icon: Home, label: "Home" },
@@ -26,9 +30,9 @@ const NAV_ITEMS = [
 
 function usePartnerCount() {
   return useQuery({
-    queryKey: ["proto-partner-count"],
+    queryKey: queryKeys.contacts.proto.partnerCount(),
     queryFn: async () => {
-      const { count } = await supabase.from("partners").select("*", { count: "exact", head: true });
+      const count = await countActivePartners();
       return count ?? 0;
     },
     staleTime: 60_000,
@@ -37,22 +41,22 @@ function usePartnerCount() {
 
 function useRecentContacts() {
   return useQuery({
-    queryKey: ["proto-recent-contacts"],
+    queryKey: queryKeys.contacts.proto.recentContacts(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partner_contacts")
-        .select("id, first_name, last_name, email, phone, partners(id, company_name, country_code)")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      return (data || []).map((pc: any) => ({
-        id: pc.id,
-        name: [pc.first_name, pc.last_name].filter(Boolean).join(" ") || "—",
-        company: pc.partners?.company_name || "—",
-        email: pc.email || undefined,
-        phone: pc.phone || undefined,
-        country: pc.partners?.country_code || undefined,
+      const { data } = await findPrototypeContacts(
+        "id, first_name, last_name, email, phone, partners(id, company_name, country_code)",
+        100,
+        true,
+      );
+      return toRecords(data).map((pc: Record<string, unknown>) => ({
+        id: String(pc.id),
+        name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
+        company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",
+        email: pc.email as string || undefined,
+        phone: pc.phone as string || undefined,
+        country: (pc.partners as Record<string, unknown>)?.country_code as string || undefined,
         origin: "WCA",
-        partnerId: pc.partners?.id || null,
+        partnerId: (pc.partners as Record<string, unknown>)?.id as string || null,
       })) as UnifiedContact[];
     },
     staleTime: 60_000,
@@ -72,7 +76,7 @@ function WidgetCard({ title, children, icon: Icon, className }: { title: string;
 }
 
 export function CommandCenterShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [section, setSection] = useState<string>("home");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,7 +103,7 @@ export function CommandCenterShell() {
     <div className="h-screen flex bg-background text-foreground">
       {/* Icon sidebar */}
       <aside className="w-14 border-r border-border/60 flex flex-col items-center py-3 gap-1 shrink-0 bg-muted/20">
-        <Button variant="ghost" size="icon" className="h-9 w-9 mb-2" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" className="h-9 w-9 mb-2" aria-label="Indietro" onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         {NAV_ITEMS.map(item => (
@@ -145,7 +149,7 @@ export function CommandCenterShell() {
             <div className="p-4 space-y-4 max-w-4xl mx-auto">
               {/* Briefing */}
               <WidgetCard title="Briefing AI" icon={Sparkles}>
-                <p className="text-xs text-foreground/80 leading-relaxed">
+                <p className="text-xs text-foreground leading-relaxed">
                   {briefing?.summary || "Caricamento briefing..."}
                 </p>
               </WidgetCard>
@@ -256,7 +260,7 @@ export function CommandCenterShell() {
 
           {section === "settings" && (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              <Settings className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+              <Settings className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
               <p>Le impostazioni sono accessibili dalla versione completa</p>
               <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/settings")}>
                 Vai alle impostazioni

@@ -4,21 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import {
-  Wand2, Loader2, Send, Copy, Edit3, Eye, RotateCcw,
-  Mail, User, Building2, CheckCircle2, AlertCircle,
-  ChevronLeft, ChevronRight, Zap, AtSign, AlertTriangle
-} from "lucide-react";
+import { Wand2, Loader2, Send, Copy, Edit3, Eye, RotateCcw, Mail, User, AlertCircle, ChevronLeft, ChevronRight, Zap, AtSign, AlertTriangle } from "lucide-react";
 import { type AllActivity } from "@/hooks/useActivities";
-import { type GeneratedEmail, useEmailGenerator } from "@/hooks/useEmailGenerator";
+import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useSocialLinks } from "@/hooks/useSocialLinks";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
+import { useEnqueueAction } from "@/hooks/useEnqueueAction";
+// SSOT v3.9.56: tutti gli invii email passano da ai_pending_actions → approvazione manuale
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
@@ -58,14 +55,15 @@ export default function EmailCanvas({
 }: EmailCanvasProps) {
   const { generate, isGenerating } = useEmailGenerator();
   const { data: settings } = useAppSettings();
+  const { enqueue, enqueuing } = useEnqueueAction();
   const [editMode, setEditMode] = useState(false);
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [sending, setSending] = useState(false);
-
+  const sending = enqueuing;
+  // LOVABLE-93: tracking gestito da postSendPipeline dentro send-email edge
   const partnerId = activity?.partner_id || null;
   const sourceType = activity?.source_type || "partner";
-  const hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
+  const _hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
   const { data: socialLinks = [] } = useSocialLinks(partnerId);
   const companyLinkedIn = socialLinks.find((l) => l.platform === "linkedin" && !l.contact_id);
   const contactLinkedIn = socialLinks.find(
@@ -116,18 +114,32 @@ export default function EmailCanvas({
 
   const handleSend = async () => {
     if (!displayEmail?.contactEmail) { toast({ title: "Nessun indirizzo email", variant: "destructive" }); return; }
-    setSending(true);
-    try {
-      const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
-    } catch (err: any) {
-      toast({ title: "Errore invio", description: err.message, variant: "destructive" });
-    } finally { setSending(false); }
+    // Hard guard: solo invio singolo. Multipli destinatari → flusso bulk (BulkActionMenu → email_campaign_queue).
+    const to = displayEmail.contactEmail;
+    if (Array.isArray(to)) {
+      toast({ title: "Invio singolo non consentito", description: "Per più destinatari usa il flusso bulk (Outreach → In Uscita).", variant: "destructive" });
+      return;
+    }
+    const recipients = String(to).split(/[,;]/).map(s => s.trim()).filter(Boolean);
+    if (recipients.length > 1) {
+      toast({ title: "Invio singolo non consentito", description: "Rilevati più destinatari. Usa il flusso bulk (Outreach → In Uscita).", variant: "destructive" });
+      return;
+    }
+    const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
+    const res = await enqueue({
+      action_type: "send_email",
+      payload: { to: recipients[0], subject: displaySubject, html: sanitizedHtml, body: displayBody },
+      partner_id: activity?.partner_id ?? null,
+      contact_id: activity?.selected_contact_id ?? null,
+      email_address: recipients[0],
+      suggested_content: displayBody,
+      reasoning: "Email generata da EmailCanvas, in attesa di approvazione manuale.",
+      source: "EmailCanvas",
+      decision_origin: "user_manual",
+    });
+    if (!res.ok) {
+      toast({ title: "Errore in coda", description: res.error || "", variant: "destructive" });
+    }
   };
 
   const partner = activity?.partners;
@@ -142,7 +154,7 @@ export default function EmailCanvas({
   if (!activity) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <Mail className="w-10 h-10 text-muted-foreground/40 mb-3" />
+        <Mail className="w-10 h-10 text-muted-foreground mb-3" />
         <h3 className="text-sm font-medium text-foreground">Seleziona un contatto</h3>
         <p className="text-xs text-muted-foreground mt-1 max-w-xs">
           Scegli un'attività dalla lista per generare un'email personalizzata
@@ -199,7 +211,7 @@ export default function EmailCanvas({
               <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
             </div>
             <p className="text-sm text-muted-foreground">Generazione in corso...</p>
-            <p className="text-xs text-muted-foreground/60">Analisi profilo {displayCompany}</p>
+            <p className="text-xs text-muted-foreground">Analisi profilo {displayCompany}</p>
           </div>
         ) : displayEmail ? (
           <div className="p-4">
@@ -268,7 +280,7 @@ export default function EmailCanvas({
                   <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)}
                     className="min-h-[350px] text-sm leading-relaxed border-border font-[inherit]" />
                 ) : (
-                  <div className="text-sm leading-[1.75] text-foreground/80 whitespace-pre-wrap">
+                  <div className="text-sm leading-[1.75] text-foreground whitespace-pre-wrap">
                     {displayBody}
                   </div>
                 )}
@@ -296,7 +308,7 @@ export default function EmailCanvas({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-center p-8">
-            <Wand2 className="w-10 h-10 text-muted-foreground/40" />
+            <Wand2 className="w-10 h-10 text-muted-foreground" />
             {/* Contact picker for partner-source activities */}
             {sourceType === "partner" && partnerId && (
               <div className="w-full max-w-xs mb-2">

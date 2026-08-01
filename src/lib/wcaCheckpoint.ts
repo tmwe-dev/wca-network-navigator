@@ -1,3 +1,7 @@
+import { createLogger } from "@/lib/log";
+import { toRecord } from "@/lib/records";
+
+const log = createLogger("wcaCheckpoint");
 /**
  * WCA Timing Checkpoint — Global Gate
  * 
@@ -16,10 +20,11 @@ interface CheckpointState {
 }
 
 function getState(): CheckpointState {
-  if (!(window as any)[CHECKPOINT_KEY]) {
-    (window as any)[CHECKPOINT_KEY] = { lastRequestTs: 0 };
+  const win = toRecord(window);
+  if (!win[CHECKPOINT_KEY]) {
+    win[CHECKPOINT_KEY] = { lastRequestTs: 0 };
   }
-  return (window as any)[CHECKPOINT_KEY];
+  return win[CHECKPOINT_KEY] as CheckpointState;
 }
 
 /** Green zone threshold in seconds (raised from 15 to 20 to reduce WCA anti-bot triggers) */
@@ -69,6 +74,13 @@ export function getLastRequestTimestamp(): number {
 }
 
 /**
+ * Resetta lo stato del checkpoint (uso test/dev).
+ */
+export function resetCheckpoint(): void {
+  getState().lastRequestTs = 0;
+}
+
+/**
  * THE CHECKPOINT GATE.
  * 
  * Waits until the green zone is reached (≥15s since last request),
@@ -107,7 +119,8 @@ export async function waitForGreenLight(
         const t = setTimeout(resolve, 1000);
         signal?.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
       });
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       return false; // Aborted
     }
   }

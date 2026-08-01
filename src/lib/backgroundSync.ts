@@ -5,6 +5,11 @@
  */
 
 import { callCheckInbox } from "@/lib/checkInbox";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("backgroundSync");
+const SYNC_LOOP_DELAY_MS = 1500;
+const TRANSIENT_RETRY_LIMIT = 4;
 
 export interface DownloadedEmail {
   id: string;
@@ -85,8 +90,12 @@ export function bgSyncIsRunning(): boolean {
   return running;
 }
 
-export async function bgSyncStart() {
+export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?: boolean } = {}) {
   if (running) return;
+  // Default: recupera tutte le nuove UID senza marcare nulla come letto
+  // (check-inbox usa BODY.PEEK). Limitarsi alle sole UNSEEN nasconde le mail
+  // già lette da altri client ma mai importate nell'app.
+  const unreadOnly = opts.unreadOnly ?? false;
 
   running = true;
   abortSync = false;
@@ -116,18 +125,19 @@ export async function bgSyncStart() {
 
   try {
     let consecutiveErrors = 0;
-    const MAX_RETRIES = 10;
+      const MAX_RETRIES = TRANSIENT_RETRY_LIMIT;
 
     while (!abortSync) {
       batchNum += 1;
-      let result: any;
+      let result: { total: number; has_more?: boolean; remaining?: number; messages?: Array<Record<string, unknown>>; transient?: boolean; resourceLimit?: boolean };
 
       try {
-        result = await callCheckInbox();
+        result = await callCheckInbox(mailboxId ?? null, { unreadOnly }) as typeof result;
         consecutiveErrors = 0;
-      } catch (batchErr: any) {
+      } catch (batchErr: unknown) {
         consecutiveErrors += 1;
-        console.warn(`[bg-sync] Batch ${batchNum} error (${consecutiveErrors}/${MAX_RETRIES}): ${batchErr.message}`);
+        const errMsg = batchErr instanceof Error ? batchErr.message : String(batchErr);
+        log.warn("batch error", { batchNum, consecutiveErrors, maxRetries: MAX_RETRIES, message: errMsg });
 
         if (consecutiveErrors >= MAX_RETRIES) {
           throw batchErr;
@@ -140,6 +150,34 @@ export async function bgSyncStart() {
         };
         notifyProgress();
         await new Promise((resolve) => setTimeout(resolve, 2000 * consecutiveErrors));
+        continue;
+      }
+
+      // CPU exhaustion (546 WORKER_RESOURCE_LIMIT) o cold-start (503 BOOT_ERROR)
+      // arrivano come { total: 0, transient: true } da callCheckInbox.
+      // NON considerarli "fine sync": fai backoff e riprova lo stesso batch.
+      if (result.transient) {
+        consecutiveErrors += 1;
+        const reason = result.resourceLimit ? "CPU edge satura" : "edge in avvio";
+        log.warn("transient batch, retrying", { batchNum, consecutiveErrors, maxRetries: MAX_RETRIES, reason });
+        if (consecutiveErrors >= MAX_RETRIES) {
+          progress = {
+            ...progress,
+            status: "error",
+            errorMessage: `Edge function in sovraccarico (${reason}). Riprova fra qualche minuto.`,
+          };
+          notifyProgress();
+          break;
+        }
+        progress = {
+          ...progress,
+          batch: batchNum,
+          lastSubject: `⏸️ ${reason}, riprovo… (${consecutiveErrors}/${MAX_RETRIES})`,
+          status: "syncing",
+        };
+        notifyProgress();
+        // backoff progressivo: evita martellamento della funzione quando il worker è saturo
+        await new Promise((resolve) => setTimeout(resolve, 10_000 * consecutiveErrors));
         continue;
       }
 
@@ -157,12 +195,12 @@ export async function bgSyncStart() {
 
         for (const message of messages) {
           notifyEmail({
-            id: message.id || `batch-${batchNum}-${Math.random().toString(36).slice(2)}`,
-            subject: message.subject || "(senza oggetto)",
-            from: message.from_address || message.from || "",
-            date: message.email_date || message.date || new Date().toISOString(),
-            bodyHtml: message.body_html || undefined,
-            bodyText: message.body_text || undefined,
+            id: String(message.id || `batch-${batchNum}-${Math.random().toString(36).slice(2)}`),
+            subject: String(message.subject || "(senza oggetto)"),
+            from: String(message.from_address || message.from || ""),
+            date: String(message.email_date || message.date || new Date().toISOString()),
+            bodyHtml: message.body_html ? String(message.body_html) : undefined,
+            bodyText: message.body_text ? String(message.body_text) : undefined,
             timestamp: Date.now(),
           });
         }
@@ -174,7 +212,7 @@ export async function bgSyncStart() {
           skipped: totalSkipped,
           remaining: serverRemaining,
           batch: batchNum,
-          lastSubject: lastMsg?.subject || progress.lastSubject,
+          lastSubject: String(lastMsg?.subject || progress.lastSubject),
           status: "syncing",
         };
       } else {
@@ -191,7 +229,7 @@ export async function bgSyncStart() {
 
       notifyProgress();
       if (!hasMore) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, SYNC_LOOP_DELAY_MS));
     }
 
     progress = {
@@ -202,8 +240,8 @@ export async function bgSyncStart() {
       batch: batchNum,
     };
     notifyProgress();
-  } catch (err: any) {
-    progress = { ...progress, status: "error", errorMessage: err.message };
+  } catch (err: unknown) {
+    progress = { ...progress, status: "error", errorMessage: err instanceof Error ? err.message : String(err) };
     notifyProgress();
   } finally {
     if (timer) clearInterval(timer);

@@ -24,9 +24,9 @@ const TemplateSuggest = ({ visible, label = "Salva come template", onSave }: Tem
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.6, ease }}
       onClick={handleSave}
-      className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground/20 hover:text-primary/40 transition-all duration-700 group"
+      className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground hover:text-primary transition-all duration-700 group"
     >
-      <Bookmark className="w-3 h-3 group-hover:text-primary/30 transition-colors duration-500" />
+      <Bookmark className="w-3 h-3 group-hover:text-primary transition-colors duration-500" />
       <span className="font-light tracking-wide">{label}</span>
     </motion.button>
   );

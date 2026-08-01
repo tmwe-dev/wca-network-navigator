@@ -8,16 +8,14 @@ import { ContactRecordAgent } from "./ContactRecordAgent";
 import { ContactEnrichmentCard } from "@/components/contacts/ContactEnrichmentCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, forwardRef, type ReactNode } from "react";
 
-export function ContactRecordDrawer() {
+export const ContactRecordDrawer = forwardRef<HTMLDivElement>(function ContactRecordDrawer(_props, _ref) {
   const { isOpen, target, list, currentIndex, close, goNext, goPrev } = useContactDrawer();
   const { data: record, isLoading } = useContactRecord(target?.sourceType ?? null, target?.sourceId ?? null);
   const updateMutation = useUpdateContactRecord();
-
   // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
@@ -30,7 +28,7 @@ export function ContactRecordDrawer() {
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen, close, goNext, goPrev]);
 
-  const handleSave = (updates: Record<string, any>) => {
+  const handleSave = (updates: Record<string, unknown>) => {
     if (!target) return;
     updateMutation.mutate(
       { sourceType: target.sourceType, sourceId: target.sourceId, updates },
@@ -41,12 +39,13 @@ export function ContactRecordDrawer() {
     );
   };
 
-  const hasEnrichment = record?.enrichmentData && (
-    record.enrichmentData.contact_profile ||
-    record.enrichmentData.company_profile ||
-    record.enrichmentData.linkedin_url ||
-    record.enrichmentData.linkedin_profile_url
-  );
+  const ed = record?.enrichmentData as Record<string, unknown> | null | undefined;
+  const hasEnrichment = Boolean(ed && (
+    ed.contact_profile ||
+    ed.company_profile ||
+    ed.linkedin_url ||
+    ed.linkedin_profile_url
+  ));
 
   return (
     <AnimatePresence>
@@ -93,7 +92,7 @@ export function ContactRecordDrawer() {
                     />
 
                     {/* Communication actions */}
-                    <ContactRecordActions record={record} />
+                    {(<ContactRecordActions record={record} />) as ReactNode}
 
                     {/* Agent assignment */}
                     <ContactRecordAgent sourceId={record.sourceId} sourceType={record.sourceType} />
@@ -106,7 +105,7 @@ export function ContactRecordDrawer() {
                           Dati Arricchimento AI
                         </div>
                         <ContactEnrichmentCard
-                          enrichmentData={record.enrichmentData}
+                          enrichmentData={record.enrichmentData as Record<string, unknown>}
                           deepSearchAt={record.deepSearchAt}
                         />
                       </div>
@@ -135,4 +134,4 @@ export function ContactRecordDrawer() {
       )}
     </AnimatePresence>
   );
-}
+});

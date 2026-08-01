@@ -1,91 +1,68 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { swallowedError } from "../_shared/swallowedError.ts";
+import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// LOVABLE-75 — LEGACY
+// Questa funzione è mantenuta solo per useAcquisitionPipeline.
+// Tutti gli altri chiamanti devono usare il Deep Search client-side (useDeepSearchLocal)
+// o leggere i dati esistenti via readUnifiedEnrichment (vedi _shared/enrichmentAdapter.ts).
+// Generate-email / improve-email / generate-outreach / Command tools NON devono più invocarla.
 
-// ── Credit helpers ──
-async function getUserId(req: Request, supabase: any): Promise<string | null> {
-  const auth = req.headers.get("Authorization");
-  if (!auth) return null;
-  const token = auth.replace("Bearer ", "");
-  const { data } = await supabase.auth.getUser(token);
-  return data?.user?.id || null;
-}
+// Audit Sez.1 — G: rimosso credit/BYOK dead-code.
+// AI usage limits sono globalmente disattivati (kill-switch AI_USAGE_LIMITS_ENABLED).
+// In caso di riattivazione futura, la contabilità centralizzata vive in `_shared/callLLM.ts`.
+// Audit Sez.1 — B/E: caching su scrape_cache (markdown) + ai_extract_cache (output AI).
+// Contratto I/O invariato — gli output sono identici a prima, solo serviti da cache se hit.
 
-async function isByok(userId: string, supabase: any): Promise<boolean> {
-  const { data } = await supabase
-    .from("user_api_keys")
-    .select("api_key")
-    .eq("user_id", userId)
-    .eq("provider", "google")
-    .eq("is_active", true)
-    .maybeSingle();
-  return !!data?.api_key;
-}
+const SCRAPE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 giorni
 
-async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: any) {
-  const inputCost = Math.ceil(usage.prompt_tokens / 1000 * 1);
-  const outputCost = Math.ceil(usage.completion_tokens / 1000 * 2);
-  const total = inputCost + outputCost;
-  if (total <= 0) return;
-
-  const { data: credits } = await supabase.from("user_credits").select("balance, total_consumed").eq("user_id", userId).single();
-  if (!credits) return;
-
-  await supabase.from("user_credits").update({
-    balance: Math.max(0, credits.balance - total),
-    total_consumed: credits.total_consumed + total,
-  }).eq("user_id", userId);
-
-  await supabase.from("credit_transactions").insert({
-    user_id: userId,
-    amount: -total,
-    operation: "ai_call",
-    description: `enrich-partner-website: ${usage.prompt_tokens} in + ${usage.completion_tokens} out`,
-  });
-  console.log(`Credits consumed: ${total} (balance: ${credits.balance - total})`);
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const { partnerId, markdown: preScrapedMarkdown, sourceUrl: preScrapedUrl } = await req.json();
     if (!partnerId) {
       return new Response(JSON.stringify({ error: "partnerId is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // ── Auth & BYOK check ──
-    const userId = await getUserId(req, supabase);
-    const byok = userId ? await isByok(userId, supabase) : false;
+    // ── Check global pause ──
+    const { data: pauseSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .maybeSingle();
 
-    if (userId && !byok) {
-      const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
-      if (!credits || credits.balance < 5) {
-        return new Response(JSON.stringify({ error: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (pauseSetting?.value === "true") {
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Get partner
@@ -97,13 +74,13 @@ Deno.serve(async (req) => {
 
     if (partnerError || !partner) {
       return new Response(JSON.stringify({ error: "Partner not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     if (!partner.website) {
       return new Response(JSON.stringify({ error: "Partner has no website" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -113,17 +90,35 @@ Deno.serve(async (req) => {
       url = `https://${url}`;
     }
 
-    console.log(`Enriching ${partner.company_name}: ${url}`);
 
     // Use pre-scraped markdown if provided, otherwise fallback to server-side fetch
     let markdown = "";
     if (preScrapedMarkdown && preScrapedMarkdown.length > 50) {
       markdown = preScrapedMarkdown.substring(0, 15000);
-      console.log(`Using pre-scraped markdown (${markdown.length} chars)`);
     } else {
-      // Fallback: direct fetch website content
+      // Audit Sez.1 — B: prova scrape_cache prima di fetchare (TTL 7gg).
       try {
-        const fetchResp = await fetch(url, {
+        const { data: cached } = await supabase
+          .from("scrape_cache")
+          .select("payload, scraped_at")
+          .eq("url", url)
+          .maybeSingle();
+        if (cached?.scraped_at && (Date.now() - new Date(cached.scraped_at).getTime()) < SCRAPE_CACHE_TTL_MS) {
+          const payload = cached.payload as { markdown?: string; text?: string } | null;
+          const cachedMd = payload?.markdown ?? payload?.text ?? "";
+          if (typeof cachedMd === "string" && cachedMd.length > 50) {
+            markdown = cachedMd.substring(0, 15000);
+          }
+        }
+      } catch (e) {
+        swallowedError("enrich_partner_website.scrape_cache_read_failed", e);
+      }
+
+      // Fallback: direct fetch website content
+      if (!markdown) try {
+        // SSRF guard P1.4 — block private/internal hosts before fetching
+        const safeUrl = assertSafePublicUrl(url);
+        const fetchResp = await fetch(safeUrl.toString(), {
           headers: { "User-Agent": "Mozilla/5.0 (compatible; PartnerConnectBot/1.0)" },
           redirect: "follow",
         });
@@ -136,9 +131,17 @@ Deno.serve(async (req) => {
             .replace(/\s+/g, " ")
             .trim()
             .substring(0, 15000);
+          // Salva nel cache per le prossime invocazioni.
+          if (markdown.length > 50) {
+            try {
+              await supabase.from("scrape_cache").upsert({
+                url, mode: "static", payload: { markdown }, scraped_at: new Date().toISOString(),
+              }, { onConflict: "url" });
+            } catch (e) { swallowedError("enrich_partner_website.scrape_cache_write_failed", e); }
+          }
         }
       } catch (e) {
-        console.error("Website fetch failed:", e);
+        swallowedError("enrich_partner_website.fetch_page_failed", e);
       }
     }
 
@@ -150,21 +153,31 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, enrichment: null, message: "No content extracted" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Extracted ${markdown.length} chars, analyzing with AI...`);
 
-    // Analyze with Gemini via Lovable AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+    // Audit Sez.1 — B: cache AI extract via hash(url + system + content slice).
+    const AI_MODEL = "google/gemini-3-flash-preview";
+    const aiContentSlice = markdown.substring(0, 8000);
+    const aiCacheKey = await sha256Hex(`enrich-partner-website|${AI_MODEL}|${url}|${aiContentSlice}`);
+    let enrichment: Record<string, unknown> | null = null;
+    try {
+      const { data: aiCached } = await supabase
+        .from("ai_extract_cache")
+        .select("result, expires_at")
+        .eq("cache_key", aiCacheKey)
+        .maybeSingle();
+      if (aiCached?.result && new Date(aiCached.expires_at).getTime() > Date.now()) {
+        enrichment = aiCached.result as Record<string, unknown>;
+      }
+    } catch (e) {
+      swallowedError("enrich_partner_website.ai_cache_read_failed", e);
+    }
+
+    const aiResponse = enrichment ? null : await aiFetch({
+        model: AI_MODEL,
         messages: [
           {
             role: "system",
@@ -176,7 +189,7 @@ Deno.serve(async (req) => {
 Website: ${url}
 
 Contenuto del sito:
-${markdown.substring(0, 8000)}
+${aiContentSlice}
 
 Estrai queste informazioni (metti null se non trovate):
 {
@@ -229,79 +242,77 @@ Estrai queste informazioni (metti null se non trovate):
           },
         ],
         tool_choice: { type: "function", function: { name: "extract_company_data" } },
-      }),
-    });
+      });
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
+    if (aiResponse && !aiResponse.ok) {
       const detail = aiResponse.status === 402 ? "Crediti AI esauriti. Riprova più tardi." : `AI analysis failed (${aiResponse.status})`;
       return new Response(JSON.stringify({ error: detail }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const aiData = await aiResponse.json();
-
-    // ── Consume credits ──
-    if (userId && !byok && aiData.usage) {
-      await consumeCredits(userId, {
-        prompt_tokens: aiData.usage.prompt_tokens || 0,
-        completion_tokens: aiData.usage.completion_tokens || 0,
-      }, supabase);
-    }
-
-    let enrichment: any = null;
-
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        enrichment = JSON.parse(toolCall.function.arguments);
-      } catch {
-        console.error("Failed to parse tool call arguments");
+    if (aiResponse && !enrichment) {
+      const aiData = await aiResponse.json();
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall?.function?.arguments) {
+        try { enrichment = JSON.parse(toolCall.function.arguments); } catch { /* ignore */ }
       }
-    }
-
-    if (!enrichment) {
-      const content = aiData.choices?.[0]?.message?.content || "";
-      try {
-        enrichment = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
-      } catch {
-        console.error("Failed to parse AI response");
+      if (!enrichment) {
+        const content = aiData.choices?.[0]?.message?.content || "";
+        try { enrichment = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim()); } catch { /* ignore */ }
+      }
+      // Salva in cache solo se parsing OK.
+      if (enrichment) {
+        try {
+          await supabase.from("ai_extract_cache").upsert({
+            cache_key: aiCacheKey, result: enrichment, model: AI_MODEL,
+          }, { onConflict: "cache_key" });
+        } catch (e) { swallowedError("enrich_partner_website.ai_cache_write_failed", e); }
       }
     }
 
     if (!enrichment) {
       return new Response(JSON.stringify({ error: "Failed to extract data" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     enrichment.source_url = url;
 
+    // Extract logo_url and website from enrichment for top-level columns
+    const logoUrl = enrichment.logo_url && typeof enrichment.logo_url === "string" ? enrichment.logo_url : null;
+    const websiteValue = enrichment.website && typeof enrichment.website === "string" ? enrichment.website : null;
+
     const { error: updateError } = await supabase.from("partners").update({
       enrichment_data: enrichment,
       enriched_at: new Date().toISOString(),
+      ...(logoUrl && { logo_url: logoUrl }),
+      ...(websiteValue && { website: websiteValue }),
     }).eq("id", partnerId);
 
     if (updateError) {
-      console.error("DB update error:", updateError);
       return new Response(JSON.stringify({ error: "Failed to save enrichment" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`Enrichment saved for ${partner.company_name}`);
+
+    // LOVABLE-93: Auto-calculate quality score after enrichment
+    try {
+      const { triggerQualityScoreRecalculation } = await import("../_shared/enrichmentAdapter.ts");
+      await triggerQualityScoreRecalculation(supabase, partnerId);
+    } catch (e) {
+      swallowedError("enrich_partner_website.quality_score_recalc_failed", e);
+    }
 
     return new Response(
       JSON.stringify({ success: true, enrichment }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });

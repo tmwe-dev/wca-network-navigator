@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from "react";
+import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, Image, Link2, Eye } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
-import { supabase } from "@/integrations/supabase/client";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
-import { ROBIN_VOICE_CALL_URL } from "@/data/agentTemplates";
+import { uploadTemplateFile, getTemplatePublicUrl } from "@/application/data/templatesStorage";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
+import { ROBIN_VOICE_CALL_URL } from "@/constants/agentTemplates";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
+
+const log = createLogger("AgentSignatureConfig");
 
 interface Props {
   agent: Agent;
@@ -36,12 +41,12 @@ export function AgentSignatureConfig({ agent }: Props) {
     try {
       const ext = file.name.split(".").pop();
       const path = `agent-signatures/${agent.id}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("templates").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("templates").getPublicUrl(path);
-      setSignatureImageUrl(urlData.publicUrl);
+      await uploadTemplateFile(path, file, { upsert: true });
+      const publicUrl = getTemplatePublicUrl(path);
+      setSignatureImageUrl(publicUrl);
       toast.success("Immagine caricata");
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore upload immagine");
     } finally {
       setUploading(false);
@@ -55,7 +60,7 @@ export function AgentSignatureConfig({ agent }: Props) {
         signature_html: signatureHtml || null,
         signature_image_url: signatureImageUrl || null,
         voice_call_url: voiceCallUrl || null,
-      } as any,
+      } as Parameters<typeof updateAgent.mutate>[0],
       { onSuccess: () => toast.success("Firma agente salvata") }
     );
   };
@@ -101,11 +106,11 @@ export function AgentSignatureConfig({ agent }: Props) {
         <Label className="text-xs">Immagine Firma (avatar agente)</Label>
         <div className="flex items-center gap-3 mt-1">
           {signatureImageUrl ? (
-            <img src={signatureImageUrl} alt="Firma" className="w-12 h-12 rounded-full object-cover border border-border/50" />
+            <OptimizedImage src={signatureImageUrl} alt="Firma" className="w-12 h-12 rounded-full object-cover border border-border/50" />
           ) : (() => {
             const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
             return avatarSrc ? (
-              <img src={avatarSrc} alt={agent.name} className="w-12 h-12 rounded-full object-cover border border-border/50" />
+              <OptimizedImage src={avatarSrc} alt={agent.name} className="w-12 h-12 rounded-full object-cover border border-border/50" />
             ) : (
               <span className="text-3xl">{agent.avatar_emoji}</span>
             );
@@ -159,7 +164,7 @@ export function AgentSignatureConfig({ agent }: Props) {
       {showPreview && (
         <div className="border border-border/50 rounded-lg p-4 bg-white">
           <p className="text-[10px] text-muted-foreground mb-2">Anteprima firma:</p>
-          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }} />
         </div>
       )}
 

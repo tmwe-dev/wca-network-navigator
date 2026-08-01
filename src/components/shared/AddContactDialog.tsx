@@ -1,14 +1,22 @@
 import { useState } from "react";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
+import {
+  getOrCreateManualImportLog,
+  insertManualContact,
+  insertManualPartnerContact,
+} from "@/application/data/manualContacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 type Destination = "contacts" | "network" | "cockpit";
 
@@ -26,6 +34,7 @@ interface AddContactDialogProps {
 export default function AddContactDialog({
   open, onOpenChange, defaultDestination = "contacts", partnerId, partnerName,
 }: AddContactDialogProps) {
+  const navigate = useAppNavigate();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [destination, setDestination] = useState<Destination>(defaultDestination);
@@ -50,7 +59,7 @@ export default function AddContactDialog({
     setSaving(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       let sourceId: string | null = null;
@@ -58,60 +67,25 @@ export default function AddContactDialog({
 
       if (destination === "contacts") {
         // Get or create "manual" import log
-        let { data: existingLog } = await supabase
-          .from("import_logs")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("file_name", "__manual_entry__")
-          .limit(1)
-          .single();
+        const logId = await getOrCreateManualImportLog(user.id);
 
-        let logId: string;
-        if (existingLog) {
-          logId = existingLog.id;
-        } else {
-          const { data: newLog, error: logErr } = await supabase
-            .from("import_logs")
-            .insert({
-              user_id: user.id,
-              file_name: "__manual_entry__",
-              file_size: 0,
-              total_rows: 0,
-              imported_rows: 0,
-              status: "completed",
-              normalization_method: "manual",
-            })
-            .select("id")
-            .single();
-          if (logErr) throw logErr;
-          logId = newLog!.id;
-        }
-
-        const { data: contact, error } = await supabase
-          .from("imported_contacts")
-          .insert({
-            import_log_id: logId,
-            user_id: user.id,
-            company_name: form.company.trim() || null,
-            name: form.name.trim() || null,
-            email: form.email.trim() || null,
-            phone: form.phone.trim() || null,
-            mobile: form.mobile.trim() || null,
-            country: form.country.trim() || null,
-            city: form.city.trim() || null,
-            position: form.position.trim() || null,
-            note: form.notes.trim() || null,
-            origin: "Manuale",
-            lead_status: "new",
-            row_number: 0,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        sourceId = contact!.id;
+        const contactId = await insertManualContact({
+          importLogId: logId,
+          userId: user.id,
+          companyName: form.company.trim() || null,
+          name: form.name.trim() || null,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          mobile: form.mobile.trim() || null,
+          country: form.country.trim() || null,
+          city: form.city.trim() || null,
+          position: form.position.trim() || null,
+          note: form.notes.trim() || null,
+        });
+        sourceId = contactId;
         sourceType = "contact";
-        queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
-        queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.byGroup() });
 
       } else if (destination === "network") {
         if (!partnerId) {
@@ -119,101 +93,60 @@ export default function AddContactDialog({
           setSaving(false);
           return;
         }
-        const { data: pc, error } = await supabase
-          .from("partner_contacts")
-          .insert({
-            partner_id: partnerId,
-            user_id: user.id,
-            name: form.name.trim() || form.company.trim() || "—",
-            title: form.position.trim() || null,
-            email: form.email.trim() || null,
-            direct_phone: form.phone.trim() || null,
-            mobile: form.mobile.trim() || null,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        sourceId = pc!.id;
+        sourceId = await insertManualPartnerContact({
+          partnerId,
+          userId: user.id,
+          name: form.name.trim() || form.company.trim() || "—",
+          title: form.position.trim() || null,
+          email: form.email.trim() || null,
+          directPhone: form.phone.trim() || null,
+          mobile: form.mobile.trim() || null,
+        });
         sourceType = "partner_contact";
-        queryClient.invalidateQueries({ queryKey: ["partners"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       }
 
       // If cockpit destination OR user wants it queued
       if (destination === "cockpit" && sourceId && sourceType) {
-        await supabase.from("cockpit_queue").insert({
+        await insertCockpitQueueItems([{
           user_id: user.id,
           source_id: sourceId,
           source_type: sourceType,
           partner_id: partnerId || null,
-        });
-        queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+        }]);
+        queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
       } else if (destination === "cockpit" && !sourceId) {
         // Create as imported_contact first, then queue
-        let { data: existingLog } = await supabase
-          .from("import_logs")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("file_name", "__manual_entry__")
-          .limit(1)
-          .single();
+        const logId = await getOrCreateManualImportLog(user.id);
 
-        let logId: string;
-        if (existingLog) {
-          logId = existingLog.id;
-        } else {
-          const { data: newLog, error: logErr } = await supabase
-            .from("import_logs")
-            .insert({
-              user_id: user.id,
-              file_name: "__manual_entry__",
-              file_size: 0,
-              total_rows: 0,
-              imported_rows: 0,
-              status: "completed",
-              normalization_method: "manual",
-            })
-            .select("id")
-            .single();
-          if (logErr) throw logErr;
-          logId = newLog!.id;
-        }
-
-        const { data: contact, error } = await supabase
-          .from("imported_contacts")
-          .insert({
-            import_log_id: logId,
-            user_id: user.id,
-            company_name: form.company.trim() || null,
-            name: form.name.trim() || null,
-            email: form.email.trim() || null,
-            phone: form.phone.trim() || null,
-            mobile: form.mobile.trim() || null,
-            country: form.country.trim() || null,
-            city: form.city.trim() || null,
-            position: form.position.trim() || null,
-            note: form.notes.trim() || null,
-            origin: "Manuale",
-            lead_status: "new",
-            row_number: 0,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-
-        await supabase.from("cockpit_queue").insert({
-          user_id: user.id,
-          source_id: contact!.id,
-          source_type: "contact",
+        const contactId = await insertManualContact({
+          importLogId: logId,
+          userId: user.id,
+          companyName: form.company.trim() || null,
+          name: form.name.trim() || null,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          mobile: form.mobile.trim() || null,
+          country: form.country.trim() || null,
+          city: form.city.trim() || null,
+          position: form.position.trim() || null,
+          note: form.notes.trim() || null,
         });
-        queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
-        queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+
+        await insertCockpitQueueItems([{
+          user_id: user.id,
+          source_id: contactId,
+          source_type: "contact",
+        }]);
+        queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
       }
 
       toast({ title: "✅ Contatto aggiunto", description: `${form.name || form.company} → ${destination === "contacts" ? "Contatti" : destination === "network" ? "Network" : "Cockpit"}` });
       resetForm();
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -285,12 +218,37 @@ export default function AddContactDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
-          <Button onClick={handleSave} disabled={saving || (!form.name.trim() && !form.company.trim())} size="sm" className="gap-1.5">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-            Salva
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+            disabled={!form.email.trim()}
+            onClick={() => {
+              navigate("/v2/email-composer", {
+                state: {
+                  prefilledRecipient: {
+                    email: form.email.trim(),
+                    name: form.name.trim() || undefined,
+                    company: form.company.trim() || undefined,
+                    city: form.city.trim() || undefined,
+                    countryCode: form.country.trim() || undefined,
+                  },
+                },
+              });
+              onOpenChange(false);
+            }}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Scrivi email
           </Button>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
+            <Button onClick={handleSave} disabled={saving || (!form.name.trim() && !form.company.trim())} size="sm" className="gap-1.5">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+              Salva
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

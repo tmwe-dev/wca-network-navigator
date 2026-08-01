@@ -8,10 +8,13 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Tassonomia 9 stati — pipeline visivo (escluse fasi terminali archived/blacklisted gestite a parte)
 const PHASES: { key: LeadStatus; label: string; color: string }[] = [
   { key: "new", label: "Nuovo", color: "bg-muted-foreground" },
-  { key: "contacted", label: "Contattato", color: "bg-primary" },
-  { key: "in_progress", label: "In corso", color: "bg-warning" },
+  { key: "first_touch_sent", label: "Primo contatto", color: "bg-primary" },
+  { key: "holding", label: "In attesa", color: "bg-warning" },
+  { key: "engaged", label: "Agganciato", color: "bg-info" },
+  { key: "qualified", label: "Qualificato", color: "bg-chart-2" },
   { key: "negotiation", label: "Trattativa", color: "bg-chart-3" },
   { key: "converted", label: "Cliente", color: "bg-success" },
 ];
@@ -27,10 +30,18 @@ interface Props {
 export function HoldingPatternIndicator({ status, onChangeStatus, compact }: Props) {
   const [confirmTarget, setConfirmTarget] = useState<LeadStatus | null>(null);
 
-  if (status === "lost") {
+  if (status === "archived") {
     return (
       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-destructive/15 text-destructive text-xs font-medium">
-        <X className="w-3 h-3" /> Perso
+        <X className="w-3 h-3" /> Archiviato
+      </div>
+    );
+  }
+
+  if (status === "blacklisted") {
+    return (
+      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-destructive/30 text-destructive text-xs font-medium">
+        <X className="w-3 h-3" /> Blacklist
       </div>
     );
   }

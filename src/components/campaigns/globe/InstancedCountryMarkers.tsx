@@ -29,7 +29,7 @@ export function InstancedCountryMarkers({ countries, selectedCountry, onSelect }
   
   const hoveredRef = useRef<number | null>(null);
   const tempMatrix = useMemo(() => new THREE.Matrix4(), []);
-  const tempColor = useMemo(() => new THREE.Color(), []);
+  const _tempColor = useMemo(() => new THREE.Color(), []);
   const tempPosition = useMemo(() => new THREE.Vector3(), []);
   
   // Pre-compute positions once
@@ -79,7 +79,7 @@ export function InstancedCountryMarkers({ countries, selectedCountry, onSelect }
       const hasPartners = country.count > 0;
       const isSelected = selectedCountry === country.code;
       const isHovered = hoveredRef.current === i;
-      const hasSelection = selectedCountry !== null;
+      const hasSelection = selectedCountry != null;
       
       // Calculate scale based on state - hide ALL markers when a country is selected
       let innerScale: number;

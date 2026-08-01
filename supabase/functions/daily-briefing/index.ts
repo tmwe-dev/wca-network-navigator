@@ -1,11 +1,9 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
+import { assemblePrompt } from "../_shared/prompts/assembler.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -13,7 +11,11 @@ const supabase = createClient(
 );
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const now = new Date();
@@ -21,59 +23,64 @@ serve(async (req) => {
     const today = now.toISOString().slice(0, 10);
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    // 1. Download jobs last 24h
-    const { data: recentJobs } = await supabase
-      .from("download_jobs")
-      .select("id, status, country_name, contacts_found_count, error_message")
-      .gte("created_at", h24ago)
-      .order("created_at", { ascending: false })
-      .limit(20);
+    // Run ALL queries in parallel to avoid sequential timeout
+    const [
+      recentJobsRes,
+      noEmailRes,
+      noProfileRes,
+      dueActivitiesRes,
+      agentTasksRes,
+      agentsRes,
+      pendingEmailsRes,
+      sentEmailsRes,
+      holdingPartnersRes,
+      holdingContactsRes,
+      newPartnersRes,
+      newContactsRes,
+      totalPartnersRes,
+      totalImportedRes,
+      scheduledTodayRes,
+      unreadMessagesRes,
+      pendingReviewsRes,
+      strategyRes,
+    ] = await Promise.all([
+      supabase.from("download_jobs").select("id, status, country_name, contacts_found_count, error_message").gte("created_at", h24ago).order("created_at", { ascending: false }).limit(20),
+      supabase.from("partners").select("*", { count: "exact", head: true }).is("email", null),
+      supabase.from("partners").select("*", { count: "exact", head: true }).or("profile_description.is.null,profile_description.eq."),
+      supabase.from("activities").select("id, title, due_date, status, priority").lte("due_date", tomorrow).not("status", "in", '("completed","cancelled")').order("due_date").limit(20),
+      supabase.from("agent_tasks").select("id, agent_id, status, description, completed_at").gte("created_at", h24ago).order("created_at", { ascending: false }).limit(50),
+      supabase.from("agents").select("id, name, avatar_emoji, is_active").eq("is_active", true),
+      supabase.from("email_campaign_queue").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("email_campaign_queue").select("*", { count: "exact", head: true }).eq("status", "sent").gte("sent_at", h24ago),
+      supabase.from("partners").select("*", { count: "exact", head: true }).in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
+      supabase.from("imported_contacts").select("*", { count: "exact", head: true }).in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
+      supabase.from("partners").select("*", { count: "exact", head: true }).eq("lead_status", "new"),
+      supabase.from("imported_contacts").select("*", { count: "exact", head: true }).eq("lead_status", "new"),
+      supabase.from("partners").select("*", { count: "exact", head: true }),
+      supabase.from("imported_contacts").select("*", { count: "exact", head: true }),
+      supabase.from("agent_tasks").select("*", { count: "exact", head: true }).gte("scheduled_at", today).lt("scheduled_at", tomorrow).in("status", ["pending", "running"]),
+      supabase.from("channel_messages").select("*", { count: "exact", head: true }).is("read_at", null).eq("direction", "inbound"),
+      supabase.from("agent_tasks").select("*", { count: "exact", head: true }).eq("task_type", "supervisor_review").eq("status", "pending"),
+      supabase.from("app_settings").select("value").eq("key", "operative_strategy").maybeSingle(),
+    ]);
 
-    const activeJobs = recentJobs?.filter(j => ["running", "pending"].includes(j.status)) ?? [];
-    const completedJobs = recentJobs?.filter(j => j.status === "completed") ?? [];
-    const failedJobs = recentJobs?.filter(j => j.status === "failed") ?? [];
+    const recentJobs = recentJobsRes.data ?? [];
+    const activeJobs = recentJobs.filter(j => ["running", "pending"].includes(j.status));
+    const completedJobs = recentJobs.filter(j => j.status === "completed");
+    const failedJobs = recentJobs.filter(j => j.status === "failed");
 
-    // 2. Partners without email
-    const { count: noEmailCount } = await supabase
-      .from("partners")
-      .select("*", { count: "exact", head: true })
-      .is("email", null);
+    const noEmailCount = noEmailRes.count ?? 0;
+    const noProfileCount = noProfileRes.count ?? 0;
 
-    // 3. Partners without profile
-    const { count: noProfileCount } = await supabase
-      .from("partners")
-      .select("*", { count: "exact", head: true })
-      .is("raw_profile_html", null);
+    const dueActivities = dueActivitiesRes.data ?? [];
+    const overdue = dueActivities.filter(a => a.due_date && a.due_date < today);
+    const dueToday = dueActivities.filter(a => a.due_date === today);
 
-    // 4. Activities due today/overdue
-    const { data: dueActivities } = await supabase
-      .from("activities")
-      .select("id, title, due_date, status, priority")
-      .lte("due_date", tomorrow)
-      .not("status", "in", '("completed","cancelled")')
-      .order("due_date")
-      .limit(20);
+    const agentTasks = agentTasksRes.data ?? [];
+    const agents = agentsRes.data ?? [];
 
-    const overdue = dueActivities?.filter(a => a.due_date && a.due_date < today) ?? [];
-    const dueToday = dueActivities?.filter(a => a.due_date === today) ?? [];
-
-    // 5. Agent tasks
-    const { data: agentTasks } = await supabase
-      .from("agent_tasks")
-      .select("id, agent_id, status, description, completed_at")
-      .gte("created_at", h24ago)
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    // 6. Agents
-    const { data: agents } = await supabase
-      .from("agents")
-      .select("id, name, avatar_emoji, is_active")
-      .eq("is_active", true);
-
-    // Build agent status
-    const agentStatus = (agents ?? []).map(agent => {
-      const tasks = agentTasks?.filter(t => t.agent_id === agent.id) ?? [];
+    const agentStatus = agents.map(agent => {
+      const tasks = agentTasks.filter(t => t.agent_id === agent.id);
       return {
         id: agent.id,
         name: agent.name,
@@ -84,19 +91,25 @@ serve(async (req) => {
       };
     });
 
-    // 7. Email queue
-    const { count: pendingEmails } = await supabase
-      .from("email_campaign_queue")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
+    const pendingEmails = pendingEmailsRes.count ?? 0;
+    const sentEmails = sentEmailsRes.count ?? 0;
+    const inHolding = (holdingPartnersRes.count ?? 0) + (holdingContactsRes.count ?? 0);
+    const notContacted = (newPartnersRes.count ?? 0) + (newContactsRes.count ?? 0);
+    const totalContacts = (totalPartnersRes.count ?? 0) + (totalImportedRes.count ?? 0);
+    const scheduledToday = scheduledTodayRes.count ?? 0;
+    const unreadMessages = unreadMessagesRes.count ?? 0;
+    const pendingReviews = pendingReviewsRes.count ?? 0;
 
-    const { count: sentEmails } = await supabase
-      .from("email_campaign_queue")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "sent")
-      .gte("sent_at", h24ago);
+    let strategyHint = "";
+    if (strategyRes.data?.value) {
+      try {
+        const s = JSON.parse(strategyRes.data.value);
+        strategyHint = `Regole operative: max ${s.dailyContactLimit} contatti/giorno, follow-up a +${s.followUpDays}gg, escalation a +${s.escalationDays}gg, max ${s.messageMaxLines} righe per messaggio, tono: ${s.toneOfVoice?.slice(0, 80)}`;
+      } catch { /* ignore */ }
+    }
 
-    // Build context for LLM
+    const stats = { totalContacts, inHolding, notContacted, scheduledToday };
+
     const context = {
       download: {
         active: activeJobs.length,
@@ -105,72 +118,77 @@ serve(async (req) => {
         totalContactsFound: completedJobs.reduce((s, j) => s + (j.contacts_found_count || 0), 0),
         failedCountries: failedJobs.map(j => j.country_name).join(", "),
       },
-      partners: { withoutEmail: noEmailCount ?? 0, withoutProfile: noProfileCount ?? 0 },
+      partners: { total: totalContacts, withoutEmail: noEmailCount, withoutProfile: noProfileCount },
+      holdingPattern: { inHolding, notContacted, unreadMessages },
       activities: { overdue: overdue.length, dueToday: dueToday.length, topOverdue: overdue.slice(0, 3).map(a => a.title) },
       agents: agentStatus.filter(a => a.activeTasks > 0 || a.completedToday > 0),
-      email: { pending: pendingEmails ?? 0, sent24h: sentEmails ?? 0 },
+      email: { pending: pendingEmails, sent24h: sentEmails },
+      supervisorReviews: pendingReviews,
+      scheduledToday,
     };
 
-    // Call LLM
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    const llmRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `Sei il direttore operativo di un sistema CRM per freight forwarding. Genera un briefing operativo in italiano.
-Rispondi SOLO con un JSON valido, senza markdown o backtick. Formato:
-{
-  "summary": "testo markdown con max 5 punti prioritari usando bullet points (•). Sii conciso e operativo.",
-  "actions": [array di max 3 oggetti {"label": "testo bottone corto", "agentName": "nome agente o null", "prompt": "prompt completo da inviare all'AI"}]
-}
-I nomi degli agenti disponibili sono: ${agents?.map(a => a.name).join(", ")}.
-Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci azioni proattive.`
-          },
-          { role: "user", content: `Dati operativi attuali:\n${JSON.stringify(context, null, 2)}` }
-        ],
-      }),
+    // Build system prompt via assembler (Livello 1 + 2 + 3)
+    const systemPrompt = await assemblePrompt({
+      agentId: "daily-briefing",
+      variables: {
+        available_tools: agents.map(a => a.name).join(", "),
+      },
+      kbCategories: ["procedures", "doctrine"],
     });
+    const strategyBlock = strategyHint ? `\n\n## Strategia attiva\n${strategyHint}` : "";
 
-    if (!llmRes.ok) {
-      const errText = await llmRes.text();
-      console.error("LLM error:", llmRes.status, errText);
-      // Fallback: return raw data without AI summary
+    // Call LLM via centralized gateway
+    let content = "{}";
+    try {
+      // For daily-briefing, use default max_tokens (no per-user override since it's global/admin view)
+      const maxTokens = 1000;
+      const r = await aiChat({
+        models: ["google/gemini-2.5-flash-lite", "openai/gpt-5-mini"],
+        messages: [
+          { role: "system", content: systemPrompt + strategyBlock },
+          { role: "user", content: `Dati operativi attuali:\n${JSON.stringify(context, null, 2)}` },
+        ],
+        timeoutMs: 25000,
+        maxRetries: 1,
+        max_tokens: maxTokens,
+        context: "daily-briefing",
+      });
+      content = r.content || "{}";
+    } catch (err) {
+      console.error("daily-briefing LLM error:", err instanceof AiGatewayError ? err.kind : err);
       return new Response(JSON.stringify({
-        summary: `• **${activeJobs.length}** download attivi, **${completedJobs.length}** completati nelle ultime 24h\n• **${noEmailCount ?? 0}** partner senza email\n• **${overdue.length}** attività scadute, **${dueToday.length}** in scadenza oggi\n• **${pendingEmails ?? 0}** email in coda`,
+        completed: `• **${completedJobs.length}** download completati\n• **${sentEmails}** email inviate`,
+        todo: `• **${dueToday.length}** attività in scadenza oggi\n• **${notContacted}** contatti da contattare\n• **${scheduledToday}** task programmati`,
+        suspended: `• **${overdue.length}** attività scadute\n• **${pendingReviews}** revisioni in attesa\n• **${unreadMessages}** messaggi non letti`,
         actions: [],
         agentStatus,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        stats,
+      }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    const llmData = await llmRes.json();
-    const content = llmData.choices?.[0]?.message?.content || "{}";
-
-    let parsed: { summary: string; actions: any[] };
+    let parsed: { completed?: string; todo?: string; suspended?: string; summary?: string; actions: Array<Record<string, unknown>> };
     try {
-      // Strip markdown code fences if present
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      parsed = { summary: content, actions: [] };
+      parsed = { completed: content, todo: "", suspended: "", actions: [] };
     }
 
     return new Response(JSON.stringify({
+      completed: parsed.completed || "",
+      todo: parsed.todo || "",
+      suspended: parsed.suspended || "",
       summary: parsed.summary || "",
       actions: parsed.actions || [],
       agentStatus,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      stats,
+    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
 
   } catch (e) {
     console.error("daily-briefing error:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

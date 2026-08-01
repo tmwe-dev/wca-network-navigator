@@ -4,6 +4,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  countUnreadInbound,
+  markChannelMessageRead,
+  findAttachmentsByMessage,
+} from "@/data/channelMessages";
+
+const log = createLogger("useEmailActions");
 
 export type EmailAttachment = {
   id: string;
@@ -16,35 +25,41 @@ export type EmailAttachment = {
   is_inline: boolean;
 };
 
+type MarkAsReadInput = {
+  id: string;
+  channel?: string | null;
+  user_id?: string | null;
+  mailbox_id?: string | null;
+};
+
 export function useMessageAttachments(messageId: string | null) {
   return useQuery({
-    queryKey: ["email-attachments", messageId],
+    queryKey: queryKeys.email.attachments(messageId),
     queryFn: async () => {
       if (!messageId) return [];
-      const { data, error } = await supabase
-        .from("email_attachments")
-        .select("id, message_id, filename, content_type, size_bytes, storage_path, content_id, is_inline")
-        .eq("message_id", messageId);
-      if (error) throw error;
-      return (data || []) as EmailAttachment[];
+      return (await findAttachmentsByMessage(messageId)) as EmailAttachment[];
     },
     enabled: !!messageId,
   });
 }
 
-export function useUnreadCount(channel?: string) {
+export type MailboxFilter =
+  | { kind: "personal" }
+  | { kind: "shared"; id: string }
+  | null
+  | undefined;
+
+function mailboxKeyOf(mb: MailboxFilter): string | undefined {
+  if (!mb) return undefined;
+  return mb.kind === "shared" ? `shared:${mb.id}` : "personal";
+}
+
+export function useUnreadCount(channel?: string, mailboxFilter?: MailboxFilter) {
+  const mailboxKey = mailboxKeyOf(mailboxFilter);
   return useQuery({
-    queryKey: ["channel-messages-unread", channel],
+    queryKey: queryKeys.channelMessages.unread(channel, undefined, mailboxKey),
     queryFn: async () => {
-      let q = supabase
-        .from("channel_messages")
-        .select("id", { count: "planned", head: true })
-        .eq("direction", "inbound")
-        .is("read_at", null);
-      if (channel) q = q.eq("channel", channel);
-      const { count, error } = await q;
-      if (error) throw error;
-      return count || 0;
+      return await countUnreadInbound({ channel, mailbox: mailboxFilter ?? null });
     },
     refetchInterval: 30000,
   });
@@ -54,31 +69,63 @@ export function useMarkAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (messageId: string) => {
-      const { error } = await supabase
-        .from("channel_messages")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", messageId);
-      if (error) throw error;
+    mutationFn: async (input: string | MarkAsReadInput) => {
+      const messageId = typeof input === "string" ? input : input.id;
+      const messageChannel = typeof input === "string" ? null : (input.channel ?? null);
+      const messageUserId = typeof input === "string" ? null : (input.user_id ?? null);
+      const messageMailboxId = typeof input === "string" ? null : (input.mailbox_id ?? null);
+
+      const updatedMessage = await markChannelMessageRead(messageId);
+      if (!updatedMessage) {
+        log.warn("mark-as-read skipped: message not writable", {
+          messageId,
+          channel: messageChannel,
+          userId: messageUserId,
+        });
+        return;
+      }
+
+      const resolvedChannel = messageChannel ?? updatedMessage.channel ?? null;
+      const resolvedUserId = messageUserId ?? updatedMessage.user_id ?? null;
+      const resolvedMailboxId =
+        messageMailboxId ?? (updatedMessage as { mailbox_id?: string | null }).mailbox_id ?? null;
+
+      if (resolvedChannel !== "email") return;
 
       // Fire-and-forget: sync \Seen flag to IMAP server
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      if (projectId) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (supabaseUrl) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session) return;
-          fetch(`https://${projectId}.supabase.co/functions/v1/mark-imap-seen`, {
+          if (resolvedUserId && resolvedUserId !== session.user.id) return;
+
+          void fetch(`${supabaseUrl}/functions/v1/mark-imap-seen`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${session.access_token}`,
+              ...(resolvedMailboxId ? { "x-mailbox-id": resolvedMailboxId } : {}),
             },
             body: JSON.stringify({ message_id: messageId }),
-          }).catch((err) => console.warn("[mark-imap-seen] sync failed:", err.message));
+          })
+            .then(async (response) => {
+              if (response.ok) return;
+              const body = await response.text().catch(() => "");
+              log.warn("mark-imap-seen sync failed", {
+                messageId,
+                status: response.status,
+                body: body || undefined,
+              });
+            })
+            .catch((err) => log.warn("mark-imap-seen sync failed", {
+              messageId,
+              message: err instanceof Error ? err.message : String(err),
+            }));
         });
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
       queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
     },
   });

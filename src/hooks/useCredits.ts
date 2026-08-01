@@ -1,25 +1,24 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findUserCreditsById } from "@/data/credits";
 import { useEffect } from "react";
+import { getSessionStats, type SessionStats } from "@/lib/api/costTracker";
+import { useAuth } from "@/providers/AuthProvider";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Refactored credits hook using React Query for caching and deduplication.
- * Replaces manual polling with proper staleTime and refetchInterval.
+ * Auth state sourced from centralized AuthProvider.
  */
 export function useCredits() {
   const queryClient = useQueryClient();
+  const { user, event } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["user-credits"],
+    queryKey: queryKeys.credits.all,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { balance: 0, totalConsumed: 0 };
 
-      const { data: credits } = await supabase
-        .from("user_credits")
-        .select("balance, total_consumed")
-        .eq("user_id", user.id)
-        .single();
+      const credits = await findUserCreditsById(user.id);
 
       return {
         balance: credits?.balance ?? 0,
@@ -28,22 +27,21 @@ export function useCredits() {
     },
     staleTime: 30_000,
     refetchInterval: 30_000,
+    enabled: !!user,
   });
 
   // Refetch on sign-in
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") {
-        queryClient.invalidateQueries({ queryKey: ["user-credits"] });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [queryClient]);
+    if (event === "SIGNED_IN") {
+      queryClient.invalidateQueries({ queryKey: queryKeys.credits.all });
+    }
+  }, [event, queryClient]);
 
   return {
     balance: data?.balance ?? 0,
     totalConsumed: data?.totalConsumed ?? 0,
     loading: isLoading,
-    refetch: () => queryClient.invalidateQueries({ queryKey: ["user-credits"] }),
+    refetch: () => queryClient.invalidateQueries({ queryKey: queryKeys.credits.all }),
+    sessionStats: getSessionStats() as SessionStats,
   };
 }

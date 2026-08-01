@@ -1,17 +1,19 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Sparkles, Network, Mail, Users, CalendarCheck, Settings, ArrowLeft, Send, Loader2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useAllActivities } from "@/hooks/useActivities";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
 import { MiniAgenda } from "./shared/MiniAgenda";
+import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/application/data/uiShellQueries";
+import { toRecords } from "@/lib/records";
 
 type PanelType = "none" | "contacts" | "outreach" | "agenda" | "email";
 
@@ -24,22 +26,22 @@ const SHORTCUTS = [
 
 function usePartnerContactsList() {
   return useQuery({
-    queryKey: ["proto-conv-contacts"],
+    queryKey: queryKeys.contacts.proto.convContacts(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partner_contacts")
-        .select("id, first_name, last_name, email, phone, partners(id, company_name, country_code)")
-        .order("created_at", { ascending: false })
-        .limit(150);
-      return (data || []).map((pc: any) => ({
-        id: pc.id,
-        name: [pc.first_name, pc.last_name].filter(Boolean).join(" ") || "—",
-        company: pc.partners?.company_name || "—",
-        email: pc.email || undefined,
-        phone: pc.phone || undefined,
-        country: pc.partners?.country_code || undefined,
+      const { data } = await findPrototypeContacts(
+        "id, first_name, last_name, email, phone, partners(id, company_name, country_code)",
+        150,
+        true,
+      );
+      return toRecords(data).map((pc: Record<string, unknown>) => ({
+        id: String(pc.id),
+        name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
+        company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",
+        email: pc.email as string || undefined,
+        phone: pc.phone as string || undefined,
+        country: (pc.partners as Record<string, unknown>)?.country_code as string || undefined,
         origin: "WCA",
-        partnerId: pc.partners?.id || null,
+        partnerId: (pc.partners as Record<string, unknown>)?.id as string || null,
       })) as UnifiedContact[];
     },
     staleTime: 60_000,
@@ -54,7 +56,7 @@ interface HistoryEntry {
 }
 
 export function ConversationalShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [prompt, setPrompt] = useState("");
   const [activePanel, setActivePanel] = useState<PanelType>("none");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -105,19 +107,19 @@ export function ConversationalShell() {
     setPrompt("");
   }, [prompt, allContacts.length, cockpitContacts.length, activities]);
 
-  const openActivities = activities.filter(a => !["completed", "cancelled"].includes(a.status)).length;
+  const _openActivities = activities.filter(a => !["completed", "cancelled"].includes(a.status)).length;
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Minimal header */}
       <header className="h-11 border-b border-border/60 flex items-center px-4 shrink-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")} aria-label="Indietro">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-semibold ml-2">WCA Partners</span>
         <span className="ml-2 text-[10px] text-muted-foreground">Conversational — Prototipo C</span>
         <div className="flex-1" />
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/settings")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/settings")} aria-label="Impostazioni">
           <Settings className="h-4 w-4" />
         </Button>
       </header>
@@ -143,12 +145,12 @@ export function ConversationalShell() {
               size="icon"
               className="absolute right-1 top-1 h-8 w-8"
               disabled={isProcessing || !prompt.trim()}
-            >
+             aria-label="Caricamento">
               {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 text-primary" />}
             </Button>
           </form>
           {aiResponse && (
-            <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-xs text-foreground/80">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-xs text-foreground">
               <Sparkles className="h-3 w-3 text-primary inline mr-1.5" />
               {aiResponse}
             </div>
@@ -205,7 +207,7 @@ export function ConversationalShell() {
         {activePanel === "email" && (
           <div className="h-full flex items-center justify-center rounded-xl border border-border/60 bg-card">
             <div className="text-center text-sm text-muted-foreground p-6">
-              <Mail className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+              <Mail className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
               <p>Seleziona un contatto per comporre un'email</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={() => setActivePanel("contacts")}>
                 Vai ai contatti

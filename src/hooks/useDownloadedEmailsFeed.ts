@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { findDownloadedEmailsFeedRows } from "@/data/channelMessages";
 import type { DownloadedEmail } from "@/lib/backgroundSync";
+import { queryKeys } from "@/lib/queryKeys";
 
 const FEED_LIMIT = 50;
 
@@ -27,19 +29,10 @@ export function useDownloadedEmailsFeed() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["downloaded-emails-feed"],
+    queryKey: queryKeys.email.downloadedFeed(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("channel_messages")
-        .select("id, subject, from_address, email_date, created_at")
-        .eq("channel", "email")
-        .order("email_date", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .limit(FEED_LIMIT);
-
-      if (error) throw error;
-
-      return ((data || []) as DownloadedEmailRow[]).map(mapRowToDownloadedEmail);
+      const data = await findDownloadedEmailsFeedRows(FEED_LIMIT);
+      return data.map(mapRowToDownloadedEmail);
     },
     staleTime: 10_000,
   });
@@ -57,20 +50,20 @@ export function useDownloadedEmailsFeed() {
           filter: "channel=eq.email",
         },
         (payload) => {
-          const row = payload.new as any;
+          const row = payload.new as Record<string, unknown>;
           const newEmail = mapRowToDownloadedEmail({
-            id: row.id,
-            subject: row.subject,
-            from_address: row.from_address,
-            email_date: row.email_date,
-            created_at: row.created_at,
+            id: row.id as string,
+            subject: row.subject as string | null,
+            from_address: row.from_address as string | null,
+            email_date: row.email_date as string | null,
+            created_at: row.created_at as string,
           });
           queryClient.setQueryData<DownloadedEmail[]>(["downloaded-emails-feed"], (old) => {
             if (!old) return [newEmail];
             if (old.some(e => e.id === newEmail.id)) return old;
             return [newEmail, ...old].slice(0, FEED_LIMIT);
           });
-          queryClient.invalidateQueries({ queryKey: ["email-count"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
         },
       )
       .subscribe();

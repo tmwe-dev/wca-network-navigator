@@ -1,34 +1,56 @@
-import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+/**
+ * useWhatsAppAdaptiveSync — Unified WhatsApp sync from per-chat cursor.
+ *
+ * Single procedure:
+ *   1. Per ogni chat in sidebar (letta o non), trova in DB l'ora dell'ultimo
+ *      messaggio salvato per quel contact (cursor).
+ *   2. Se sidebar.lastVisibleAt > cursor (o cursor null), apre il thread,
+ *      legge i messaggi e salva quelli con timestamp > cursor.
+ *   3. Letti/non letti non rilevano: il filtro è puramente temporale.
+ *
+ * API preservata per compat: readNow, isReading, isAvailable, isAuthenticated,
+ * focusedChat, focusOn, domIsStale, lastLearnedAt, forceRelearn.
+ */
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useWhatsAppDomLearning } from "@/hooks/useWhatsAppDomLearning";
 import { buildDeterministicId } from "@/lib/messageDedup";
+import { parseWhatsAppTimestamp } from "@/lib/whatsappTimestamp";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+import { markSessionExpired } from "@/lib/inbox/sessionTracker";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  getChannelContactCursor,
+  getChannelContactCursors,
+  upsertChannelMessageDedup,
+} from "@/data/channelMessages";
+import { findOperatorByUserId } from "@/data/operators";
+import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
+import { toJsonValue } from "@/lib/typedJson";
 
-// ── Attention Levels ──
-// 0 = Idle:          sidebar scan every 60-90s
-// 3 = Alert:         sidebar scan every 10-20s (new message detected)
-// 6 = Conversation:  thread scan every 3-5s (active reply exchange)
+const log = createLogger("useWhatsAppAdaptiveSync");
+
 export type AttentionLevel = 0 | 3 | 6;
 
-const INTERVALS: Record<AttentionLevel, number> = {
-  0: 75_000,   // ~75s average (60-90)
-  3: 15_000,   // ~15s average (10-20)
-  6: 4_000,    // ~4s  (3-5)
-};
+const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: ", "io: "];
+const WA_UI_LABELS = new Set([
+  "gruppi", "da leggere", "ferie permessi malattie", "name", "group 1",
+  "non letti", "preferiti", "archiviate", "tutti", "chat con lucchetto",
+]);
+const WA_GHOST_BODIES = new Set([
+  "foto", "video", "audio", "sticker", "gif", "documento",
+  "posizione", "contatto", "messaggio", "messaggio eliminato",
+]);
+const MAX_MESSAGES_PER_THREAD = 200;
+const MAX_THREADS_PER_RUN = 40;
 
-// Jitter ±20% to look human
-function jitter(base: number) {
-  return base * (0.8 + Math.random() * 0.4);
+function isAuthError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /auth|session|login|expired|unauthorized|qr|logout/i.test(msg);
 }
-
-// De-escalation timeouts
-const DEESCALATE_6_TO_3 = 60_000;   // 60s no reply → drop from 6 to 3
-const DEESCALATE_3_TO_0 = 180_000;  // 3min no new messages → drop to 0
-
-// Detect outbound messages: WhatsApp sidebar prefixes your own messages with "Tu: " or "You: "
-const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: "];
 
 function detectDirection(text: string): { direction: "inbound" | "outbound"; cleanText: string } {
   const lower = text.toLowerCase();
@@ -40,301 +62,337 @@ function detectDirection(text: string): { direction: "inbound" | "outbound"; cle
   return { direction: "inbound", cleanText: text };
 }
 
-function normalizeWhatsAppTimestamp(rawValue: string): string | null {
-  const value = rawValue.trim();
-  if (!value) return null;
-
-  const parsed = new Date(value);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString();
-  }
-
-  const hhmmMatch = value.match(/^(\d{1,2}):(\d{2})$/);
-  if (hhmmMatch) {
-    const date = new Date();
-    date.setHours(Number(hhmmMatch[1]), Number(hhmmMatch[2]), 0, 0);
-    return date.toISOString();
-  }
-
-  return null;
+interface SidebarChat {
+  contact: string;
+  lastMessage?: string;
+  time?: string;
+  unreadCount?: number;
+  isVerify?: boolean;
 }
 
-function isSidebarPreviewMessage(msg: any) {
-  return Object.prototype.hasOwnProperty.call(msg, "lastMessage") ||
-    Object.prototype.hasOwnProperty.call(msg, "unreadCount");
-}
-
-function shouldSkipSidebarMessage(msg: any, text: string, rawTime: string) {
-  if (msg.isVerify === true) return true;
-  if (!isSidebarPreviewMessage(msg)) return false;
-  if (!text.trim()) return true;
-  return rawTime.trim().length === 0;
+interface ThreadMessage {
+  contact?: string;
+  from?: string;
+  text?: string;
+  lastMessage?: string;
+  timestamp?: string;
+  time?: string;
+  direction?: string;
 }
 
 export function useWhatsAppAdaptiveSync() {
-  const [level, setLevel] = useState<AttentionLevel>(0);
   const [isReading, setIsReading] = useState(false);
   const [focusedChat, setFocusedChat] = useState<string | null>(null);
-  const [enabled, setEnabled] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number; newMessages: number } | null>(null);
 
-  const { isAvailable, readUnread, readThread, onSidebarChanged } = useWhatsAppExtensionBridge();
-  const { getSchema, forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
+  const { isAvailable, isAuthenticated, listSidebarChats, readThread, verifySession } = useWhatsAppExtensionBridge();
+  const { forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
-  const levelRef = useRef<AttentionLevel>(0);
-  const focusedChatRef = useRef<string | null>(null);
   const readingRef = useRef(false);
-  const lastNewMsgAt = useRef(0);
-  const lastReplyAt = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const deescalateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
-  // Keep refs in sync
-  useEffect(() => { levelRef.current = level; }, [level]);
-  useEffect(() => { focusedChatRef.current = focusedChat; }, [focusedChat]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   useEffect(() => { readingRef.current = isReading; }, [isReading]);
 
-  // ── Escalate ──
-  const escalate = useCallback((to: AttentionLevel) => {
-    setLevel(prev => {
-      if (to > prev) return to;
-      return prev;
-    });
+  // ── Load per-contact cursors (latest created_at per contact) ──
+  const loadCursors = useCallback(async (userId: string): Promise<Map<string, number>> => {
+    return getChannelContactCursors(userId, "whatsapp");
   }, []);
 
-  // ── De-escalate ──
-  const deescalate = useCallback((to: AttentionLevel) => {
-    setLevel(prev => {
-      if (to < prev) return to;
-      return prev;
-    });
-    if (to === 0) setFocusedChat(null);
-  }, []);
-
-  // ── Schedule de-escalation ──
-  const scheduleDeescalation = useCallback(() => {
-    if (deescalateTimerRef.current) clearTimeout(deescalateTimerRef.current);
-    
-    const currentLevel = levelRef.current;
-    if (currentLevel === 0) return;
-
-    const timeout = currentLevel === 6 ? DEESCALATE_6_TO_3 : DEESCALATE_3_TO_0;
-    const targetLevel: AttentionLevel = currentLevel === 6 ? 3 : 0;
-
-    deescalateTimerRef.current = setTimeout(() => {
-      deescalate(targetLevel);
-      if (targetLevel === 3) scheduleDeescalation();
-    }, timeout);
-  }, [deescalate]);
-
-  // ── Save messages to DB ──
-  const saveMessages = useCallback(async (messages: any[], sessionUserId: string) => {
+  // ── Save thread messages above cursor ──
+  const saveThreadMessages = useCallback(async (
+    contact: string,
+    messages: ThreadMessage[],
+    cursorMs: number,
+    userId: string,
+    operatorId: string,
+  ): Promise<number> => {
     let newCount = 0;
-
     for (const msg of messages) {
-      const contact = String(msg.contact || msg.from || "").trim();
-      if (!contact) continue;
-
-      const rawTime = String(msg.time || msg.timestamp || "");
-      const rawText = String(msg.lastMessage || msg.text || "");
-      if (shouldSkipSidebarMessage(msg, rawText, rawTime)) continue;
+      const rawText = String(msg.text || msg.lastMessage || "").trim();
+      if (!rawText) continue;
 
       const { direction: detectedDir, cleanText } = detectDirection(rawText);
-      const finalDirection = msg.direction || detectedDir;
+      const finalDirection = (msg.direction as "inbound" | "outbound") || detectedDir;
       const text = cleanText.trim();
-      if (!text) continue;
+      if (!text || text.length < 2) continue;
+      const lowerText = text.toLowerCase();
+      if (WA_GHOST_BODIES.has(lowerText)) continue;
+      if (WA_UI_LABELS.has(contact.toLowerCase())) continue;
 
-      const timestamp = normalizeWhatsAppTimestamp(rawTime) || new Date().toISOString();
+      const rawTime = String(msg.timestamp || msg.time || "");
+      const parsedIso = parseWhatsAppTimestamp(rawTime);
+      const timestamp = parsedIso || new Date().toISOString();
+      const ts = new Date(timestamp).getTime();
+      // Skip if already on/before cursor (delta semantics)
+      if (cursorMs > 0 && ts <= cursorMs) continue;
+
       const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
-
-      const { error, status } = await supabase
-        .from("channel_messages")
-        .upsert({
-          user_id: sessionUserId,
-          channel: "whatsapp",
-          direction: finalDirection,
-          from_address: finalDirection === "outbound" ? undefined : contact,
-          to_address: finalDirection === "outbound" ? contact : undefined,
-          body_text: text,
-          message_id_external: extId,
-          raw_payload: msg as any,
-          created_at: timestamp,
-        }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
-
-      if (!error && status === 201) {
-        newCount++;
+      const row = {
+        user_id: userId,
+        operator_id: operatorId,
+        channel: "whatsapp",
+        direction: finalDirection,
+        from_address: finalDirection === "outbound" ? undefined : contact,
+        to_address: finalDirection === "outbound" ? contact : undefined,
+        body_text: text,
+        message_id_external: extId,
+        raw_payload: toJsonValue(msg),
+        created_at: timestamp,
+      };
+      try {
+        const { inserted } = await upsertChannelMessageDedup(row as never);
+        if (inserted) newCount++;
+      } catch (err) {
+        log.warn("upsert.failed", { contact, error: err instanceof Error ? err.message : String(err) });
       }
     }
-    return { newCount };
+    return newCount;
   }, []);
 
-  // ── Sidebar scan (Level 0 & 3) ──
-  const sidebarScan = useCallback(async () => {
+  // ── The single, unified sync procedure ──
+  const syncFromCursor = useCallback(async () => {
     if (readingRef.current) return;
+    if (!mountedRef.current) return;
+
+    let guard!: import("@/lib/syncGuard").GuardToken;
+    try {
+      guard = tryAcquire("whatsapp", "Sincronizza");
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+        }
+        toast.warning("WhatsApp: un'operazione è già in corso, attendi.");
+        return;
+      }
+      throw e;
+    }
     setIsReading(true);
+    setProgress(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      const userId = session.user.id;
 
-      const result = await readUnread();
-      if (!result.success) return;
+      const opRow = await findOperatorByUserId(userId);
+      const operatorId = opRow?.id;
+      if (!operatorId) {
+        toast.error("Nessun operatore associato");
+        return;
+      }
 
-      const messages = (result as any).messages || [];
-      if (!messages.length) return;
+      // 1. Snapshot sidebar (all chats, no unread filter)
+      await throttle("whatsapp", "ping", "Ping estensione");
+      const sidebarRes = await listSidebarChats();
+      if (!sidebarRes.success) {
+        toast.error(`WhatsApp: ${sidebarRes.error || "errore lettura sidebar"}`);
+        return;
+      }
+      const rawChats = ((sidebarRes as Record<string, unknown>).messages || []) as SidebarChat[];
+      const seenLower = new Set<string>();
+      const chats: SidebarChat[] = [];
+      for (const c of rawChats) {
+        const name = String(c.contact || "").trim();
+        if (!name) continue;
+        if (c.isVerify) continue;
+        const lower = name.toLowerCase();
+        if (WA_UI_LABELS.has(lower)) continue;
+        if (seenLower.has(lower)) continue;
+        seenLower.add(lower);
+        chats.push({ ...c, contact: name });
+      }
+      if (chats.length === 0) {
+        toast.info("Nessuna chat rilevata in WhatsApp Web");
+        return;
+      }
 
-      const { newCount } = await saveMessages(messages, session.user.id);
+      // 2. Load cursors
+      const cursors = await loadCursors(userId);
 
-      if (newCount > 0) {
-        lastNewMsgAt.current = Date.now();
-        queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+      // 3. Decide which chats need a thread read
+      const nowMs = Date.now();
+      const toRead: Array<{ name: string; cursorMs: number }> = [];
+      for (const c of chats) {
+        const lower = c.contact.toLowerCase();
+        const cursorMs = cursors.get(lower) ?? 0;
+        const sidebarTs = c.time ? parseWhatsAppTimestamp(c.time) : null;
+        const sidebarMs = sidebarTs ? new Date(sidebarTs).getTime() : nowMs;
+        // If we never saw this chat, OR sidebar shows newer activity → read.
+        if (cursorMs === 0 || sidebarMs > cursorMs + 60_000) {
+          toRead.push({ name: c.contact, cursorMs });
+        }
+      }
+
+      const focused = focusedChat;
+      if (focused && !toRead.some((c) => c.name.toLowerCase() === focused.toLowerCase())) {
+        const lower = focused.toLowerCase();
+        toRead.unshift({ name: focused, cursorMs: cursors.get(lower) ?? 0 });
+      }
+
+      const queue = toRead.slice(0, MAX_THREADS_PER_RUN);
+      if (queue.length === 0) {
+        toast.success("WhatsApp: già aggiornato");
+        return;
+      }
+
+      setProgress({ current: 0, total: queue.length, newMessages: 0 });
+
+      // 4. Walk threads sequentially
+      let totalNew = 0;
+      for (let i = 0; i < queue.length; i++) {
+        if (!mountedRef.current) break;
+        const { name, cursorMs } = queue[i];
+        try {
+          await throttle("whatsapp", "open", `Apri chat: ${name}`);
+          const threadRes = await readThread(name, MAX_MESSAGES_PER_THREAD);
+          if (threadRes.success && Array.isArray(threadRes.messages)) {
+            await throttle("whatsapp", "read", `Leggo messaggi: ${name}`);
+            const newCount = await saveThreadMessages(
+              name,
+              threadRes.messages as ThreadMessage[],
+              cursorMs,
+              userId,
+              operatorId,
+            );
+            totalNew += newCount;
+          }
+        } catch (err) {
+          log.warn("thread_read.failed", { contact: name, error: err instanceof Error ? err.message : String(err) });
+          if (isAuthError(err)) {
+            await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
+            break;
+          }
+        }
+        setProgress({ current: i + 1, total: queue.length, newMessages: totalNew });
+        if (i < queue.length - 1) {
+          await throttle("whatsapp", "betweenThreads", "Pausa tra chat");
+        }
+      }
+
+      if (totalNew > 0) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
         queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
-
-        // Escalate: new message → level 3
-        if (levelRef.current === 0) {
-          escalate(3);
-          scheduleDeescalation();
-        }
-
-        // If we have a focused chat and it received a new msg → level 6
-        if (focusedChatRef.current) {
-          const hasReplyInFocused = messages.some(
-            (m: any) => (m.contact || m.from || "").toLowerCase() === focusedChatRef.current!.toLowerCase() && !m.isVerify
-          );
-          if (hasReplyInFocused) {
-            lastReplyAt.current = Date.now();
-            escalate(6);
-            scheduleDeescalation();
-          }
-        }
-
-        // Auto-focus first unread if none focused
-        if (!focusedChatRef.current && levelRef.current >= 3) {
-          const firstUnread = messages.find((m: any) => !m.isVerify && (m.unreadCount || 0) > 0);
-          if (firstUnread) {
-            const contact = firstUnread.contact || firstUnread.from || "unknown";
-            setFocusedChat(contact);
-          }
-        }
-
-        if (newCount > 0) {
-          toast.success(`📱 ${newCount} nuovi messaggi WhatsApp`, { duration: 2000 });
-        }
+        toast.success(`📱 ${totalNew} nuovi messaggi WhatsApp da ${queue.length} chat`);
+        window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "whatsapp" } }));
+      } else {
+        toast.info(`WhatsApp: ${queue.length} chat verificate, nessun nuovo messaggio`);
       }
-    } catch (_) {
+      window.dispatchEvent(new CustomEvent("wa-sync-completed", {
+        detail: { newMessages: totalNew, threads: queue.length, errors: 0 },
+      }));
+    } catch (err: unknown) {
+      log.warn("sync.failed", { error: err instanceof Error ? err.message : String(err) });
+      if (isAuthError(err)) {
+        await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
+      }
+      toast.error(`WhatsApp sync: ${err instanceof Error ? err.message : String(err)}`);
+      window.dispatchEvent(new CustomEvent("wa-sync-completed", {
+        detail: { newMessages: 0, threads: 0, errors: 1 },
+      }));
     } finally {
-      setIsReading(false);
+      if (mountedRef.current) {
+        setIsReading(false);
+        setProgress(null);
+      }
+      guard.release();
     }
-  }, [readUnread, saveMessages, queryClient, escalate, scheduleDeescalation]);
+  }, [listSidebarChats, readThread, loadCursors, saveThreadMessages, queryClient, focusedChat]);
 
-  // ── Thread scan (Level 6) ──
-  const threadScan = useCallback(async () => {
-    if (readingRef.current || !focusedChatRef.current) return;
-    setIsReading(true);
+  // ── Single-thread sync (Chat Mode) ──
+  const syncSingleThread = useCallback(async (contact: string): Promise<number> => {
+    if (!isAvailable || !isAuthenticated) return 0;
+    if (readingRef.current) return 0;
+    let guard!: import("@/lib/syncGuard").GuardToken;
+    try {
+      guard = tryAcquire("whatsapp", `Chat: ${contact}`);
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+        }
+        return 0;
+      }
+      throw e;
+    }
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) return 0;
+      const userId = session.user.id;
+      const opRow = await findOperatorByUserId(userId);
+      const operatorId = opRow?.id;
+      if (!operatorId) return 0;
 
-      const result = await readThread(focusedChatRef.current, 20);
-      if (!result.success) return;
+      // Cursor del solo contatto: prendi il created_at più recente in DB.
+      const lower = contact.toLowerCase().trim();
+      const cursorMs = await getChannelContactCursor(userId, "whatsapp", lower);
 
-      const messages = (result as any).messages || [];
-      if (!messages.length) return;
-
-      const { newCount } = await saveMessages(messages, session.user.id);
-
+      await throttle("whatsapp", "open", `Apri chat: ${contact}`);
+      const threadRes = await readThread(contact, 60);
+      if (!threadRes.success || !Array.isArray(threadRes.messages)) return 0;
+      await throttle("whatsapp", "read", `Leggo messaggi: ${contact}`);
+      const newCount = await saveThreadMessages(
+        contact,
+        threadRes.messages as ThreadMessage[],
+        cursorMs,
+        userId,
+        operatorId,
+      );
       if (newCount > 0) {
-        lastReplyAt.current = Date.now();
-        queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-        scheduleDeescalation(); // reset de-escalation timer
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+        queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+        window.dispatchEvent(new CustomEvent("wa-sync-completed", {
+          detail: { newMessages: newCount, threads: 1, errors: 0, mode: "chat" },
+        }));
       }
-    } catch (_) {
+      return newCount;
+    } catch (err) {
+      log.warn("chat_mode.tick.failed", { error: err instanceof Error ? err.message : String(err) });
+      if (isAuthError(err)) {
+        await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
+      }
+      return 0;
     } finally {
-      setIsReading(false);
+      guard.release();
     }
-  }, [readThread, saveMessages, queryClient, scheduleDeescalation]);
+  }, [isAvailable, isAuthenticated, readThread, saveThreadMessages, queryClient]);
 
-  // ── Main tick ──
-  const tick = useCallback(async () => {
-    if (levelRef.current === 6 && focusedChatRef.current) {
-      await threadScan();
-    } else {
-      await sidebarScan();
-    }
-  }, [sidebarScan, threadScan]);
-
-  // ── Adaptive timer ──
-  useEffect(() => {
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-    if (!enabled || !isAvailable) return;
-
-    const schedule = () => {
-      const interval = jitter(INTERVALS[level]);
-      timerRef.current = setTimeout(async () => {
-        await tick();
-        schedule(); // re-schedule after tick completes
-      }, interval);
-    };
-
-    // First tick immediately
-    tick().then(() => schedule());
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [enabled, isAvailable, level, tick]);
-
-  // ── MutationObserver push: instant scan on sidebar change ──
-  useEffect(() => {
-    if (!enabled || !isAvailable) return;
-    onSidebarChanged(() => {
-      // Sidebar changed → immediate scan (no waiting for next poll)
-      if (!readingRef.current) {
-        sidebarScan();
-      }
-    });
-    return () => onSidebarChanged(() => {});
-  }, [enabled, isAvailable, onSidebarChanged, sidebarScan]);
-
-  // Cleanup de-escalation timer
-  useEffect(() => {
-    return () => {
-      if (deescalateTimerRef.current) clearTimeout(deescalateTimerRef.current);
-    };
+  const focusOn = useCallback((contact: string | null) => {
+    setFocusedChat(contact);
   }, []);
 
-  // ── Manual focus on a chat ──
-  const focusOn = useCallback((contact: string) => {
-    setFocusedChat(contact);
-    escalate(3);
-    scheduleDeescalation();
-  }, [escalate, scheduleDeescalation]);
-
-  // ── Manual read now ──
   const readNow = useCallback(async () => {
-    await sidebarScan();
-  }, [sidebarScan]);
-
-  const toggle = useCallback(() => setEnabled(prev => !prev), []);
-
-  const levelLabel = useMemo(() => {
-    switch (level) {
-      case 0: return "Idle";
-      case 3: return "Alert";
-      case 6: return "Live";
+    if (!isAvailable) {
+      toast.error("Estensione WhatsApp non rilevata. Verifica che sia installata e ricarica la pagina.");
+      return;
     }
-  }, [level]);
+    if (!isAuthenticated) {
+      // Try a fresh verifySession before giving up — l'auth heartbeat può essere stantio.
+      const v = await verifySession();
+      const ok = v.success === true && (v as { authenticated?: boolean }).authenticated === true;
+      if (!ok) {
+        toast.error("WhatsApp Web non autenticato. Apri web.whatsapp.com e scansiona il QR code.");
+        return;
+      }
+      log.info("verifySession refreshed before sync");
+    }
+    await syncFromCursor();
+  }, [syncFromCursor, isAvailable, isAuthenticated, verifySession]);
 
   return {
-    level,
-    levelLabel,
-    enabled,
-    toggle,
-    setEnabled,
     isReading,
     isAvailable,
+    isAuthenticated,
     focusedChat,
     focusOn,
     readNow,
+    syncSingleThread,
+    progress,
     domIsStale,
     lastLearnedAt,
     forceRelearn,

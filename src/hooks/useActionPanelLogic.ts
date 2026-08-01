@@ -1,9 +1,17 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
+import { getPartnersByCountries, deletePartnersWithRelations } from "@/data/partners";
+import { findDirectoryCache, upsertDirectoryCache } from "@/data/directoryCache";
+import { findJobsByStatusSelect, updateDownloadJob, updateJobItemsByJobIdAndStatus } from "@/data/downloadJobs";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
+import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
+import { toJsonValue } from "@/lib/typedJson";
+
+const log = createLogger("useActionPanelLogic");
 
 type DownloadMode = "new" | "no_profile" | "all";
 
@@ -17,7 +25,7 @@ interface UseActionPanelProps {
 }
 
 export function useActionPanelLogic({
-  selectedCountries, networks, networkKeys, delay, directoryOnly, onJobCreated,
+  selectedCountries, networks, networkKeys, delay, directoryOnly: _directoryOnly, onJobCreated,
 }: UseActionPanelProps) {
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
@@ -38,31 +46,25 @@ export function useActionPanelLogic({
 
   // ── Queries ──
   const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
-    queryKey: ["directory-cache", countryCodes, networkKeys],
+    queryKey: queryKeys.directoryCache(countryCodes, networkKeys),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
-      let q = supabase.from("directory_cache").select("*").in("country_code", countryCodes);
-      if (networks.length > 0) q = q.in("network_name", networks);
-      else q = q.eq("network_name", "");
-      const { data, error } = await q;
-      if (error) { toast({ title: "Errore directory cache", description: error.message, variant: "destructive" }); return []; }
-      return data || [];
+      try {
+        return await findDirectoryCache(countryCodes, networks.length > 0 ? networks : undefined);
+      } catch (e: unknown) {
+        toast({ title: "Errore directory cache", description: (e instanceof Error ? e.message : String(e)), variant: "destructive" });
+        return [];
+      }
     },
     staleTime: 30_000,
     enabled: countryCodes.length > 0,
   });
 
   const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
-    queryKey: ["db-partners-for-countries", countryCodes],
+    queryKey: queryKeys.dbPartnersForCountries(countryCodes),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
-      const { data, error } = await supabase
-        .from("partners")
-        .select("wca_id, company_name, city, country_code, country_name, updated_at")
-        .in("country_code", countryCodes)
-        .not("wca_id", "is", null)
-        .order("company_name");
-      if (error) { toast({ title: "Errore caricamento partner", description: error.message, variant: "destructive" }); return []; }
+      const data = await getPartnersByCountries(countryCodes, "wca_id, company_name, city, country_code, country_name, updated_at");
       return (data || []).map(p => ({
         wca_id: p.wca_id!, company_name: p.company_name, city: p.city,
         country_code: p.country_code, country_name: p.country_name, updated_at: p.updated_at,
@@ -73,12 +75,10 @@ export function useActionPanelLogic({
   });
 
   const { data: noProfileIds = [] } = useQuery({
-    queryKey: ["no-profile-wca-ids", countryCodes],
+    queryKey: queryKeys.noProfileWcaIds(countryCodes),
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
-      const { data } = await supabase
-        .from("partners").select("wca_id")
-        .in("country_code", countryCodes).not("wca_id", "is", null).is("raw_profile_html", null);
+      const data = await getPartnersByCountries(countryCodes, "wca_id", { noProfile: true });
       return (data || []).map(p => p.wca_id!);
     },
     staleTime: 30_000,
@@ -86,12 +86,15 @@ export function useActionPanelLogic({
   });
 
   // ── Derived ──
-  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
-    const members = entry.members as any[];
-    return (members || []).map((m: any) => ({
-      company_name: m.company_name, city: m.city, country: m.country,
-      country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
-    }));
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry) => {
+    const members = entry.members as unknown[];
+    return (members || []).map((raw) => {
+      const m = raw as Record<string, unknown>;
+      return {
+        company_name: String(m.company_name || ""), city: String(m.city || ""), country: String(m.country || ""),
+        country_code: String(m.country_code || entry.country_code), wca_id: m.wca_id as number,
+      };
+    });
   });
 
   const hasCache = cachedMembers.length > 0;
@@ -135,11 +138,11 @@ export function useActionPanelLogic({
   // ── Scan ──
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
-    await supabase.from("directory_cache").upsert({
-      country_code: countryCode, network_name: netKey, members: membersJson as any,
+    await upsertDirectoryCache({
+      country_code: countryCode, network_name: netKey, members: toJsonValue(membersJson),
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    }, { onConflict: "country_code,network_name" });
-    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
+    });
+    queryClient.invalidateQueries({ queryKey: queryKeys.directoryCacheAll });
   }, [queryClient]);
 
   const handleStartScan = useCallback(async () => {
@@ -153,7 +156,7 @@ export function useActionPanelLogic({
       document.addEventListener("visibilitychange", handler);
     });
 
-    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    const cachedCountryCodes = new Set(cachedEntries.map((e) => e.country_code));
 
     for (let ci = 0; ci < selectedCountries.length; ci++) {
       if (abortRef.current) break;
@@ -205,8 +208,8 @@ export function useActionPanelLogic({
 
     setScannedMembers([...allMembers]);
     setIsScanning(false); setScanComplete(true);
-    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
-    queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.directoryCacheAll });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dbPartnersForCountriesAll });
   }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries, delay]);
 
   const abortScan = useCallback(() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }, []);
@@ -219,26 +222,22 @@ export function useActionPanelLogic({
     }
 
     try {
-      let cookie: string | null = null;
-      try {
-        const cached = localStorage.getItem("wca_session_cookie");
-        if (cached) { const parsed = JSON.parse(cached); if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) cookie = parsed.cookie; }
-      } catch {}
+      const cookie = getWcaCookie();
       if (!cookie) {
         const res = await fetch("https://wca-app.vercel.app/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
         const data = await res.json();
         if (!data.success || !data.cookies) { toast({ title: "Login WCA fallito", description: data.error || "Riprova.", variant: "destructive" }); return; }
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+        setWcaCookie(data.cookies);
       }
-    } catch { toast({ title: "Connessione WCA fallita", variant: "destructive" }); return; }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast({ title: "Connessione WCA fallita", variant: "destructive" }); return; }
 
-    const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, updated_at").in("status", ["pending", "running"]).limit(1);
-    if (activeJobs && activeJobs.length > 0) {
+    const activeJobs = await findJobsByStatusSelect(["pending", "running"], "id, status, updated_at", 1);
+    if (activeJobs.length > 0) {
       const job = activeJobs[0];
-      const ageMs = Date.now() - new Date(job.updated_at).getTime();
+      const ageMs = Date.now() - new Date(String(job.updated_at)).getTime();
       if (job.status === "running" && ageMs > 120_000) {
-        await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato — job orfano" }).eq("id", job.id);
-        await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", job.id).eq("status", "processing");
+        await updateDownloadJob(String(job.id), { status: "stopped", error_message: "Resettato — job orfano" });
+        await updateJobItemsByJobIdAndStatus(String(job.id), "processing", { status: "pending" });
       } else {
         toast({ title: "Job già in corso", description: "Attendi il completamento.", variant: "destructive" }); return;
       }
@@ -273,29 +272,18 @@ export function useActionPanelLogic({
       const freshWcaIds = new Set(scannedMembers.filter(m => m.wca_id).map(m => m.wca_id!));
       if (freshWcaIds.size === 0) { toast({ title: "⚠️ Nessun partner trovato", variant: "destructive" }); return; }
 
-      const { data: dbPartnersForCleanup } = await supabase.from("partners").select("id, wca_id").in("country_code", countryCodes).not("wca_id", "is", null);
+      const dbPartnersForCleanup = await getPartnersByCountries(countryCodes, "id, wca_id");
       const dbList = dbPartnersForCleanup || [];
-      const stalePartners = dbList.filter(p => p.wca_id && !freshWcaIds.has(p.wca_id));
+      const stalePartners = dbList.filter(p => p.wca_id && !freshWcaIds.has(p.wca_id as number));
 
       if (stalePartners.length > 0) {
-        const staleIds = stalePartners.map(p => p.id);
-        for (let i = 0; i < staleIds.length; i += 50) {
-          const batch = staleIds.slice(i, i + 50);
-          await supabase.from("partner_contacts").delete().in("partner_id", batch);
-          await supabase.from("partner_networks").delete().in("partner_id", batch);
-          await supabase.from("partner_services").delete().in("partner_id", batch);
-          await supabase.from("partner_certifications").delete().in("partner_id", batch);
-          await supabase.from("partner_social_links").delete().in("partner_id", batch);
-          await supabase.from("interactions").delete().in("partner_id", batch);
-          await supabase.from("reminders").delete().in("partner_id", batch);
-          await supabase.from("activities").delete().in("partner_id", batch);
-          await supabase.from("partners").delete().in("id", batch);
-        }
+        const staleIds = stalePartners.map(p => String(p.id));
+        await deletePartnersWithRelations(staleIds);
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
-      await queryClient.invalidateQueries({ queryKey: ["no-profile-wca-ids"] });
-      await queryClient.invalidateQueries({ queryKey: ["partners"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dbPartnersForCountriesAll });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.noProfileWcaIds([]) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       setDownloadMode("no_profile");
 
       toast({ title: "🧹 Pulizia completata", description: `Directory: ${freshWcaIds.size} partner.` });
@@ -312,11 +300,10 @@ export function useActionPanelLogic({
     if (countryCodes.length > 0 && !loadingCache && !loadingDb && !hasCache && !isScanning && !scanComplete) {
       handleStartScan();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [loadingCache, loadingDb, hasCache, countryCodes.length]);
 
   return {
-    // State
     downloadMode, setDownloadMode,
     skipCachedDirs, setSkipCachedDirs,
     isScanning, scanComplete,
@@ -324,12 +311,10 @@ export function useActionPanelLogic({
     scanError, skippedCountries,
     dirThenDownload, setDirThenDownload,
     autoDownloadPending, setAutoDownloadPending,
-    // Derived
     hasCache, totalCount, downloadedCount, missingIds,
     noProfileInDirectoryCount, idsToDownload, estimateLabel,
     isLoading: loadingCache || loadingDb,
     createJob,
-    // Actions
     handleStartScan, abortScan, executeDownload,
   };
 }

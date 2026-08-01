@@ -1,24 +1,27 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Slider } from "@/components/ui/slider";
 import {
   Sparkles, Globe, ChevronDown, ChevronRight, Wrench, Loader2,
-  FlaskConical, CheckCircle, Users,
+  FlaskConical,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPartnersForEnrichment, getPartnerWebsite } from "@/application/data/partners";
+import { runBulkOp } from "@/v2/services/bulkOps";
 import { toast } from "@/hooks/use-toast";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs";
 import { scrapeWcaPartnerById } from "@/lib/api/wcaScraper";
 import { WcaBrowser } from "./WcaBrowser";
-import { useTheme, t } from "./theme";
+import { t } from "./theme";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
+import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
+
+const log = createLogger("AdvancedTools");
 
 interface EnrichPartner {
   id: string;
@@ -62,17 +65,12 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState(false);
   const [current, setCurrent] = useState(0);
-  const [results, setResults] = useState<{ id: string; success: boolean }[]>([]);
+  const [_results, setResults] = useState<{ id: string; success: boolean }[]>([]);
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["enrichment-partners", filterCountry, filterType, onlyNotEnriched],
+    queryKey: queryKeys.partners.enrichment(filterCountry, filterType, onlyNotEnriched),
     queryFn: async () => {
-      let query = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
-      if (filterCountry) query = query.eq("country_code", filterCountry);
-      if (filterType) query = query.eq("partner_type", filterType as any);
-      if (onlyNotEnriched) query = query.is("enriched_at", null);
-      const { data, error } = await query.limit(500);
-      if (error) throw error;
+      const data = await findPartnersForEnrichment({ country: filterCountry, type: filterType, onlyNotEnriched }, 500);
       return data as EnrichPartner[];
     },
   });
@@ -84,9 +82,9 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
     for (let i = 0; i < ids.length; i++) {
       setCurrent(i + 1);
       try {
-        const { data: partner } = await supabase.from("partners").select("id, website").eq("id", ids[i]).single();
+        const partner = await getPartnerWebsite(ids[i]);
         if (partner?.website) {
-          let enrichBody: Record<string, any> = { partnerId: partner.id };
+          const enrichBody: Record<string, unknown> = { partnerId: partner.id };
 
           // Try client-side scraping via FireScrape for better quality
           if (fsAvailable) {
@@ -98,13 +96,17 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
                 enrichBody.markdown = scrapeResult.markdown;
                 enrichBody.sourceUrl = scrapeResult.metadata?.url || websiteUrl;
               }
-            } catch { /* fallback to server-side fetch */ }
+            } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to server-side fetch */ }
           }
 
-          await supabase.functions.invoke("enrich-partner-website", { body: enrichBody });
-          setResults(prev => [...prev, { id: ids[i], success: true }]);
+          const bulkResult = await runBulkOp("enrich.base", [{
+            partnerId: partner.id,
+            markdown: typeof enrichBody.markdown === "string" ? enrichBody.markdown : undefined,
+            sourceUrl: typeof enrichBody.sourceUrl === "string" ? enrichBody.sourceUrl : undefined,
+          }], { sourceView: "AdvancedTools", concurrency: 1 });
+          setResults(prev => [...prev, { id: ids[i], success: bulkResult.errorCount === 0 }]);
         }
-      } catch { setResults(prev => [...prev, { id: ids[i], success: false }]); }
+      } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); setResults(prev => [...prev, { id: ids[i], success: false }]); }
       if (i < ids.length - 1) await new Promise(r => setTimeout(r, 3000));
     }
     setRunning(false);
@@ -158,7 +160,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
               <ScrollArea className={`h-40 border rounded-lg ${th.panelSlate}`}>
                 <div className={th.divider}>
                   {partners?.map(p => (
-                    <div key={p.id} onClick={() => setSelected(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer ${th.hover}`}>
+                    <div key={p.id} onClick={() => setSelected(prev => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })} className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer ${th.hover}`}>
                       <Checkbox checked={selected.has(p.id)} className="pointer-events-none" />
                       <div className="min-w-0 flex-1">
                         <p className={`text-xs truncate ${th.chipName}`}>{p.company_name}</p>
@@ -234,7 +236,7 @@ function NetworkSection({ isDark }: { isDark: boolean }) {
                   </div>
                 </div>
                 {config.is_member && (
-                  <Button size="sm" variant="outline" onClick={() => handleTest(config)} disabled={testing !== null} className={`h-7 text-xs ${th.btnTest}`}>
+                  <Button size="sm" variant="outline" onClick={() => handleTest(config)} disabled={testing != null} className={`h-7 text-xs ${th.btnTest}`}>
                     {testing === config.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FlaskConical className="w-3 h-3" />}
                     <span className="ml-1">{tested ? "Ri-testa" : "Test"}</span>
                   </Button>

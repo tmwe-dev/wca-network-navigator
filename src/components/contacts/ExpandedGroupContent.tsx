@@ -13,7 +13,7 @@ interface ExpandedGroupContentProps {
   groupType: string;
   groupKey: string;
   selectedId: string | null;
-  onSelect: (contact: any) => void;
+  onSelect: (contact: Record<string, unknown>) => void;
   selection: ReturnType<typeof useSelection>;
   holdingPattern?: "out" | "in" | "all";
   sortKey: SortKey;
@@ -23,20 +23,23 @@ interface ExpandedGroupContentProps {
 export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect, selection, holdingPattern, sortKey, searchFilter }: ExpandedGroupContentProps) {
   const [page, setPage] = useState(0);
   const { data, isLoading } = useContactsByGroup(groupType, groupKey, page, 200, true, holdingPattern);
-  const { data: activeInteractions } = useContactInteractions(selectedId);
+  const { data: _activeInteractions } = useContactInteractions(selectedId);
   const rawContacts = data?.items ?? [];
 
   const filtered = useMemo(() => {
     const search = searchFilter?.trim().toLowerCase();
     if (!search) return rawContacts;
-    return rawContacts.filter((c: any) =>
-      (c.company_name || "").toLowerCase().includes(search) ||
-      (c.name || "").toLowerCase().includes(search) ||
-      (c.email || "").toLowerCase().includes(search) ||
-      (c.city || "").toLowerCase().includes(search) ||
-      (c.company_alias || "").toLowerCase().includes(search) ||
-      (c.contact_alias || "").toLowerCase().includes(search)
-    );
+    return rawContacts.filter((c) => {
+      const r = c as unknown as Record<string, string | null>;
+      return (
+        (r.company_name || "").toLowerCase().includes(search) ||
+        (r.name || "").toLowerCase().includes(search) ||
+        (r.email || "").toLowerCase().includes(search) ||
+        (r.city || "").toLowerCase().includes(search) ||
+        (r.company_alias || "").toLowerCase().includes(search) ||
+        (r.contact_alias || "").toLowerCase().includes(search)
+      );
+    });
   }, [rawContacts, searchFilter]);
 
   const contacts = useMemo(() => sortContacts(filtered, sortKey), [filtered, sortKey]);
@@ -67,10 +70,10 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
       <div ref={parentRef} className="max-h-[400px] overflow-y-auto p-2">
         <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
           {virtualizer.getVirtualItems().map((virtualRow) => {
-            const c = contacts[virtualRow.index] as any;
+            const c = contacts[virtualRow.index];
             return (
               <div
-                key={c.id}
+                key={String(c.id)}
                 style={{
                   position: "absolute",
                   top: 0,
@@ -81,13 +84,14 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
                 }}
               >
                 <ContactCard
-                  c={c}
-                  isActive={selectedId === c.id}
-                  isSelected={selection.selectedIds.has(c.id)}
-                  onSelect={() => onSelect(c)}
-                  onToggle={() => selection.toggle(c.id)}
+                  c={c as never}
+                  isActive={selectedId === String(c.id)}
+                  isSelected={selection.selectedIds.has(String(c.id))}
+                  onSelect={() => {}}
+                  onViewDetail={() => onSelect(c)}
+                  onToggle={() => selection.toggle(String(c.id))}
                   index={page * pageSize + virtualRow.index}
-                  interactions={selectedId === c.id ? activeInteractions : undefined}
+                  
                 />
               </div>
             );
@@ -99,11 +103,11 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
       )}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-1 pt-1 text-[10px] text-muted-foreground">
-          <Button variant="ghost" size="icon" className="h-5 w-5" disabled={page === 0} onClick={() => setPage(page - 1)}>
+          <Button variant="ghost" size="icon" aria-label="Precedente" className="h-5 w-5" disabled={page === 0} onClick={() => setPage(page - 1)}>
             <ChevronLeft className="w-3 h-3" />
           </Button>
           <span>{page + 1}/{totalPages}</span>
-          <Button variant="ghost" size="icon" className="h-5 w-5" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
+          <Button variant="ghost" size="icon" aria-label="Successivo" className="h-5 w-5" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
             <ChevronRight className="w-3 h-3" />
           </Button>
         </div>

@@ -12,10 +12,14 @@ import {
   Save, Loader2, User, Mail, Phone, Briefcase, TrendingUp, RotateCcw,
   Upload, Trash2, Image as ImageIcon,
 } from "lucide-react";
-import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/data/salesKnowledgeBase";
+import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/constants/salesKnowledgeBase";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadTemplateFile, getTemplatePublicUrl } from "@/application/data/templatesStorage";
+import { createLogger } from "@/lib/log";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
+
+const log = createLogger("AIProfileSettings");
 
 const AI_KEYS = [
   "ai_company_name", "ai_company_alias", "ai_contact_name", "ai_contact_alias",
@@ -26,6 +30,8 @@ const AI_KEYS = [
   "ai_sales_knowledge_base",
   "ai_tone", "ai_language", "ai_style_instructions",
   "ai_sector", "ai_networks", "ai_sector_notes",
+  "ai_business_goals", "ai_behavior_rules", "ai_company_activities",
+  "ai_current_focus",
 ] as const;
 
 type AIFields = Record<(typeof AI_KEYS)[number], string>;
@@ -47,13 +53,12 @@ function ImageUploadField({ label, value, onChange, hint }: {
     try {
       const ext = file.name.split(".").pop() || "png";
       const path = `email-images/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("templates").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from("templates").getPublicUrl(path);
+      await uploadTemplateFile(path, file, { upsert: true });
+      const publicUrl = getTemplatePublicUrl(path);
       onChange(publicUrl);
       toast.success("Immagine caricata");
-    } catch (err: any) {
-      toast.error(err.message || "Errore upload");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Errore upload");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -65,7 +70,7 @@ function ImageUploadField({ label, value, onChange, hint }: {
       <Label className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" /> {label}</Label>
       {value ? (
         <div className="space-y-2">
-          <img src={value} alt={label} className="max-h-24 rounded border border-border object-contain bg-muted p-1" />
+          <OptimizedImage src={value} alt={label} className="max-h-24 rounded border border-border object-contain bg-muted p-1" />
           <Button variant="outline" size="sm" onClick={() => onChange("")}>
             <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Rimuovi
           </Button>
@@ -113,7 +118,8 @@ export default function AIProfileSettings() {
         await updateSetting.mutateAsync({ key, value: fields[key].trim() });
       }
       toast.success("Profilo AI salvato con successo!");
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore durante il salvataggio");
     } finally {
       setSaving(false);
@@ -231,13 +237,14 @@ export default function AIProfileSettings() {
         </CardContent>
       </Card>
 
-      {/* ── Card 2b: Sales Knowledge Base ── */}
-      <Card>
+      {/* ── Card 2b: Sales Knowledge Base (Legacy — migrating to KB Entries) ── */}
+      <Card className="border-primary/30">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
               <CardTitle className="text-base">Sales Knowledge Base</CardTitle>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">LEGACY</span>
             </div>
             <Button
               variant="outline"
@@ -249,15 +256,16 @@ export default function AIProfileSettings() {
             </Button>
           </div>
           <CardDescription>
-            Guida completa per la generazione di email B2B: tecniche di vendita, gestione obiezioni, struttura email, adattamento tono.
-            L'AI segue queste istruzioni per scrivere comunicazioni convincenti come un venditore esperto.
+            <span className="text-primary font-medium">⚠️ Questo campo sarà sostituito dalle schede KB atomiche.</span>{" "}
+            Le tecniche di vendita inserite qui vengono già ignorate se esistono schede nella Knowledge Base strutturata (Impostazioni → Knowledge Base).
+            Migra i contenuti come schede KB per un controllo più granulare.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Textarea
             value={fields.ai_sales_knowledge_base || DEFAULT_SALES_KNOWLEDGE_BASE.trim()}
             onChange={e => set("ai_sales_knowledge_base", e.target.value)}
-            className="min-h-[400px] text-xs font-mono leading-relaxed"
+            className="min-h-[400px] text-xs font-mono leading-relaxed opacity-80"
           />
         </CardContent>
       </Card>
@@ -353,6 +361,67 @@ export default function AIProfileSettings() {
               placeholder="Es. Ci posizioniamo come partner premium per il Far East, con focus su import tessile e componentistica elettronica."
               className="min-h-[80px] text-sm"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Card 5: Business Context ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <CardTitle className="text-base">Contesto Business</CardTitle>
+          </div>
+          <CardDescription>
+            Obiettivi, attività e regole comportamentali che l'AI utilizzerà in tutte le interazioni
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Current Focus — highlighted field */}
+          <div className="space-y-1.5 p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+            <Label className="flex items-center gap-1.5 text-primary font-medium">
+              <TrendingUp className="w-3.5 h-3.5" /> 🎯 Focus Corrente
+            </Label>
+            <Input
+              value={fields.ai_current_focus}
+              onChange={e => set("ai_current_focus", e.target.value)}
+              placeholder="Es. Questo mese il focus è l'acquisizione di partner in Germania e Far East"
+              className="border-primary/20"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Obiettivo temporaneo — l'AI lo userà per dare priorità alle risposte e suggerire azioni proattive
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Attività principali dell'azienda</Label>
+            <Textarea
+              value={fields.ai_company_activities}
+              onChange={e => set("ai_company_activities", e.target.value)}
+              placeholder={`Es. Import/export via aerea e marittima, gestione doganale, magazzinaggio, distribuzione last-mile in Europa.`}
+              className="min-h-[80px] text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Obiettivi commerciali attuali</Label>
+            <Textarea
+              value={fields.ai_business_goals}
+              onChange={e => set("ai_business_goals", e.target.value)}
+              placeholder={`Es. Espandere la rete partner in Far East, aumentare il volume ocean FCL del 20%, acquisire 5 nuovi clienti pharma entro Q4.`}
+              className="min-h-[80px] text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Regole comportamentali AI</Label>
+            <Textarea
+              value={fields.ai_behavior_rules}
+              onChange={e => set("ai_behavior_rules", e.target.value)}
+              placeholder={`Es. Non proporre mai sconti nella prima email. Usa sempre il Lei con interlocutori italiani. Menziona sempre WCA come punto in comune. Non promettere transit time specifici senza verifica.`}
+              className="min-h-[100px] text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Queste regole saranno iniettate in TUTTE le interazioni AI del sistema
+            </p>
           </div>
         </CardContent>
       </Card>

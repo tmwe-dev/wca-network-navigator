@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 // Valid enum values for matching
 const SERVICE_MAP: Record<string, string> = {
@@ -67,7 +64,7 @@ function parseDate(raw: string): string | null {
   const d = new Date(raw)
   if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
   // Try DD/MM/YYYY
-  const parts = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+  const parts = raw.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/)
   if (parts) {
     const d2 = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`)
     if (!isNaN(d2.getTime())) return d2.toISOString().split('T')[0]
@@ -95,9 +92,14 @@ const pickBestEmail = (personName: string, emails: string[]): string | null => {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
+
+  const auth = await requireExtensionAuth(req, dynCors);
+  if (isExtensionAuthError(auth)) return auth;
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -105,8 +107,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
-    const items: Array<{ wcaId: number; contacts: any[]; profile?: any; profileHtml?: string }> = body.batch || [body]
-    const results: any[] = []
+    const items: Array<{ wcaId: number; contacts: Array<Record<string, unknown>>; profile?: Record<string, unknown>; profileHtml?: string }> = body.batch || [body]
+    const results: Array<Record<string, unknown>> = []
 
     for (const item of items) {
       const { wcaId, contacts, profile, profileHtml } = item
@@ -135,7 +137,7 @@ Deno.serve(async (req) => {
       // PART 1: Save PROFILE data to partners table
       // ══════════════════════════════════════════════════
       if (profile) {
-        const partnerUpdate: Record<string, any> = {}
+        const partnerUpdate: Record<string, unknown> = {}
         if (profile.address) partnerUpdate.address = profile.address
         if (profile.phone) partnerUpdate.phone = profile.phone
         if (profile.fax) partnerUpdate.fax = profile.fax
@@ -176,12 +178,12 @@ Deno.serve(async (req) => {
             .from('partner_networks')
             .select('network_name')
             .eq('partner_id', partnerId)
-          const existingNetNames = new Set((existingNets || []).map((n: any) => n.network_name.toLowerCase()))
+          const existingNetNames = new Set((existingNets || []).map((n: Record<string, unknown>) => n.network_name.toLowerCase()))
 
           for (const net of profile.networks) {
             if (!net.name) continue
             if (existingNetNames.has(net.name.toLowerCase())) continue
-            const netInsert: any = { partner_id: partnerId, network_name: net.name }
+            const netInsert: Record<string, unknown> = { partner_id: partnerId, network_name: net.name }
             if (net.expires) {
               const exp = parseDate(net.expires)
               if (exp) netInsert.expires = exp
@@ -196,7 +198,7 @@ Deno.serve(async (req) => {
             .from('partner_services')
             .select('service_category')
             .eq('partner_id', partnerId)
-          const existingSvcSet = new Set((existingSvc || []).map((s: any) => s.service_category))
+          const existingSvcSet = new Set((existingSvc || []).map((s: Record<string, unknown>) => s.service_category))
 
           for (const svc of profile.services) {
             const mapped = matchService(svc)
@@ -216,7 +218,7 @@ Deno.serve(async (req) => {
             .from('partner_certifications')
             .select('certification')
             .eq('partner_id', partnerId)
-          const existingCertSet = new Set((existingCert || []).map((c: any) => c.certification))
+          const existingCertSet = new Set((existingCert || []).map((c: Record<string, unknown>) => c.certification))
 
           for (const cert of profile.certifications) {
             const mapped = matchCert(cert)
@@ -243,13 +245,13 @@ Deno.serve(async (req) => {
       // PART 2: Save CONTACTS (existing logic)
       // ══════════════════════════════════════════════════
       if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
-        console.log(`save-wca-contacts: ${partner.company_name} (${wcaId}) — profile saved, no contacts`)
+        
         results.push({ wcaId, success: true, companyName: partner.company_name, updated: 0, inserted: 0, profileSaved: true })
         continue
       }
 
       // Deduplicate incoming contacts by email
-      const dedupByEmail: any[] = []
+      const dedupByEmail: Array<Record<string, unknown>> = []
       const seenEmails = new Map<string, number>()
       for (const c of contacts) {
         if (!c.title && !c.name) continue
@@ -270,7 +272,7 @@ Deno.serve(async (req) => {
       }
 
       // Deduplicate by NAME
-      const deduped: any[] = []
+      const deduped: Array<Record<string, unknown>> = []
       const seenNames = new Map<string, number>()
       for (const c of dedupByEmail) {
         const nameKey = (c.name || c.title || '').trim().toLowerCase()
@@ -302,9 +304,9 @@ Deno.serve(async (req) => {
         .select('id, title, name, email, direct_phone, mobile')
         .eq('partner_id', partnerId)
 
-      const existingByName = new Map<string, any>()
-      const existingByEmail = new Map<string, any>()
-      const existingByTitle = new Map<string, any>()
+      const existingByName = new Map<string, Record<string, unknown>>()
+      const existingByEmail = new Map<string, Record<string, unknown>>()
+      const existingByTitle = new Map<string, Record<string, unknown>>()
       for (const e of (existing || [])) {
         if (e.name) existingByName.set(e.name.trim().toLowerCase(), e)
         if (e.email) existingByEmail.set(e.email.trim().toLowerCase(), e)
@@ -359,19 +361,19 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`save-wca-contacts: ${partner.company_name} (${wcaId}) — contacts: updated=${updated}, inserted=${inserted}, profile saved`)
+      
       results.push({ wcaId, success: true, companyName: partner.company_name, updated, inserted, profileSaved: true })
     }
 
     return new Response(
       JSON.stringify({ success: true, results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('save-wca-contacts error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   }
 })

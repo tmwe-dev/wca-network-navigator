@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search } from "lucide-react";
+import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DraftChannel } from "@/pages/Cockpit";
+import type { DraftChannel } from "@/types/cockpit";
 
-const channels: { id: DraftChannel; label: string; icon: any; hoverBg: string; hoverBorder: string; hoverText: string }[] = [
-  { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary" },
-  { id: "linkedin", label: "LinkedIn", icon: Linkedin, hoverBg: "bg-[hsl(210,80%,55%)]/10", hoverBorder: "border-[hsl(210,80%,55%)]", hoverText: "text-[hsl(210,80%,55%)]" },
-  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, hoverBg: "bg-[hsl(142,71%,45%)]/10", hoverBorder: "border-[hsl(142,71%,45%)]", hoverText: "text-[hsl(142,71%,45%)]" },
-  { id: "sms", label: "SMS / Chat", icon: Smartphone, hoverBg: "bg-accent/20", hoverBorder: "border-accent-foreground/50", hoverText: "text-accent-foreground" },
+const channels: { id: DraftChannel; label: string; icon: React.ElementType; hoverBg: string; hoverBorder: string; hoverText: string; requiredField: string }[] = [
+  { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary", requiredField: "email" },
+  { id: "linkedin", label: "LinkedIn", icon: Linkedin, hoverBg: "bg-[hsl(210,80%,55%)]/10", hoverBorder: "border-[hsl(210,80%,55%)]", hoverText: "text-[hsl(210,80%,55%)]", requiredField: "linkedinUrl" },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, hoverBg: "bg-[hsl(142,71%,45%)]/10", hoverBorder: "border-[hsl(142,71%,45%)]", hoverText: "text-[hsl(142,71%,45%)]", requiredField: "phone" },
+  { id: "sms", label: "SMS / Chat", icon: Smartphone, hoverBg: "bg-accent/20", hoverBorder: "border-accent-foreground/50", hoverText: "text-accent-foreground", requiredField: "phone" },
 ];
+
+export interface ContactAvailability {
+  hasEmail?: boolean;
+  hasPhone?: boolean;
+  hasLinkedinUrl?: boolean;
+}
 
 interface ChannelDropZonesProps {
   isDragging: boolean;
@@ -19,9 +25,10 @@ interface ChannelDropZonesProps {
   onReadProfile?: () => void;
   onDeepSearch?: () => void;
   hasActiveContact?: boolean;
+  contactAvailability?: ContactAvailability;
 }
 
-export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact }: ChannelDropZonesProps) {
+export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact, contactAvailability }: ChannelDropZonesProps) {
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   // Compact mode: show horizontal row of buttons when not dragging
@@ -57,9 +64,16 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
           {channels.map((ch) => {
             const Icon = ch.icon;
             const isHovered = hoveredChannel === ch.id;
+            const isMissing = contactAvailability && hasActiveContact
+              ? (ch.requiredField === "email" && !contactAvailability.hasEmail) ||
+                (ch.requiredField === "phone" && !contactAvailability.hasPhone) ||
+                (ch.requiredField === "linkedinUrl" && !contactAvailability.hasLinkedinUrl)
+              : false;
             return (
               <div
                 key={ch.id}
+                data-drop-zone="true"
+                data-channel-id={ch.id}
                 onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
                 onDragLeave={() => setHoveredChannel(null)}
                 onDrop={(e) => {
@@ -69,8 +83,9 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                 }}
                 className={cn(
                   "flex items-center gap-3 px-5 py-5 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[72px]",
-                  !isHovered && "border-border/40 bg-card/40 text-muted-foreground/60",
+                  !isHovered && "border-border/40 bg-card/40 text-muted-foreground",
                   isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder, ch.hoverText),
+                  isMissing && !isHovered && "opacity-50",
                 )}
               >
                 <div className={cn(
@@ -80,7 +95,13 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className={cn("text-sm font-semibold", isHovered && "text-foreground")}>{ch.label}</span>
-                {isHovered && (
+                {isMissing && (
+                  <span className="ml-auto flex items-center gap-1 text-[10px] text-warning">
+                    <AlertTriangle className="w-3 h-3" />
+                    Dato mancante
+                  </span>
+                )}
+                {isHovered && !isMissing && (
                   <span className={cn("text-xs font-medium ml-auto", ch.hoverText)}>
                     Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""}
                   </span>
@@ -90,16 +111,16 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
           })}
         </div>
 
-        <p className="text-[10px] text-muted-foreground/40 text-center">
+        <p className="text-[10px] text-muted-foreground text-center">
           Trascina un contatto qui per generare un messaggio
         </p>
       </div>
     );
   }
 
-  // Expanded mode: full drop zones during drag
+  // Expanded mode: full drop zones during drag — tall and prominent
   return (
-    <div className="flex flex-col gap-3 w-full max-w-[360px]">
+    <div className="flex flex-col gap-3 w-full max-w-[400px] h-full">
       {channels.map((ch, i) => {
         const isHovered = hoveredChannel === ch.id;
         const Icon = ch.icon;
@@ -107,10 +128,12 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
         return (
           <motion.div
             key={ch.id}
+            data-drop-zone="true"
+            data-channel-id={ch.id}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{
               opacity: 1,
-              scale: isHovered ? 1.03 : 1,
+              scale: isHovered ? 1.05 : 1,
             }}
             transition={{ delay: i * 0.04, duration: 0.2, type: "spring", stiffness: 300, damping: 20 }}
             onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
@@ -121,40 +144,40 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               if (draggedContactId) onDrop(ch.id, draggedContactId, "Contact");
             }}
             className={cn(
-              "relative flex items-center gap-3 px-4 py-4 rounded-xl border-2 border-dashed transition-all duration-200",
+              "relative flex flex-1 items-center justify-center gap-4 px-6 py-6 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[100px]",
               !isHovered && "border-muted-foreground/30 bg-card/40",
-              isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder),
+              isHovered && cn("border-[4px] border-solid shadow-xl", ch.hoverBg, ch.hoverBorder),
             )}
           >
             {isHovered && (
               <motion.div
-                className={cn("absolute inset-0 rounded-xl opacity-20", ch.hoverBg)}
+                className={cn("absolute inset-0 rounded-xl", ch.hoverBg)}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.2 }}
+                animate={{ opacity: 0.3 }}
               />
             )}
 
             <div className={cn(
-              "relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
-              isHovered ? cn(ch.hoverBg, ch.hoverText) : "bg-muted/40 text-muted-foreground/60"
+              "relative w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+              isHovered ? cn(ch.hoverBg, ch.hoverText, "animate-pulse") : "bg-muted/40 text-muted-foreground"
             )}>
-              <Icon className="w-5 h-5" />
+              <Icon className={cn("transition-all", isHovered ? "w-7 h-7" : "w-5 h-5")} />
             </div>
 
             <span className={cn(
-              "text-sm font-semibold transition-colors",
-              isHovered ? "text-foreground" : "text-muted-foreground"
+              "font-semibold transition-all",
+              isHovered ? "text-lg text-foreground" : "text-sm text-muted-foreground"
             )}>
               {ch.label}
             </span>
 
             {isHovered && (
               <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={cn("text-xs font-medium ml-auto", ch.hoverText)}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={cn("text-sm font-bold ml-auto", ch.hoverText)}
               >
-                Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""}
+                Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""} ↓
               </motion.span>
             )}
           </motion.div>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -20,7 +19,7 @@ export function QuickFilters({ chips, active, onChange, className }: Props) {
     onChange(active.includes(key) ? active.filter(k => k !== key) : [...active, key]);
   };
 
-  const groups = [...new Set(chips.map(c => c.group || ""))];
+  const _groups = [...new Set(chips.map(c => c.group || ""))];
 
   return (
     <div className={cn("flex flex-wrap gap-1.5 p-2", className)}>

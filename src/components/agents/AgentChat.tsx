@@ -2,10 +2,14 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Mic, MicOff, Volume2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("AgentChat");
 
 interface Message {
   role: "user" | "assistant";
@@ -22,6 +26,10 @@ export function AgentChat({ agent }: Props) {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const speech = useContinuousSpeech((text) => {
+    setInput((prev) => (prev ? prev + " " + text : text));
+  });
+
   useEffect(() => { setMessages([]); }, [agent.id]);
   useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
 
@@ -34,12 +42,13 @@ export function AgentChat({ agent }: Props) {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("agent-execute", {
+      const data = await invokeAi<Record<string, unknown>>("agent-execute", {
+        scope: "agent",
+        context: { source: "AgentChat.agent_execute", mode: "chat" },
         body: { agent_id: agent.id, chat_messages: newMsgs },
       });
-      if (error) throw error;
-      setMessages([...newMsgs, { role: "assistant", content: data?.response || "Nessuna risposta" }]);
-    } catch (e) {
+      setMessages([...newMsgs, { role: "assistant", content: String(data?.response ?? "Nessuna risposta") }]);
+    } catch {
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione con l'agente." }]);
     } finally {
       setLoading(false);
@@ -64,7 +73,7 @@ export function AgentChat({ agent }: Props) {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch {}
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   };
 
   return (
@@ -115,14 +124,27 @@ export function AgentChat({ agent }: Props) {
       {/* Input */}
       <div className="flex gap-2 mt-2">
         <Input
-          value={input}
+          value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder={`Parla con ${agent.name}...`}
+          placeholder={speech.listening ? "🎙 Sto ascoltando…" : `Parla con ${agent.name}...`}
           className="text-sm"
           disabled={loading}
         />
-        <Button size="icon" onClick={send} disabled={!input.trim() || loading}>
+        <Button
+          size="icon"
+          aria-label={speech.listening ? "Stop dettatura" : "Dettatura vocale"}
+          variant={speech.listening ? "destructive" : "outline"}
+          onClick={speech.toggle}
+          className={cn("relative", speech.listening && "animate-pulse")}
+          title={speech.listening ? "Stop dettatura" : "Dettatura vocale"}
+        >
+          {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          {speech.listening && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-ping" />
+          )}
+        </Button>
+        <Button size="icon" onClick={send} disabled={!input.trim() || loading} aria-label="Invia">
           <Send className="w-4 h-4" />
         </Button>
       </div>

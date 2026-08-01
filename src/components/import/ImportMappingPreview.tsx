@@ -24,7 +24,7 @@ import type { AiMappingResult } from "@/hooks/useImportWizard";
 interface ImportMappingPreviewProps {
   aiMapping: AiMappingResult;
   pendingFile: File | null;
-  pendingRows: any[];
+  pendingRows: Array<Record<string, unknown>>;
   groupName: string;
   setGroupName: (v: string) => void;
   importSource: "standard" | "business_card";
@@ -111,6 +111,7 @@ export function ImportMappingPreview({
                           size="icon"
                           className="h-6 w-6 text-muted-foreground hover:text-destructive"
                           onClick={() => onMappingTargetChange(src, "__unmapped__")}
+                          aria-label="Elimina"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -149,7 +150,7 @@ export function ImportMappingPreview({
         <div>
           {(() => {
             const previewRows = pendingFile && pendingRows.length > 0
-              ? pendingRows.slice(0, 5).map(row => transformRow(row, aiMapping.column_mapping))
+              ? pendingRows.slice(0, 5).map(row => transformRow(row as Record<string, string | undefined>, aiMapping.column_mapping as Record<string, string>))
               : aiMapping.parsed_rows.slice(0, 5);
             const totalRows = pendingFile ? pendingRows.length : aiMapping.parsed_rows.length;
             const activeCols = TARGET_COLUMNS.filter(col => previewRows.some(r => r[col]));
@@ -172,7 +173,7 @@ export function ImportMappingPreview({
                         <TableRow key={i}>
                           {activeCols.map(col => (
                             <TableCell key={col} className="text-[10px] truncate max-w-[120px]">
-                              {row[col] || "—"}
+                              {String((row as Record<string, unknown>)[col] || "—")}
                             </TableCell>
                           ))}
                         </TableRow>

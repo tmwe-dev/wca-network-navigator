@@ -1,28 +1,34 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
-import { CommandPalette } from "@/components/CommandPalette";
-import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, RefreshCw, FlaskConical } from "lucide-react";
+import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, Plus, FlaskConical, DatabaseZap, Activity, Mic, MicOff } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
-import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { ConnectionStatusBar } from "./ConnectionStatusBar";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { useWcaSync } from "@/hooks/useWcaSync";
 import { useOutreachQueue } from "@/hooks/useOutreachQueue";
+import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
-import { MissionDrawer } from "@/components/global/MissionDrawer";
-import { FiltersDrawer } from "@/components/global/FiltersDrawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
+import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
+const TestExtensionsContent = lazy(() => import("@/components/test-extensions/TestExtensionsView").then((m) => ({ default: m.TestExtensionsContent })));
+const CommandPalette = lazy(() => import("@/components/CommandPalette").then((m) => ({ default: m.CommandPalette })));
+const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then((m) => ({ default: m.MissionDrawer })));
+const FiltersDrawer = lazy(() => import("@/components/global/filters-drawer").then((m) => ({ default: m.FiltersDrawer })));
+const AddContactDialog = lazy(() => import("@/components/contacts/AddContactDialog").then((m) => ({ default: m.AddContactDialog })));
+const AgentOperationsDashboard = lazy(() => import("@/components/agents/AgentOperationsDashboard").then((m) => ({ default: m.AgentOperationsDashboard })));
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,24 +36,29 @@ export function AppLayout() {
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
   const [missionOpen, setMissionOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
+  const [testExtOpen, setTestExtOpen] = useState(false);
+  const [agentDashOpen, setAgentDashOpen] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const deepSearch = useDeepSearchRunner();
   const outreachQueue = useOutreachQueue();
   useJobHealthMonitor();
   useWcaSync();
+  const globalSync = useGlobalAutoSync();
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const currentPath = location.pathname;
-  
   const isFullscreenRoute = ["/", "/network", "/crm", "/outreach", "/agenda", "/operations", "/global", "/reminders", "/settings", "/import", "/hub-operativo", "/email-composer"].includes(currentPath);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCommandOpen((o) => !o); }
-      // ⌘J now opens IntelliFlow (unified AI)
       if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setIntelliflowOpen((o) => !o); }
+      if (e.key === "n" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); navigate("/v2/email-composer"); }
+      if (e.key === "m" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); navigate("/v1/mission-builder"); }
+      if (e.key === "Escape") { setCommandOpen(false); setIntelliflowOpen(false); setMissionOpen(false); setFiltersOpen(false); }
     };
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
@@ -56,22 +67,30 @@ export function AppLayout() {
     };
     document.addEventListener("keydown", down);
     window.addEventListener("open-drawer", drawerHandler);
-    return () => { document.removeEventListener("keydown", down); window.removeEventListener("open-drawer", drawerHandler); };
-  }, []);
+    return () => {
+      document.removeEventListener("keydown", down);
+      window.removeEventListener("open-drawer", drawerHandler);
+    };
+  }, [navigate]);
 
-  // Global listener for AI UI actions
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (!detail) return;
       switch (detail.action_type) {
-        case "navigate": if (detail.path) navigate(detail.path); break;
-        case "show_toast": toast({ title: detail.toast_type === "error" ? "⚠️ Errore" : "✅ Fatto", description: detail.message || "" }); break;
-        case "apply_filters": window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } })); break;
+        case "navigate":
+          if (detail.path) navigate(detail.path);
+          break;
+        case "show_toast":
+          toast({ title: detail.toast_type === "error" ? "⚠️ Errore" : "✅ Fatto", description: detail.message || "" });
+          break;
+        case "apply_filters":
+          window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } }));
+          break;
         case "start_download_job":
           if (detail.job_id) {
             toast({ title: "🤖 Job creato dall'agente", description: `Job ${detail.job_id.slice(0, 8)}… pronto. Vai su Network per avviarlo.` });
-            navigate("/network");
+            navigate("/v1/network");
           }
           break;
       }
@@ -80,111 +99,145 @@ export function AppLayout() {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
-  // Edge hover zones
-  const hoverTimerLeft = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverTimerRight = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleEdgeEnter = (side: "left" | "right") => {
-    const timer = setTimeout(() => {
-      if (side === "left") setFiltersOpen(true);
-      else setMissionOpen(true);
-    }, 150);
-    if (side === "left") hoverTimerLeft.current = timer;
-    else hoverTimerRight.current = timer;
-  };
-  const handleEdgeLeave = (side: "left" | "right") => {
-    const t = side === "left" ? hoverTimerLeft.current : hoverTimerRight.current;
-    if (t) clearTimeout(t);
-  };
+  // ⚠️ Rimosso il listener globale wheel/preventDefault: blocca trackpad
+  // e scroll annidati. Lo swipe-back orizzontale è gestito via CSS
+  // `overscroll-behavior-x: none` in src/index.css.
 
   return (
-    <DeepSearchContext.Provider value={deepSearch}>
+    <ActiveOperatorProvider>
       <MissionProvider>
         <GlobalFiltersProvider>
-      <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
-        {/* Visual tab triggers — follow drawer edges */}
-        <button
-          onClick={() => setFiltersOpen(true)}
-          onMouseEnter={() => handleEdgeEnter("left")}
-          onMouseLeave={() => handleEdgeLeave("left")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
-          style={{
-            left: filtersOpen ? "min(92vw, 620px)" : 0,
-            background: "hsla(270, 60%, 65%, 0.25)",
-            backdropFilter: "blur(8px)",
-          }}
-          aria-label="Apri filtri"
-        >
-          <SlidersHorizontal className="w-4 h-4 text-purple-300" />
-        </button>
-        <button
-          onClick={() => setMissionOpen(true)}
-          onMouseEnter={() => handleEdgeEnter("right")}
-          onMouseLeave={() => handleEdgeLeave("right")}
-          className="fixed top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all duration-300 ease-out cursor-pointer"
-          style={{
-            right: missionOpen ? "min(90vw, 700px)" : 0,
-            background: "hsla(270, 60%, 65%, 0.25)",
-            backdropFilter: "blur(8px)",
-          }}
-          aria-label="Apri Mission"
-        >
-          <Target className="w-4 h-4 text-purple-300" />
-        </button>
-        <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
-          <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
-        </div>
-
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-           <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md">
-            <TooltipProvider>
-             <div className="flex h-full items-center justify-between px-2 sm:px-4">
-              <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
-                
-                {/* Area switch */}
-                {currentPath.startsWith("/network") && (
-                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/crm")}>
-                    <Users className="w-3.5 h-3.5" /> CRM <ArrowRight className="w-3 h-3" />
-                  </Button>
+          <div className="flex h-screen w-full bg-background overflow-hidden overscroll-none" onClick={() => sidebarOpen && setSidebarOpen(false)}>
+              <a
+                href="#main-content-v1"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
+              >
+                Vai al contenuto principale
+              </a>
+              <button
+                onClick={() => setFiltersOpen(true)}
+                className={cn(
+                  "hidden sm:flex fixed left-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                  filtersOpen && "opacity-0 pointer-events-none"
                 )}
-                {currentPath.startsWith("/crm") && (
-                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/network")}>
-                    <Globe className="w-3.5 h-3.5" /> Network <ArrowRight className="w-3 h-3" />
-                  </Button>
+                style={{
+                  background: "hsl(var(--primary) / 0.25)",
+                  backdropFilter: "blur(8px)",
+                }}
+                aria-label="Apri filtri"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-primary" />
+              </button>
+              <button
+                onClick={() => setMissionOpen(true)}
+                className={cn(
+                  "hidden sm:flex fixed right-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
+                  missionOpen && "opacity-0 pointer-events-none"
                 )}
+                style={{
+                  background: "hsl(var(--primary) / 0.25)",
+                  backdropFilter: "blur(8px)",
+                }}
+                aria-label="Apri Mission"
+              >
+                <Target className="w-4 h-4 text-primary" />
+              </button>
+              <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)} role="navigation" aria-label="Menu principale">
+                <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
+              </div>
 
-                <ActiveProcessIndicator />
-                <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} />
-                <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md" role="banner">
+                  <TooltipProvider>
+                    <div className="flex h-full items-center justify-between px-2 sm:px-4">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Menu"><Menu className="h-4 w-4" /></Button>
+
+                        {currentPath.startsWith("/v1/network") && (
+                          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/crm")}>
+                            <Users className="w-3.5 h-3.5" /> CRM <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        )}
+                        {currentPath.startsWith("/v1/crm") && (
+                          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs border-border/50" onClick={() => navigate("/v1/network")}>
+                            <Globe className="w-3.5 h-3.5" /> Network <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        )}
+
+                        <ActiveProcessIndicator />
+                        <ConnectionStatusBar onAiClick={() => setIntelliflowOpen(true)} outreachQueue={outreachQueue} nightPause={globalSync.nightPause} isNightTime={globalSync.isNightTime} manualOverride={globalSync.manualOverride} onToggleNightPause={globalSync.toggleNightPause} resumeMinutes={globalSync.resumeMinutes} />
+                        <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
+                      </div>
+                      <div className="flex items-center gap-0.5 sm:gap-1">
+                        <OperatorSelector />
+                        <InfoTooltip content="Nuovo Contatto"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground hover:text-primary transition-colors" onClick={() => setAddContactOpen(true)} aria-label="Aggiungi contatto"><Plus className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Arricchimento"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground hover:text-primary transition-colors" onClick={() => navigate("/settings?tab=enrichment")} aria-label="Arricchimento"><DatabaseZap className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Operazioni Agenti"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground hover:text-primary transition-colors" onClick={() => setAgentDashOpen(true)} aria-label="Operazioni Agenti"><Activity className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="hidden md:inline-flex h-7 w-7 sm:h-8 sm:w-8 text-foreground hover:text-primary transition-colors" onClick={() => setTestExtOpen(true)} aria-label="Test Estensioni"><FlaskConical className="h-4 w-4" /></Button></InfoTooltip>
+                        <InfoTooltip content="Assistente Vocale LUCA"><Button variant="ghost" size="icon" className={cn("hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 transition-colors", voiceActive ? "text-destructive hover:text-destructive" : "text-foreground hover:text-primary")} onClick={() => { setVoiceActive(v => !v); window.dispatchEvent(new CustomEvent("toggle-voice-fab")); }} aria-label="Assistente Vocale">{voiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button></InfoTooltip>
+                        <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-foreground hover:text-primary transition-colors" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4" /></Button></InfoTooltip>
+                      </div>
+                    </div>
+                  </TooltipProvider>
+                </header>
+
+                <main id="main-content-v1" tabIndex={-1} role="main" className={cn("flex-1 min-h-0 overflow-hidden mx-2 sm:mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-2 sm:p-4")}>
+                  <Outlet />
+                </main>
               </div>
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                <OperatorSelector />
-                <InfoTooltip content="Test Estensioni"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/test-extensions")} aria-label="Test Extensions"><FlaskConical className="h-4 w-4 text-accent-foreground" /></Button></InfoTooltip>
-                <InfoTooltip content="Sincronizza WCA"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => window.dispatchEvent(new CustomEvent("sync-wca-trigger"))} aria-label="Sync WCA"><RefreshCw className="h-4 w-4" /></Button></InfoTooltip>
-                <InfoTooltip content="IntelliFlow AI (⌘J)"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setIntelliflowOpen(true)} aria-label="IntelliFlow"><Sparkles className="h-4 w-4 text-purple-400" /></Button></InfoTooltip>
-              </div>
+
+              {commandOpen && (
+                <Suspense fallback={null}>
+                  <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+                </Suspense>
+              )}
+              {missionOpen && (
+                <Suspense fallback={null}>
+                  <DrawerErrorBoundary scope="MissionDrawer" onReset={() => setMissionOpen(false)}>
+                    <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
+                  </DrawerErrorBoundary>
+                </Suspense>
+              )}
+              {filtersOpen && (
+                <Suspense fallback={null}>
+                  <DrawerErrorBoundary scope="FiltersDrawer" onReset={() => setFiltersOpen(false)}>
+                    <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
+                  </DrawerErrorBoundary>
+                </Suspense>
+              )}
+              {intelliflowOpen && (
+                <Suspense fallback={null}>
+                  <DrawerErrorBoundary scope="IntelliFlowOverlay" onReset={() => setIntelliflowOpen(false)}>
+                    <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
+                  </DrawerErrorBoundary>
+                </Suspense>
+              )}
+              {addContactOpen && (
+                <Suspense fallback={null}>
+                  <DrawerErrorBoundary scope="AddContactDialog" onReset={() => setAddContactOpen(false)}>
+                    <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
+                  </DrawerErrorBoundary>
+                </Suspense>
+              )}
+              <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
+                <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>🧪 Test Estensioni</DialogTitle>
+                  </DialogHeader>
+                  <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
+                    <TestExtensionsContent />
+                  </Suspense>
+                </DialogContent>
+              </Dialog>
+              {agentDashOpen && (
+                <Suspense fallback={null}>
+                  <AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} />
+                </Suspense>
+              )}
             </div>
-            </TooltipProvider>
-          </header>
-
-          <main className={cn("flex-1 min-h-0 overflow-hidden mx-[36px]", isFullscreenRoute ? "" : "overflow-auto p-4")}>
-            <Outlet />
-          </main>
-        </div>
-
-        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-        <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
-        <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
-
-
-        <Suspense fallback={null}>
-          <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
-        </Suspense>
-      </div>
-    <ClaudeBadge />
+            <ClaudeBadge />
         </GlobalFiltersProvider>
       </MissionProvider>
-      </DeepSearchContext.Provider>
+    </ActiveOperatorProvider>
   );
 }

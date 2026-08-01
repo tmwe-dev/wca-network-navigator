@@ -1,10 +1,24 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from "vite-plugin-pwa";
+import viteCompression from "vite-plugin-compression";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const projectId =
+    env.VITE_SUPABASE_PROJECT_ID ||
+    (env.VITE_SUPABASE_URL ? new URL(env.VITE_SUPABASE_URL).host.split(".")[0] : "");
+  // Escape regex meta chars in project id (safety)
+  const escapedHost = projectId
+    ? `${projectId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.supabase\\.co`
+    : "[a-z0-9-]+\\.supabase\\.co";
+  const edgeFnPattern = new RegExp(`^https:\\/\\/${escapedHost}\\/functions\\/v1\\/`);
+  const restPattern = new RegExp(`^https:\\/\\/${escapedHost}\\/rest\\/v1\\/`);
+
+  return ({
   server: {
     host: "::",
     port: 8080,
@@ -12,11 +26,112 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    mcpPlugin(),
+    VitePWA({
+      registerType: "autoUpdate",
+      devOptions: {
+        enabled: false,
+      },
+      workbox: {
+      maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
+      cleanupOutdatedCaches: true,
+      skipWaiting: true,
+      clientsClaim: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "html-pages",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          {
+            urlPattern: edgeFnPattern,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "edge-functions",
+              expiration: { maxEntries: 50, maxAgeSeconds: 300 },
+              networkTimeoutSeconds: 10,
+            },
+          },
+          {
+            urlPattern: restPattern,
+            // Hardening 2026-05-27: dati live, mai stale.
+            // NetworkFirst con timeout breve + cache di fallback minima per resilienza offline.
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "supabase-rest",
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 50, maxAgeSeconds: 30 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\//,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts",
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api/, /^\/functions/, /^\/~oauth/],
+      },
+      manifest: {
+        name: "WCA Network Navigator",
+        short_name: "WCA Nav",
+        theme_color: "#0f172a",
+        description: "AI-powered CRM & Business Development Platform",
+        orientation: "portrait-primary",
+        background_color: "#0f172a",
+        display: "standalone",
+        scope: "/",
+        start_url: "/",
+        icons: [
+          { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+          { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
+        ],
+      },
+    }),
+    mode === "production" && viteCompression({ algorithm: "gzip", threshold: 1024 }),
+    mode === "production" && viteCompression({ algorithm: "brotliCompress", threshold: 1024 }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "@tanstack/react-query", "react-router-dom"],
   },
-}));
+  build: {
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-supabase": ["@supabase/supabase-js"],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-charts": ["recharts"],
+          "vendor-motion": ["framer-motion"],
+          "vendor-three-core": ["three"],
+          "vendor-three-fiber": ["@react-three/fiber"],
+          "vendor-three-drei": ["@react-three/drei"],
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+          ],
+        },
+      },
+    },
+  },
+  });
+});

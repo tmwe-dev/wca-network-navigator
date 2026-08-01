@@ -3,9 +3,17 @@
  * Provides start, pause, resume, and real-time status monitoring.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  findActiveSyncJob,
+  findLastCompletedSyncJob,
+  closeOpenSyncJobs,
+  createSyncJob,
+  updateSyncJobStatus,
+} from "@/data/emailSyncJobs";
 
 export type SyncJobStatus = "running" | "paused" | "completed" | "error";
 
@@ -29,36 +37,18 @@ export function useServerSyncJob() {
 
   // Get the current active job (most recent non-completed)
   const { data: activeJob, isLoading } = useQuery({
-    queryKey: ["email-sync-job"],
+    queryKey: queryKeys.email.syncJob,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_sync_jobs")
-        .select("*")
-        .in("status", ["running", "paused", "error"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      return (data as SyncJob) || null;
+      return findActiveSyncJob<SyncJob>();
     },
     refetchInterval: 3000, // Poll every 3 seconds
   });
 
   // Get the last completed job
   const { data: lastCompletedJob } = useQuery({
-    queryKey: ["email-sync-job-completed"],
+    queryKey: queryKeys.email.syncJobCompleted,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_sync_jobs")
-        .select("*")
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      return (data as SyncJob) || null;
+      return findLastCompletedSyncJob<SyncJob>();
     },
   });
 
@@ -70,9 +60,9 @@ export function useServerSyncJob() {
         "postgres_changes",
         { event: "*", schema: "public", table: "email_sync_jobs" },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
-          queryClient.invalidateQueries({ queryKey: ["email-sync-job-completed"] });
-          queryClient.invalidateQueries({ queryKey: ["email-count"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJobCompleted });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
         },
       )
       .subscribe();
@@ -91,24 +81,13 @@ export function useServerSyncJob() {
       if (!session) throw new Error("Non autenticato");
 
       // Cancel any existing running/paused jobs
-      await supabase
-        .from("email_sync_jobs")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("user_id", session.user.id)
-        .in("status", ["running", "paused"]);
+      await closeOpenSyncJobs(session.user.id);
 
       // Create new job
-      const { data, error } = await supabase
-        .from("email_sync_jobs")
-        .insert({ user_id: session.user.id, status: "running" })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return createSyncJob(session.user.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 
@@ -116,14 +95,10 @@ export function useServerSyncJob() {
   const pauseJob = useMutation({
     mutationFn: async () => {
       if (!activeJob) throw new Error("Nessun job attivo");
-      const { error } = await supabase
-        .from("email_sync_jobs")
-        .update({ status: "paused" })
-        .eq("id", activeJob.id);
-      if (error) throw error;
+      await updateSyncJobStatus(activeJob.id, { status: "paused" });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 
@@ -131,14 +106,10 @@ export function useServerSyncJob() {
   const resumeJob = useMutation({
     mutationFn: async () => {
       if (!activeJob) throw new Error("Nessun job da riprendere");
-      const { error } = await supabase
-        .from("email_sync_jobs")
-        .update({ status: "running", error_message: null })
-        .eq("id", activeJob.id);
-      if (error) throw error;
+      await updateSyncJobStatus(activeJob.id, { status: "running", error_message: null });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 
@@ -146,14 +117,13 @@ export function useServerSyncJob() {
   const cancelJob = useMutation({
     mutationFn: async () => {
       if (!activeJob) throw new Error("Nessun job attivo");
-      const { error } = await supabase
-        .from("email_sync_jobs")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", activeJob.id);
-      if (error) throw error;
+      await updateSyncJobStatus(activeJob.id, {
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["email-sync-job"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
     },
   });
 

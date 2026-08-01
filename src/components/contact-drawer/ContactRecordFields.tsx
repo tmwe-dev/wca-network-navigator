@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Save, Pencil, X, Globe, Mail, Phone, MapPin, Briefcase, Building2, Linkedin, StickyNote } from "lucide-react";
 import { HoldingPatternIndicator } from "@/components/contacts/HoldingPatternIndicator";
 import type { UnifiedRecord } from "@/hooks/useContactRecord";
@@ -10,16 +11,19 @@ import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
   { value: "new", label: "Nuovo" },
-  { value: "contacted", label: "Contattato" },
-  { value: "in_progress", label: "In corso" },
+  { value: "first_touch_sent", label: "Primo contatto" },
+  { value: "holding", label: "In attesa" },
+  { value: "engaged", label: "Coinvolto" },
+  { value: "qualified", label: "Qualificato" },
   { value: "negotiation", label: "Trattativa" },
-  { value: "converted", label: "Cliente" },
-  { value: "lost", label: "Perso" },
+  { value: "converted", label: "Convertito" },
+  { value: "archived", label: "Archiviato" },
+  { value: "blacklisted", label: "Blacklist" },
 ];
 
 interface Props {
   record: UnifiedRecord;
-  onSave: (updates: Record<string, any>) => void;
+  onSave: (updates: Record<string, unknown>) => void;
   isSaving: boolean;
 }
 
@@ -45,7 +49,7 @@ function FieldRow({ icon, label, value, editing, onChange, type = "text" }: Fiel
           type={type}
         />
       ) : (
-        <span className={cn("text-xs flex-1 truncate", value ? "text-foreground" : "text-muted-foreground/50")}>
+        <span className={cn("text-xs flex-1 truncate", value ? "text-foreground" : "text-muted-foreground")}>
           {value || "—"}
         </span>
       )}
@@ -78,7 +82,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
   const cancelEdit = () => { setEditing(false); setDraft({}); };
 
   const handleSave = () => {
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     if (record.sourceType === "partner") {
       if (draft.company_name !== record.companyName) updates.company_name = draft.company_name;
       if (draft.email !== (record.email || "")) updates.email = draft.email || null;
@@ -109,7 +113,8 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
     setEditing(false);
   };
 
-  const val = (key: string) => editing ? (draft[key] || "") : ((record as any)[key === "contact_name" ? "contactName" : key === "company_name" ? "companyName" : key === "lead_status" ? "leadStatus" : key] || "");
+  const fieldMap: Record<string, keyof UnifiedRecord> = { contact_name: "contactName", company_name: "companyName", lead_status: "leadStatus" };
+  const val = (key: string) => editing ? (draft[key] || "") : (String(record[fieldMap[key] ?? key as keyof UnifiedRecord] ?? ""));
 
   return (
     <div className="space-y-3">
@@ -133,7 +138,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
 
       {/* Status + Holding Pattern */}
       <div className="flex items-center gap-2">
-        <HoldingPatternIndicator status={record.leadStatus as any} />
+        <HoldingPatternIndicator status={record.leadStatus as "new" | "first_touch_sent" | "holding" | "engaged" | "qualified" | "negotiation" | "converted" | "archived" | "blacklisted"} />
         {editing ? (
           <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
             <SelectTrigger className="h-7 w-36 text-xs">
@@ -152,7 +157,23 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
       <div className="bg-muted/30 rounded-xl p-3 space-y-0.5">
         <FieldRow icon={<Building2 className="w-3.5 h-3.5" />} label="Azienda" value={val("company_name")} editing={editing} onChange={v => setDraft(d => ({ ...d, company_name: v }))} />
         <FieldRow icon={<Briefcase className="w-3.5 h-3.5" />} label="Ruolo" value={val("position") || record.position || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, position: v }))} />
-        <FieldRow icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={val("email") || record.email || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, email: v }))} type="email" />
+        <div className="flex items-center gap-2 py-1.5">
+          <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <span className="text-[11px] text-muted-foreground w-20 flex-shrink-0">Email</span>
+          {editing ? (
+            <Input value={val("email") || record.email || ""} onChange={e => setDraft(d => ({ ...d, email: e.target.value }))} className="h-7 text-xs flex-1" type="email" />
+          ) : (
+            <span className={cn("text-xs flex-1 truncate flex items-center gap-1.5", (val("email") || record.email) ? "text-foreground" : "text-muted-foreground")}>
+              {val("email") || record.email || "—"}
+              {record.emailStatus === "bounced" && (
+                <Badge variant="destructive" className="text-[10px] h-4 px-1.5">Bounced</Badge>
+              )}
+              {record.emailStatus === "invalid" && (
+                <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-destructive/50 text-destructive">Invalid</Badge>
+              )}
+            </span>
+          )}
+        </div>
         <FieldRow icon={<Phone className="w-3.5 h-3.5" />} label="Telefono" value={val("phone") || record.phone || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, phone: v }))} />
         <FieldRow icon={<Phone className="w-3.5 h-3.5" />} label="Mobile" value={val("mobile") || record.mobile || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, mobile: v }))} />
         <FieldRow icon={<MapPin className="w-3.5 h-3.5" />} label="Città" value={val("city") || record.city || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, city: v }))} />
@@ -182,7 +203,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
             placeholder="Aggiungi note..."
           />
         ) : (
-          <p className={cn("text-xs rounded-lg bg-muted/20 p-2 min-h-[40px]", record.note ? "text-foreground" : "text-muted-foreground/50")}>
+          <p className={cn("text-xs rounded-lg bg-muted/20 p-2 min-h-[40px]", record.note ? "text-foreground" : "text-muted-foreground")}>
             {record.note || "Nessuna nota"}
           </p>
         )}

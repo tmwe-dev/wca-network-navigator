@@ -10,7 +10,7 @@ interface TexturedEarthProps {
 export function TexturedEarth({ rotation }: TexturedEarthProps) {
   const earthRef = useRef<THREE.Mesh>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
-  const nightRef = useRef<THREE.Mesh>(null);
+  const _nightRef = useRef<THREE.Mesh>(null);
 
   // Load textures
   const [dayTexture, nightTexture, bumpTexture, specularTexture] = useLoader(

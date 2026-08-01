@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
 import { Sparkles, Search, Globe, Brain, User, CheckCircle2, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ScrapingPhase, DraftState } from "@/pages/Cockpit";
+import type { ScrapingPhase, DraftState } from "@/types/cockpit";
 
-const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; color: string }> = {
+const scrapingPhaseConfig: Record<ScrapingPhase, { icon: React.ElementType; label: string; color: string }> = {
   idle: { icon: Sparkles, label: "", color: "text-muted-foreground" },
   searching: { icon: Search, label: "🔍 Ricerca profilo LinkedIn...", color: "text-chart-3" },
   visiting: { icon: Globe, label: "Visita profilo LinkedIn...", color: "text-[hsl(210,80%,55%)]" },
@@ -39,7 +39,7 @@ export function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: Scra
             const isCurrent = i === currentIndex;
             return (
               <motion.div key={p} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15 }}
-                className={cn("flex items-center gap-2 text-[11px] px-2 py-1 rounded", isDone ? "text-success bg-success/5" : isCurrent ? `${stepConfig.color} bg-muted/40` : "text-muted-foreground/40")}>
+                className={cn("flex items-center gap-2 text-[11px] px-2 py-1 rounded", isDone ? "text-success bg-success/5" : isCurrent ? `${stepConfig.color} bg-muted/40` : "text-muted-foreground")}>
                 {isDone ? <CheckCircle2 className="w-3 h-3" /> : <StepIcon className="w-3 h-3" />}
                 <span>{stepConfig.label}</span>
               </motion.div>
@@ -54,8 +54,8 @@ export function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: Scra
           </div>
           {linkedinProfile.name && <div className="text-xs font-medium text-foreground">{linkedinProfile.name}</div>}
           {linkedinProfile.headline && <div className="text-[11px] text-muted-foreground">{linkedinProfile.headline}</div>}
-          {linkedinProfile.about && <div className="text-[10px] text-muted-foreground/80 line-clamp-2">{linkedinProfile.about}</div>}
-          {linkedinProfile.location && <div className="text-[10px] text-muted-foreground/60">📍 {linkedinProfile.location}</div>}
+          {linkedinProfile.about && <div className="text-[10px] text-muted-foreground line-clamp-2">{linkedinProfile.about}</div>}
+          {linkedinProfile.location && <div className="text-[10px] text-muted-foreground">📍 {linkedinProfile.location}</div>}
         </motion.div>
       )}
     </div>

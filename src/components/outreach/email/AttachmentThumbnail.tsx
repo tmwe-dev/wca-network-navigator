@@ -5,9 +5,10 @@
 
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getImportFilePublicUrl } from "@/application/data/importLogs";
 import { formatBytes, getAttachmentIcon } from "./emailUtils";
 import type { EmailAttachment } from "@/hooks/useEmailActions";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 type Props = {
   att: EmailAttachment;
@@ -23,8 +24,8 @@ export function AttachmentThumbnail({ att, onDownload }: Props) {
       if (att.storage_path.startsWith("data:")) {
         setImgUrl(att.storage_path);
       } else {
-        const { data } = supabase.storage.from("import-files").getPublicUrl(att.storage_path);
-        if (data?.publicUrl) setImgUrl(data.publicUrl);
+        const publicUrl = getImportFilePublicUrl(att.storage_path);
+        if (publicUrl) setImgUrl(publicUrl);
       }
     }
   }, [att.storage_path, isImage]);
@@ -35,7 +36,7 @@ export function AttachmentThumbnail({ att, onDownload }: Props) {
     <button onClick={onDownload}
       className="flex flex-col items-center gap-1.5 p-2 border border-border rounded-lg hover:bg-muted/50 transition-colors text-xs w-[140px]">
       {isImage && imgUrl ? (
-        <img src={imgUrl} alt={att.filename} className="w-full h-16 object-cover rounded" />
+        <OptimizedImage src={imgUrl} alt={att.filename} className="w-full h-16 object-cover rounded" />
       ) : (
         <div className="w-full h-16 flex items-center justify-center bg-muted/30 rounded">
           <Icon className="w-8 h-8 text-muted-foreground" />

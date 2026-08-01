@@ -1,0 +1,592 @@
+/**
+ * ComposerCanvas — Glass-style email composer for Command page.
+ * Uses useEmailComposerV2 for real AI generation + send via edge functions.
+ *
+ * Supporta DUE modalità:
+ *  - SINGLE: una bozza singola (partner risolto), rigenerazione via generate-email.
+ *  - BATCH: array `drafts` con N bozze pre-personalizzate, frecce di navigazione,
+ *           "Rigenera tutte" e "Invia tutte". Stato del composer sincronizzato
+ *           con la bozza correntemente selezionata.
+ */
+import { useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw, Eye } from "lucide-react";
+import { toast } from "sonner";
+import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
+import { invokeAi } from "@/lib/ai/invokeAi";
+import { supabase } from "@/integrations/supabase/client";
+import { insertPendingAction } from "@/application/data/aiPendingActions";
+import ApprovalPanel from "@/components/workspace/ApprovalPanel";
+import { useGovernance } from "../hooks/useGovernance";
+import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
+import type { ComposerDraft } from "../tools/types";
+import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
+import EmailPipelineBadge, { type EmailPipelineStage } from "./EmailPipelineBadge";
+import EmailPreviewDialog from "./EmailPreviewDialog";
+
+const ease = [0.2, 0.8, 0.2, 1] as const;
+
+interface ComposerCanvasProps {
+  readonly initialTo: string;
+  readonly initialSubject: string;
+  readonly initialBody: string;
+  readonly promptHint: string;
+  readonly onClose: () => void;
+  /** Partner risolto dall'Oracolo: abilita rigenerazione via generate-email. */
+  readonly partnerId?: string | null;
+  readonly recipientName?: string | null;
+  readonly emailType?: string;
+  /** Bozze multiple pre-personalizzate (modalità BATCH country-wide). */
+  readonly drafts?: ReadonlyArray<ComposerDraft>;
+  /** Tono iniziale detectato dal prompt (default: "professionale"). */
+  readonly detectedTone?: DetectedTone;
+  /** Pipeline mail (Oracolo→Architetto→Prompt Lab→Giornalista→Bozza). */
+  readonly pipeline?: ReadonlyArray<EmailPipelineStage>;
+}
+
+export default function ComposerCanvas({
+  initialTo,
+  initialSubject,
+  initialBody,
+  promptHint,
+  onClose,
+  partnerId,
+  recipientName,
+  emailType,
+  drafts,
+  detectedTone,
+  pipeline,
+}: ComposerCanvasProps) {
+  const composer = useEmailComposerV2();
+  const governance = useGovernance("compose-email");
+
+  const [toField, setToField] = useState(initialTo);
+  const [showApproval, setShowApproval] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [batchSending, setBatchSending] = useState(false);
+  const [batchDrafts, setBatchDrafts] = useState<ReadonlyArray<ComposerDraft>>(drafts ?? []);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [tone, setTone] = useState<DetectedTone>(detectedTone ?? "professionale");
+  const [showPreview, setShowPreview] = useState(false);
+
+  const isBatch = batchDrafts.length > 1;
+
+  // ── Sync iniziale + ad ogni cambio di initialSubject/initialBody/initialTo ──
+  // FIX: il vecchio `useState(initializer)` non rigirava mai, quindi i nuovi
+  // valori dopo "rigenera con tono X" restavano invisibili nel Canvas.
+  useEffect(() => {
+    if (isBatch) return; // batch usa l'effetto sotto
+    if (initialSubject !== undefined) composer.setSubject(initialSubject);
+    if (initialBody !== undefined) composer.setBody(initialBody);
+    if (initialTo) {
+      // Reset destinatari al singolo iniziale
+      for (const r of composer.recipients) composer.removeRecipient(r.email);
+      composer.addRecipient({
+        email: initialTo,
+        name: recipientName ?? (initialTo.split("@")[0] ?? initialTo),
+      });
+    }
+     
+  }, [initialSubject, initialBody, initialTo, isBatch]);
+
+  // ── Sync nuova lista di drafts (es. dopo "rigenera tutte") ──
+  useEffect(() => {
+    if (drafts && drafts.length > 0) {
+      setBatchDrafts(drafts);
+      setCurrentIndex(0);
+    }
+  }, [drafts]);
+
+  useEffect(() => {
+    if (detectedTone) setTone(detectedTone);
+  }, [detectedTone]);
+
+  // ── Sync composer con la bozza batch correntemente selezionata ──
+  useEffect(() => {
+    if (!isBatch) return;
+    const d = batchDrafts[currentIndex];
+    if (!d) return;
+    composer.setSubject(d.subject ?? "");
+    composer.setBody(d.body ?? "");
+    // Reset destinatari → metti solo quello della bozza corrente
+    for (const r of composer.recipients) composer.removeRecipient(r.email);
+    if (d.contactEmail) {
+      composer.addRecipient({
+        email: d.contactEmail,
+        name: d.contactName ?? d.partnerName,
+        companyName: d.partnerName,
+        partnerId: d.partnerId,
+      });
+    }
+     
+  }, [currentIndex, batchDrafts, isBatch]);
+
+  const handleAddRecipient = useCallback(() => {
+    const email = toField.trim();
+    if (!email || !/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(email)) {
+      toast.error("Indirizzo email non valido");
+      return false;
+    }
+    composer.addRecipient({ email, name: email.split("@")[0] ?? email });
+    setToField("");
+    return true;
+  }, [toField, composer]);
+
+  /** Commit silenzioso del campo toField (senza toast) prima di invio/approval. */
+  const commitPendingRecipient = useCallback(() => {
+    const email = toField.trim();
+    if (!email) return;
+    if (!/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(email)) return;
+    if (composer.recipients.some((r) => r.email === email)) {
+      setToField("");
+      return;
+    }
+    composer.addRecipient({ email, name: email.split("@")[0] ?? email });
+    setToField("");
+  }, [toField, composer]);
+
+  const handleGenerate = useCallback(async () => {
+    // BATCH → rigenera tutte le N bozze in parallelo col tono corrente
+    if (isBatch) {
+      setRegenerating(true);
+      const newTone = detectTone(promptHint) ?? tone;
+      try {
+        const settled = await Promise.allSettled(
+          batchDrafts.map(async (d) => {
+            if (!d.contactEmail || !d.partnerId) return d;
+            try {
+              const gen = await invokeAi<{ subject?: string; body?: string }>("generate-email", {
+                scope: "command",
+                context: { source: "ComposerCanvas.regenerate_batch", mode: "generate" },
+                body: {
+                  standalone: true,
+                  partner_id: d.partnerId,
+                  recipient_name: d.contactName,
+                  recipient_company: d.partnerName,
+                  oracle_type: emailType ?? "primo_contatto",
+                  oracle_tone: newTone,
+                  goal: promptHint,
+                  quality: "standard",
+                  use_kb: true,
+                  language: "it",
+                },
+              });
+              return {
+                ...d,
+                subject: gen?.subject ?? d.subject,
+                body: gen?.body ?? d.body,
+                status: gen?.body ? ("ok" as const) : ("ai_error" as const),
+              };
+            } catch {
+              return { ...d, status: "ai_error" as const };
+            }
+          }),
+        );
+        const next: ComposerDraft[] = settled.map((r, i) =>
+          r.status === "fulfilled" ? r.value : batchDrafts[i],
+        );
+        setBatchDrafts(next);
+        setTone(newTone);
+        toast.success(`${next.filter((d) => d.status === "ok").length}/${next.length} bozze rigenerate (${toneLabel(newTone)})`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore rigenerazione batch");
+      } finally {
+        setRegenerating(false);
+      }
+      return;
+    }
+
+    // Se abbiamo un partner risolto → usa la pipeline ufficiale generate-email
+    if (partnerId) {
+      setRegenerating(true);
+      try {
+        const newTone = detectTone(promptHint) ?? tone;
+        const gen = await invokeAi<{ subject?: string; body?: string }>("generate-email", {
+          scope: "command",
+          context: { source: "ComposerCanvas.regenerate", mode: "generate" },
+          body: {
+            standalone: true,
+            partner_id: partnerId,
+            recipient_name: recipientName ?? null,
+            oracle_type: emailType ?? "primo_contatto",
+            oracle_tone: newTone,
+            goal: promptHint,
+            quality: "standard",
+            use_kb: true,
+            language: "it",
+          },
+        });
+        if (gen?.subject) composer.setSubject(gen.subject);
+        if (gen?.body) composer.setBody(gen.body);
+        setTone(newTone);
+        toast.success("Bozza rigenerata");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore rigenerazione");
+      } finally {
+        setRegenerating(false);
+      }
+      return;
+    }
+    // Fallback (nessun partner risolto): usa il generator legacy
+    composer.generate.mutate(promptHint || undefined);
+  }, [composer, promptHint, partnerId, recipientName, emailType, isBatch, batchDrafts, tone]);
+
+  const handleSendClick = useCallback(() => {
+    // Se l'utente ha digitato una mail senza premere Invio, la committiamo ora.
+    commitPendingRecipient();
+    const pendingEmail = toField.trim();
+    const willHaveRecipients =
+      composer.recipients.length > 0 ||
+      (pendingEmail.length > 0 && /^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(pendingEmail));
+    if (!willHaveRecipients) {
+      toast.error("Aggiungi almeno un destinatario");
+      return;
+    }
+    if (!composer.subject) {
+      toast.error("Inserisci un oggetto");
+      return;
+    }
+    if (!composer.body) {
+      toast.error("Inserisci il corpo dell'email");
+      return;
+    }
+    setShowApproval(true);
+  }, [composer, commitPendingRecipient, toField]);
+
+  const handleConfirmSend = useCallback(() => {
+    setShowApproval(false);
+    composer.send.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("Email inviata con successo");
+        onClose();
+      },
+      onError: (err: Error) => {
+        toast.error(`Errore invio: ${err.message}`);
+      },
+    });
+  }, [composer, onClose]);
+
+  /** Invia TUTTE le bozze batch (solo quelle con status "ok"). */
+  const handleSendAllBatch = useCallback(async () => {
+    if (!isBatch) return;
+    const sendable = batchDrafts.filter((d) => d.status === "ok" && d.contactEmail && d.body && d.subject);
+    if (sendable.length === 0) {
+      toast.error("Nessuna bozza pronta all'invio");
+      return;
+    }
+    setBatchSending(true);
+    // SSOT v3.9.56: il batch NON invia direttamente — accoda in
+    // ai_pending_actions (editorial review hard a valle in useApproveAndDispatch).
+    let okCount = 0;
+    let failCount = 0;
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) {
+      setBatchSending(false);
+      toast.error("Sessione non valida");
+      return;
+    }
+    for (const d of sendable) {
+      const { error } = await insertPendingAction({
+        user_id: userId,
+        action_type: "send_email",
+        action_payload: {
+          to: d.contactEmail,
+          subject: d.subject,
+          html: d.body,
+        },
+        suggested_content: d.body,
+        email_address: d.contactEmail,
+        reasoning: "Batch composer: in attesa di approvazione umana.",
+        confidence: 0.9,
+        source: "composer:send-batch",
+        status: "pending",
+      });
+      if (error) failCount++; else okCount++;
+    }
+    setBatchSending(false);
+    if (okCount > 0) toast.success(`${okCount} email in coda di approvazione${failCount > 0 ? ` · ${failCount} fallite` : ""}`);
+    if (okCount === sendable.length) onClose();
+  }, [isBatch, batchDrafts, onClose]);
+
+  const isGenerating = composer.generate.isPending || regenerating;
+  const isSending = composer.send.isPending || batchSending;
+  const currentDraft = isBatch ? batchDrafts[currentIndex] : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.98 }}
+      transition={{ duration: 0.6, ease }}
+      className="float-panel rounded-2xl p-6 flex flex-col gap-4"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider bg-primary/20 text-primary">
+            COMPOSER
+          </span>
+          <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-[13px] font-light text-foreground">
+            {isBatch ? `Componi email · batch ${batchDrafts.length}` : "Componi email"}
+          </span>
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-muted/40 text-muted-foreground">
+            tono: {toneLabel(tone)}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground text-[10px] transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Pipeline mail (Oracolo → Architetto → Prompt Lab → Giornalista → Bozza) */}
+      {(() => {
+        const stages: ReadonlyArray<EmailPipelineStage> | undefined = isBatch
+          ? (batchDrafts[currentIndex]?.pipeline ?? pipeline)
+          : pipeline;
+        if (!stages || stages.length === 0) return null;
+        const summary = isBatch
+          ? `${batchDrafts.filter((d) => d.status === "ok").length}/${batchDrafts.length} bozze · review ok`
+          : `${stages.length} step`;
+        return <EmailPipelineBadge pipeline={stages} summary={summary} />;
+      })()}
+
+      {/* Batch navigation header */}
+      {isBatch && currentDraft && (
+        <div
+          className="flex items-center justify-between rounded-xl px-3 py-2"
+          style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
+        >
+          <button
+            type="button"
+            onClick={() => setCurrentIndex((i) => (i - 1 + batchDrafts.length) % batchDrafts.length)}
+            disabled={isGenerating || isSending}
+            className="p-1 rounded hover:bg-foreground/5 disabled:opacity-40 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Bozza precedente"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="flex flex-col items-center text-center min-w-0 flex-1 px-2">
+            <span className="text-[10px] font-mono text-muted-foreground tracking-wider">
+              {currentIndex + 1} / {batchDrafts.length}
+            </span>
+            <span className="text-[12px] text-foreground truncate max-w-full font-light">
+              {currentDraft.partnerName}
+              {currentDraft.contactName ? ` · ${currentDraft.contactName}` : ""}
+            </span>
+            {currentDraft.status !== "ok" && (
+              <span className="text-[9px] font-mono text-warning mt-0.5">
+                {currentDraft.status === "no_email" ? "⚠ no email" : "⚠ generazione fallita"}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setCurrentIndex((i) => (i + 1) % batchDrafts.length)}
+            disabled={isGenerating || isSending}
+            className="p-1 rounded hover:bg-foreground/5 disabled:opacity-40 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Bozza successiva"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Recipients */}
+      <div className="space-y-1">
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
+          Destinatari
+        </label>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-1.5 flex-wrap rounded-xl px-3 py-2 min-h-[40px]"
+            style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
+          >
+            {composer.recipients.map((r) => (
+              <motion.span
+                key={r.email}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono bg-primary/10 text-primary"
+              >
+                {r.email}
+                <button
+                  onClick={() => composer.removeRecipient(r.email)}
+                  className="hover:text-destructive transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </motion.span>
+            ))}
+            <input
+              value={toField}
+              onChange={(e) => setToField(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddRecipient();
+                } else if (e.key === "," || e.key === ";" || e.key === " ") {
+                  // separatori comuni → committa il chip
+                  if (toField.trim()) {
+                    e.preventDefault();
+                    handleAddRecipient();
+                  }
+                }
+              }}
+              onBlur={() => commitPendingRecipient()}
+              placeholder={composer.recipients.length === 0 ? "email@esempio.com" : "Aggiungi..."}
+              className="flex-1 min-w-[120px] bg-transparent text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Subject */}
+      <div className="space-y-1">
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
+          Oggetto
+        </label>
+        <input
+          value={composer.subject}
+          onChange={(e) => composer.setSubject(e.target.value)}
+          placeholder="Oggetto dell'email"
+          className="w-full rounded-xl px-3 py-2.5 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
+          style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
+        />
+      </div>
+
+      {/* Body */}
+      <div className="space-y-1 flex-1">
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
+          Corpo
+        </label>
+        <div className="relative">
+          <HtmlEmailEditor
+            value={composer.body}
+            onChange={composer.setBody}
+            placeholder="Scrivi il contenuto dell'email..."
+            className="min-h-[300px] [&_[contenteditable]]:rounded-xl [&_[contenteditable]]:border-border [&_[contenteditable]]:bg-background/50 [&_[contenteditable]]:text-xs [&_[contenteditable]]:leading-relaxed"
+          />
+          <AnimatePresence>
+            {isGenerating && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 flex items-center justify-center rounded-xl"
+                style={{ background: "hsl(var(--glass-surface) / 0.8)", backdropFilter: "blur(8px)" }}
+              >
+                <div className="flex items-center gap-2 text-primary">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-[11px] font-light">Generazione AI in corso...</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between pt-2"
+        style={{ borderTop: "1px solid hsl(var(--glass-edge) / 0.12)" }}
+      >
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleGenerate}
+          disabled={isGenerating || isSending}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-light transition-all duration-300 disabled:opacity-50"
+          style={{
+            background: "hsl(270 60% 60% / 0.1)",
+            border: "1px solid hsl(270 60% 60% / 0.15)",
+            color: "hsl(270 60% 70%)",
+          }}
+        >
+          {isBatch ? <RefreshCw className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+          {isBatch ? `Rigenera tutte (${batchDrafts.length})` : "Genera con AI"}
+        </motion.button>
+
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowPreview(true)}
+            disabled={isGenerating || isSending}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-light transition-all duration-300 disabled:opacity-50 text-muted-foreground hover:text-foreground"
+            style={{ background: "hsl(var(--glass-surface) / 0.4)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
+            title="Anteprima email come arriverà al destinatario"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Anteprima
+          </motion.button>
+
+          {isBatch && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSendAllBatch}
+              disabled={isGenerating || isSending}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-light transition-all duration-300 disabled:opacity-50"
+              style={{
+                background: "hsl(152 60% 45% / 0.1)",
+                border: "1px solid hsl(152 60% 45% / 0.2)",
+                color: "hsl(152 60% 60%)",
+              }}
+            >
+              {isSending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
+              Invia tutte ({batchDrafts.filter((d) => d.status === "ok").length})
+            </motion.button>
+          )}
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSendClick}
+            disabled={isSending || isGenerating}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
+            style={{ border: "1px solid hsl(152 60% 45% / 0.15)" }}
+          >
+            {isSending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Send className="w-3.5 h-3.5" />
+            )}
+            {isBatch ? "Invia questa" : "Invia"}
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Approval Panel */}
+      <ApprovalPanel
+        visible={showApproval}
+        title="Conferma invio email"
+        description={`Stai per inviare un'email a ${composer.recipients.map(r => r.email).join(", ")}. Questa azione non è reversibile.`}
+        details={[
+          { label: "Destinatari", value: String(composer.recipients.length) },
+          { label: "Oggetto", value: composer.subject || "—" },
+          { label: "Lunghezza corpo", value: `${composer.body.length} caratteri` },
+        ]}
+        governance={governance}
+        onApprove={handleConfirmSend}
+        onModify={() => setShowApproval(false)}
+        onCancel={() => setShowApproval(false)}
+      />
+
+      {/* Email preview (read-only) */}
+      <EmailPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        recipients={composer.recipients.map((r) => ({ email: r.email, name: r.name }))}
+        subject={composer.subject}
+        body={composer.body}
+      />
+    </motion.div>
+  );
+}

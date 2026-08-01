@@ -1,20 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
+import { findAppSettingsMapForUser, saveAppSettingForUser } from "@/data/appSettings";
 
 export function useAppSettings() {
   return useQuery({
-    queryKey: ["app-settings"],
+    queryKey: queryKeys.appSettings.all,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value");
-      if (error) throw error;
-      const map: Record<string, string> = {};
-      data?.forEach((row: any) => {
-        map[row.key] = row.value;
-      });
-      return map;
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) return {} as Record<string, string>;
+      return findAppSettingsMapForUser(user.id);
     },
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -23,28 +20,13 @@ export function useUpdateSetting() {
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      // Upsert: insert or update
-      const { data: existing } = await supabase
-        .from("app_settings")
-        .select("id")
-        .eq("key", key)
-        .maybeSingle();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) throw new Error("Not authenticated");
 
-      if (existing) {
-        const { error } = await supabase
-          .from("app_settings")
-          .update({ value })
-          .eq("key", key);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("app_settings")
-          .insert({ key, value });
-        if (error) throw error;
-      }
+      await saveAppSettingForUser(user.id, key, value);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.appSettings.all });
     },
   });
 }

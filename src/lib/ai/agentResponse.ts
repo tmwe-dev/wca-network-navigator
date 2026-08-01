@@ -1,4 +1,7 @@
 import type { AiOperation } from "@/components/ai/AiOperationCard";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("agentResponse");
 
 export interface JobCreatedInfo {
   job_id: string;
@@ -48,7 +51,8 @@ function safeJsonParse<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
   try {
     return JSON.parse(value) as T;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return fallback;
   }
 }
@@ -82,7 +86,7 @@ export function parseAiAgentResponse<TPartner = unknown>(content: string): Parse
   const partners = structured?.type === "partners" && Array.isArray(structured.data) ? structured.data : [];
 
   const jobCreated = safeJsonParse<JobCreatedInfo | null>(jobPayload, null);
-  let operations = safeJsonParse<AiOperation[]>(opsPayload, []);
+  const operations = safeJsonParse<AiOperation[]>(opsPayload, []);
 
   // Auto-generate operation card from jobCreated if no explicit one exists
   if (jobCreated && !operations.some(o => o.job_id === jobCreated.job_id)) {
@@ -114,7 +118,7 @@ export function dispatchAiUiActions(actions: AiUiAction[]) {
   }
 }
 
-export function dispatchAiAgentEffects(parsed: ParsedAiAgentResponse<any>) {
+export function dispatchAiAgentEffects(parsed: ParsedAiAgentResponse<unknown>) {
   const actions = [...parsed.uiActions];
 
   if (parsed.jobCreated?.job_id && !actions.some((action) => action.action_type === "start_download_job" && action.job_id === parsed.jobCreated?.job_id)) {

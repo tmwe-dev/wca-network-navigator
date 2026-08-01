@@ -1,13 +1,30 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { z, safeParseAiJson, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const BusinessCardSchema = z.object({
+  company_name: z.string().nullish(),
+  contact_name: z.string().nullish(),
+  position: z.string().nullish(),
+  email: z.string().nullish(),
+  phone: z.string().nullish(),
+  mobile: z.string().nullish(),
+  address: z.string().nullish(),
+  website: z.string().nullish(),
+  notes: z.string().nullish(),
+}).passthrough();
+const BC_FALLBACK = {} as z.infer<typeof BusinessCardSchema>;
+
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("authorization") ?? "";
@@ -21,14 +38,14 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(token);
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Non autorizzato" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     const { imageUrl } = await req.json();
     if (!imageUrl) {
       return new Response(JSON.stringify({ error: "imageUrl richiesto" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -42,7 +59,7 @@ serve(async (req) => {
     const creditRow = creditResult?.[0];
     if (!creditRow?.success) {
       return new Response(JSON.stringify({ error: "Crediti insufficienti" }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 402, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -62,16 +79,10 @@ serve(async (req) => {
     }
 
     // Call Gemini vision via Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY non configurata");
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiResp = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           {
@@ -126,41 +137,48 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
           },
         ],
         tool_choice: { type: "function", function: { name: "extract_business_card" } },
-      }),
-    });
+      });
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
       console.error("AI Gateway error:", aiResp.status, errText);
       if (aiResp.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit AI superato, riprova tra poco" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI error: ${aiResp.status}`);
     }
 
     const aiData = await aiResp.json();
-    let extracted: any = {};
-
-    // Parse tool call response
+    let extracted: Record<string, unknown> = {};
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        extracted = typeof toolCall.function.arguments === "string"
-          ? JSON.parse(toolCall.function.arguments)
-          : toolCall.function.arguments;
-      } catch {
-        // Fallback: try parsing from content
+    const toolArgsRaw = toolCall?.function?.arguments;
+    if (toolArgsRaw) {
+      const argsStr = typeof toolArgsRaw === "string" ? toolArgsRaw : JSON.stringify(toolArgsRaw);
+      const r = safeParseToolArgs(argsStr, BusinessCardSchema, {
+        fnName: "parse-business-card",
+        model: "ai-tool-call",
+        fallback: BC_FALLBACK,
+      });
+      extracted = r.data as Record<string, unknown>;
+      if (r.isFallback) {
         const content = aiData.choices?.[0]?.message?.content || "";
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);
+        const r2 = safeParseAiJson(content, BusinessCardSchema, {
+          fnName: "parse-business-card",
+          model: "ai-content-fallback",
+          fallback: BC_FALLBACK,
+        });
+        extracted = r2.data as Record<string, unknown>;
       }
     } else {
-      // Fallback: parse from content
       const content = aiData.choices?.[0]?.message?.content || "";
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);
+      const r = safeParseAiJson(content, BusinessCardSchema, {
+        fnName: "parse-business-card",
+        model: "ai-content",
+        fallback: BC_FALLBACK,
+      });
+      extracted = r.data as Record<string, unknown>;
     }
 
     return new Response(JSON.stringify({
@@ -178,12 +196,12 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
       },
       credits_remaining: creditRow.new_balance,
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("parse-business-card error:", e);
     return new Response(JSON.stringify({ error: e.message || "Errore interno" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

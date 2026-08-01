@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useEnqueueAction } from "@/hooks/useEnqueueAction";
+// SSOT v3.9.56: invio email passa da ai_pending_actions → approvazione manuale
 
 interface SendEmailDialogProps {
   open: boolean;
@@ -21,32 +22,33 @@ interface SendEmailDialogProps {
 }
 
 export function SendEmailDialog({
-  open, onOpenChange, recipientEmail, recipientName, companyName, partnerId, isDark,
+  open, onOpenChange, recipientEmail, recipientName, companyName, partnerId, isDark: _isDark,
 }: SendEmailDialogProps) {
   const [subject, setSubject] = useState(`Contatto da ${companyName}`);
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
-
+  const { enqueue, enqueuing } = useEnqueueAction();
+  const sending = enqueuing;
   const handleSend = async () => {
     if (!body.trim()) {
       toast.error("Scrivi un messaggio prima di inviare");
       return;
     }
-    setSending(true);
-    try {
-      const html = body.replace(/\n/g, "<br/>");
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: { to: recipientEmail, subject, html, partner_id: partnerId },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success(`Email inviata a ${recipientEmail}`);
+    const html = body.replace(/\n/g, "<br/>");
+    const res = await enqueue({
+      action_type: "send_email",
+      payload: { to: recipientEmail, subject, html, body, partner_id: partnerId },
+      partner_id: partnerId,
+      email_address: recipientEmail,
+      suggested_content: body,
+      reasoning: `Email manuale da SendEmailDialog a ${recipientName}.`,
+      source: "SendEmailDialog",
+      decision_origin: "user_manual",
+    });
+    if (res.ok) {
       onOpenChange(false);
       setBody("");
-    } catch (e: any) {
-      toast.error(e?.message || "Errore nell'invio dell'email");
-    } finally {
-      setSending(false);
+    } else {
+      toast.error(res.error || "Errore in coda");
     }
   };
 

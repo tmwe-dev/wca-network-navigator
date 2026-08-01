@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { setWcaCookie } from "@/lib/wcaCookieStore";
 import { Button } from "@/components/ui/button";
 import { Globe, CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("StepWCA");
 
 interface StepWCAProps {
   wcaUsername: string;
@@ -27,13 +31,12 @@ export function StepWCA({ onNext, onSkip }: StepWCAProps) {
       const data = await res.json();
       if (data.success && data.cookies) {
         setStatus("ok");
-        try {
-          localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() }));
-        } catch {}
+        setWcaCookie(data.cookies);
       } else {
         setStatus("fail");
       }
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setStatus("fail");
     } finally {
       setTesting(false);

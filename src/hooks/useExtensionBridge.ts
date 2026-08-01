@@ -2,10 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 /**
  * V5: Extension bridge with improved reliability.
- * - Content script handles ping locally (fast)
- * - Heartbeat-based availability detection
- * - Serial queue for extractions
- * - Returns BridgeResult with bridgeHealthy flag
  */
 
 export type ExtractionResult = {
@@ -15,11 +11,11 @@ export type ExtractionResult = {
   errorCode?: string | null;
   companyName?: string | null;
   contacts?: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
-  profile?: Record<string, any>;
+  profile?: Record<string, unknown>;
   profileHtml?: string | null;
   htmlLength?: number;
   error?: string | null;
-  debug?: Record<string, any>;
+  debug?: Record<string, unknown>;
 };
 
 export type BridgeResult = {
@@ -32,9 +28,16 @@ type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string
 
 // Serial queue
 const LOCK_KEY = "__extractLock__";
-function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
-  if (!(window as any)[LOCK_KEY]) (window as any)[LOCK_KEY] = { busy: false, queue: [] };
-  return (window as any)[LOCK_KEY];
+
+interface LockState {
+  busy: boolean;
+  queue: Array<{ resolve: (v: unknown) => void; fn: () => Promise<unknown> }>;
+}
+
+function getLock(): LockState {
+  const w = window as Window & { [LOCK_KEY]?: LockState };
+  if (!w[LOCK_KEY]) w[LOCK_KEY] = { busy: false, queue: [] };
+  return w[LOCK_KEY]!;
 }
 
 async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
@@ -43,11 +46,11 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
     const run = async () => {
       lock.busy = true;
       try { resolve(await fn()); }
-      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as any); }
+      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as unknown as T); }
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
-    else lock.queue.push({ resolve, fn: run as any });
+    else lock.queue.push({ resolve: resolve as (v: unknown) => void, fn: run as () => Promise<unknown> });
   });
 }
 
@@ -76,9 +79,9 @@ export function useExtensionBridge() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const sendMessage = useCallback((action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<RawResponse> => {
+  const sendMessage = useCallback((action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<RawResponse> => {
     return new Promise((resolve) => {
-      const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const requestId = `${action}_${crypto.randomUUID()}`;
       const timer = setTimeout(() => {
         pendingRef.current.delete(requestId);
         resolve({ success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_TIMEOUT", error: "Timeout" } as RawResponse);
@@ -89,12 +92,10 @@ export function useExtensionBridge() {
   }, []);
 
   const checkAvailable = useCallback(async (): Promise<boolean> => {
-    // Quick check: if heartbeat was recent, we're good
     if (Date.now() - lastHeartbeatRef.current < 15000) {
       setIsAvailable(true);
       return true;
     }
-    // Ping with retries
     for (let i = 0; i < 3; i++) {
       const r = await sendMessage("ping", {}, 3000);
       if (r.success) { setIsAvailable(true); lastHeartbeatRef.current = Date.now(); return true; }
@@ -107,12 +108,10 @@ export function useExtensionBridge() {
     return serialExtract(async () => {
       const raw = await sendMessage("extractContacts", { wcaId }, 60000);
 
-      // Bridge-level failure
       if (raw.error === "Timeout" || raw.errorCode === "EXT_BRIDGE_TIMEOUT" || raw.errorCode === "EXT_NO_CONTENT_SCRIPT" || raw.errorCode === "EXT_CONTEXT_INVALIDATED") {
         return { bridgeHealthy: false, bridgeError: raw.errorCode || "EXT_BRIDGE_TIMEOUT", extraction: null };
       }
 
-      // Bridge worked, return extraction result
       return {
         bridgeHealthy: true,
         extraction: {

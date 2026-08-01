@@ -10,7 +10,7 @@ function Chip({
   onClick,
   onRemove,
 }: {
-  icon: any;
+  icon: React.ElementType;
   label: string;
   empty?: boolean;
   onClick: () => void;
@@ -45,7 +45,7 @@ const openDrawer = (drawer: "mission" | "filters") => {
 };
 
 export function ActiveContextBar() {
-  const { goal, setGoal, baseProposal, setBaseProposal, recipients, removeRecipient } = useMission();
+  const { goal, setGoal, baseProposal, setBaseProposal, recipients, removeRecipient: _removeRecipient } = useMission();
   const { filters } = useGlobalFilters();
 
   const activeFilterCount = [
@@ -96,7 +96,7 @@ export function ActiveContextBar() {
       )}
 
       {!hasAnything && (
-        <span className="text-[10px] text-muted-foreground/60 ml-1">
+        <span className="text-[10px] text-muted-foreground ml-1">
           Usa le sidebar per configurare obiettivo, proposta e destinatari
         </span>
       )}

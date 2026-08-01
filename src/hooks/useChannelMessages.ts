@@ -4,102 +4,49 @@
 
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useCallback } from "react";
+import { findChannelMessagesPage, type ChannelMessageRow } from "@/data/channelMessages";
+import { useEffect } from "react";
+import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
 
-export type ChannelMessage = {
-  id: string;
-  user_id: string;
-  channel: string;
-  direction: string;
-  source_type: string | null;
-  source_id: string | null;
-  partner_id: string | null;
-  from_address: string | null;
-  to_address: string | null;
-  cc_addresses: string | null;
-  bcc_addresses: string | null;
-  subject: string | null;
-  body_text?: string | null;
-  body_html?: string | null;
-  raw_payload?: any;
-  message_id_external: string | null;
-  in_reply_to: string | null;
-  read_at: string | null;
-  created_at: string;
-  email_date: string | null;
-  raw_storage_path: string | null;
-  raw_sha256: string | null;
-  raw_size_bytes: number | null;
-  imap_uid: number | null;
-  uidvalidity: number | null;
-  imap_flags: string | null;
-  internal_date: string | null;
-  parse_status: string | null;
-  parse_warnings: string[] | null;
-  thread_id: string | null;
-  references_header: string | null;
-};
+const log = createLogger("useChannelMessages");
+
+export type ChannelMessage = ChannelMessageRow;
 
 const PAGE_SIZE = 50;
 
-const MESSAGE_LIST_SELECT = [
-  "id",
-  "user_id",
-  "channel",
-  "direction",
-  "source_type",
-  "source_id",
-  "partner_id",
-  "from_address",
-  "to_address",
-  "cc_addresses",
-  "bcc_addresses",
-  "subject",
-  "body_text",
-  "raw_payload",
-  "message_id_external",
-  "in_reply_to",
-  "read_at",
-  "created_at",
-  "email_date",
-  "raw_storage_path",
-  "raw_sha256",
-  "raw_size_bytes",
-  "imap_uid",
-  "uidvalidity",
-  "imap_flags",
-  "internal_date",
-  "parse_status",
-  "parse_warnings",
-  "thread_id",
-  "references_header",
-].join(", ");
+export type MailboxFilter =
+  | { kind: "personal" }
+  | { kind: "shared"; id: string }
+  | null
+  | undefined;
 
-export function useChannelMessages(channel?: string, searchQuery?: string, page = 0) {
+function mailboxKeyOf(mb: MailboxFilter): string | undefined {
+  if (!mb) return undefined;
+  return mb.kind === "shared" ? `shared:${mb.id}` : "personal";
+}
+
+export function useChannelMessages(
+  channel?: string,
+  searchQuery?: string,
+  page = 0,
+  operatorUserId?: string,
+  mailboxFilter?: MailboxFilter,
+) {
   const queryClient = useQueryClient();
+  const mailboxKey = mailboxKeyOf(mailboxFilter);
 
   const query = useQuery({
-    queryKey: ["channel-messages", channel, searchQuery, page],
+    queryKey: queryKeys.channelMessages.list(channel, searchQuery, page, operatorUserId, mailboxKey),
     queryFn: async () => {
-      let q = supabase
-        .from("channel_messages")
-        .select(MESSAGE_LIST_SELECT)
-        .order("email_date", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-      if (channel && channel !== "all") {
-        q = q.eq("channel", channel);
-      }
-
-      if (searchQuery && searchQuery.trim()) {
-        const terms = searchQuery.trim().split(/\s+/).map(t => `${t}:*`).join(" & ");
-        q = q.textSearch("search_vector", terms);
-      }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return ((data || []) as unknown) as ChannelMessage[];
+      return findChannelMessagesPage({
+        channel,
+        searchQuery,
+        page,
+        pageSize: PAGE_SIZE,
+        operatorUserId,
+        mailboxFilter,
+      });
     },
     staleTime: 30_000,
   });
@@ -116,14 +63,27 @@ export function useChannelMessages(channel?: string, searchQuery?: string, page 
         ...(filterStr ? { filter: filterStr } : {}),
       }, (payload) => {
         const newRow = payload.new as ChannelMessage;
-        // Only update page 0 of matching channel
-        const baseKey = ["channel-messages", channel, searchQuery, 0];
-        queryClient.setQueryData<ChannelMessage[]>(baseKey, (old) => {
+        // Vol. II §10.1: dedup per id E per message_id_external (UID race-safe)
+        const baseKey = queryKeys.channelMessages.list(channel, searchQuery, 0, undefined);
+        queryClient.setQueryData<ChannelMessage[]>([...baseKey], (old) => {
           if (!old) return old;
+          // dedup by id
           if (old.some(m => m.id === newRow.id)) return old;
+          // dedup by external id (sync race possibile)
+          if (newRow.message_id_external) {
+            const existingIdx = old.findIndex(
+              m => m.message_id_external === newRow.message_id_external
+            );
+            if (existingIdx >= 0) {
+              const next = old.slice();
+              next[existingIdx] = newRow;
+              return next;
+            }
+          }
+          log.debug("realtime.prepend", { channel, id: newRow.id });
           return [newRow, ...old].slice(0, PAGE_SIZE);
         });
-        queryClient.invalidateQueries({ queryKey: ["email-count"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
       })
       .subscribe();
 

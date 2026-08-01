@@ -1,0 +1,146 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { findAgentsByUser } from "@/data/agents";
+import { findClientAssignmentsByUser } from "@/data/clientAssignments";
+import { findAgentTasksByUser } from "@/data/agentTasks";
+import { findOperativePrompts } from "@/data/operativePrompts";
+import { queryKeys } from "@/lib/queryKeys";
+
+export interface DirectoryAgent {
+  id: string;
+  name: string;
+  role: string;
+  avatar_emoji: string;
+  is_active: boolean;
+  stats: { tasks_completed: number; emails_sent: number; calls_made: number };
+  clientCount: number;
+  activeTaskCount: number;
+}
+
+export interface DirectoryPrompt {
+  id: string;
+  name: string;
+  objective: string;
+  priority: number;
+  tags: string[];
+  is_active: boolean;
+}
+
+export interface SystemDirectory {
+  agents: DirectoryAgent[];
+  prompts: DirectoryPrompt[];
+  processes: Array<{ name: string; description: string; section: string }>;
+}
+
+interface AgentRecord {
+  id: string;
+  name: string;
+  role: string;
+  avatar_emoji: string;
+  is_active: boolean;
+  stats: unknown;
+}
+
+interface AssignmentRecord {
+  agent_id: string;
+}
+
+interface TaskRecord {
+  agent_id: string;
+}
+
+interface PromptRecord {
+  id: string;
+  name: string;
+  objective?: string;
+  priority: number;
+  tags?: string[];
+  is_active: boolean;
+}
+
+const SYSTEM_PROCESSES = [
+  { name: "Outreach Cockpit", description: "Genera e invia messaggi multicanale (email/WA/LI)", section: "Cockpit" },
+  { name: "Circuito di Attesa", description: "Follow-up automatico post-invio con regole per tipo contatto", section: "Cockpit" },
+  { name: "Copertura Dati WCA", description: "Verifica partner, profili, contatti e biglietti da visita già locali", section: "Network" },
+  { name: "Deep Search", description: "Ricerca Google + LinkedIn per arricchimento profili", section: "Ricerca" },
+  { name: "Email Sync", description: "Sincronizzazione IMAP bidirezionale", section: "InReach" },
+  { name: "WhatsApp Bridge", description: "Lettura messaggi via estensione Chrome", section: "InReach" },
+  { name: "Campaign Queue", description: "Invio email in coda con delay anti-spam", section: "Email" },
+  { name: "Ciclo Autonomo", description: "Esecuzione periodica task agenti via pg_cron", section: "Agenti" },
+];
+
+export function useSystemDirectory() {
+  return useQuery({
+    queryKey: queryKeys.system.directory,
+    queryFn: async (): Promise<SystemDirectory> => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) throw new Error("Not authenticated");
+
+      const [agentsData, assignmentsData, tasksData, promptsData] = await Promise.all([
+        findAgentsByUser(user.id, "id, name, role, avatar_emoji, is_active, stats"),
+        findClientAssignmentsByUser(user.id),
+        findAgentTasksByUser(user.id, ["pending", "running"]),
+        findOperativePrompts(user.id),
+      ]);
+
+      const toAgentRecord = (r: Record<string, unknown>): AgentRecord => ({
+        id: r.id as string,
+        name: r.name as string,
+        role: r.role as string,
+        avatar_emoji: r.avatar_emoji as string,
+        is_active: r.is_active as boolean,
+        stats: r.stats,
+      });
+      const toAssignmentRecord = (r: Record<string, unknown>): AssignmentRecord => ({
+        agent_id: r.agent_id as string,
+      });
+      const toTaskRecord = (r: Record<string, unknown>): TaskRecord => ({
+        agent_id: r.agent_id as string,
+      });
+      const toPromptRecord = (r: Record<string, unknown>): PromptRecord => ({
+        id: r.id as string,
+        name: r.name as string,
+        objective: r.objective as string | undefined,
+        priority: r.priority as number,
+        tags: r.tags as string[] | undefined,
+        is_active: r.is_active as boolean,
+      });
+
+      const agentsList = (agentsData || []).map(toAgentRecord);
+      const assignmentsList = (assignmentsData || []).map(toAssignmentRecord);
+      const tasksList = (tasksData || []).map(toTaskRecord);
+      const promptsList = (promptsData || []).map(toPromptRecord);
+
+      // Count assignments per agent
+      const assignMap = new Map<string, number>();
+      for (const a of assignmentsList) assignMap.set(a.agent_id, (assignMap.get(a.agent_id) || 0) + 1);
+
+      // Count active tasks per agent
+      const taskMap = new Map<string, number>();
+      for (const t of tasksList) taskMap.set(t.agent_id, (taskMap.get(t.agent_id) || 0) + 1);
+
+      const agents: DirectoryAgent[] = agentsList.map((a) => ({
+        id: a.id,
+        name: a.name,
+        role: a.role,
+        avatar_emoji: a.avatar_emoji,
+        is_active: a.is_active,
+        stats: (a.stats as DirectoryAgent["stats"]) || { tasks_completed: 0, emails_sent: 0, calls_made: 0 },
+        clientCount: assignMap.get(a.id) || 0,
+        activeTaskCount: taskMap.get(a.id) || 0,
+      }));
+
+      const prompts: DirectoryPrompt[] = promptsList.map((p) => ({
+        id: p.id,
+        name: p.name,
+        objective: p.objective || "",
+        priority: p.priority,
+        tags: p.tags || [],
+        is_active: p.is_active,
+      }));
+
+      return { agents, prompts, processes: SYSTEM_PROCESSES };
+    },
+    staleTime: 60_000,
+  });
+}

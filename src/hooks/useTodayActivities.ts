@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findTodayActivities } from "@/data/activities";
+import { asSourceMeta } from "@/lib/types/sourceMeta";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface TodayActivity {
   id: string;
@@ -11,27 +13,20 @@ export interface TodayActivity {
   completedAt: string | null;
   contactName: string;
   company: string;
+  status: string;
 }
 
 export function useTodayActivities() {
   return useQuery({
-    queryKey: ["today-activities"],
+    queryKey: queryKeys.activities.today,
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data, error } = await supabase
-        .from("activities")
-        .select("id, activity_type, title, source_id, source_type, description, completed_at, source_meta")
-        .gte("created_at", today.toISOString())
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false })
-        .limit(50);
+      const data = await findTodayActivities(today.toISOString());
 
-      if (error) throw error;
-
-      return (data || []).map((a): TodayActivity => {
-        const meta = (a.source_meta || {}) as any;
+      return data.map((a): TodayActivity => {
+        const meta = asSourceMeta(a.source_meta);
         return {
           id: a.id,
           activityType: a.activity_type,
@@ -40,12 +35,13 @@ export function useTodayActivities() {
           sourceType: a.source_type,
           description: a.description,
           completedAt: a.completed_at,
-          contactName: meta.name || a.title?.split("—")[0]?.trim() || "—",
-          company: meta.company || a.title?.split("—")[1]?.trim() || "",
+          contactName: (meta.contact_name as string) || a.title?.split("—")[0]?.trim() || "—",
+          company: (meta.company_name as string) || a.title?.split("—")[1]?.trim() || "",
+          status: a.status,
         };
       });
     },
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 60_000,
+    refetchInterval: 90_000,
   });
 }

@@ -1,4 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useLinkedInExtensionBridge");
+let lastTabVisibleToastAt = 0;
 
 type LiExtensionResponse = {
   success: boolean;
@@ -23,8 +28,26 @@ export function useLinkedInExtensionBridge() {
   const pendingRef = useRef<Map<string, (response: LiExtensionResponse) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const availableRef = useRef(false);
+  const configSentRef = useRef(false);
 
   useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
+
+  // Send Supabase config to extension when it becomes available
+  const sendConfig = useCallback(() => {
+    if (configSentRef.current) return;
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) return;
+    configSentRef.current = true;
+    log.debug("→ sending setConfig to extension");
+    window.postMessage({
+      direction: "from-webapp-li",
+      action: "setConfig",
+      requestId: `li_setConfig_${Date.now()}`,
+      supabaseUrl: url,
+      supabaseAnonKey: key,
+    }, window.location.origin);
+  }, []);
 
   // Listen for responses from the content script
   useEffect(() => {
@@ -33,10 +56,10 @@ export function useLinkedInExtensionBridge() {
       const data = event.data;
       if (!data || data.direction !== "from-extension-li") return;
 
-      if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
-      if (data.action === "extensionDead") { setIsAvailable(false); return; }
-      if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
-      if (data.action === "ping" && data.response?.error) { setIsAvailable(false); return; }
+      if (data.action === "contentScriptReady") { setIsAvailable(true); sendConfig(); return; }
+      if (data.action === "extensionDead") { setIsAvailable(false); configSentRef.current = false; return; }
+      if (data.action === "ping" && data.response?.success) { setIsAvailable(true); sendConfig(); return; }
+      if (data.action === "ping" && data.response?.error) { setIsAvailable(false); configSentRef.current = false; return; }
 
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
@@ -65,21 +88,31 @@ export function useLinkedInExtensionBridge() {
   }, []);
 
   const sendMessage = useCallback(
-    (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<LiExtensionResponse> => {
+    (action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<LiExtensionResponse> => {
       return new Promise((resolve) => {
-        const requestId = `li_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const requestId = `li_${action}_${crypto.randomUUID()}`;
 
-        console.log(`[LI Bridge] → ${action}`, { requestId, payload: payload ? Object.keys(payload) : [] });
+        log.debug("→ request", { action, requestId, payloadKeys: payload ? Object.keys(payload) : [] });
 
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);
-          console.warn(`[LI Bridge] ⏰ Timeout for ${action} (${timeoutMs}ms)`, requestId);
+          log.warn("timeout", { action, timeoutMs, requestId });
           resolve({ success: false, error: "Timeout" });
         }, timeoutMs);
 
         pendingRef.current.set(requestId, (response) => {
           clearTimeout(timer);
-          console.log(`[LI Bridge] ← ${action}`, { requestId, success: response.success, error: response.error });
+          log.debug("← response", { action, requestId, success: response.success, error: response.error });
+          const resp = response as LiExtensionResponse & { errorCode?: string };
+          if (resp && resp.errorCode === "TAB_NOT_VISIBLE") {
+            const now = Date.now();
+            if (now - lastTabVisibleToastAt > 3000) {
+              lastTabVisibleToastAt = now;
+              toast.error("Apri LinkedIn nel browser", {
+                description: "La tab deve essere visibile per leggere i messaggi.",
+              });
+            }
+          }
           resolve(response);
         });
 
@@ -111,13 +144,13 @@ export function useLinkedInExtensionBridge() {
 
   const sendDirectMessage = useCallback(
     (profileUrl: string, message: string) =>
-      sendMessage("sendMessage", { url: profileUrl, message }, 60000),
+      sendMessage("sendMessage", { url: profileUrl, message }, 120000),
     [sendMessage]
   );
 
   const sendConnectionRequest = useCallback(
     (profileUrl: string, note?: string) =>
-      sendMessage("sendConnectionRequest", { url: profileUrl, note: note || "" }, 60000),
+      sendMessage("sendConnectionRequest", { url: profileUrl, note: note || "" }, 120000),
     [sendMessage]
   );
 
@@ -152,7 +185,8 @@ export function useLinkedInExtensionBridge() {
         const ok = r.success === true && r.authenticated === true;
         lastAuthCheck.current = { ok, ts: Date.now() };
         return { ok, reason: ok ? "authenticated" : r.reason || "not_authenticated" };
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         lastAuthCheck.current = { ok: false, ts: Date.now() };
         return { ok: false, reason: "verify_error" };
       }

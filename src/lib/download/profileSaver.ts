@@ -1,15 +1,37 @@
-import { supabase } from "@/integrations/supabase/client";
+import { updatePartner } from "@/data/partners";
+import type { Database } from "@/integrations/supabase/types";
+
+type ServiceCategory = Database["public"]["Enums"]["service_category"];
+import {
+  findPartnerContacts, insertPartnerContacts, updatePartnerContact,
+  findPartnerNetworks, insertPartnerNetworks,
+  findPartnerServices, insertPartnerServices,
+  findPartnerCertifications, insertPartnerCertifications,
+} from "@/data/partnerRelations";
+
+/** Shape of the scraper extraction result */
+interface ExtractionResult {
+  success?: boolean;
+  companyName?: string;
+  profileHtml?: string;
+  contacts?: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
+  profile?: {
+    address?: string; phone?: string; fax?: string; mobile?: string; emergencyPhone?: string;
+    email?: string; website?: string; description?: string; memberSince?: string;
+    membershipExpires?: string; officeType?: string; branchCities?: string[];
+    networks?: Array<{ name: string; expires?: string | null }>;
+    services?: string[];
+    certifications?: string[];
+  };
+}
 
 /**
  * V2: Saves extracted profile data with BATCHED operations.
- * - Contacts: single batch insert instead of N individual inserts
- * - Partner update: single unified UPDATE instead of 3-4 separate calls
- * - Networks/Services/Certifications: batch inserts
  */
 export async function saveExtractionResult(
   partnerId: string,
   wcaId: number,
-  result: any,
+  result: ExtractionResult,
   existingCompanyName: string,
 ) {
   let hasEmail = false;
@@ -20,9 +42,8 @@ export async function saveExtractionResult(
   let extractedPhoneCount = 0;
 
   // ── 1. Build unified partner update payload ──
-  const partnerUpdate: Record<string, any> = {};
+  const partnerUpdate: Record<string, unknown> = {};
 
-  // Company name
   if (
     result.companyName &&
     !result.companyName.startsWith("WCA ") &&
@@ -32,7 +53,6 @@ export async function saveExtractionResult(
     partnerUpdate.company_name = companyName;
   }
 
-  // Profile data
   if (result.profile) {
     const p = result.profile;
     if (p.address) partnerUpdate.address = p.address;
@@ -50,37 +70,34 @@ export async function saveExtractionResult(
       if (ot.includes("head") || ot.includes("main")) partnerUpdate.office_type = "head_office";
       else if (ot.includes("branch")) partnerUpdate.office_type = "branch";
     }
-    if (p.branchCities?.length > 0) {
+    if ((p.branchCities?.length ?? 0) > 0) {
       partnerUpdate.has_branches = true;
       partnerUpdate.branch_cities = p.branchCities;
     }
   }
 
-  // Raw HTML
   if (result.profileHtml) {
     partnerUpdate.raw_profile_html = result.profileHtml;
   }
 
   // ── 2. Execute single partner UPDATE ──
   if (Object.keys(partnerUpdate).length > 0) {
-    await supabase.from("partners").update(partnerUpdate).eq("id", partnerId);
+    await updatePartner(partnerId, partnerUpdate);
     profileSaved = true;
   }
 
   // ── 3. Batch save contacts ──
-  if (result.success && result.contacts?.length > 0) {
-    const { data: existingContacts } = await supabase
-      .from("partner_contacts")
-      .select("id, name, email")
-      .eq("partner_id", partnerId);
+  if (result.success && (result.contacts?.length ?? 0) > 0) {
+    const contacts = result.contacts!;
+    const existingContacts = await findPartnerContacts(partnerId, "id, name, email");
     const existingByName = new Map(
       (existingContacts || []).map((c) => [c.name?.trim().toLowerCase(), c])
     );
 
-    const toInsert: any[] = [];
+    const toInsert: Array<Record<string, unknown>> = [];
     const toUpdate: Array<{ id: string; updates: Record<string, string> }> = [];
 
-    for (const c of result.contacts) {
+    for (const c of contacts) {
       const nameKey = (c.name || c.title || "Sconosciuto").trim().toLowerCase();
       if (!existingByName.has(nameKey)) {
         toInsert.push({
@@ -101,40 +118,30 @@ export async function saveExtractionResult(
       if (c.phone || c.mobile) hasPhone = true;
     }
 
-    // Batch insert all new contacts at once
-    if (toInsert.length > 0) {
-      await supabase.from("partner_contacts").insert(toInsert);
-    }
-
-    // Update existing contacts (usually 0-1)
+    await insertPartnerContacts(toInsert);
     for (const { id, updates } of toUpdate) {
-      await supabase.from("partner_contacts").update(updates).eq("id", id);
+      await updatePartnerContact(id, updates);
     }
 
-    extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
+    extractedEmailCount = contacts.filter((c) => c.email).length;
+    extractedPhoneCount = contacts.filter((c) => c.phone || c.mobile).length;
   }
 
   // ── 4. Batch save networks ──
-  if (result.profile?.networks?.length > 0) {
-    const { data: existingNets } = await supabase
-      .from("partner_networks").select("network_name").eq("partner_id", partnerId);
+  if ((result.profile?.networks?.length ?? 0) > 0) {
+    const networks = result.profile!.networks!;
+    const existingNets = await findPartnerNetworks(partnerId);
     const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
-    const toInsert = result.profile.networks
-      .filter((n: any) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
-      .map((n: any) => ({
-        partner_id: partnerId,
-        network_name: n.name.trim(),
-        expires: n.expires || null,
-      }));
-    if (toInsert.length > 0) {
-      await supabase.from("partner_networks").insert(toInsert);
-    }
+    const toInsert = networks
+      .filter((n) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
+      .map((n) => ({ partner_id: partnerId, network_name: n.name.trim(), expires: n.expires || null }));
+    await insertPartnerNetworks(toInsert);
   }
 
   // ── 5. Batch save services ──
-  if (result.profile?.services?.length > 0) {
-    const serviceMap: Record<string, string> = {
+  if ((result.profile?.services?.length ?? 0) > 0) {
+    const services = result.profile!.services!;
+    const serviceMap: Record<string, ServiceCategory> = {
       air: "air_freight", "air freight": "air_freight",
       "ocean fcl": "ocean_fcl", "sea fcl": "ocean_fcl", fcl: "ocean_fcl",
       "ocean lcl": "ocean_lcl", "sea lcl": "ocean_lcl", lcl: "ocean_lcl",
@@ -151,7 +158,7 @@ export async function saveExtractionResult(
       warehouse: "warehousing", warehousing: "warehousing",
       nvocc: "nvocc",
     };
-    const mapService = (text: string): string | null => {
+    const mapService = (text: string): ServiceCategory | null => {
       const lower = text.trim().toLowerCase();
       if (serviceMap[lower]) return serviceMap[lower];
       for (const [key, val] of Object.entries(serviceMap)) {
@@ -160,24 +167,22 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      result.profile.services.map((s: string) => mapService(s)).filter(Boolean) as string[]
+      services.map((s: string) => mapService(s)).filter((s): s is ServiceCategory => s !== null)
     )];
     if (mapped.length > 0) {
-      const { data: existingSvc } = await supabase
-        .from("partner_services").select("service_category").eq("partner_id", partnerId);
+      const existingSvc = await findPartnerServices(partnerId);
       const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
-        service_category: s as any,
+        service_category: s,
       }));
-      if (toInsert.length > 0) {
-        await supabase.from("partner_services").insert(toInsert);
-      }
+      await insertPartnerServices(toInsert);
     }
   }
 
   // ── 6. Batch save certifications ──
-  if (result.profile?.certifications?.length > 0) {
+  if ((result.profile?.certifications?.length ?? 0) > 0) {
+    const certifications = result.profile!.certifications!;
     const validCerts = ["IATA", "BASC", "ISO", "C-TPAT", "AEO"] as const;
     const mapCert = (text: string): typeof validCerts[number] | null => {
       const upper = text.trim().toUpperCase();
@@ -188,19 +193,16 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      result.profile.certifications.map((c: string) => mapCert(c)).filter(Boolean) as string[]
+      certifications.map((c: string) => mapCert(c)).filter((c): c is typeof validCerts[number] => c !== null)
     )];
     if (mapped.length > 0) {
-      const { data: existingCerts } = await supabase
-        .from("partner_certifications").select("certification").eq("partner_id", partnerId);
+      const existingCerts = await findPartnerCertifications(partnerId);
       const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
-        certification: c as any,
+        certification: c,
       }));
-      if (toInsert.length > 0) {
-        await supabase.from("partner_certifications").insert(toInsert);
-      }
+      await insertPartnerCertifications(toInsert);
     }
   }
 

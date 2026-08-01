@@ -6,10 +6,10 @@ import type { CountryWithPartners } from "@/standalone-globe/types";
 interface PartnerMiniGlobeProps {
   partnerCountryCode: string;
   partnerCity: string;
-  branchCities: any[] | null;
+  branchCities: Array<Record<string, unknown>> | null;
 }
 
-export function PartnerMiniGlobe({ partnerCountryCode, partnerCity, branchCities }: PartnerMiniGlobeProps) {
+export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity, branchCities }: PartnerMiniGlobeProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
   const countries: CountryWithPartners[] = useMemo(() => {
@@ -17,9 +17,9 @@ export function PartnerMiniGlobe({ partnerCountryCode, partnerCity, branchCities
     codes.add(partnerCountryCode);
 
     const branches = Array.isArray(branchCities) ? branchCities : [];
-    branches.forEach((b: any) => {
+    branches.forEach((b) => {
       const code = b?.country_code || b?.country;
-      if (code) codes.add(code);
+      if (code) codes.add(String(code));
     });
 
     return Array.from(codes).map((code) => {

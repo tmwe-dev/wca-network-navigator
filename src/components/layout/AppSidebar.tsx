@@ -1,55 +1,57 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  Calendar, Mail, Globe, Home, Moon, Sun, Settings,
-  Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
-  Earth, Send, Inbox,
-} from "lucide-react";
+import { Calendar, Mail, Globe, Home, Moon, Sun, Settings, Wifi, WifiOff, Users, Command, Rocket, MessageCircle, Send, Inbox, Target, LogOut, Activity, Crown, Gamepad2, Shield, Brain } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWcaSession } from "@/hooks/useWcaSession";
+import { usePendingTaskCount } from "@/hooks/usePendingTaskCount";
 import { useState } from "react";
 
 function getNavSections(pathname: string) {
-  const inNetwork = pathname.startsWith("/network");
-  const inCRM = pathname.startsWith("/crm");
+  const inNetwork = pathname.startsWith("/v1/network");
+  const inCRM = pathname.startsWith("/v1/crm");
 
   return [
     {
       label: "Aree",
       items: [
-        { title: "Dashboard", url: "/", icon: Home },
-        ...(!inCRM ? [{ title: "Network", url: "/network", icon: Globe }] : []),
-        ...(!inNetwork ? [{ title: "CRM", url: "/crm", icon: Users }] : []),
+        { title: "Dashboard", url: "/v1", icon: Home },
+        ...(!inCRM ? [{ title: "Network", url: "/v1/network", icon: Globe }] : []),
+        ...(!inNetwork ? [{ title: "CRM", url: "/v1/crm", icon: Users }] : []),
       ],
     },
     {
       label: "Strumenti",
       items: [
-        { title: "Outreach", url: "/outreach", icon: Rocket },
-        { title: "Inreach", url: "/inreach", icon: Inbox },
-        { title: "Email Composer", url: "/email-composer", icon: Mail },
-        { title: "Agenda", url: "/agenda", icon: Calendar },
+        { title: "Nuova Missione", url: "/v1/mission-builder", icon: Target },
+        { title: "Outreach", url: "/v1/outreach", icon: Rocket },
+        { title: "Inreach", url: "/v1/inreach", icon: Inbox },
+        { title: "Email", url: "/v2/email-composer", icon: Mail },
+        { title: "Agenda", url: "/v1/agenda", icon: Calendar },
       ],
     },
     {
       label: "AI",
       items: [
-        { title: "Agenti", url: "/agents", icon: Bot },
-        { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
+        { title: "AI Arena", url: "/v1/ai-arena", icon: Gamepad2 },
+        { title: "AI Control", url: "/v1/ai-control", icon: Shield },
+        { title: "Email Intelligence", url: "/v1/email-intelligence", icon: Brain },
+        { title: "Chat Agenti", url: "/v1/agent-chat", icon: MessageCircle },
+        { title: "Staff Direzionale", url: "/v1/staff-direzionale", icon: Crown },
       ],
     },
     {
       label: "Legacy",
       items: [
-        { title: "Global", url: "/global", icon: Earth },
-        { title: "Campagne", url: "/campaigns", icon: Send },
+        { title: "Campagne", url: "/v1/campaigns", icon: Send },
       ],
     },
     {
       label: "Sistema",
       items: [
-        { title: "Impostazioni", url: "/settings", icon: Settings },
+        { title: "Telemetria", url: "/v1/telemetry", icon: Activity },
+        { title: "Impostazioni", url: "/v1/settings", icon: Settings },
       ],
     },
   ];
@@ -60,12 +62,14 @@ interface AppSidebarProps {
   onToggle: () => void;
 }
 
-export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
+export function AppSidebar({ collapsed: _collapsed, onToggle: _onToggle }: AppSidebarProps) {
+  const navigate = useNavigate();
   const location = useLocation();
   const [isDark, setIsDark] = useState(
     () => document.documentElement.classList.contains("dark")
   );
   const { isSessionActive } = useWcaSession();
+  const pendingCount = usePendingTaskCount();
   const wcaStatus =
     isSessionActive === true ? "ok"
     : isSessionActive === false ? "expired"
@@ -137,6 +141,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                         )}
                       />
                       <span className="truncate">{item.title}</span>
+                      {item.url === "/v1/outreach" && pendingCount > 0 && (
+                        <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
+                          {pendingCount > 99 ? "99+" : pendingCount}
+                        </span>
+                      )}
                       {isActive && (
                         <motion.span
                           layoutId="sidebar-indicator"
@@ -154,13 +163,13 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-2 py-2 border-t border-sidebar-border space-y-px">
+      <div className="flex-shrink-0 px-2 py-2 border-t border-sidebar-border space-y-px">
         {/* WCA status */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             {wcaStatus === "expired" ? (
               <Link
-                to="/settings"
+                to="/v1/settings"
                 className="flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <span className="relative flex-shrink-0">
@@ -209,6 +218,18 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             {isDark ? <Sun className="w-4 h-4 group-hover:text-warning" /> : <Moon className="w-4 h-4" />}
           </motion.div>
           <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+        </button>
+
+        {/* Logout */}
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            navigate("/auth");
+          }}
+          className="flex items-center gap-2.5 w-full px-2 py-[7px] rounded-md text-[13px] font-medium text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors group"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Esci</span>
         </button>
       </div>
     </aside>

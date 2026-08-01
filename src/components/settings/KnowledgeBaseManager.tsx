@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Pencil, Trash2, Search, Download, Sparkles, Star, BookOpen } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -85,24 +85,25 @@ export function KnowledgeBaseManager() {
       toast.error("Titolo e contenuto sono obbligatori");
       return;
     }
-    upsert.mutate(editEntry as any, { onSuccess: () => setEditEntry(null) });
+    upsert.mutate(editEntry as never, { onSuccess: () => setEditEntry(null) });
   };
 
   const handleImproveWithAI = async () => {
     if (!editEntry?.content?.trim()) return;
     setImproving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("improve-email", {
+      const data = await invokeAi<Record<string, unknown>>("improve-email", {
+        scope: "email",
+        context: { source: "KnowledgeBaseManager.improve_email" },
         body: { html_body: editEntry.content, oracle_tone: "professionale", use_kb: false },
       });
-      if (error) throw error;
       const improved = data?.body || data?.html;
       if (improved) {
-        setEditEntry(prev => ({ ...prev, content: improved }));
+        setEditEntry(prev => ({ ...prev, content: String(improved) }));
         toast.success("Contenuto migliorato con AI");
       }
-    } catch (e: any) {
-      toast.error("Errore AI: " + (e.message || "sconosciuto"));
+    } catch (e: unknown) {
+      toast.error("Errore AI: " + ((e instanceof Error ? e.message : String(e)) || "sconosciuto"));
     } finally {
       setImproving(false);
     }
@@ -190,10 +191,10 @@ export function KnowledgeBaseManager() {
                         {entry.tags.slice(0, 3).map(t => (
                           <Badge key={t} variant="secondary" className="text-[9px] px-1">{t}</Badge>
                         ))}
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditEntry({ ...entry })}>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditEntry({ ...entry })} aria-label="Modifica">
                           <Pencil className="w-3 h-3" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove.mutate(entry.id)}>
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove.mutate(entry.id)} aria-label="Elimina">
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>

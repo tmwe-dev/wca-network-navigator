@@ -40,7 +40,7 @@ export const STATUS_ICONS = {
 } as const;
 
 export const STATUS_CYCLE = ["pending", "in_progress", "completed"] as const;
-export type ActivityStatusKey = (typeof STATUS_CYCLE)[number];
+type ActivityStatusKey = (typeof STATUS_CYCLE)[number];
 
 /** Advance status to the next in the cycle */
 export function nextStatus(current: string): ActivityStatusKey {

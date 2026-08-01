@@ -2,10 +2,13 @@ import { useState, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "@/hooks/use-toast";
 import type { ContactFilters } from "@/hooks/useContacts";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ContactAIBar");
 
 export interface AICommand {
   type: "apply_filters" | "set_sort" | "select_contacts" | "update_status" | "export_csv" | "send_to_workspace" | "create_jobs" | "multi";
@@ -35,7 +38,8 @@ function parseCommand(content: string): { message: string; command: AICommand | 
   try {
     const command = JSON.parse(jsonStr) as AICommand;
     return { message, command };
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return { message: content.trim(), command: null };
   }
 }
@@ -59,8 +63,11 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const { data, error } = await supabase.functions.invoke("contacts-assistant", {
+      const data = await invokeAi<{ error?: string; content?: string }>("unified-assistant", {
+        scope: "contacts",
+        context: { source: "ContactAIBar.contacts_assistant" },
         body: {
+          scope: "contacts",
           messages: newMessages,
           context: {
             filters,
@@ -71,8 +78,6 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
           },
         },
       });
-
-      if (error) throw error;
       if (data?.error) {
         toast({ title: "Errore AI", description: data.error, variant: "destructive" });
         setLoading(false);
@@ -93,9 +98,9 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
           onAICommand(command);
         }
       }
-    } catch (e: any) {
-      console.error("ContactAIBar error:", e);
-      toast({ title: "Errore", description: e.message || "Errore di comunicazione", variant: "destructive" });
+    } catch (e: unknown) {
+      log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
+      toast({ title: "Errore", description: e instanceof Error ? e.message : "Errore di comunicazione", variant: "destructive" });
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -119,6 +124,7 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Invia"
             className="absolute right-0.5 top-1/2 -translate-y-1/2 h-5 w-5"
             onClick={send}
             disabled={loading || !input.trim()}

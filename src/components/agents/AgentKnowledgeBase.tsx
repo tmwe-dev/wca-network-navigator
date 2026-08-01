@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Save, BookOpen } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
 import { toast } from "sonner";
+import { toJsonValue } from "@/lib/typedJson";
 
 interface KBEntry {
   title: string;
@@ -16,10 +17,10 @@ interface Props {
 }
 
 export function AgentKnowledgeBase({ agent }: Props) {
-  const [entries, setEntries] = useState<KBEntry[]>((agent.knowledge_base as KBEntry[]) || []);
+  const [entries, setEntries] = useState<KBEntry[]>((agent.knowledge_base as unknown as KBEntry[]) || []);
   const { updateAgent } = useAgents();
 
-  useEffect(() => setEntries((agent.knowledge_base as KBEntry[]) || []), [agent.id]);
+  useEffect(() => setEntries((agent.knowledge_base as unknown as KBEntry[]) || []), [agent.id]);
 
   const addEntry = () => setEntries([...entries, { title: "", content: "" }]);
 
@@ -33,7 +34,7 @@ export function AgentKnowledgeBase({ agent }: Props) {
 
   const save = () => {
     updateAgent.mutate(
-      { id: agent.id, knowledge_base: entries } as any,
+      { id: agent.id, knowledge_base: toJsonValue(entries) },
       { onSuccess: () => toast.success("Knowledge Base salvata") }
     );
   };
@@ -67,7 +68,7 @@ export function AgentKnowledgeBase({ agent }: Props) {
               placeholder="Titolo documento"
               className="text-sm"
             />
-            <Button size="icon" variant="ghost" onClick={() => removeEntry(i)}>
+            <Button size="icon" variant="ghost" onClick={() => removeEntry(i)} aria-label="Elimina">
               <Trash2 className="w-3.5 h-3.5 text-destructive" />
             </Button>
           </div>

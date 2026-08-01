@@ -6,6 +6,10 @@ import { useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
+
+const log = createLogger("useWcaSync");
 
 export function useWcaSync() {
   const queryClient = useQueryClient();
@@ -66,18 +70,18 @@ export function useWcaSync() {
                 { id: toastId, duration: 8000 }
               );
             } else if (evt.type === "error") {
-              console.error("Sync SSE error:", evt.message);
+              log.error("sse error", { message: evt.message });
               toast.loading(`⚠️ ${evt.message}`, { id: toastId });
             }
-          } catch {}
+          } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
         }
       }
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["partners-paginated"] });
-      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
-    } catch (e: any) {
-      toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.paginated() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partnerStats });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Errore sincronizzazione", { id: toastId });
     }
   }, [queryClient]);
 

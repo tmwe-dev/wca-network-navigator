@@ -1,259 +1,363 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useState, useMemo, useCallback } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Wand2, Plus, BookOpen, X, ExternalLink } from "lucide-react";
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import {
+  Search,
+  SlidersHorizontal,
+  FileText,
+  ImageIcon,
+  BookOpen,
+} from "lucide-react";
+import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
+import { checkOracleCoherence } from "@/lib/oracleCoherence";
+import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
+import BriefAccordion, { EMPTY_BRIEF, briefToText, type EmailBrief } from "./BriefAccordion";
+import { useDeepSearchTrigger } from "@/hooks/email-composer/useDeepSearchTrigger";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
+import { ImageGalleryTab } from "./ImageGalleryTab";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
+import { OraclePanelHeader } from "./oracle/OraclePanelHeader";
+import { OraclePanelGoalInput } from "./oracle/OraclePanelGoalInput";
+import { OraclePanelTypeChips } from "./oracle/OraclePanelTypeChips";
+import { OraclePanelFooter } from "./oracle/OraclePanelFooter";
+import EnrichmentStatusBadges from "./EnrichmentStatusBadges";
+
+const log = createLogger("OraclePanel");
 
 export interface OracleConfig {
   emailType: EmailType | null;
   tone: string;
   useKB: boolean;
   deepSearch: boolean;
+  customGoal: string;
 }
 
 interface OraclePanelProps {
   onGenerate: (config: OracleConfig) => void;
   onImprove: (config: OracleConfig) => void;
   onLoadTemplate: (subject: string, body: string) => void;
+  onInsertImage?: (url: string) => void;
   generating: boolean;
   improving: boolean;
   hasBody: boolean;
+  recipientPartnerId?: string | null;
+  recipientCount?: number;
+  contextSummary?: import("@/components/email/OracleContextPanel").OracleContextSummary | null;
 }
 
-export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, generating, improving, hasBody }: OraclePanelProps) {
-  const navigate = useNavigate();
+export default function OraclePanel({
+  onGenerate,
+  onImprove,
+  onLoadTemplate,
+  onInsertImage,
+  generating,
+  improving,
+  hasBody,
+  recipientPartnerId = null,
+  recipientCount = 0,
+  contextSummary = null,
+}: OraclePanelProps) {
   const [selectedType, setSelectedType] = useState<EmailType | null>(null);
   const [tone, setTone] = useState("professionale");
   const [useKB, setUseKB] = useState(true);
-  const [deepSearch, setDeepSearch] = useState(false);
-  const [showNewType, setShowNewType] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newIcon, setNewIcon] = useState("📧");
-  const [newPrompt, setNewPrompt] = useState("");
-  
+  const [customGoal, setCustomGoal] = useState("");
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showImages, setShowImages] = useState(false);
+  const [brief, setBrief] = useState<EmailBrief>(EMPTY_BRIEF);
+  const [detailType, setDetailType] = useState<EmailType | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const deepSearch = useDeepSearchTrigger(recipientPartnerId);
+
+  const coherence = useMemo(
+    () => checkOracleCoherence(selectedType?.id ?? null, customGoal),
+    [selectedType?.id, customGoal]
+  );
+
+  const onVoiceText = useCallback((text: string) => {
+    setCustomGoal(text);
+  }, []);
+  const speech = useContinuousSpeech(onVoiceText);
 
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
   const { data: templates = [] } = useEmailTemplates();
 
-  // Custom types from app_settings
   const customTypes: EmailType[] = useMemo(() => {
     try {
       return JSON.parse(settings?.email_oracle_types || "[]");
-    } catch { return []; }
+    } catch (e) {
+      log.debug("fallback used after parse failure", {
+        error: e instanceof Error ? e.message : String(e),
+      });
+      return [];
+    }
   }, [settings?.email_oracle_types]);
 
-  const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
+  const allTypes = useMemo(
+    () => [...DEFAULT_EMAIL_TYPES, ...customTypes],
+    [customTypes]
+  );
 
-  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch };
+  const mergedGoal = useMemo(() => {
+    const base = customGoal.trim();
+    const briefBlock = briefToText(brief);
+    if (!briefBlock) return base;
+    return base ? `${base}\n\n${briefBlock}` : briefBlock;
+  }, [customGoal, brief]);
 
-  const handleAddType = () => {
-    if (!newName.trim() || !newPrompt.trim()) return;
-    const newType: EmailType = {
-      id: `custom_${Date.now()}`,
-      name: newName.trim(),
-      icon: newIcon || "📧",
-      category: "altro",
-      prompt: newPrompt.trim(),
-      tone,
-    };
+  const config: OracleConfig = {
+    emailType: selectedType,
+    tone,
+    useKB,
+    deepSearch: deepSearch.status === "fresh",
+    customGoal: mergedGoal,
+  };
+
+  const handleAddType = (newType: EmailType) => {
     const updated = [...customTypes, newType];
-    updateSetting.mutate({ key: "email_oracle_types", value: JSON.stringify(updated) });
+    updateSetting.mutate({
+      key: "email_oracle_types",
+      value: JSON.stringify(updated),
+    });
     setSelectedType(newType);
-    setNewName(""); setNewIcon("📧"); setNewPrompt("");
-    setShowNewType(false);
   };
 
   const removeCustomType = (id: string) => {
-    const updated = customTypes.filter(t => t.id !== id);
-    updateSetting.mutate({ key: "email_oracle_types", value: JSON.stringify(updated) });
+    const updated = customTypes.filter((t) => t.id !== id);
+    updateSetting.mutate({
+      key: "email_oracle_types",
+      value: JSON.stringify(updated),
+    });
     if (selectedType?.id === id) setSelectedType(null);
   };
 
-  const salesKB = settings?.ai_sales_knowledge_base || "";
-  const companyKB = settings?.ai_knowledge_base || "";
+  const handleDuplicate = (newType: EmailType) => {
+    const updated = [...customTypes, newType];
+    updateSetting.mutate({
+      key: "email_oracle_types",
+      value: JSON.stringify(updated),
+    });
+    setSelectedType(newType);
+  };
+
+  const openDetail = (t: EmailType) => {
+    setDetailType(t);
+    setDetailOpen(true);
+  };
+
+  const currentToneOption = TONE_OPTIONS.find((t) => t.value === tone);
 
   return (
     <div className="flex flex-col h-full border-l border-border/30 bg-muted/5">
-      {/* Header */}
-      <div className="shrink-0 px-3 py-2.5 border-b border-border/30 flex items-center gap-2">
-        <span className="text-base">🔮</span>
-        <span className="text-xs font-semibold tracking-wide uppercase text-foreground/80">Oracolo</span>
-      </div>
+      <OraclePanelHeader />
 
-      <Tabs defaultValue="tipi" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="shrink-0 mx-2 mt-2 h-7 p-0.5">
-          <TabsTrigger value="tipi" className="text-[10px] h-6 px-3">Tipi</TabsTrigger>
-          <TabsTrigger value="template" className="text-[10px] h-6 px-3">Template</TabsTrigger>
-        </TabsList>
+      <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-3">
+        <OraclePanelGoalInput
+          selectedType={selectedType}
+          customGoal={customGoal}
+          coherence={coherence}
+          onGoalChange={setCustomGoal}
+          speech={speech}
+        />
 
-        {/* === TIPI TAB === */}
-        <TabsContent value="tipi" className="flex-1 min-h-0 flex flex-col mt-0">
-          <ScrollArea className="flex-1 px-2 py-1.5">
-            <div className="space-y-1">
-              {allTypes.map((t) => {
-                const isCustom = customTypes.some(c => c.id === t.id);
-                return (
-                  <Tooltip key={t.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setSelectedType(selectedType?.id === t.id ? null : t)}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all text-xs group",
-                          selectedType?.id === t.id
-                            ? "bg-primary/10 ring-1 ring-primary/30 text-primary font-medium"
-                            : "hover:bg-muted/50 text-foreground/70"
-                        )}
-                      >
-                        <span className="text-sm shrink-0">{t.icon}</span>
-                        <span className="truncate flex-1">{t.name}</span>
-                        {isCustom && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); removeCustomType(t.id); }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity"
-                          >
-                            <X className="w-3 h-3 text-destructive" />
-                          </button>
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-[220px] text-[11px]">
-                      {t.prompt}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
+        <BriefAccordion brief={brief} onChange={setBrief} />
 
-              {/* Add new type */}
-              {!showNewType ? (
+        <OraclePanelTypeChips
+          allTypes={allTypes}
+          selectedType={selectedType}
+          customTypes={customTypes}
+          onSelectType={setSelectedType}
+          onAddType={handleAddType}
+          onRemoveType={removeCustomType}
+          onOpenDetail={openDetail}
+        />
+
+        <EnrichmentStatusBadges partnerId={recipientPartnerId} />
+
+        <div className="flex items-center gap-2 px-1 py-1">
+          <div title={"Tono: " + (currentToneOption?.label || "Professionale")}>
+            <Select value={tone} onValueChange={setTone}>
+              <SelectTrigger className="h-7 w-9 p-0 border-0 bg-transparent justify-center [&>svg:last-child]:hidden">
+                <SlidersHorizontal className="w-4 h-4 text-foreground" />
+              </SelectTrigger>
+              <SelectContent>
+                {TONE_OPTIONS.map((t) => (
+                  <SelectItem key={t.value} value={t.value} className="text-xs">
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setUseKB(!useKB)}
+                className={cn(
+                  "p-1.5 rounded-md border transition-all",
+                  useKB
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                )}
+              >
+                <BookOpen className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-[10px]">
+              Knowledge Base: {useKB ? "attiva" : "spenta"}
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => deepSearch.trigger()}
+                disabled={!deepSearch.canRun || deepSearch.status === "running"}
+                className={cn(
+                  "p-1.5 rounded-md border transition-all relative",
+                  !deepSearch.canRun && "opacity-40 cursor-not-allowed",
+                  deepSearch.status === "running" &&
+                    "border-primary/30 bg-primary/10 text-primary",
+                  deepSearch.status === "fresh" &&
+                    "border-success/30 bg-success/10 text-success",
+                  deepSearch.status === "stale" &&
+                    "border-warning/30 bg-warning/10 text-warning",
+                  (deepSearch.status === "missing" ||
+                    deepSearch.status === "idle") &&
+                    "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                  deepSearch.status === "failed" &&
+                    "border-destructive/30 bg-destructive/10 text-destructive"
+                )}
+              >
+                {deepSearch.status === "running" ? (
+                  <Search className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                {deepSearch.status === "fresh" && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-success" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-[10px]">
+              {!deepSearch.canRun
+                ? "Deep Search: richiede 1 destinatario CRM"
+                : deepSearch.status === "running"
+                  ? "Deep Search in corso..."
+                  : deepSearch.status === "fresh"
+                    ? `Deep Search aggiornata (${deepSearch.ageDays}gg fa)`
+                    : deepSearch.status === "stale"
+                      ? `Vecchia (${deepSearch.ageDays}gg) — clicca per ricompilare`
+                      : deepSearch.status === "missing"
+                        ? "Clicca per eseguire Deep Search"
+                        : deepSearch.status === "failed"
+                          ? "Errore — clicca per ritentare"
+                          : "Deep Search"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <button
-                  onClick={() => setShowNewType(true)}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    setShowTemplates(!showTemplates);
+                    if (!showTemplates) setShowImages(false);
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-md border transition-all",
+                    showTemplates
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  )}
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Crea tipo...</span>
+                  <FileText className="w-4 h-4" />
                 </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-[10px]">
+                Template
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => {
+                    setShowImages(!showImages);
+                    if (!showImages) setShowTemplates(false);
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-md border transition-all",
+                    showImages
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  )}
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-[10px]">
+                Immagini
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {showTemplates && (
+            <div className="max-h-[200px] overflow-y-auto rounded-md border border-border/30 bg-muted/20">
+              {templates.length === 0 ? (
+                <p className="text-xs text-foreground px-2 py-4 text-center">
+                  Nessun template
+                </p>
               ) : (
-                <div className="p-2 rounded-lg bg-muted/30 space-y-1.5 border border-border/30">
-                  <div className="flex gap-1.5">
-                    <Input value={newIcon} onChange={e => setNewIcon(e.target.value)} className="w-10 h-7 text-center text-sm px-1" maxLength={2} />
-                    <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nome tipo" className="flex-1 h-7 text-xs" />
-                  </div>
-                  <Textarea value={newPrompt} onChange={e => setNewPrompt(e.target.value)} placeholder="Prompt / obiettivo..." className="text-xs min-h-[60px] resize-none" rows={3} />
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="default" className="h-6 text-[10px] flex-1" onClick={handleAddType}>Salva</Button>
-                    <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowNewType(false)}>Annulla</Button>
-                  </div>
+                <div className="p-1 space-y-0.5">
+                  {templates.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        onLoadTemplate(t.name || "", t.file_url || "");
+                        setShowTemplates(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-[11px] hover:bg-muted/50 text-foreground transition-colors"
+                    >
+                      <span className="shrink-0">📄</span>
+                      <span className="truncate">{t.name}</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-          </ScrollArea>
-        </TabsContent>
+          )}
 
-        {/* === TEMPLATE TAB === */}
-        <TabsContent value="template" className="flex-1 min-h-0 flex flex-col mt-0">
-          <ScrollArea className="flex-1 px-2 py-1.5">
-            {templates.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground px-2 py-4 text-center">Nessun template disponibile</p>
-            ) : (
-              <div className="space-y-1">
-                {templates.map((t: any) => (
-                  <Tooltip key={t.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => onLoadTemplate(t.name || "", t.file_url || "")}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs hover:bg-muted/50 text-foreground/70 transition-colors"
-                      >
-                        <span className="text-sm shrink-0">📄</span>
-                        <span className="truncate flex-1">{t.name}</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-[220px] text-[11px]">
-                      {t.file_name} · {t.category || "altro"}
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
-
-      {/* === AI OPTIONS — always visible at bottom === */}
-      <div className="shrink-0 border-t border-border/30 px-3 py-2 space-y-2">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Opzioni AI</p>
-
-        {/* Deep Search */}
-        <label className="flex items-center justify-between gap-2 cursor-pointer">
-          <span className="text-[11px] text-foreground/70">🔍 Deep Search live</span>
-          <Switch checked={deepSearch} onCheckedChange={setDeepSearch} className="scale-75" />
-        </label>
-
-        {/* KB toggle */}
-        <label className="flex items-center justify-between gap-2 cursor-pointer">
-          <span className="text-[11px] text-foreground/70">📚 Knowledge Base</span>
-          <Switch checked={useKB} onCheckedChange={setUseKB} className="scale-75" />
-        </label>
-
-        {/* Tone */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-foreground/70 shrink-0">Tono:</span>
-          <Select value={tone} onValueChange={setTone}>
-            <SelectTrigger className="h-6 text-[11px] flex-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TONE_OPTIONS.map(t => (
-                <SelectItem key={t.value} value={t.value} className="text-xs">
-                  {t.icon} {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {showImages && (
+            <div className="max-h-[200px] overflow-y-auto rounded-md border border-border/30">
+              <ImageGalleryTab onInsertImage={onInsertImage || (() => {})} />
+            </div>
+          )}
         </div>
-
-        {/* KB manager link — navigates to Settings */}
-        <button
-          onClick={() => navigate("/settings?tab=ai-prompt")}
-          className="flex items-center gap-1.5 text-[10px] text-primary hover:underline"
-        >
-          <BookOpen className="w-3 h-3" /> Gestisci KB & Prompt
-          <ExternalLink className="w-2.5 h-2.5" />
-        </button>
       </div>
 
-      {/* === ACTION BUTTONS === */}
-      <div className="shrink-0 border-t border-border/30 px-3 py-2.5 space-y-1.5">
-        <Button
-          size="sm"
-          className="w-full h-8 text-xs gap-1.5"
-          onClick={() => onGenerate(config)}
-          disabled={generating || improving}
-        >
-          {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          {generating ? "Generazione..." : "🔮 Genera con Oracolo"}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full h-8 text-xs gap-1.5"
-          onClick={() => onImprove(config)}
-          disabled={improving || generating || !hasBody}
-        >
-          {improving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-amber-500" />}
-          {improving ? "Miglioramento..." : "🪄 Migliora"}
-        </Button>
-      </div>
+      <OraclePanelFooter
+        generating={generating}
+        improving={improving}
+        hasBody={hasBody}
+        recipientCount={recipientCount || 0}
+        contextSummary={contextSummary}
+        onGenerate={() => onGenerate(config)}
+        onImprove={() => onImprove(config)}
+      />
+
+      <EmailTypeDetailDialog
+        emailType={detailType}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onDuplicate={handleDuplicate}
+      />
     </div>
   );
 }

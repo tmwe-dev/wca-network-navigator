@@ -1,56 +1,49 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
+import { useAuth } from "@/providers/AuthProvider";
+import {
+  findAllOperators,
+  findOperatorByUserId,
+  updateOperator,
+  insertOperator,
+  deleteOperator,
+} from "@/data/operators";
 
-export type Operator = {
-  id: string;
-  user_id: string | null;
-  name: string;
-  email: string;
-  avatar_url: string | null;
-  imap_host: string | null;
-  imap_user: string | null;
-  smtp_host: string | null;
-  smtp_user: string | null;
-  smtp_port: number | null;
-  whatsapp_phone: string | null;
-  linkedin_profile_url: string | null;
-  is_admin: boolean;
-  is_active: boolean;
-  invited_by: string | null;
-  invited_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
+type OperatorRow = Database["public"]["Tables"]["operators"]["Row"];
+
+export type Operator = OperatorRow;
 
 export function useOperators() {
+  const { status, user } = useAuth();
+  const userId = user?.id ?? null;
+
   return useQuery({
-    queryKey: ["operators"],
+    // Scoped per user.id: il cache di un utente non può essere riusato
+    // per un altro account loggato sullo stesso browser.
+    queryKey: [...queryKeys.operators.all, userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("operators" as any)
-        .select("id, user_id, name, email, avatar_url, imap_host, imap_user, smtp_host, smtp_user, smtp_port, whatsapp_phone, linkedin_profile_url, is_admin, is_active, invited_by, invited_at, created_at, updated_at")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data || []) as unknown as Operator[];
+      return findAllOperators();
     },
+    enabled: status === "authenticated" && !!userId,
   });
 }
 
 export function useCurrentOperator() {
+  const { status, user } = useAuth();
+  const userId = user?.id ?? null;
+
   return useQuery({
-    queryKey: ["current-operator"],
+    // Scoped per user.id (vedi useOperators).
+    queryKey: [...queryKeys.operators.current, userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return null;
-      const { data, error } = await supabase
-        .from("operators" as any)
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data as unknown as Operator | null;
+      return findOperatorByUserId(user.id);
     },
+    enabled: status === "authenticated" && !!userId,
   });
 }
 
@@ -59,21 +52,15 @@ export function useUpsertOperator() {
   return useMutation({
     mutationFn: async (op: Partial<Operator> & { id?: string }) => {
       if (op.id) {
-        const { error } = await supabase
-          .from("operators" as any)
-          .update(op as any)
-          .eq("id", op.id);
-        if (error) throw error;
+        const { id, ...rest } = op;
+        await updateOperator(id, rest);
       } else {
-        const { error } = await supabase
-          .from("operators" as any)
-          .insert([op] as any);
-        if (error) throw error;
+        await insertOperator(op);
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["operators"] });
-      qc.invalidateQueries({ queryKey: ["current-operator"] });
+      qc.invalidateQueries({ queryKey: queryKeys.operators.all });
+      qc.invalidateQueries({ queryKey: queryKeys.operators.current });
       toast.success("Operatore salvato");
     },
     onError: (e: Error) => toast.error("Errore: " + e.message),
@@ -84,14 +71,10 @@ export function useDeleteOperator() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("operators" as any)
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
+      await deleteOperator(id);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["operators"] });
+      qc.invalidateQueries({ queryKey: queryKeys.operators.all });
       toast.success("Operatore eliminato");
     },
     onError: (e: Error) => toast.error("Errore: " + e.message),

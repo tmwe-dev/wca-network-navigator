@@ -1,0 +1,16 @@
+title = "WCA Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsi positivi accettati (anon key Supabase pubblica per design)"
+paths = [
+  '''\.env\.example$''',
+  '''README\.md$''',
+  '''docs/.*\.md$''',
+  '''mem/.*\.md$''',
+]
+regexes = [
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIs.*''',
+]

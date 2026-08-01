@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,8 +8,9 @@ import { Globe, Download, CheckCircle, AlertCircle, Loader2, Square, Building2, 
 import { toast } from "@/hooks/use-toast";
 import { scrapeWcaPartnerById, type ScrapeSingleResult, type AIClassification } from "@/lib/api/wcaScraper";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PartnerDetailModal } from "./PartnerDetailModal";
+import { queryKeys } from "@/lib/queryKeys";
+import { getMaxPartnerWcaId } from "@/application/data/partners";
 
 interface ScrapeLog {
   wcaId: number;
@@ -43,16 +44,9 @@ export function WCAScraper() {
 
   // Get max wca_id for sync feature
   const { data: maxWcaId } = useQuery({
-    queryKey: ["max-wca-id"],
+    queryKey: queryKeys.downloads.maxWcaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("wca_id")
-        .not("wca_id", "is", null)
-        .order("wca_id", { ascending: false })
-        .limit(1)
-        .single();
-      return data?.wca_id || 0;
+      return await getMaxPartnerWcaId();
     },
   });
 
@@ -97,7 +91,7 @@ export function WCAScraper() {
 
     const total = endId - startId + 1;
     let processed = 0;
-    let localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
+    const localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
 
     for (let id = startId; id <= endId; id++) {
       if (abortRef.current) break;
@@ -121,7 +115,7 @@ export function WCAScraper() {
           log.aiClassification = result.aiClassification;
           // Check if contacts have email or phone
           const contacts = result.partner?.contacts || [];
-          log.hasContactDetails = contacts.some((c: any) => c.email || c.phone || c.direct_phone || c.mobile);
+          log.hasContactDetails = contacts.some((c) => c.email);
           localStats.found++;
           if (result.action === "inserted") localStats.inserted++;
           if (result.action === "updated") localStats.updated++;
@@ -159,7 +153,7 @@ export function WCAScraper() {
     setCurrentId(null);
     setCountdown(0);
     setIsLoading(false);
-    queryClient.invalidateQueries({ queryKey: ["partners"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
 
     toast({
       title: abortRef.current ? "Scraping interrotto" : "Scraping completato",

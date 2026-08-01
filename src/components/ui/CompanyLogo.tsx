@@ -21,12 +21,40 @@ export function isPersonalEmail(domain: string): boolean {
   return PERSONAL_PROVIDERS.has(domain);
 }
 
-/**
- * Global in-memory logo cache.
- * Maps domain -> resolved source ("clearbit" | "google" | "none").
- * Survives across re-renders and component instances within a session.
- */
-const logoCache = new Map<string, "clearbit" | "google" | "none">();
+/** Country TLD → flag emoji mapping */
+const TLD_TO_FLAG: Record<string, string> = {
+  ae: "🇦🇪", ar: "🇦🇷", at: "🇦🇹", au: "🇦🇺", be: "🇧🇪", bg: "🇧🇬", br: "🇧🇷",
+  ca: "🇨🇦", ch: "🇨🇭", cl: "🇨🇱", cn: "🇨🇳", co: "🇨🇴", cz: "🇨🇿", de: "🇩🇪",
+  dk: "🇩🇰", ee: "🇪🇪", eg: "🇪🇬", es: "🇪🇸", fi: "🇫🇮", fr: "🇫🇷", gb: "🇬🇧",
+  gr: "🇬🇷", hk: "🇭🇰", hr: "🇭🇷", hu: "🇭🇺", id: "🇮🇩", ie: "🇮🇪", il: "🇮🇱",
+  in: "🇮🇳", is: "🇮🇸", it: "🇮🇹", jp: "🇯🇵", ke: "🇰🇪", kr: "🇰🇷", kw: "🇰🇼",
+  lt: "🇱🇹", lu: "🇱🇺", lv: "🇱🇻", ma: "🇲🇦", mx: "🇲🇽", my: "🇲🇾", ng: "🇳🇬",
+  nl: "🇳🇱", no: "🇳🇴", nz: "🇳🇿", om: "🇴🇲", pe: "🇵🇪", ph: "🇵🇭", pk: "🇵🇰",
+  pl: "🇵🇱", pt: "🇵🇹", qa: "🇶🇦", ro: "🇷🇴", rs: "🇷🇸", ru: "🇷🇺", sa: "🇸🇦",
+  se: "🇸🇪", sg: "🇸🇬", si: "🇸🇮", sk: "🇸🇰", th: "🇹🇭", tn: "🇹🇳", tr: "🇹🇷",
+  tw: "🇹🇼", ua: "🇺🇦", uk: "🇬🇧", us: "🇺🇸", uy: "🇺🇾", vn: "🇻🇳", za: "🇿🇦",
+};
+
+export function getFlagFromDomain(domain: string): string | null {
+  if (!domain) return null;
+  const parts = domain.split(".");
+  const tld = parts[parts.length - 1];
+  return TLD_TO_FLAG[tld] || null;
+}
+
+/** Extract root domain (drop subdomains): news.armani.com → armani.com */
+function getRootDomain(domain: string): string {
+  const parts = domain.split(".");
+  if (parts.length <= 2) return domain;
+  // Handle co.uk, com.au style TLDs
+  const sld = parts[parts.length - 2];
+  if (["co", "com", "org", "net", "ac", "gov"].includes(sld) && parts.length > 2) {
+    return parts.slice(-3).join(".");
+  }
+  return parts.slice(-2).join(".");
+}
+
+const logoCache = new Map<string, "clearbit" | "none">();
 
 interface CompanyLogoProps {
   domain?: string | null;
@@ -34,21 +62,22 @@ interface CompanyLogoProps {
   name?: string;
   size?: number;
   className?: string;
+  showFlag?: boolean;
 }
 
 /**
- * Displays a company logo from Clearbit with Google Favicon fallback.
- * Shows initials as final fallback.
- * Results are cached globally so each domain is resolved only once per session.
+ * Displays a company logo from Clearbit with InitialsAvatar fallback.
+ * Optionally shows a country flag based on the email TLD.
  */
-export function CompanyLogo({ domain: domainProp, email, name, size = 32, className }: CompanyLogoProps) {
-  const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
+export function CompanyLogo({ domain: domainProp, email, name, size = 32, className, showFlag = false }: CompanyLogoProps) {
+  const rawDomain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const rootDomain = rawDomain ? getRootDomain(rawDomain) : null;
+  // Try root domain for logo lookup (better Clearbit hit rate)
+  const domain = rootDomain || rawDomain;
 
-  // Start from cache if available, otherwise try clearbit first
   const cached = domain ? logoCache.get(domain) : undefined;
-  const [src, setSrc] = useState<"clearbit" | "google" | "none">(cached || "clearbit");
+  const [src, setSrc] = useState<"clearbit" | "none">(cached || "clearbit");
 
-  // Sync with cache when domain changes
   useEffect(() => {
     if (domain) {
       const c = logoCache.get(domain);
@@ -57,43 +86,69 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
     }
   }, [domain]);
 
-  if (!domain || isPersonalEmail(domain)) {
-    return <InitialsAvatar name={name || domain || "?"} size={size} className={className} />;
+  const flag = showFlag && rawDomain ? getFlagFromDomain(rawDomain) : null;
+  const personal = rawDomain ? isPersonalEmail(rawDomain) : true;
+
+  if (!domain || personal) {
+    return (
+      <div className={cn("relative flex-shrink-0", className)} style={{ width: size, height: size }}>
+        <InitialsAvatar name={name || domain || "?"} size={size} />
+        {flag && <FlagBadge flag={flag} size={size} />}
+      </div>
+    );
   }
 
-  const clearbitUrl = `https://logo.clearbit.com/${domain}`;
-  const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${Math.min(size * 2, 256)}`;
+  // Clearbit Logo API è stato dismesso (sunset 8 dic 2025). Usiamo il
+  // servizio favicon di Google come fonte logo affidabile e gratuita.
+  const clearbitUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 
   if (src === "none") {
-    return <InitialsAvatar name={name || domain} size={size} className={className} />;
+    return (
+      <div className={cn("relative flex-shrink-0", className)} style={{ width: size, height: size }}>
+        <InitialsAvatar name={name || domain || "?"} size={size} />
+        {flag && <FlagBadge flag={flag} size={size} />}
+      </div>
+    );
   }
 
   const handleError = () => {
-    if (src === "clearbit") {
-      setSrc("google");
-      // Don't cache yet — google might also fail
-    } else {
-      setSrc("none");
-      logoCache.set(domain, "none");
-    }
+    setSrc("none");
+    logoCache.set(domain, "none");
   };
 
-  const handleLoad = () => {
-    // Cache the successful source so we never retry this domain
-    logoCache.set(domain, src);
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+      handleError();
+      return;
+    }
+    logoCache.set(domain, "clearbit");
   };
 
   return (
-    <img
-      src={src === "clearbit" ? clearbitUrl : googleUrl}
-      alt={domain}
-      width={size}
-      height={size}
-      className={cn("rounded object-contain bg-white", className)}
-      onError={handleError}
-      onLoad={handleLoad}
-      loading="lazy"
-    />
+    <div className={cn("relative flex-shrink-0", className)} style={{ width: size, height: size }}>
+      <img
+        src={clearbitUrl}
+        alt={domain}
+        width={size}
+        height={size}
+        className="rounded object-contain bg-transparent"
+        onError={handleError}
+        onLoad={handleLoad}
+        loading="lazy"
+        style={{ maxWidth: size, maxHeight: size }}
+      />
+      {flag && <FlagBadge flag={flag} size={size} />}
+    </div>
+  );
+}
+
+function FlagBadge({ flag, size }: { flag: string; size: number }) {
+  const flagSize = Math.max(14, Math.round(size * 0.55));
+  return (
+    <span className="absolute -bottom-1 -right-1 leading-none" style={{ fontSize: flagSize }}>
+      {flag}
+    </span>
   );
 }
 
@@ -117,4 +172,67 @@ function InitialsAvatar({ name, size, className }: { name: string; size: number;
       {initials || "?"}
     </div>
   );
+}
+
+/**
+ * Inline company logo — only renders if Clearbit has a real logo.
+ * No fallback, no placeholder. Returns null if no logo found.
+ */
+export function CompanyLogoInline({ domain: domainProp, email, size = 18, className }: {
+  domain?: string | null;
+  email?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const rawDomain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const domain = rawDomain ? getRootDomain(rawDomain) : null;
+  const cached = domain ? logoCache.get(domain) : undefined;
+  const [src, setSrc] = useState<"clearbit" | "none">(cached || "clearbit");
+
+  useEffect(() => {
+    if (domain) {
+      const c = logoCache.get(domain);
+      if (c) setSrc(c);
+      else setSrc("clearbit");
+    }
+  }, [domain]);
+
+  const personal = rawDomain ? isPersonalEmail(rawDomain) : true;
+  if (!domain || personal || src === "none") return null;
+
+  return (
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
+      alt=""
+      width={size}
+      height={size}
+      className={cn("rounded object-contain inline-block", className)}
+      onError={() => { setSrc("none"); logoCache.set(domain, "none"); }}
+      onLoad={(e) => {
+        const img = e.currentTarget;
+        if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+          setSrc("none"); logoCache.set(domain, "none");
+        } else {
+          logoCache.set(domain, "clearbit");
+        }
+      }}
+      loading="lazy"
+      style={{ maxWidth: size, maxHeight: size }}
+    />
+  );
+}
+
+/**
+ * Standalone country flag from email TLD. Returns null if no flag found.
+ */
+export function CountryFlag({ domain: domainProp, email, size = 22, className }: {
+  domain?: string | null;
+  email?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
+  const flag = domain ? getFlagFromDomain(domain) : null;
+  if (!flag) return null;
+  return <span className={cn("leading-none", className)} style={{ fontSize: size }}>{flag}</span>;
 }

@@ -15,6 +15,18 @@ interface HtmlEmailEditorProps {
 const ALLOWED_TAGS = ['p', 'br', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'img', 'hr', 'blockquote', 'pre', 'code', 'sup', 'sub', 'u', 's'];
 const ALLOWED_ATTR = ['href', 'target', 'rel', 'style', 'class', 'src', 'alt', 'width', 'height', 'border', 'cellpadding', 'cellspacing', 'align', 'valign', 'colspan', 'rowspan'];
 
+function normalizeEditorHtml(raw: string): string {
+  return (raw || "")
+    .replace(/&lt;(\/?(?:p|br|strong|em|ul|ol|li|a)\b[^&]*)&gt;/gi, (_match, tag: string) => `<${tag.replace(/&quot;/g, '"')}>`)
+    .replace(/<br\s*\/?\s*>/gi, "<br>")
+    .replace(/(?:<br>\s*){2,}/gi, "<br>")
+    .replace(/<\/p>\s*([,.;:])/gi, "$1</p>")
+    .replace(/<p>\s*([,.;:])\s*/gi, "<p>")
+    .replace(/<p>\s+/gi, "<p>")
+    .replace(/\s+<\/p>/gi, "</p>")
+    .trim();
+}
+
 export default function HtmlEmailEditor({ value, onChange, placeholder, className }: HtmlEmailEditorProps) {
   const [sourceMode, setSourceMode] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -27,7 +39,7 @@ export default function HtmlEmailEditor({ value, onChange, placeholder, classNam
       return;
     }
     if (editorRef.current && !sourceMode) {
-      const sanitized = DOMPurify.sanitize(value, { ALLOWED_TAGS, ALLOWED_ATTR });
+      const sanitized = DOMPurify.sanitize(normalizeEditorHtml(value), { ALLOWED_TAGS, ALLOWED_ATTR });
       if (editorRef.current.innerHTML !== sanitized) {
         editorRef.current.innerHTML = sanitized;
       }
@@ -71,26 +83,26 @@ export default function HtmlEmailEditor({ value, onChange, placeholder, classNam
           value={value}
           onChange={(e) => handleSourceChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 min-h-[280px] h-full text-xs font-mono bg-muted/10 resize-y border-border/40 focus:border-primary/50"
+          className="flex-1 min-h-[200px] max-h-[60vh] h-full text-xs font-mono bg-muted/10 resize-none border-border focus:border-primary/50 overflow-y-auto"
         />
       ) : (
-        <div className="relative flex-1 min-h-[280px]">
+        <div className="relative flex-1 min-h-[200px] max-h-[60vh]">
           <div
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
             onInput={handleInput}
             className={cn(
-              "w-full h-full min-h-[280px] rounded-md border border-input bg-background px-4 py-3 text-sm",
+              "w-full h-full min-h-[200px] max-h-[60vh] rounded-md border border-input bg-background px-4 py-3 text-sm",
               "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              "overflow-y-auto resize-y",
+              "overflow-y-auto",
               "prose prose-sm max-w-none",
               "prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5",
               "prose-a:text-primary prose-strong:text-foreground",
-              "[&_*]:text-foreground/80",
+              "[&_*]:text-foreground",
               isEmpty && "empty-editor"
             )}
-            style={{ minHeight: 280 }}
+            style={{ minHeight: 200 }}
             data-placeholder={placeholder}
           />
           {isEmpty && (

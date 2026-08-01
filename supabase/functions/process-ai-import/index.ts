@@ -1,24 +1,47 @@
+import "../_shared/llmFetchInterceptor.ts";
+/**
+ * process-ai-import — AI-powered contact import enrichment Edge Function.
+ *
+ * Takes an import_log_id, fetches pending imported_contacts, and uses AI to
+ * normalize/enrich fields (company names, countries, roles). Processes in batches of 25.
+ *
+ * @endpoint POST /functions/v1/process-ai-import
+ * @auth Required (Bearer token)
+ * @rateLimit 10 requests/minute per user
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient>;
 
 const BATCH_SIZE = 25;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    // Auth check — E3: authGuard terse (contratto HTTP byte-identico al pre-E3).
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (isAuthError(auth)) return auth;
+    const userId = auth.userId;
+
+    // Rate limit
+    const rl = checkRateLimit(`ai-import:${userId}`, { maxTokens: 10, refillRate: 0.1 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
+
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    const lovableApiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -27,7 +50,7 @@ serve(async (req) => {
 
     // Fix errors mode
     if (mode === "fix_errors") {
-      return await handleFixErrors(supabase, import_log_id, lovableApiKey, corsHeaders, custom_prompt, batch_offset || 0);
+      return await handleFixErrors(supabase, import_log_id, lovableApiKey, dynCors, custom_prompt, batch_offset || 0);
     }
 
     // Get import log
@@ -146,18 +169,18 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, imported: importedCount, errors: errorCount }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("process-ai-import error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });
 
-async function normalizeWithAI(batch: any[], apiKey: string): Promise<any[]> {
+async function normalizeWithAI(batch: Array<Record<string, unknown>>, _apiKey: string): Promise<Array<Record<string, unknown>>> {
   const prompt = `Sei un assistente specializzato nella normalizzazione di dati aziendali per un CRM di spedizionieri e freight forwarder.
 
 Per ogni record nel seguente array JSON, normalizza i campi:
@@ -187,13 +210,7 @@ Rispondi SOLO con un array JSON valido, stesso numero di elementi dell'input. Se
     zip_code: c.zip_code,
   });
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const response = await aiFetch({
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: prompt },
@@ -235,8 +252,7 @@ Rispondi SOLO con un array JSON valido, stesso numero di elementi dell'input. Se
         },
       ],
       tool_choice: { type: "function", function: { name: "return_normalized_contacts" } },
-    }),
-  });
+    });
 
   if (!response.ok) {
     const text = await response.text();
@@ -252,12 +268,12 @@ Rispondi SOLO con un array JSON valido, stesso numero di elementi dell'input. Se
 }
 
 async function logImportError(
-  supabase: any,
+  supabase: SupabaseClient,
   importLogId: string,
   rowNumber: number,
   errorType: string,
   errorMessage: string,
-  rawData: any
+  rawData: unknown
 ) {
   await supabase.from("import_errors").insert({
     import_log_id: importLogId,
@@ -268,10 +284,10 @@ async function logImportError(
   });
 }
 
-async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey: string | undefined, corsHeaders: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
+async function handleFixErrors(supabase: SupabaseClient, importLogId: string, lovableApiKey: string | undefined, dynCors: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
   if (!lovableApiKey) {
     return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -289,7 +305,7 @@ async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey
   if (fetchErr) throw new Error(fetchErr.message);
   if (!errors || errors.length === 0) {
     return new Response(JSON.stringify({ corrected: 0, dismissed: 0, has_more: false, next_offset: batchOffset }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -314,20 +330,14 @@ Rispondi con un array dove ogni elemento ha:
     ? `${customPrompt}\n\nRispondi con un array dove ogni elemento ha:\n- corrected: true/false\n- data: oggetto con i campi corretti (company_name, name, email, phone, mobile, country, city, address, zip_code). Se non riesci, data = null.`
     : defaultPrompt;
 
-  const records = errors.map((e: any) => ({
+  const records = errors.map((e: Record<string, unknown>) => ({
     row_number: e.row_number,
     raw_data: e.raw_data,
     error_message: e.error_message,
     error_type: e.error_type,
   }));
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const response = await aiFetch({
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: prompt },
@@ -372,8 +382,7 @@ Rispondi con un array dove ogni elemento ha:
         },
       }],
       tool_choice: { type: "function", function: { name: "return_corrections" } },
-    }),
-  });
+    });
 
   if (!response.ok) {
     const text = await response.text();
@@ -439,6 +448,6 @@ Rispondi con un array dove ogni elemento ha:
     next_offset: 0, // Always 0 since we process "pending" status and they change after processing
     total_pending_before: totalPending || 0,
   }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...dynCors, "Content-Type": "application/json" },
   });
 }

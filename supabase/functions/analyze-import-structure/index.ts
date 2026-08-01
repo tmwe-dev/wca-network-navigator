@@ -1,10 +1,9 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 const TARGET_SCHEMA = {
   company_name: "Nome dell'azienda (es. 'Global Logistics Srl', 'DHL Express')",
@@ -181,10 +180,38 @@ function deriveMappingFromParsedRows(
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    // P1.3: require valid user JWT (this function consumes paid AI gateway credits).
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    if (!token || token === SUPABASE_ANON_KEY) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+    try {
+      const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data: { user }, error: authErr } = await authClient.auth.getUser(token);
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+          status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        });
+      }
+    } catch {
+      return new Response(JSON.stringify({ error: "Authentication check failed" }), {
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
+    const lovableApiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const { sample_rows, input_type, raw_text } = await req.json();
@@ -193,13 +220,7 @@ serve(async (req) => {
     const prompt = isPaste ? PASTE_PROMPT : CONTEXT_PROMPT;
     const userContent = isPaste ? (raw_text || "") : JSON.stringify(sample_rows || [], null, 2);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: prompt },
@@ -272,18 +293,17 @@ serve(async (req) => {
           },
         ],
         tool_choice: { type: "function", function: { name: "return_import_structure" } },
-      }),
-    });
+      });
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit superato, riprova tra poco." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       const text = await response.text();
@@ -299,14 +319,10 @@ serve(async (req) => {
     // Convert array mapping to dict
     let columnMappingDict = arrayMappingToDict(result.column_mapping);
 
-    console.log("[analyze-import-structure] AI returned column_mapping entries:", Array.isArray(result.column_mapping) ? result.column_mapping.length : "not-array");
-    console.log("[analyze-import-structure] Converted dict keys:", Object.keys(columnMappingDict));
 
     // Fallback: if dict is empty but parsed_rows has data, derive mapping
     if (Object.keys(columnMappingDict).length === 0 && result.parsed_rows?.length > 0 && !isPaste) {
-      console.log("[analyze-import-structure] column_mapping empty, deriving from parsed_rows...");
       columnMappingDict = deriveMappingFromParsedRows(sample_rows || [], result.parsed_rows);
-      console.log("[analyze-import-structure] Derived mapping keys:", Object.keys(columnMappingDict));
     }
 
     const finalResult = {
@@ -317,17 +333,14 @@ serve(async (req) => {
       unmapped_columns: result.unmapped_columns || [],
     };
 
-    console.log("[analyze-import-structure] Final mapping:", JSON.stringify(finalResult.column_mapping));
-    console.log("[analyze-import-structure] confidence:", finalResult.confidence);
 
     return new Response(JSON.stringify(finalResult), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("analyze-import-structure error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });

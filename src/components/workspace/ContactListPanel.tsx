@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,11 +12,12 @@ import ContactPicker from "@/components/workspace/ContactPicker";
 import LinkedInDMDialog from "@/components/workspace/LinkedInDMDialog";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findSocialLinksByPartnerIds } from "@/application/data/partnerRelations";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { useGlobalFilters, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
+import { queryKeys } from "@/lib/queryKeys";
 
 /* ── Helpers ── */
 
@@ -52,18 +53,17 @@ function matchesFilter(a: AllActivity, f: WorkspaceFilterKey): boolean {
 
 function useLinkedInLinks(partnerIds: string[]) {
   return useQuery({
-    queryKey: ["linkedin-links-workspace", partnerIds],
+    queryKey: queryKeys.socialLinks.linkedin(partnerIds),
     queryFn: async () => {
-      if (!partnerIds.length) return {} as Record<string, string>;
-      const { data, error } = await supabase
-        .from("partner_social_links")
-        .select("partner_id, url")
-        .eq("platform", "linkedin")
-        .in("partner_id", partnerIds);
-      if (error) throw error;
-      const map: Record<string, string> = {};
-      (data || []).forEach((r) => { map[r.partner_id] = r.url; });
-      return map;
+      if (!partnerIds.length) return { companyByPartner: {}, contactById: {} } as { companyByPartner: Record<string, string>; contactById: Record<string, string> };
+      const data = await findSocialLinksByPartnerIds(partnerIds, "linkedin");
+      const companyByPartner: Record<string, string> = {};
+      const contactById: Record<string, string> = {};
+      (data || []).forEach((r) => {
+        if (r.contact_id) contactById[r.contact_id] = r.url;
+        else companyByPartner[r.partner_id] = r.url;
+      });
+      return { companyByPartner, contactById };
     },
     enabled: partnerIds.length > 0,
     staleTime: 30_000,
@@ -93,7 +93,7 @@ export default function ContactListPanel({
   const activeFilters = filters.workspaceFilters;
   const emailGenFilter = filters.emailGenFilter;
   const selectedCountries = filters.workspaceCountries;
-  const [dmTarget, setDmTarget] = useState<{ url: string; contactName: string | null; companyName: string } | null>(null);
+  const [dmTarget, setDmTarget] = useState<{ url: string; contactName: string | null; companyName: string; partnerId?: string; contactId?: string } | null>(null);
 
   const emailActivities = useMemo(() => {
     if (!activities) return [];
@@ -220,7 +220,9 @@ export default function ContactListPanel({
                 const hasEmail = !!contact?.email || !!d.email;
                 const displayName = d.contactName;
                 const companyDisplay = d.companyName;
-                const linkedinUrl = activity.partner_id ? linkedinMap?.[activity.partner_id] : undefined;
+                const contactLinkedinUrl = contact?.id ? linkedinMap?.contactById?.[contact.id] : undefined;
+                const companyLinkedinUrl = activity.partner_id ? linkedinMap?.companyByPartner?.[activity.partner_id] : undefined;
+                const linkedinUrl = contactLinkedinUrl || companyLinkedinUrl;
                 const hasGeneratedEmail = !!activity.email_subject;
 
                 return (
@@ -248,14 +250,14 @@ export default function ContactListPanel({
                             {hasGeneratedEmail && (
                               <span title="Email generata"><Sparkles className="w-3 h-3 text-success shrink-0" /></span>
                             )}
-                            {d.hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
+                            {d.hasWebsite && <Globe className="w-3 h-3 text-primary shrink-0" />}
                             {linkedinUrl && (
                               <>
                                 <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()} title="LinkedIn">
                                   <Linkedin className="w-3 h-3 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
                                 </a>
-                                <button onClick={(e) => { e.stopPropagation(); setDmTarget({ url: linkedinUrl, contactName: displayName || null, companyName: companyDisplay || "" }); }}
+                                <button onClick={(e) => { e.stopPropagation(); setDmTarget({ url: linkedinUrl, contactName: displayName || null, companyName: companyDisplay || "", partnerId: activity.partner_id || undefined, contactId: contact?.id }); }}
                                   title="Invia messaggio LinkedIn" className="inline-flex">
                                   <Send className="w-3 h-3 text-[#0A66C2]/60 shrink-0 hover:text-[#0A66C2] hover:scale-110 transition-all" />
                                 </button>
@@ -292,8 +294,8 @@ export default function ContactListPanel({
                               </div>
                             ) : (contact || displayName) ? (
                               <div className="flex items-center gap-1">
-                                <Mail className="w-3 h-3 text-destructive/60" />
-                                <span className="text-[11px] text-destructive/80">No email</span>
+                                <Mail className="w-3 h-3 text-destructive" />
+                                <span className="text-[11px] text-destructive">No email</span>
                               </div>
                             ) : null}
                             {(contact?.direct_phone || contact?.mobile) && (
@@ -310,7 +312,7 @@ export default function ContactListPanel({
                           </div>
                         </div>
                         <ChevronRight className={cn(
-                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground/50",
+                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground",
                           isSelected && "text-primary rotate-90"
                         )} />
                       </div>
@@ -335,6 +337,8 @@ export default function ContactListPanel({
           profileUrl={dmTarget.url}
           contactName={dmTarget.contactName}
           companyName={dmTarget.companyName}
+          partnerId={dmTarget.partnerId}
+          contactId={dmTarget.contactId}
         />
       )}
     </div>

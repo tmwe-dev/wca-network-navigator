@@ -1,157 +1,185 @@
 import { Suspense } from "react";
+import { V2Routes } from "@/v2/routes";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
-import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
-import { ContactRecordDrawer } from "@/components/contact-drawer/ContactRecordDrawer";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
+import { InboundNotificationsProvider } from "@/components/providers/InboundNotificationsProvider";
+const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { BackgroundSyncIndicator } from "@/components/BackgroundSyncIndicator";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
-import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPanel";
+import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
+const RuntimeDiagnosticPanel = lazyRetry(() => import("@/components/system/RuntimeDiagnosticPanel").then(m => ({ default: m.RuntimeDiagnosticPanel })));
+import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
+import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
 import { lazyRetry } from "@/lib/lazyRetry";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { AuthLifecycle } from "@/providers/AuthLifecycle";
+import { TextIntensityProvider } from "@/providers/TextIntensityProvider";
+import { TraceConsole } from "@/v2/observability/TraceConsole";
+import { traceCollector } from "@/v2/observability/traceCollector";
+import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
+import { GlobalSherlockLauncher } from "@/components/global/GlobalSherlockLauncher";
+const SimpleHomePage = lazyRetry(() => import("@/v2/ui/pages/SimpleHomePage"));
+const OAuthConsent = lazyRetry(() => import("@/pages/OAuthConsent"));
 
-// ── All routes use lazyRetry for automatic chunk recovery ──
-const SuperHome3D = lazyRetry(() => import("./pages/SuperHome3D"));
-const NetworkPage = lazyRetry(() => import("./pages/Network"));
-const CRM = lazyRetry(() => import("./pages/CRM"));
-const Outreach = lazyRetry(() => import("./pages/Outreach"));
-const Inreach = lazyRetry(() => import("./pages/Inreach"));
-const Agenda = lazyRetry(() => import("./pages/Agenda"));
-const AgentChatHub = lazyRetry(() => import("./pages/AgentChatHub"));
+// Init observability layer (idempotent, safe before any render)
+traceCollector.init();
+installSupabaseTraceProxy();
 
-const RADashboard = lazyRetry(() => import("./pages/RADashboard"));
-const RAExplorer = lazyRetry(() => import("./pages/RAExplorer"));
-const RAScrapingEngine = lazyRetry(() => import("./pages/RAScrapingEngine"));
-const RACompanyDetail = lazyRetry(() => import("./pages/RACompanyDetail"));
+const DEFAULT_HOME_ROUTE = "/v2/command";
 
-// Prefetch high-traffic routes after initial load
-if (typeof window !== "undefined") {
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      import("./pages/Network");
-      import("./pages/Outreach");
-      import("./pages/CRM");
-    }, 3000);
-  }, { once: true });
+function appendLocationParts(target: string, search: string, hash: string): string {
+  if (!search) return `${target}${hash}`;
+  const joiner = target.includes("?") ? "&" : "?";
+  return `${target}${joiner}${search.replace(/^\?/, "")}${hash}`;
 }
 
-const EmailComposer = lazyRetry(() => import("./pages/EmailComposer"));
-const Auth = lazyRetry(() => import("./pages/Auth"));
-const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
-const Settings = lazyRetry(() => import("./pages/Settings"));
-const OperatorsSettings = lazyRetry(() => import("./pages/OperatorsSettings"));
-
-const Campaigns = lazyRetry(() => import("./pages/Campaigns"));
-const CampaignJobs = lazyRetry(() => import("./pages/CampaignJobs"));
-const TestDownload = lazyRetry(() => import("./pages/TestDownload"));
-const TestLinkedInSearch = lazyRetry(() => import("./pages/TestLinkedInSearch"));
-const TestExtensions = lazyRetry(() => import("./pages/TestExtensions"));
-const Diagnostics = lazyRetry(() => import("./pages/Diagnostics"));
-const Guida = lazyRetry(() => import("./pages/Guida"));
-const AILab = lazyRetry(() => import("./pages/AILab"));
-const NotFound = lazyRetry(() => import("./pages/NotFound"));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const LEGACY_V1_REDIRECTS: Record<string, string> = {
+  "": DEFAULT_HOME_ROUTE,
+  "network": "/v2/network",
+  "crm": "/v2/crm",
+  "outreach": "/v2/outreach",
+  "inreach": "/v2/inreach",
+  "agenda": "/v2/outreach/agenda",
+  "agent-chat": "/v2/agents",
+  "settings": "/v2/settings",
+  "settings/operators": "/v2/settings",
+  "settings/users": "/v2/settings/admin-users",
+  "email-composer": "/v2/outreach/composer",
+  "ra": "/v2/research",
+  "ra/explorer": "/v2/ra-explorer",
+  "ra/scraping": "/v2/ra-scraping",
+  "campaigns": "/v2/campaigns",
+  "campaign-jobs": "/v2/campaigns/jobs",
+  "diagnostics": "/v2/settings/diagnostics",
+  "guida": "/v2/guida",
+  "ai-lab": "/v2/ai-staff/lab",
+  "mission-builder": "/v2/agents/missions",
+  "telemetry": "/v2/settings/telemetry",
+  "staff-direzionale": "/v2/ai-staff",
+  "ai-arena": "/v2/ai-arena",
+  "ai-control": "/v2/ai-control",
+  "email-intelligence": "/v2/email-intelligence",
+  "operations": "/v2/partner-directory",
+  "contacts": "/v2/crm/contacts",
+  "cockpit": "/v2/outreach",
+  "reminders": "/v2/outreach/agenda",
+};
 
 function PageFallback() {
-  return <div className="min-h-screen" />;
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span>Caricamento applicazione…</span>
+      </div>
+    </div>
+  );
+}
+
+function resolveLegacyV1Path(pathname: string, search: string, hash: string): string {
+  const legacyPath = pathname.replace(/^\/v1\/?/, "");
+
+  if (legacyPath.startsWith("ra/company/")) {
+    return `/v2/${legacyPath.replace(/^ra\/company\//, "ra-company/")}${search}${hash}`;
+  }
+
+  return appendLocationParts(LEGACY_V1_REDIRECTS[legacyPath] ?? DEFAULT_HOME_ROUTE, search, hash);
+}
+
+function V1DeprecationRedirect() {
+  const location = useLocation();
+
+  return (
+    <Navigate
+      to={resolveLegacyV1Path(location.pathname, location.search, location.hash)}
+      state={location.state}
+      replace
+    />
+  );
+}
+
+function LegacyRedirect({ to }: { to: string }) {
+  const location = useLocation();
+  return <Navigate to={to} state={location.state} replace />;
 }
 
 const App = () => (
   <GlobalErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <ContactDrawerProvider>
-      <ActiveOperatorProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ViteChunkRecovery />
-          <BackgroundSyncIndicator />
-          <ConnectionBanner />
-          <RuntimeDiagnosticPanel />
-          <Suspense fallback={<PageFallback />}>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/onboarding" element={<Onboarding />} />
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthLifecycle />
+        <TextIntensityProvider>
+        <InboundNotificationsProvider>
+          <ContactDrawerProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <GlobalFiltersProvider>
+                <ViteChunkRecovery />
+                <PWAUpdatePrompt />
+                <BackgroundSyncIndicator />
+                <ConnectionBanner />
+                <RuntimeDiagnosticPanel />
+                <TraceConsole />
+                <GlobalSherlockLauncher />
+                <Suspense fallback={<PageFallback />}>
+                  <Routes>
+                  <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
 
-              {/* Protected routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route element={<AppLayout />}>
-                  {/* ── 5 consolidated environments ── */}
-                  <Route path="/" element={<SuperHome3D />} />
-                  <Route path="/network" element={<NetworkPage />} />
-                  <Route path="/crm" element={<CRM />} />
-                   <Route path="/outreach" element={<Outreach />} />
-                   <Route path="/inreach" element={<Inreach />} />
-                  <Route path="/agenda" element={<Agenda />} />
-                  <Route path="/agent-chat" element={<AgentChatHub />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/settings/operators" element={<OperatorsSettings />} />
-                  <Route path="/email-composer" element={<EmailComposer />} />
+                  {/* Nuovo menu esclusivo del sistema semplificato (non tocca /v2/*). */}
+                  <Route path="/app" element={<SimpleHomePage />} />
 
-                   {/* ── Report Aziende (hidden, from Settings) ── */}
-                   <Route path="/ra" element={<RADashboard />} />
-                   <Route path="/ra/explorer" element={<RAExplorer />} />
-                   <Route path="/ra/scraping" element={<RAScrapingEngine />} />
-                   <Route path="/ra/company/:id" element={<RACompanyDetail />} />
+                  {/* Public routes */}
+                  <Route path="/auth" element={<LegacyRedirect to="/v2/login" />} />
+                  <Route path="/onboarding" element={<LegacyRedirect to="/v2/onboarding" />} />
+                  <Route path="/reset-password" element={<LegacyRedirect to="/v2/reset-password" />} />
 
-                   {/* ── Utility pages ── */}
-                  <Route path="/campaigns" element={<Campaigns />} />
-                  <Route path="/campaign-jobs" element={<CampaignJobs />} />
-                  <Route path="/test-download" element={<TestDownload />} />
-                  <Route path="/test-linkedin" element={<TestLinkedInSearch />} />
-                  <Route path="/test-extensions" element={<TestExtensions />} />
-                  <Route path="/diagnostics" element={<Diagnostics />} />
-                  <Route path="/guida" element={<Guida />} />
-                   <Route path="/ai-lab" element={<AILab />} />
+                  {/* OAuth consent route per client MCP esterni */}
+                  <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
-                  {/* ── Redirects from old routes to new environments ── */}
-                  <Route path="/operations" element={<Navigate to="/network" replace />} />
-                  <Route path="/partner-hub" element={<Navigate to="/network" replace />} />
-                  <Route path="/contacts" element={<Navigate to="/crm" replace />} />
-                  <Route path="/prospects" element={<Navigate to="/crm" replace />} />
-                  <Route path="/import" element={<Navigate to="/crm" replace />} />
-                  <Route path="/cockpit" element={<Navigate to="/outreach" replace />} />
-                  <Route path="/workspace" element={<Navigate to="/outreach" replace />} />
-                  
-                  <Route path="/sorting" element={<Navigate to="/outreach" replace />} />
-                  <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
-                  <Route path="/hub" element={<Navigate to="/agenda" replace />} />
-                  <Route path="/acquisizione" element={<Navigate to="/network" replace />} />
-                  <Route path="/dashboard-legacy" element={<Navigate to="/" replace />} />
-                  <Route path="/agents" element={<Navigate to="/" replace />} />
-                  <Route path="/global" element={<Navigate to="/" replace />} />
-                  <Route path="/system-map" element={<Navigate to="/" replace />} />
-                  <Route path="/prototype-a" element={<Navigate to="/" replace />} />
-                  <Route path="/prototype-b" element={<Navigate to="/" replace />} />
-                  <Route path="/prototype-c" element={<Navigate to="/" replace />} />
-                </Route>
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-        <ContactRecordDrawer />
-      </TooltipProvider>
-      </ActiveOperatorProvider>
-      </ContactDrawerProvider>
-    </QueryClientProvider>
+                  {/* V1 deprecated — redirect every legacy route to V2 */}
+                  <Route path="/v1/*" element={<V1DeprecationRedirect />} />
+
+                  {/* V2 routes */}
+                  <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
+
+                  {/* Legacy bare paths — redirect to V2 equivalents */}
+                  <Route path="/email-composer" element={<LegacyRedirect to="/v2/outreach/composer" />} />
+                  <Route path="/network" element={<LegacyRedirect to="/v2/network" />} />
+                  <Route path="/crm" element={<LegacyRedirect to="/v2/crm" />} />
+                  <Route path="/outreach" element={<LegacyRedirect to="/v2/outreach" />} />
+                  <Route path="/inreach" element={<LegacyRedirect to="/v2/inreach" />} />
+                  <Route path="/agenda" element={<LegacyRedirect to="/v2/outreach/agenda" />} />
+                  <Route path="/campaigns" element={<LegacyRedirect to="/v2/campaigns" />} />
+                  <Route path="/settings" element={<LegacyRedirect to="/v2/settings" />} />
+                  <Route path="/ai-staff" element={<LegacyRedirect to="/v2/ai-staff" />} />
+                  <Route path="/ai-staff/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
+                  <Route path="/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
+
+                  <Route path="*" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
+                </Routes>
+              </Suspense>
+              </GlobalFiltersProvider>
+            </BrowserRouter>
+            <DrawerErrorBoundary scope="ContactRecordDrawer">
+              <ContactRecordDrawer />
+            </DrawerErrorBoundary>
+          </TooltipProvider>
+          </ContactDrawerProvider>
+        </InboundNotificationsProvider>
+        </TextIntensityProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   </GlobalErrorBoundary>
 );
 

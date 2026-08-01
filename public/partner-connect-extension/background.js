@@ -23,6 +23,69 @@ class FireScrapeError extends Error {
 }
 
 // ============================================================
+// BACKGROUND TAB SINGLETON — riusa 1 solo tab nascosto
+// per le navigate Deep Search (no tab visibili, no proliferazione).
+// ============================================================
+const BackgroundTab = {
+  tabId: null,
+  windowId: null,
+  busy: false,
+
+  async _ensure() {
+    // Se già esiste e vivo, riusa
+    if (this.tabId !== null) {
+      try {
+        const t = await chrome.tabs.get(this.tabId);
+        if (t && t.id) return this.tabId;
+      } catch { /* tab chiuso, ricreiamo */ }
+    }
+    // Crea finestra minimizzata fuori schermo (no focus stealing)
+    try {
+      const win = await chrome.windows.create({
+        url: 'about:blank',
+        focused: false,
+        state: 'minimized',
+        type: 'normal',
+        width: 1024,
+        height: 768,
+        left: -2000,
+        top: -2000,
+      });
+      this.windowId = win.id;
+      this.tabId = win.tabs && win.tabs[0] ? win.tabs[0].id : null;
+    } catch (err) {
+      // Fallback: tab inattivo nella finestra corrente
+      const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
+      this.tabId = tab.id;
+      this.windowId = tab.windowId;
+    }
+    return this.tabId;
+  },
+
+  async navigate(url) {
+    const tabId = await this._ensure();
+    await chrome.tabs.update(tabId, { url, active: false });
+    await waitForTabLoad(tabId);
+    await sleep(800);
+    // Auto-accept popup consenso PRIMA che il caller scrappi.
+    // Senza questo, Sherlock Deep Search (fs.readUrl → navigateBackground →
+    // handleScrape) leggeva solo il banner cookie invece del contenuto reale.
+    try { await autoAcceptConsent(tabId); } catch (e) {
+      relayLog({ kind: 'consent', accepted: false, where: 'BackgroundTab.navigate', error: e?.message || String(e) });
+    }
+    return tabId;
+  },
+
+  async close() {
+    if (this.tabId !== null) {
+      try { await chrome.tabs.remove(this.tabId); } catch {}
+    }
+    this.tabId = null;
+    this.windowId = null;
+  },
+};
+
+// ============================================================
 // RELAY CONFIG (Claude Bridge)
 // ============================================================
 const RELAY = {
@@ -216,7 +279,30 @@ async function handleWaRelay(msg) {
 // ============================================================
 // LINKEDIN TAB RELAY
 // ============================================================
+//
+// NOTA — LinkedIn è delegato all'estensione "LinkedIn Cookie Sync"
+// (canale from-webapp-li). Questo handler resta come fallback per
+// chiamate legacy ma le azioni LinkedIn-specific vengono respinte
+// subito con errore esplicito invece di tentare chrome.tabs.sendMessage
+// verso una tab linkedin.com dove Partner Connect non inietta alcun
+// content script.
+const LI_BLOCKED_ACTIONS = new Set([
+  'sendMessage', 'sendMessageWithMethod', 'sendConnectionRequest',
+  'searchProfile', 'readLinkedInInbox', 'readLinkedInThread',
+  'backfillLinkedInThread', 'syncCookie', 'autoLogin',
+  'learnDom', 'diagnosticLinkedInDom', 'remapSendDom', 'getSendPlan',
+  'setConfig',
+]);
+
 async function handleLiRelay(msg) {
+  if (LI_BLOCKED_ACTIONS.has(msg.liAction)) {
+    return {
+      success: false,
+      error: 'linkedin_handled_by_dedicated_extension',
+      errorCode: 'LI_DELEGATED',
+      hint: 'Usa il canale from-webapp-li (estensione LinkedIn Cookie Sync).',
+    };
+  }
   const tabs = await chrome.tabs.query({ url: '*://www.linkedin.com/*' });
   if (!tabs.length) {
     return { success: false, error: 'LinkedIn non è aperto.' };
@@ -400,11 +486,196 @@ async function withTab(url, fn) {
   try {
     tab = await chrome.tabs.create({ url, active: false });
     await waitForTabLoad(tab.id);
+    // Auto-accept eventuali popup di consenso cookie/privacy PRIMA di scrapare,
+    // altrimenti il contenuto reale resta gated dietro un overlay e l'estrazione
+    // ritorna solo il testo del banner.
+    try {
+      await autoAcceptConsent(tab.id);
+    } catch (e) {
+      relayLog({ kind: 'consent', accepted: false, error: e?.message || String(e) });
+    }
     return await fn(tab);
   } finally {
     if (tab?.id) {
       try { await chrome.tabs.remove(tab.id); } catch {}
     }
+  }
+}
+
+// ============================================================
+// CONSENT AUTO-ACCEPT
+// ============================================================
+// Strategia a cascata eseguita nel tab:
+//  1) selettori noti dei principali CMP (OneTrust, Cookiebot, Didomi, ecc.)
+//  2) fallback testuale multilingua sui bottoni "Accetta / Accept all / OK"
+//  3) reset scroll-lock (overflow:hidden su body/html, classi modal-open)
+//  4) breve settle window per lasciare al sito tempo di renderizzare
+// Idempotente: se nessun banner trovato, esce subito.
+async function autoAcceptConsent(tabId) {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        const KNOWN_SELECTORS = [
+          '#onetrust-accept-btn-handler',
+          '#accept-recommended-btn-handler',
+          '#CybotCookiebotDialogBodyLevelButtonAccept',
+          '#CybotCookiebotDialogBodyLevelButtonAcceptAll',
+          '#CybotCookiebotDialogBodyButtonAccept',
+          '#didomi-notice-agree-button',
+          '.didomi-continue-without-agreeing',
+          '.qc-cmp2-summary-buttons button[mode="primary"]',
+          'button.iubenda-cs-accept-btn',
+          '.cky-btn-accept',
+          'button[data-testid="uc-accept-all-button"]',
+          '#truste-consent-button',
+          '#hs-eu-confirmation-button',
+          'button.fc-cta-consent',
+          '.cmplz-btn.cmplz-accept',
+          '#axeptio_btn_acceptAll',
+          'button[aria-label*="accept all" i]',
+          'button[aria-label*="accetta tutti" i]',
+          'button[aria-label*="accept cookies" i]',
+        ];
+        const TEXT_PATTERNS = [
+          /^accept all$/i, /^accept$/i, /^i accept$/i, /^agree$/i, /^agree & continue$/i,
+          /^accetta tutti$/i, /^accetta$/i, /^accetto$/i, /^ho capito$/i, /^consenti$/i, /^acconsento$/i,
+          /^d'accord$/i, /^accepter$/i, /^tout accepter$/i, /^j'accepte$/i,
+          /^akzeptieren$/i, /^alle akzeptieren$/i, /^einverstanden$/i,
+          /^aceptar$/i, /^aceptar todo$/i, /^acepto$/i,
+          /^aceitar$/i, /^aceitar tudo$/i,
+          /^ok$/i, /^got it$/i, /^continue$/i,
+        ];
+        // Blocklist: NON cliccare mai su questi (commerciali / contrari).
+        const BLOCK_PATTERNS = [
+          /reject/i, /decline/i, /deny/i, /rifiuta/i, /no,?\s*thanks/i,
+          /manage/i, /preferenze/i, /settings/i, /options?/i, /personalizza/i, /scegli/i,
+          /subscribe/i, /sign\s*up/i, /register/i, /login/i, /sign\s*in/i,
+          /buy/i, /checkout/i, /add to cart/i, /acquista/i,
+          /save (my )?choices/i, /salva (le )?preferenze/i,
+        ];
+
+        // Raccoglie candidati anche da shadow DOM aperti.
+        function collectCandidates(root, out, depth = 0) {
+          if (depth > 4 || !root) return;
+          const sel = 'button, a[role="button"], [role="button"], input[type="button"], input[type="submit"]';
+          try {
+            root.querySelectorAll(sel).forEach((el) => out.push(el));
+          } catch {}
+          // Shadow roots aperti
+          try {
+            root.querySelectorAll('*').forEach((el) => {
+              if (el.shadowRoot) collectCandidates(el.shadowRoot, out, depth + 1);
+            });
+          } catch {}
+        }
+
+        function visible(el) {
+          if (!el) return false;
+          if (el.offsetParent === null && el.getClientRects().length === 0) return false;
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        }
+
+        function scoreCandidate(txt) {
+          const t = txt.toLowerCase();
+          if (BLOCK_PATTERNS.some((re) => re.test(t))) return -100;
+          let s = 0;
+          if (/\ball\b|tutti|tutto|todo|tudo|alle|tout/.test(t)) s += 10;
+          if (/accept|accetta|accetto|aceptar|aceitar|akzept|accept/i.test(t)) s += 8;
+          if (/agree|consent|consenti|acconsento|einverst|d'accord/i.test(t)) s += 6;
+          if (/^(ok|got it|continue|ho capito)$/i.test(t)) s += 3;
+          return s;
+        }
+
+        function tryClick(el) {
+          try {
+            el.scrollIntoView({ block: 'center' });
+            el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+            el.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, cancelable: true, view: window }));
+            el.dispatchEvent(new MouseEvent('click',     { bubbles: true, cancelable: true, view: window }));
+            if (typeof el.click === 'function') el.click();
+            return true;
+          } catch { return false; }
+        }
+
+        function attempt() {
+          // 1) selettori noti CMP
+          for (const sel of KNOWN_SELECTORS) {
+            const el = document.querySelector(sel);
+            if (el && visible(el)) {
+              if (tryClick(el)) return { selector: sel, text: (el.innerText || '').slice(0, 40) };
+            }
+          }
+          // 2) candidati testuali con scoring (light DOM + shadow DOM aperti)
+          const candidates = [];
+          collectCandidates(document, candidates, 0);
+          let best = null;
+          for (const el of candidates) {
+            if (!visible(el)) continue;
+            const txt = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim();
+            if (!txt || txt.length > 60) continue;
+            // Filtro grezzo: deve assomigliare a un consenso
+            const looksConsent =
+              TEXT_PATTERNS.some((re) => re.test(txt)) ||
+              /accept|agree|consent|allow|accetta|accetto|consenti|acconsento|aceptar|aceitar|akzept|d'accord|tout accepter|alle akzeptieren/i.test(txt);
+            if (!looksConsent) continue;
+            const s = scoreCandidate(txt);
+            if (s <= 0) continue;
+            if (!best || s > best.score) best = { el, score: s, text: txt };
+          }
+          if (best && tryClick(best.el)) {
+            return { selector: `text:${best.text.slice(0, 40)}`, text: best.text, score: best.score };
+          }
+          return null;
+        }
+
+        // Reset scroll-lock SOLO dopo eventuale click (non prima: alcuni CMP
+        // si rendono usando overflow:hidden e cancellarlo prima li nasconde).
+        function unlockScroll() {
+          try {
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open', 'no-scroll', 'noscroll', 'overflow-hidden');
+          } catch {}
+        }
+
+        // Retry: alcuni banner appaiono dopo il primo render.
+        const SLEEP = (ms) => new Promise((r) => setTimeout(r, ms));
+        return (async () => {
+          let hit = null;
+          let attempts = 0;
+          for (let i = 0; i < 3; i++) {
+            attempts++;
+            hit = attempt();
+            if (hit) break;
+            await SLEEP(400);
+          }
+          unlockScroll();
+          return {
+            accepted: !!hit,
+            selector: hit ? hit.selector : null,
+            text: hit ? hit.text : null,
+            attempts,
+          };
+        })();
+      }
+    });
+    // results contiene un entry per frame (allFrames:true). Considera "accettato"
+    // se almeno un frame ha cliccato qualcosa.
+    const arr = Array.isArray(results) ? results : [];
+    const accepted = arr.find((r) => r?.result?.accepted)?.result || null;
+    const summary = accepted
+      ? { accepted: true, selector: accepted.selector, text: accepted.text, frames: arr.length }
+      : { accepted: false, frames: arr.length };
+    if (summary.accepted) {
+      relayLog({ kind: 'consent', ...summary });
+      // Settle per lasciare al sito il tempo di ri-renderizzare il contenuto reale
+      await sleep(900);
+    }
+    return summary;
+  } catch (err) {
+    return { accepted: false, error: err?.message || String(err) };
   }
 }
 
@@ -492,12 +763,12 @@ async function handleGoogleSearch(msg) {
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: function (maxResults) {
-        var items = [];
-        var unwrapGoogleUrl = function (href) {
+        const items = [];
+        const unwrapGoogleUrl = function (href) {
           try {
-            var parsed = new URL(href);
-            var host = parsed.hostname.toLowerCase();
-            var isGoogleHost = host === 'google.com' || host.startsWith('google.') || host.startsWith('www.google.') || host.endsWith('.google.com');
+            const parsed = new URL(href);
+            const host = parsed.hostname.toLowerCase();
+            const isGoogleHost = host === 'google.com' || host.startsWith('google.') || host.startsWith('www.google.') || host.endsWith('.google.com');
             if (isGoogleHost && (parsed.pathname === '/url' || parsed.pathname === '/imgres')) {
               return parsed.searchParams.get('url') || parsed.searchParams.get('q') || parsed.searchParams.get('imgurl') || href;
             }
@@ -507,17 +778,17 @@ async function handleGoogleSearch(msg) {
           }
         };
 
-        var els = document.querySelectorAll('div.g, div[data-sokoban-container]');
-        for (var i = 0; i < els.length && items.length < maxResults; i++) {
-          var linkEl = els[i].querySelector('a[href]');
+        const els = document.querySelectorAll('div.g, div[data-sokoban-container]');
+        for (let i = 0; i < els.length && items.length < maxResults; i++) {
+          const linkEl = els[i].querySelector('a[href]');
           if (!linkEl) continue;
-          var url = unwrapGoogleUrl(linkEl.href);
+          const url = unwrapGoogleUrl(linkEl.href);
           if (!url) continue;
           if (/google\.com\/(search|maps|imgres|sorry)/.test(url)) continue;
-          var titleEl = els[i].querySelector('h3');
-          var title = titleEl ? titleEl.textContent.trim() : '';
-          var snippetEl = els[i].querySelector('[data-sncf], .VwiC3b, .IsZvec, span.st');
-          var description = snippetEl ? snippetEl.textContent.trim() : '';
+          const titleEl = els[i].querySelector('h3');
+          const title = titleEl ? titleEl.textContent.trim() : '';
+          const snippetEl = els[i].querySelector('[data-sncf], .VwiC3b, .IsZvec, span.st');
+          const description = snippetEl ? snippetEl.textContent.trim() : '';
           items.push({ url: url, title: title, description: description });
         }
         return items;
@@ -525,9 +796,9 @@ async function handleGoogleSearch(msg) {
       args: [limit]
     });
 
-    var data = (results[0] && results[0].result) || [];
+    const data = (results[0] && results[0].result) || [];
     RateLimiter.recordRequest(searchUrl);
-    var response = { success: true, data: data, query: msg.query, count: data.length };
+    const response = { success: true, data: data, query: msg.query, count: data.length };
     await Cache.set('search', cacheKey, response);
     return response;
   } catch (err) {
@@ -541,14 +812,36 @@ async function handleGoogleSearch(msg) {
 // 1. SCRAPE
 // ============================================================
 async function handleScrape(msg) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
-  const url = tab.url;
+  // Se il caller ha passato un URL esplicito, naviga il background tab a
+  // quell'URL e scrappa lì (nessun focus stealing, nessuna interferenza
+  // con il tab attivo dell'utente — es. editor Lovable).
+  let tabId = null;
+  let url = null;
+  if (msg.url && isValidHttpUrl(msg.url)) {
+    tabId = await BackgroundTab.navigate(msg.url);
+    url = msg.url;
+  } else if (BackgroundTab.tabId !== null) {
+    try {
+      const bt = await chrome.tabs.get(BackgroundTab.tabId);
+      if (bt && bt.url && !/^about:/.test(bt.url)) { tabId = bt.id; url = bt.url; }
+    } catch { /* ignore */ }
+  }
+  if (tabId === null) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    tabId = tab.id;
+    url = tab.url;
+  }
   if (!msg.skipCache) {
     const cached = await Cache.get('domain', url);
     if (cached) return { ...cached, _fromCache: true };
   }
-  const result = await scrapeTab(tab.id);
+  // Rete di sicurezza: anche se navigate non ha già accettato (es. caller
+  // diverso da BackgroundTab.navigate), proviamo qui prima di estrarre.
+  try { await autoAcceptConsent(tabId); } catch (e) {
+    relayLog({ kind: 'consent', accepted: false, where: 'handleScrape', error: e?.message || String(e) });
+  }
+  const result = await scrapeTab(tabId);
   RateLimiter.recordRequest(url);
   await Cache.set('domain', url, result);
   return result;
@@ -598,6 +891,7 @@ async function handleCrawlStart(msg) {
 
         tab = await chrome.tabs.create({ url, active: false });
         await waitForTabLoad(tab.id);
+        try { await autoAcceptConsent(tab.id); } catch {}
         await Stealth.scrollTab(tab.id);
         await sleep(500 + Math.random() * 1000);
         const result = await scrapeTab(tab.id);
@@ -694,6 +988,7 @@ async function handleMap(msg) {
     try {
       tab = await chrome.tabs.create({ url, active: false });
       await waitForTabLoad(tab.id);
+      try { await autoAcceptConsent(tab.id); } catch {}
       await sleep(Stealth.gaussianRandom(1500, 500));
 
       const results = await chrome.scripting.executeScript({
@@ -806,14 +1101,25 @@ async function captureFullPage(tabId, format, quality) {
 // 6. EXTRACT (con validazione schema + ReDoS protection)
 // ============================================================
 async function handleExtract(msg) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+  // Preferisci il background tab se attivo (allineato a handleScrape)
+  let tabId = null;
+  if (BackgroundTab.tabId !== null) {
+    try {
+      const bt = await chrome.tabs.get(BackgroundTab.tabId);
+      if (bt && bt.url && !/^about:/.test(bt.url)) tabId = bt.id;
+    } catch { /* ignore */ }
+  }
+  if (tabId === null) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    tabId = tab.id;
+  }
   if (!msg.schema || typeof msg.schema !== 'object') {
     throw new FireScrapeError('Schema non valido', 'INVALID_SCHEMA');
   }
 
   const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
+    target: { tabId },
     func: (schema) => {
       const extracted = {};
       for (const [key, selector] of Object.entries(schema)) {
@@ -840,17 +1146,29 @@ async function handleExtract(msg) {
     },
     args: [msg.schema]
   });
-  return { data: results?.[0]?.result, url: tab.url };
+  let finalUrl = '';
+  try { const t = await chrome.tabs.get(tabId); finalUrl = t.url || ''; } catch {}
+  return { data: results?.[0]?.result, url: finalUrl };
 }
 
 // ============================================================
 // 7. AGENT — Azioni singole + sequenze
 // ============================================================
 async function handleAgentAction(msg) {
+  const step = msg.step || {};
+  // Fast path: navigate in background (riusa singleton tab nascosto)
+  if (step.action === 'navigate' && (step.background === true || step.reuseTab === true)) {
+    if (!step.url) throw new FireScrapeError('URL mancante', 'NO_URL');
+    const tabId = await BackgroundTab.navigate(step.url);
+    const result = { ok: true, action: 'navigate', url: step.url, tabId, background: true };
+    relayLog({ type: 'agent-action', step, result });
+    return result;
+  }
+  // Default: usa tab attivo
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
-  const result = await Agent.executeAction(tab.id, msg.step);
-  relayLog({ type: 'agent-action', step: msg.step, result });
+  const result = await Agent.executeAction(tab.id, step);
+  relayLog({ type: 'agent-action', step, result });
   return result;
 }
 

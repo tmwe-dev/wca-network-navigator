@@ -1,0 +1,242 @@
+/**
+ * useEmailComposerV2 — State & mutations for the email composer
+ */
+import { useState, useCallback } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
+import { invokeAi } from "@/lib/ai/invokeAi";
+import { createCampaignDraftQueue } from "@/data/emailCampaigns";
+import { pickDefaultEmailTypeId } from "@/data/pickDefaultEmailType";
+import { insertEmailDraft } from "@/data/emailDrafts";
+import { findActiveEmailPrompts } from "@/data/emailTemplates";
+
+export interface EmailRecipient {
+  readonly email: string;
+  readonly name: string;
+  readonly companyName?: string;
+  readonly partnerId?: string;
+  readonly contactId?: string;
+}
+
+interface PrefillState {
+  readonly prefilledRecipient?: EmailRecipient;
+  readonly prefilledSubject?: string;
+  readonly prefilledBody?: string;
+  readonly isReply?: boolean;
+}
+
+const EMAIL_VARIABLES = [
+  { key: "{{company_name}}", label: "Azienda" },
+  { key: "{{contact_name}}", label: "Contatto" },
+  { key: "{{city}}", label: "Città" },
+  { key: "{{country}}", label: "Paese" },
+] as const;
+
+/**
+ * Converte qualsiasi output AI (plain text, HTML, markdown misto) in HTML minimale
+ * (<p>…</p>) per il rendering nell'editor contentEditable. La SSOT del formato AI è
+ * plain text (vedi KB "calligrafia"); qui ci limitiamo a wrappare i paragrafi.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function normalizeComposerHtml(raw: string): string {
+  let value = (raw || "").replace(/\r\n?/g, "\n").trim();
+  if (!value) return "";
+
+  // Decode entities and strip any HTML/Markdown leaking from the model.
+  value = value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#x27;|&#39;/gi, "'")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(?:p|div|li|h[1-6]|blockquote)>/gi, "\n\n")
+    .replace(/<li\b[^>]*>/gi, "- ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1");
+
+  return value
+    .split(/\n\s*\n+/)
+    .map((paragraph) =>
+      paragraph
+        .split("\n")
+        .map((line) => line.replace(/[ \t]+/g, " ").trim())
+        .filter(Boolean)
+        .join("<br>"),
+    )
+    .filter(Boolean)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/&lt;br&gt;/g, "<br>")}</p>`)
+    .join("\n");
+}
+
+export { EMAIL_VARIABLES };
+
+export function useEmailComposerV2() {
+  const location = useLocation();
+  const prefill = (location.state as PrefillState | null) ?? {};
+
+  const [recipients, setRecipients] = useState<EmailRecipient[]>(
+    prefill.prefilledRecipient ? [prefill.prefilledRecipient] : [],
+  );
+  const [subject, setSubject] = useState(prefill.prefilledSubject ?? "");
+  const [body, setBody] = useState(prefill.prefilledBody ?? "");
+  const [emailType, setEmailType] = useState(() => pickDefaultEmailTypeId({ isReply: prefill.isReply }));
+  const [tone, setTone] = useState("professionale");
+  const [useKB, setUseKB] = useState(true);
+
+  const addRecipient = useCallback((r: EmailRecipient) => {
+    setRecipients((prev) => {
+      if (prev.some((p) => p.email === r.email)) return prev;
+      return [...prev, r];
+    });
+  }, []);
+
+  const removeRecipient = useCallback((email: string) => {
+    setRecipients((prev) => prev.filter((r) => r.email !== email));
+  }, []);
+
+  // Templates query
+  const templates = useQuery({
+    queryKey: queryKeys.v2.emailTemplates,
+    queryFn: async () => {
+      return findActiveEmailPrompts(20);
+    },
+  });
+
+  // Send mutation
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      if (recipients.length === 0) throw new Error("Nessun destinatario");
+      if (!subject) throw new Error("Oggetto mancante");
+      if (!body) throw new Error("Corpo mancante");
+
+      // REGOLA UNICA: nessun invio diretto dal frontend.
+      // Tutte le email — singole o batch — vengono accodate in
+      // email_campaign_queue con status='pending' e partono SOLO dopo
+      // autorizzazione umana dalla coda "In Uscita".
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Sessione non valida");
+      // email_campaign_queue.partner_id è NOT NULL: il composer richiede
+      // che ogni destinatario sia agganciato a un partner.
+      const missing = recipients.filter((r) => !r.partnerId);
+      if (missing.length > 0) {
+        throw new Error(`Manca il partner per: ${missing.map((m) => m.email).join(", ")}. Aggiungi il destinatario dalla rubrica partner.`);
+      }
+      const result = await createCampaignDraftQueue({
+        userId,
+        subject,
+        htmlBody: body,
+        partnerIds: recipients.map((r) => r.partnerId as string),
+        recipients: recipients.map((r) => ({
+          partner_id: r.partnerId as string,
+          email: r.email,
+          name: r.name,
+          subject,
+          html: body,
+        })),
+      });
+      return result;
+    },
+    onSuccess: (result) => {
+      const n = result?.queued ?? recipients.length;
+      toast.success(`${n} email messa in uscita. Conferma l'invio dalla coda "In Uscita".`);
+      setRecipients([]);
+      setSubject("");
+      setBody("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // AI generate
+  const generateMutation = useMutation({
+    mutationFn: async (goal?: string) => {
+      const recipientInfo = recipients[0]
+        ? `Destinatario: ${recipients[0].name} di ${recipients[0].companyName ?? "N/D"} (${recipients[0].email})`
+        : "";
+
+      const data = await invokeAi<{ response?: string; content?: string }>("unified-assistant", {
+        scope: "email",
+        context: { source: "useEmailComposerV2", mode: "generate" },
+        body: {
+          messages: [{
+            role: "user",
+            content: `Sei un assistente che genera SOLO il testo finale di un'email commerciale. NON aggiungere analisi, commenti, prossimi passi, sezioni markdown, intestazioni tipo "Bozza Email" o "Oggetto:". Restituisci ESCLUSIVAMENTE un oggetto JSON valido con questa struttura esatta, senza altro testo, senza backtick, senza markdown:
+{"subject":"<oggetto breve max 70 caratteri>","body":"<corpo email pronto all'invio, in testo semplice con \\n per andare a capo, firma inclusa>"}
+
+Tipo email: "${emailType}". Tono: "${tone}". ${recipientInfo}. ${subject ? `Oggetto suggerito: ${subject}.` : ""} ${goal ? `Richiesta operatore: ${goal}` : ""}
+Contesto: outreach commerciale logistica WCA.`,
+          }],
+          scope: "extension",
+          context: { source: "email_composer", use_kb: useKB },
+        },
+      });
+      const raw = (data?.response || data?.content || "").trim();
+      if (!raw) return;
+      // Strip eventuali fence ```json ... ```
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      // Tenta parse JSON
+      try {
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        const jsonStr = match ? match[0] : cleaned;
+        const parsed = JSON.parse(jsonStr) as { subject?: string; body?: string };
+        if (parsed.subject) setSubject(parsed.subject);
+        if (parsed.body) setBody(normalizeComposerHtml(parsed.body));
+        if (!parsed.body && !parsed.subject) setBody(raw);
+      } catch {
+        // Fallback: estrai con regex Oggetto/Corpo da markdown
+        const subjMatch = raw.match(/(?:\*\*)?Oggetto(?:\*\*)?\s*[:-]\s*(.+)/i);
+        const bodyMatch = raw.match(/(?:\*\*)?(?:Testo|Corpo|Body)(?:\*\*)?\s*[:-]?\s*\n+([\s\S]+?)(?:\n---|\n###|$)/i);
+        if (subjMatch?.[1]) setSubject(subjMatch[1].trim().replace(/\*+/g, ""));
+        if (bodyMatch?.[1]) {
+          setBody(normalizeComposerHtml(bodyMatch[1].trim().replace(/\*\*/g, "")));
+        } else {
+          setBody(normalizeComposerHtml(raw));
+        }
+      }
+    },
+    onError: () => toast.error("Errore nella generazione AI"),
+  });
+
+  // Save draft
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) throw new Error("Non autenticato");
+      await insertEmailDraft({
+        subject,
+        html_body: body,
+        recipient_type: "manual",
+        status: "draft",
+        user_id: user.id,
+      });
+    },
+    onSuccess: () => toast.success("Bozza salvata"),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return {
+    recipients, addRecipient, removeRecipient,
+    subject, setSubject,
+    body, setBody,
+    emailType, setEmailType,
+    tone, setTone,
+    useKB, setUseKB,
+    templates: templates.data ?? [],
+    send: sendMutation,
+    generate: generateMutation,
+    saveDraft: saveDraftMutation,
+  };
+}

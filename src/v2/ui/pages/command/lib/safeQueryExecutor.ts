@@ -1,0 +1,190 @@
+/**
+ * safeQueryExecutor — Esecutore client-side di query AI-generate.
+ *
+ * Validazione contro:
+ *   • whitelist tabelle business (ALLOWED_TABLES)
+ *   • whitelist operatori (eq, neq, gt, gte, lt, lte, ilike, in, is)
+ *   • cap limit hard (max 200, default 50)
+ *   • colonne reali (introspect live dal DB via liveSchemaClient)
+ *
+ * Esegue via supabase.from() rispettando RLS. Solo SELECT.
+ */
+import { selectFromValidatedTable } from "@/data/validatedQuery";
+import { z } from "zod";
+import { ALLOWED_TABLES, ALLOWED_TABLES_LIST, findAllowedTable, type AllowedTable } from "./allowedTables";
+import { getLiveColumns } from "./liveSchemaClient";
+
+export const QueryFilterSchema = z.object({
+  column: z.string(),
+  op: z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "ilike", "in", "is"]),
+  value: z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.union([z.string(), z.number()]))]),
+});
+
+export const QueryPlanSchema = z.object({
+  table: z.string(),
+  columns: z.array(z.string()).optional(),
+  filters: z.array(QueryFilterSchema).default([]),
+  sort: z
+    .object({
+      column: z.string(),
+      ascending: z.boolean().default(false),
+    })
+    .optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+  title: z.string().optional(),
+  rationale: z.string().optional(),
+});
+
+export type QueryFilter = z.infer<typeof QueryFilterSchema>;
+export type QueryPlan = z.infer<typeof QueryPlanSchema>;
+
+const HARD_LIMIT = 200;
+
+export interface ExecutorResult {
+  readonly rows: Record<string, unknown>[];
+  readonly count: number;
+  readonly table: string;
+  readonly columnsUsed: string[];
+}
+
+export class QueryValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "QueryValidationError";
+  }
+}
+
+async function validatePlan(plan: QueryPlan): Promise<{ table: AllowedTable; liveColumns: string[] }> {
+  if (!ALLOWED_TABLES.has(plan.table)) {
+    throw new QueryValidationError(
+      `Tabella "${plan.table}" non consentita. Tabelle disponibili: ${[...ALLOWED_TABLES].join(", ")}`,
+    );
+  }
+
+  const table = findAllowedTable(plan.table)!;
+
+  // Carica colonne reali dal DB (cache 5 min).
+  const liveMap = await getLiveColumns(ALLOWED_TABLES_LIST.map((t) => t.name));
+  const liveCols = liveMap.get(plan.table) ?? [];
+  if (liveCols.length === 0) {
+    throw new QueryValidationError(
+      `Impossibile introspettare lo schema di "${plan.table}". Riprova tra qualche secondo.`,
+    );
+  }
+  const validColumns = new Set(liveCols.map((c) => c.name));
+
+  for (const f of plan.filters) {
+    if (!validColumns.has(f.column)) {
+      throw new QueryValidationError(
+        `Colonna filtro "${f.column}" non valida per "${plan.table}".`,
+      );
+    }
+    if (f.op === "in" && !Array.isArray(f.value)) {
+      throw new QueryValidationError(`Operatore "in" richiede un array per "${f.column}".`);
+    }
+  }
+
+  if (plan.sort && !validColumns.has(plan.sort.column)) {
+    throw new QueryValidationError(`Colonna sort "${plan.sort.column}" non valida.`);
+  }
+
+  if (plan.columns) {
+    for (const c of plan.columns) {
+      if (!validColumns.has(c)) {
+        throw new QueryValidationError(`Colonna select "${c}" non valida.`);
+      }
+    }
+  }
+
+  return { table, liveColumns: liveCols.map((c) => c.name) };
+}
+
+export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult> {
+  const parsed = QueryPlanSchema.safeParse(rawPlan);
+  if (!parsed.success) {
+    throw new QueryValidationError(`QueryPlan malformato: ${parsed.error.message}`);
+  }
+  const plan = parsed.data;
+  const { table, liveColumns } = await validatePlan(plan);
+
+  // Determina colonne da selezionare (default: prime 10 reali)
+  const selectCols = plan.columns?.length
+    ? plan.columns.join(",")
+    : liveColumns.slice(0, 10).join(",");
+
+  // Cap limit
+  const limit = Math.min(plan.limit ?? 50, HARD_LIMIT);
+
+  // Tabella e colonne sono già validate da validatePlan(): l'esecuzione passa
+  // dal confine dinamico sanzionato nel DAL.
+  let q = selectFromValidatedTable(plan.table, selectCols, { count: "exact" });
+
+  for (const f of plan.filters) {
+    switch (f.op) {
+      case "eq":
+        q = q.eq(f.column, f.value);
+        break;
+      case "neq":
+        q = q.neq(f.column, f.value);
+        break;
+      case "gt":
+        q = q.gt(f.column, f.value);
+        break;
+      case "gte":
+        q = q.gte(f.column, f.value);
+        break;
+      case "lt":
+        q = q.lt(f.column, f.value);
+        break;
+      case "lte":
+        q = q.lte(f.column, f.value);
+        break;
+      case "ilike": {
+        const raw = typeof f.value === "string" ? f.value : String(f.value);
+        // Accent-insensitive: ILIKE wraps value with %; if the value has
+        // diacritics, also OR-match on the stripped variant so "Arcanà"
+        // hits rows stored as "Arcana" / "Arcana'" / "Acana".
+        const stripped = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[''`]/g, "");
+        if (stripped && stripped.toLowerCase() !== raw.toLowerCase()) {
+          // Postgrest .or() syntax: column.ilike.%val%,column.ilike.%stripped%
+          // Escape commas/parens that would break the .or() grammar.
+          const safeRaw = raw.replace(/[,()]/g, " ").trim();
+          const safeStripped = stripped.replace(/[,()]/g, " ").trim();
+          q = q.or(`${f.column}.ilike.%${safeRaw}%,${f.column}.ilike.%${safeStripped}%`);
+        } else {
+          q = q.ilike(f.column, `%${raw}%`);
+        }
+        break;
+      }
+      case "in":
+        q = q.in(f.column, f.value as (string | number)[]);
+        break;
+      case "is":
+        q = q.is(f.column, f.value as null | boolean);
+        break;
+    }
+  }
+
+  if (plan.sort) {
+    q = q.order(plan.sort.column, { ascending: plan.sort.ascending });
+  } else if (table.defaultSort && liveColumns.includes(table.defaultSort.column)) {
+    q = q.order(table.defaultSort.column, { ascending: table.defaultSort.ascending });
+  }
+
+  q = q.limit(limit);
+
+  const { data, error, count } = await q;
+  if (error) throw new Error(`Query fallita: ${error.message}`);
+
+  // `data` è `unknown` sul confine dinamico: si tengono solo gli oggetti.
+  const rows: Record<string, unknown>[] = Array.isArray(data)
+    ? data.filter((r): r is Record<string, unknown> => typeof r === "object" && r !== null)
+    : [];
+
+  return {
+    rows,
+    count: count ?? rows.length,
+    table: plan.table,
+    columnsUsed: plan.columns ?? liveColumns.slice(0, 10),
+  };
+}

@@ -31,7 +31,7 @@ export function useJobHealthMonitor() {
     }
 
     for (const job of jobs) {
-      const prevStatus = prevStatusRef.current.get(job.id);
+      const _prevStatus = prevStatusRef.current.get(job.id);
 
       // 1. Notify on failure (solo se cambiato stato)
       if (job.status === "failed" && !notifiedRef.current.has(`fail-${job.id}`)) {

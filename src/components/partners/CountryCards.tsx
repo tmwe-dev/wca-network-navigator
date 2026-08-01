@@ -3,7 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 
 export type CountrySortBy = "name" | "total";
 

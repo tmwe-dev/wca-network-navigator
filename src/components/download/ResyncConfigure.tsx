@@ -1,18 +1,25 @@
-import { useState, useEffect, useContext, createContext } from "react";
+import { useState, useEffect } from "react";
+import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import {
-  RefreshCw, Play, Users, Mail, Phone, AlertTriangle, ArrowRight, Loader2
+  RefreshCw, Play, Users, Mail, AlertTriangle, Loader2
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  findPartnerNetworksWithWcaId,
+  findPartnerContactEmails,
+  findPartnerContactsWithEmail,
+  findPartnersByWcaIds,
+} from "@/application/data/resyncStats";
+import { createDownloadJob } from "@/application/data/downloadJobs";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("ResyncConfigure");
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { WCA_NETWORKS } from "@/data/wcaFilters";
-
-const ThemeCtx = createContext(true);
 
 interface NetworkStats {
   network_name: string;
@@ -22,24 +29,25 @@ interface NetworkStats {
 }
 
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
+import { queryKeys } from "@/lib/queryKeys";
 
-function t(dark: boolean) {
+function t(_dark: boolean) {
   return {
-    panel: dark ? "bg-black/40 backdrop-blur-xl" : "bg-white/80 backdrop-blur-lg shadow-lg",
-    h1: dark ? "text-slate-100" : "text-slate-800",
-    h2: dark ? "text-slate-100" : "text-slate-800",
-    sub: dark ? "text-slate-400" : "text-slate-500",
-    body: dark ? "text-slate-300" : "text-slate-600",
-    label: dark ? "text-slate-400" : "text-slate-500",
-    cardBg: dark ? "bg-slate-800/40 border-slate-700/50" : "bg-white border-slate-200 shadow-sm",
-    btnPri: dark ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white",
-    hi: dark ? "text-amber-400" : "text-sky-600",
-    acEm: dark ? "text-emerald-400" : "text-emerald-600",
-    acAmber: dark ? "text-amber-400" : "text-sky-600",
-    infoBox: dark ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600",
-    input: dark ? "bg-slate-800/50 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800",
-    hover: dark ? "hover:bg-slate-800/50" : "hover:bg-slate-50",
-    dim: dark ? "text-slate-500" : "text-slate-400",
+    panel: "bg-card/80 backdrop-blur-xl",
+    h1: "text-foreground",
+    h2: "text-foreground",
+    sub: "text-muted-foreground",
+    body: "text-foreground",
+    label: "text-muted-foreground",
+    cardBg: "bg-card border-border",
+    btnPri: "bg-primary hover:bg-primary/90 text-primary-foreground",
+    hi: "text-primary",
+    acEm: "text-emerald-500",
+    acAmber: "text-primary",
+    infoBox: "bg-muted/50 border-border text-foreground",
+    input: "bg-muted border-border text-foreground",
+    hover: "hover:bg-accent/50",
+    dim: "text-muted-foreground",
   };
 }
 
@@ -63,12 +71,9 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
   // 🤖 Claude Engine V8: verifica connessione wca-app (non più cookie DB)
   async function checkCookie() {
     try {
-      const cached = localStorage.getItem("wca_session_cookie");
+      const cached = getWcaCookie();
       if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) {
-          setHasCookie(true); return;
-        }
+        setHasCookie(true); return;
       }
       // Try a fresh login to verify
       const res = await fetch("https://wca-app.vercel.app/api/login", {
@@ -79,33 +84,28 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       const data = await res.json();
       setHasCookie(data.success && !!data.cookies);
       if (data.success && data.cookies) {
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+        setWcaCookie(data.cookies);
       }
-    } catch { setHasCookie(false); }
+    } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setHasCookie(false); }
   }
 
   async function loadStats() {
     setLoading(true);
     try {
-      const { data: pnData } = await supabase
-        .from("partner_networks")
-        .select("network_name, partner_id, partners!inner(wca_id)");
-
-      const { data: contactsData } = await supabase
-        .from("partner_contacts")
-        .select("partner_id, email");
+      const pnData = await findPartnerNetworksWithWcaId();
+      const contactsData = await findPartnerContactEmails();
 
       const partnersWithEmail = new Set(
-        (contactsData || []).filter(c => c.email).map(c => c.partner_id)
+        contactsData.filter(c => c.email).map(c => c.partner_id)
       );
 
       const byNetwork = new Map<string, { partnerIds: Set<string>; wcaIds: Set<number> }>();
-      for (const pn of (pnData || [])) {
+      for (const pn of pnData) {
         const nn = pn.network_name;
         if (!byNetwork.has(nn)) byNetwork.set(nn, { partnerIds: new Set(), wcaIds: new Set() });
         const entry = byNetwork.get(nn)!;
         entry.partnerIds.add(pn.partner_id);
-        const wcaId = (pn as any).partners?.wca_id;
+        const wcaId = pn.partners?.wca_id ?? null;
         if (wcaId) entry.wcaIds.add(wcaId);
       }
 
@@ -122,7 +122,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       stats.sort((a, b) => b.total_partners - a.total_partners);
       setNetworkStats(stats);
     } catch (err) {
-      console.error("Error loading network stats:", err);
+      log.error("load network stats failed", { message: err instanceof Error ? err.message : String(err) });
     }
     setLoading(false);
   }
@@ -160,25 +160,17 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       allWcaIds = [...new Set(allWcaIds)];
 
       if (prioritizeMissing) {
-        const { data: partnersAll } = await supabase
-          .from("partners")
-          .select("id, wca_id")
-          .in("wca_id", allWcaIds)
-          .not("wca_id", "is", null);
-
-        const { data: contactsWithEmail } = await supabase
-          .from("partner_contacts")
-          .select("partner_id, email")
-          .not("email", "is", null);
+        const partnersAll = await findPartnersByWcaIds(allWcaIds);
+        const contactsWithEmail = await findPartnerContactsWithEmail();
 
         const partnerIdsWithEmail = new Set(
-          (contactsWithEmail || []).map(c => c.partner_id)
+          contactsWithEmail.map(c => c.partner_id)
         );
 
         const withEmailWcaIds = new Set<number>();
         const withoutEmailWcaIds: number[] = [];
 
-        for (const p of (partnersAll || [])) {
+        for (const p of partnersAll) {
           if (partnerIdsWithEmail.has(p.id)) {
             withEmailWcaIds.add(p.wca_id!);
           } else {
@@ -195,30 +187,24 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
 
       const networkNames = [...selected].join(", ");
 
-      const { data, error } = await supabase
-        .from("download_jobs")
-        .insert({
-          country_code: "ALL",
-          country_name: "Re-sync Contatti",
-          network_name: networkNames,
-          wca_ids: allWcaIds as any,
-          total_count: allWcaIds.length,
-          delay_seconds: delay,
-          status: "pending",
-          job_type: "resync",
-        } as any)
-        .select("id")
-        .single();
-
-      if (error) throw error;
+      await createDownloadJob({
+        country_code: "ALL",
+        country_name: "Re-sync Contatti",
+        network_name: networkNames,
+        wca_ids: allWcaIds,
+        total_count: allWcaIds.length,
+        delay_seconds: delay,
+        status: "pending",
+        job_type: "resync",
+      });
 
       // 🤖 Claude Engine V8: il job viene processato dal motore V8 nella UI
       // Non serve più chiamare Edge Function process-download-job
-      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.downloads.jobs });
       toast({ title: "Re-sync creato", description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.` });
       onStartRunning();
-    } catch (err: any) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
     }
     setStarting(false);
   }
@@ -244,8 +230,8 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       </div>
 
       {hasCookie === false && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
-          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-primary/30 bg-primary/10">
+          <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
           <div>
             <p className={`text-sm font-medium ${th.h2}`}>Connessione WCA non disponibile</p>
             <p className={`text-xs mt-1 ${th.sub}`}>
@@ -255,7 +241,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         </div>
       )}
 
-      <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5`}>
+      <div className={`${th.panel} border border-border rounded-2xl p-5`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-sm font-medium ${th.h2}`}>Seleziona Network</h3>
           <button onClick={selectAll} className={`text-xs ${th.hi}`}>
@@ -289,7 +275,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
                         variant="outline"
                         className={isComplete
                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]"
-                          : "bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px]"
+                          : "bg-primary/10 text-primary border-primary/30 text-[10px]"
                         }
                       >
                         {isComplete ? "Completo" : `${ns.missing_contacts} mancanti`}
@@ -317,7 +303,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       </div>
 
       {selected.size > 0 && (
-        <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5 space-y-5`}>
+        <div className={`${th.panel} border border-border rounded-2xl p-5 space-y-5`}>
           <label className="flex items-center gap-3 cursor-pointer">
             <Checkbox
               checked={prioritizeMissing}
@@ -354,7 +340,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
                 <p className={`text-xs ${th.sub}`}>Partner totali</p>
               </div>
               <div>
-                <p className={`text-2xl font-bold text-amber-400`}>{totalMissing}</p>
+                <p className="text-2xl font-bold text-primary">{totalMissing}</p>
                 <p className={`text-xs ${th.sub}`}>Senza contatti</p>
               </div>
               <div>

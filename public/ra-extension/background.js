@@ -84,7 +84,7 @@ async function autoLogin() {
 
     // Wait for login page to load
     await new Promise(function(resolve) {
-      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
+      const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
       function listener(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener);
@@ -107,7 +107,7 @@ async function autoLogin() {
 
     // Wait for navigation after submit
     await new Promise(function(resolve) {
-      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 15000);
+      const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 15000);
       function listener2(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener2);
@@ -119,8 +119,8 @@ async function autoLogin() {
     });
 
     // Verify the final URL — success means we're NOT on login or error page
-    var tabInfo = await chrome.tabs.get(tab.id);
-    var finalUrl = tabInfo.url || "";
+    const tabInfo = await chrome.tabs.get(tab.id);
+    const finalUrl = tabInfo.url || "";
     if (finalUrl.includes("/login3") || finalUrl.includes("errore_404") || finalUrl.includes("p=login")) {
       return { success: false, error: "Login fallito: la pagina è ancora su login/errore. Verificare le credenziali." };
     }
@@ -136,9 +136,9 @@ async function autoLogin() {
 
 function fillLogin(username, password) {
   setTimeout(function() {
-    var emailField = document.querySelector('input#username, input[name="username"], input[type="email"], input#email');
-    var passField = document.querySelector('input#password, input[type="password"]');
-    var submitBtn = document.querySelector('input[type="submit"].btn_blu, input[type="submit"], button[type="submit"]');
+    const emailField = document.querySelector('input#username, input[name="username"], input[type="email"], input#email');
+    const passField = document.querySelector('input#password, input[type="password"]');
+    const submitBtn = document.querySelector('input[type="submit"].btn_blu, input[type="submit"], button[type="submit"]');
 
     if (emailField) {
       emailField.value = username;
@@ -152,7 +152,7 @@ function fillLogin(username, password) {
     }
 
     // Check "Resta collegato" / remember me
-    var rememberMe = document.querySelector('#rememberme, input[name="rememberme"], input[name="remember"]');
+    const rememberMe = document.querySelector('#rememberme, input[name="rememberme"], input[name="remember"]');
     if (rememberMe && !rememberMe.checked) {
       rememberMe.checked = true;
       rememberMe.dispatchEvent(new Event("change", { bubbles: true }));
@@ -285,13 +285,13 @@ function extractProfileData() {
 // ══════════════════════════════════════════════
 function discoverFormFields() {
   try {
-    var fields = { ateco: [], geography: [], fatturato: [], dipendenti: [], contatti: [], allInputs: [] };
+    const fields = { ateco: [], geography: [], fatturato: [], dipendenti: [], contatti: [], allInputs: [] };
 
     // Scan all inputs/selects inside the page (including hidden ones inside modals)
-    var allInputs = document.querySelectorAll("input, select, textarea");
-    for (var i = 0; i < allInputs.length; i++) {
-      var el = allInputs[i];
-      var info = {
+    const allInputs = document.querySelectorAll("input, select, textarea");
+    for (let i = 0; i < allInputs.length; i++) {
+      const el = allInputs[i];
+      const info = {
         tag: el.tagName.toLowerCase(),
         type: el.type || "",
         name: el.name || "",
@@ -303,7 +303,7 @@ function discoverFormFields() {
       fields.allInputs.push(info);
 
       // Categorize
-      var ctx = (info.name + " " + info.id + " " + info.placeholder + " " + info.parentId).toLowerCase();
+      const ctx = (info.name + " " + info.id + " " + info.placeholder + " " + info.parentId).toLowerCase();
       if (ctx.indexOf("ateco") >= 0) fields.ateco.push(info);
       if (ctx.indexOf("region") >= 0 || ctx.indexOf("provincia") >= 0 || ctx.indexOf("comune") >= 0 || ctx.indexOf("geograf") >= 0) fields.geography.push(info);
       if (ctx.indexOf("fatturato") >= 0 || ctx.indexOf("ricav") >= 0) fields.fatturato.push(info);
@@ -312,16 +312,16 @@ function discoverFormFields() {
     }
 
     // Also detect modal IDs
-    var modals = document.querySelectorAll("[id*='MODAL'], [id*='modal'], .modal");
+    const modals = document.querySelectorAll("[id*='MODAL'], [id*='modal'], .modal");
     fields.modalIds = [];
-    for (var m = 0; m < modals.length; m++) {
+    for (let m = 0; m < modals.length; m++) {
       fields.modalIds.push(modals[m].id || modals[m].className);
     }
 
     // Detect forms
-    var forms = document.querySelectorAll("form");
+    const forms = document.querySelectorAll("form");
     fields.formIds = [];
-    for (var f = 0; f < forms.length; f++) {
+    for (let f = 0; f < forms.length; f++) {
       fields.formIds.push({ id: forms[f].id || "", action: forms[f].action || "", name: forms[f].name || "" });
     }
 
@@ -353,14 +353,14 @@ function fillAndSubmitSearchForm(params) {
       if (!values || values.length === 0 || !container) return;
       if (typeof container === "string") container = document.querySelector(container);
       if (!container) return;
-      var inputs = container.querySelectorAll("input[type='checkbox'], input[type='radio']");
-      for (var i = 0; i < inputs.length; i++) {
-        var val = (inputs[i].value || "").toLowerCase();
-        var label = "";
-        var lbl = inputs[i].parentElement;
+      const inputs = container.querySelectorAll("input[type='checkbox'], input[type='radio']");
+      for (let i = 0; i < inputs.length; i++) {
+        const val = (inputs[i].value || "").toLowerCase();
+        let label = "";
+        const lbl = inputs[i].parentElement;
         if (lbl) label = (lbl.textContent || "").toLowerCase().trim();
-        for (var v = 0; v < values.length; v++) {
-          var target = values[v].toLowerCase();
+        for (let v = 0; v < values.length; v++) {
+          const target = values[v].toLowerCase();
           if (val === target || val.indexOf(target) >= 0 || label.indexOf(target) >= 0) {
             inputs[i].checked = true;
             inputs[i].dispatchEvent(new Event("change", { bubbles: true }));
@@ -375,10 +375,10 @@ function fillAndSubmitSearchForm(params) {
       if (!value || !container) return;
       if (typeof container === "string") container = document.querySelector(container);
       if (!container) return;
-      var inputs = container.querySelectorAll("input[type='text'], input[type='number'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
-      for (var i = 0; i < inputs.length; i++) {
-        var ctx = ((inputs[i].name || "") + " " + (inputs[i].id || "") + " " + (inputs[i].placeholder || "")).toLowerCase();
-        var parent = inputs[i].closest(".form-group, .input-group, label, .row");
+      const inputs = container.querySelectorAll("input[type='text'], input[type='number'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
+      for (let i = 0; i < inputs.length; i++) {
+        let ctx = ((inputs[i].name || "") + " " + (inputs[i].id || "") + " " + (inputs[i].placeholder || "")).toLowerCase();
+        const parent = inputs[i].closest(".form-group, .input-group, label, .row");
         if (parent) ctx += " " + (parent.textContent || "").toLowerCase();
         if (ctx.indexOf(labelMatch) >= 0) {
           setInput(inputs[i], String(value));
@@ -392,13 +392,13 @@ function fillAndSubmitSearchForm(params) {
 
     // ── 1. ATECO ──
     if (params.atecoCode || (params.atecoCodes && params.atecoCodes.length > 0)) {
-      var codes = params.atecoCodes || [params.atecoCode];
-      var atecoModalIds = ["#MODALsettoreAteco", "#modalAteco", "#modal-ateco", "#MODALateco"];
-      var atecoSet = false;
-      for (var am = 0; am < atecoModalIds.length; am++) {
-        var atecoModal = document.querySelector(atecoModalIds[am]);
+      const codes = params.atecoCodes || [params.atecoCode];
+      const atecoModalIds = ["#MODALsettoreAteco", "#modalAteco", "#modal-ateco", "#MODALateco"];
+      let atecoSet = false;
+      for (let am = 0; am < atecoModalIds.length; am++) {
+        const atecoModal = document.querySelector(atecoModalIds[am]);
         if (atecoModal) {
-          var atecoInput = atecoModal.querySelector("input[type='text'], input[type='search'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
+          const atecoInput = atecoModal.querySelector("input[type='text'], input[type='search'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
           if (atecoInput && codes.length > 0) setInput(atecoInput, codes[0]);
           setCheckboxes(atecoModal, codes);
           atecoSet = true;
@@ -406,19 +406,19 @@ function fillAndSubmitSearchForm(params) {
         }
       }
       if (!atecoSet) {
-        var atecoHidden = document.querySelector("input[name*='ateco'], input[name*='Ateco'], input[name*='ATECO']");
+        const atecoHidden = document.querySelector("input[name*='ateco'], input[name*='Ateco'], input[name*='ATECO']");
         if (atecoHidden) setInput(atecoHidden, codes.join(","));
       }
     }
 
     // ── 2. GEOGRAPHY ──
-    var regions = params.regions || (params.region ? [params.region] : []);
-    var provinces = params.provinces || (params.province ? [params.province] : []);
+    const regions = params.regions || (params.region ? [params.region] : []);
+    const provinces = params.provinces || (params.province ? [params.province] : []);
     if (regions.length > 0 || provinces.length > 0) {
-      var geoModalIds = ["#MODALgeografica", "#modalGeografica", "#modal-geografia", "#MODALgeografia"];
-      var geoSet = false;
-      for (var gm = 0; gm < geoModalIds.length; gm++) {
-        var geoModal = document.querySelector(geoModalIds[gm]);
+      const geoModalIds = ["#MODALgeografica", "#modalGeografica", "#modal-geografia", "#MODALgeografia"];
+      let geoSet = false;
+      for (let gm = 0; gm < geoModalIds.length; gm++) {
+        const geoModal = document.querySelector(geoModalIds[gm]);
         if (geoModal) {
           if (regions.length > 0) setCheckboxes(geoModal, regions);
           if (provinces.length > 0) setCheckboxes(geoModal, provinces);
@@ -427,18 +427,18 @@ function fillAndSubmitSearchForm(params) {
         }
       }
       if (!geoSet) {
-        var regInput = document.querySelector("input[name*='regione'], input[name*='Regione']");
+        const regInput = document.querySelector("input[name*='regione'], input[name*='Regione']");
         if (regInput && regions.length > 0) setInput(regInput, regions.join(","));
-        var provInput = document.querySelector("input[name*='provincia'], input[name*='Provincia']");
+        const provInput = document.querySelector("input[name*='provincia'], input[name*='Provincia']");
         if (provInput && provinces.length > 0) setInput(provInput, provinces.join(","));
       }
     }
 
     // ── 3. FATTURATO ──
     if (params.filters && (params.filters.fatturato_min || params.filters.fatturato_max)) {
-      var fatModalIds = ["#MODALfatturato", "#modalFatturato", "#modal-fatturato"];
-      for (var fm = 0; fm < fatModalIds.length; fm++) {
-        var fatModal = document.querySelector(fatModalIds[fm]);
+      const fatModalIds = ["#MODALfatturato", "#modalFatturato", "#modal-fatturato"];
+      for (let fm = 0; fm < fatModalIds.length; fm++) {
+        const fatModal = document.querySelector(fatModalIds[fm]);
         if (fatModal) {
           setInputByLabel(fatModal, "min", params.filters.fatturato_min);
           setInputByLabel(fatModal, "max", params.filters.fatturato_max);
@@ -449,9 +449,9 @@ function fillAndSubmitSearchForm(params) {
 
     // ── 4. DIPENDENTI ──
     if (params.filters && (params.filters.dipendenti_min || params.filters.dipendenti_max)) {
-      var dipModalIds = ["#MODALnumeroDipendenti", "#modalDipendenti", "#modal-dipendenti"];
-      for (var dm = 0; dm < dipModalIds.length; dm++) {
-        var dipModal = document.querySelector(dipModalIds[dm]);
+      const dipModalIds = ["#MODALnumeroDipendenti", "#modalDipendenti", "#modal-dipendenti"];
+      for (let dm = 0; dm < dipModalIds.length; dm++) {
+        const dipModal = document.querySelector(dipModalIds[dm]);
         if (dipModal) {
           setInputByLabel(dipModal, "min", params.filters.dipendenti_min);
           setInputByLabel(dipModal, "max", params.filters.dipendenti_max);
@@ -462,11 +462,11 @@ function fillAndSubmitSearchForm(params) {
 
     // ── 5. CONTATTI ──
     if (params.filters && (params.filters.has_phone_and_email || params.filters.has_phone || params.filters.has_email)) {
-      var contModalIds = ["#MODALcontatti", "#modalContatti", "#modal-contatti"];
-      for (var cm2 = 0; cm2 < contModalIds.length; cm2++) {
-        var contModal = document.querySelector(contModalIds[cm2]);
+      const contModalIds = ["#MODALcontatti", "#modalContatti", "#modal-contatti"];
+      for (let cm2 = 0; cm2 < contModalIds.length; cm2++) {
+        const contModal = document.querySelector(contModalIds[cm2]);
         if (contModal) {
-          var contValues = [];
+          const contValues = [];
           if (params.filters.has_phone_and_email) contValues.push("telefono e email", "entrambi", "tel e email");
           else {
             if (params.filters.has_phone) contValues.push("telefono", "tel");
@@ -479,16 +479,16 @@ function fillAndSubmitSearchForm(params) {
     }
 
     // ── 6. SUBMIT ──
-    var form = document.querySelector("#cercaAvanzataForm, form[name='cercaAvanzata'], form[action*='search']");
+    const form = document.querySelector("#cercaAvanzataForm, form[name='cercaAvanzata'], form[action*='search']");
     if (form) {
       form.submit();
       return { submitted: true, method: "form.submit" };
     }
     // Fallback: click search button
-    var searchBtn = document.querySelector(".btn-search, #btnCerca, button.cerca, a.cerca");
+    let searchBtn = document.querySelector(".btn-search, #btnCerca, button.cerca, a.cerca");
     if (!searchBtn) {
-      var allBtns = document.querySelectorAll("button, a.btn");
-      for (var sb = 0; sb < allBtns.length; sb++) {
+      const allBtns = document.querySelectorAll("button, a.btn");
+      for (let sb = 0; sb < allBtns.length; sb++) {
         if ((allBtns[sb].textContent || "").trim().toLowerCase() === "cerca") {
           searchBtn = allBtns[sb];
           break;
@@ -500,7 +500,7 @@ function fillAndSubmitSearchForm(params) {
       return { submitted: true, method: "button.click" };
     }
     // Last resort
-    var anyForm = document.querySelector("form");
+    const anyForm = document.querySelector("form");
     if (anyForm) {
       anyForm.submit();
       return { submitted: true, method: "anyForm.submit" };
@@ -513,19 +513,19 @@ function fillAndSubmitSearchForm(params) {
 
 // Extract search results from RA DataTable (injected into the results page)
 function extractSearchResults() {
-  var results = [];
+  const results = [];
   try {
     // RA uses DataTables - look for the results table
-    var targetTable = null;
+    let targetTable = null;
 
     // Try specific DataTable selectors first
     targetTable = document.querySelector("#DataTables_Table_0, .dataTable, table.display, table.table-striped");
     
     if (!targetTable) {
       // Fallback: find table with company links
-      var tables = document.querySelectorAll("table");
-      for (var t = 0; t < tables.length; t++) {
-        var tbodyRows = tables[t].querySelectorAll("tbody tr");
+      const tables = document.querySelectorAll("table");
+      for (let t = 0; t < tables.length; t++) {
+        const tbodyRows = tables[t].querySelectorAll("tbody tr");
         if (tbodyRows.length > 0 && tables[t].querySelector("a[href]")) {
           targetTable = tables[t];
           break;
@@ -535,47 +535,47 @@ function extractSearchResults() {
 
     if (!targetTable) {
       // Last fallback: DataTable wrapper
-      var dtWrapper = document.querySelector(".dataTables_wrapper");
+      const dtWrapper = document.querySelector(".dataTables_wrapper");
       if (dtWrapper) targetTable = dtWrapper.querySelector("table");
     }
 
     if (targetTable) {
-      var rows = targetTable.querySelectorAll("tbody tr");
-      for (var i = 0; i < rows.length; i++) {
-        var row = rows[i];
-        var cells = row.querySelectorAll("td");
+      const rows = targetTable.querySelectorAll("tbody tr");
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.querySelectorAll("td");
         if (cells.length < 2) continue;
 
         // Find the link to the company profile
-        var link = row.querySelector("a[href]");
+        const link = row.querySelector("a[href]");
         if (!link) continue;
 
-        var name = link.textContent.trim();
-        var href = link.getAttribute("href");
+        const name = link.textContent.trim();
+        let href = link.getAttribute("href");
         if (!name || !href) continue;
         if (!href.startsWith("http")) {
           href = "https://www.reportaziende.it" + (href.startsWith("/") ? "" : "/") + href;
         }
 
         // Extract P.IVA (11 digits) and city from cells
-        var piva = null;
-        var city = null;
-        var province = null;
-        var ateco = null;
-        for (var c = 0; c < cells.length; c++) {
-          var cellText = cells[c].textContent.trim();
+        let piva = null;
+        let city = null;
+        let province = null;
+        let ateco = null;
+        for (let c = 0; c < cells.length; c++) {
+          const cellText = cells[c].textContent.trim();
           // P.IVA is 11 digits
-          var pivaMatch = cellText.match(/\b(\d{11})\b/);
+          const pivaMatch = cellText.match(/\b(\d{11})\b/);
           if (pivaMatch && !piva) piva = pivaMatch[1];
           // Province: 2-letter code in parentheses like (MI) or standalone
-          var provMatch = cellText.match(/\(([A-Z]{2})\)/);
+          const provMatch = cellText.match(/\(([A-Z]{2})\)/);
           if (provMatch && !province) province = provMatch[1];
           // City: short text that's not a number and not the company name
           if (!city && cellText.length > 1 && cellText.length < 50 && !/^\d+$/.test(cellText) && cellText !== name && !/\d{11}/.test(cellText) && !/^[A-Z]{2}$/.test(cellText)) {
             city = cellText;
           }
           // ATECO code pattern: XX.XX.XX
-          var atecoMatch = cellText.match(/\b(\d{2}\.\d{2}(?:\.\d{1,2})?)\b/);
+          const atecoMatch = cellText.match(/\b(\d{2}\.\d{2}(?:\.\d{1,2})?)\b/);
           if (atecoMatch && !ateco) ateco = atecoMatch[1];
         }
 
@@ -584,26 +584,26 @@ function extractSearchResults() {
     }
 
     // Detect total results count
-    var totalText = "";
-    var totalCount = 0;
-    var infoEl = document.querySelector(".dataTables_info, .risultati, .total-results, .search-results-count");
+    let totalText = "";
+    let totalCount = 0;
+    const infoEl = document.querySelector(".dataTables_info, .risultati, .total-results, .search-results-count");
     if (infoEl) {
       totalText = infoEl.textContent.trim();
       // Try to parse number like "1.234 risultati" or "Showing 1 to 25 of 1,234"
-      var numMatch = totalText.match(/(?:di|of|totale|trovate?|risultati?:?)\s*([\d.,]+)/i) || totalText.match(/([\d.,]+)\s*(?:risultati|aziende|record)/i);
+      const numMatch = totalText.match(/(?:di|of|totale|trovate?|risultati?:?)\s*([\d.,]+)/i) || totalText.match(/([\d.,]+)\s*(?:risultati|aziende|record)/i);
       if (numMatch) {
         totalCount = parseInt(numMatch[1].replace(/[.,]/g, ""), 10) || 0;
       }
     }
 
     // Detect pagination
-    var hasNextPage = false;
-    var nextBtn = document.querySelector(".paginate_button.next:not(.disabled), a.next:not(.disabled), a[rel='next'], .page-item.next:not(.disabled) a");
+    let hasNextPage = false;
+    const nextBtn = document.querySelector(".paginate_button.next:not(.disabled), a.next:not(.disabled), a[rel='next'], .page-item.next:not(.disabled) a");
     if (nextBtn && !nextBtn.classList.contains("disabled")) hasNextPage = true;
 
     // Also detect CTA gate (paywall modal) as sign of no session
-    var ctaGate = document.querySelector("#modalCTAGate, .cta-gate, .paywall-modal");
-    var ctaVisible = ctaGate && (ctaGate.style.display !== "none" && ctaGate.classList.contains("show"));
+    const ctaGate = document.querySelector("#modalCTAGate, .cta-gate, .paywall-modal");
+    const ctaVisible = ctaGate && (ctaGate.style.display !== "none" && ctaGate.classList.contains("show"));
 
     return { results: results, hasNextPage: hasNextPage, totalText: totalText, totalCount: totalCount, ctaGateDetected: !!ctaVisible };
   } catch (e) {
@@ -661,9 +661,9 @@ function isSessionExpiredUrl(url) {
 
 // ── Helper: open a tab, wait for load, and check session; auto-login + retry once ──
 async function openTabWithSessionCheck(url) {
-  var tab = await chrome.tabs.create({ url: url, active: false });
+  let tab = await chrome.tabs.create({ url: url, active: false });
   await new Promise(function(resolve) {
-    var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
+    const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
     function listener(tabId, info) {
       if (tabId === tab.id && info.status === "complete") {
         chrome.tabs.onUpdated.removeListener(listener);
@@ -674,12 +674,12 @@ async function openTabWithSessionCheck(url) {
     chrome.tabs.onUpdated.addListener(listener);
   });
 
-  var tabInfo = await chrome.tabs.get(tab.id);
+  let tabInfo = await chrome.tabs.get(tab.id);
   if (isSessionExpiredUrl(tabInfo.url)) {
     // Session expired — close tab, attempt auto-login, retry once
     await chrome.tabs.remove(tab.id);
     addLog("⚠️ Sessione scaduta, tentativo auto-login...");
-    var loginResult = await autoLogin();
+    const loginResult = await autoLogin();
     if (!loginResult.success) {
       return { tab: null, error: "session_expired", loginError: loginResult.error };
     }
@@ -693,7 +693,7 @@ async function openTabWithSessionCheck(url) {
     addLog("🔄 Riprovo dopo auto-login...");
     tab = await chrome.tabs.create({ url: url, active: false });
     await new Promise(function(resolve) {
-      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 20000);
+      const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 20000);
       function listener2(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener2);
@@ -717,10 +717,10 @@ async function openTabWithSessionCheck(url) {
 // Run field discovery on the search page (one-time diagnostic)
 async function runDiscoverFields() {
   try {
-    var result = await openTabWithSessionCheck("https://www.reportaziende.it/search.php?tab=2");
+    const result = await openTabWithSessionCheck("https://www.reportaziende.it/search.php?tab=2");
     if (result.error) return { success: false, error: result.error, reason: result.reason };
-    var tab = result.tab;
-    var [scriptResult] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: discoverFormFields });
+    const tab = result.tab;
+    const [scriptResult] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: discoverFormFields });
     await chrome.tabs.remove(tab.id);
     return { success: true, fields: scriptResult ? scriptResult.result : null };
   } catch (err) {
@@ -730,23 +730,23 @@ async function runDiscoverFields() {
 
 // Search for companies using Ricerca Avanzata (search.php?tab=2) with modal interaction
 async function scrapeSearchResults(params) {
-  var tab = null;
+  let tab = null;
   try {
     // Navigate with session check + auto-login retry
-    var openResult = await openTabWithSessionCheck("https://www.reportaziende.it/search.php?tab=2");
+    const openResult = await openTabWithSessionCheck("https://www.reportaziende.it/search.php?tab=2");
     if (openResult.error) {
       return { success: false, error: openResult.error, results: [], reason: openResult.reason };
     }
     tab = openResult.tab;
 
     // Inject the form-filling script (interacts with modals) and submit
-    var [fillResult] = await chrome.scripting.executeScript({
+    const [fillResult] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: fillAndSubmitSearchForm,
       args: [params],
     });
 
-    var fillData = fillResult && fillResult.result;
+    const fillData = fillResult && fillResult.result;
     if (fillData && !fillData.submitted) {
       await chrome.tabs.remove(tab.id); tab = null;
       return { success: false, error: "Form non compilato: " + (fillData.error || "sconosciuto"), results: [] };
@@ -754,7 +754,7 @@ async function scrapeSearchResults(params) {
 
     // Wait for results page to load after form submission
     await new Promise(function(resolve) {
-      var timeout = setTimeout(function() {
+      const timeout = setTimeout(function() {
         chrome.tabs.onUpdated.removeListener(listener);
         resolve();
       }, 25000);
@@ -769,14 +769,14 @@ async function scrapeSearchResults(params) {
     });
 
     // Check for login redirect after form submit
-    var tabInfo = await chrome.tabs.get(tab.id);
+    const tabInfo = await chrome.tabs.get(tab.id);
     if (isSessionExpiredUrl(tabInfo.url)) {
       await chrome.tabs.remove(tab.id); tab = null;
       return { success: false, error: "session_expired", results: [] };
     }
 
     // Extract results from the DataTable
-    var [result] = await chrome.scripting.executeScript({
+    const [result] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: extractSearchResults,
     });
@@ -802,24 +802,24 @@ async function runSearchOnly(params) {
   if (scrapingState.active) return { success: false, error: "Scraping già in corso" };
   resetState(); scrapingState.active = true;
   addLog("Avvio ricerca lista aziende...");
-  var delay = (params.delaySeconds || 20) * 1000;
-  var atecoCodes = params.atecoCodes || (params.atecoCode ? [params.atecoCode] : []);
-  var regions = params.regions || (params.region ? [params.region] : []);
-  var provinces = params.provinces || (params.province ? [params.province] : []);
+  const delay = (params.delaySeconds || 20) * 1000;
+  const atecoCodes = params.atecoCodes || (params.atecoCode ? [params.atecoCode] : []);
+  const regions = params.regions || (params.region ? [params.region] : []);
+  const provinces = params.provinces || (params.province ? [params.province] : []);
   try {
-    var allResults = [];
-    for (var ai = 0; ai < atecoCodes.length; ai++) {
+    let allResults = [];
+    for (let ai = 0; ai < atecoCodes.length; ai++) {
       if (scrapingState.stopped) break;
-      var ateco = atecoCodes[ai];
-      var regList = regions.length > 0 ? regions : [""];
-      var provList = provinces.length > 0 ? provinces : [""];
-      for (var ri = 0; ri < regList.length; ri++) {
-        for (var pi = 0; pi < provList.length; pi++) {
+      const ateco = atecoCodes[ai];
+      const regList = regions.length > 0 ? regions : [""];
+      const provList = provinces.length > 0 ? provinces : [""];
+      for (let ri = 0; ri < regList.length; ri++) {
+        for (let pi = 0; pi < provList.length; pi++) {
           if (scrapingState.stopped) break;
-          var page = 1, hasMore = true;
+          let page = 1, hasMore = true;
           while (hasMore && !scrapingState.stopped) {
             addLog("Ricerca: ATECO=" + ateco + (regList[ri] ? " Reg=" + regList[ri] : "") + " pag." + page);
-            var sr = await scrapeSearchResults({ atecoCode: ateco, region: regList[ri] || undefined, province: provList[pi] || undefined, filters: params.filters, page: page });
+            const sr = await scrapeSearchResults({ atecoCode: ateco, region: regList[ri] || undefined, province: provList[pi] || undefined, filters: params.filters, page: page });
             if (!sr.success) { if (sr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); scrapingState.active = false; return { success: false, error: "session_expired", results: allResults, log: scrapingState.log.slice(-50) }; } addLog("Errore: " + sr.error); break; }
             if (sr.results && sr.results.length > 0) { allResults = allResults.concat(sr.results); addLog("Trovate " + sr.results.length + " (tot: " + allResults.length + ")"); }
             hasMore = sr.hasNextPage && sr.results && sr.results.length > 0; page++;
@@ -838,21 +838,21 @@ async function runSearchOnly(params) {
 // Scrape Selected: scrape only specific URLs chosen by user
 async function runScrapeSelected(params) {
   if (scrapingState.active) return { success: false, error: "Scraping già in corso" };
-  var items = params.items || [];
+  const items = params.items || [];
   if (items.length === 0) return { success: false, error: "Nessun elemento" };
   resetState(); scrapingState.active = true; scrapingState.total = items.length;
   addLog("Scraping " + items.length + " profili selezionati");
-  var delay = (params.delaySeconds || 20) * 1000, batchSize = params.batchSize || 5, batch = [], LONG_PAUSE_EVERY = 10, LONG_PAUSE_MS = 45000;
+  let delay = (params.delaySeconds || 20) * 1000, batchSize = params.batchSize || 5, batch = [], LONG_PAUSE_EVERY = 10, LONG_PAUSE_MS = 45000;
   try {
-    for (var i = 0; i < items.length; i++) {
+    for (let i = 0; i < items.length; i++) {
       if (scrapingState.stopped) { addLog("Interrotto."); break; }
       scrapingState.currentCompany = items[i].name; scrapingState.processed = i + 1;
       addLog("Scraping " + (i+1) + "/" + items.length + ": " + items[i].name);
-      var pr = await scrapeCompanyProfile(items[i].url);
+      const pr = await scrapeCompanyProfile(items[i].url);
       if (pr.success && pr.data) { batch.push(pr.data); addLog("✅ " + items[i].name); }
       else { scrapingState.errors++; if (pr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); if (batch.length > 0) await saveBatch(batch); scrapingState.active = false; return { success: false, error: "session_expired", saved: scrapingState.saved }; } addLog("❌ " + items[i].name); }
       if (batch.length >= batchSize) { await saveBatch(batch); batch = []; }
-      if (i < items.length - 1 && !scrapingState.stopped) { var jit = delay * (0.8 + Math.random() * 0.8); if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) { addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili..."); await new Promise(function(r) { setTimeout(r, LONG_PAUSE_MS); }); } else { await new Promise(function(r) { setTimeout(r, jit); }); } }
+      if (i < items.length - 1 && !scrapingState.stopped) { const jit = delay * (0.8 + Math.random() * 0.8); if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) { addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili..."); await new Promise(function(r) { setTimeout(r, LONG_PAUSE_MS); }); } else { await new Promise(function(r) { setTimeout(r, jit); }); } }
     }
     if (batch.length > 0) await saveBatch(batch);
     addLog("Completato. Salvati: " + scrapingState.saved + ", Errori: " + scrapingState.errors);

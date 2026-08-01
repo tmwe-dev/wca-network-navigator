@@ -1,4 +1,9 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { insertReactCrashLog } from "@/application/data/appErrorLogs";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("GlobalErrorBoundary");
 
 interface Props {
   children: ReactNode;
@@ -11,15 +16,38 @@ interface State {
 }
 
 export class GlobalErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null, errorInfo: null };
+  override state: State = { hasError: false, error: null, errorInfo: null };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
-    console.error("[GlobalErrorBoundary]", error, errorInfo);
+    log.error("unhandled react error", {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
+    this.logErrorToDb(error, errorInfo);
+  }
+
+  private async logErrorToDb(error: Error, info: ErrorInfo) {
+    try {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) return;
+      await insertReactCrashLog({
+        user_id: user.id,
+        error_message: error.message,
+        error_stack: error.stack?.substring(0, 2000) ?? null,
+        component_stack: info.componentStack?.substring(0, 2000) ?? null,
+        page_url: window.location.pathname,
+        user_agent: navigator.userAgent,
+      });
+    } catch (e) {
+      log.warn("Failed to persist error log", { error: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   private getDiagnosticInfo(): string {
@@ -30,8 +58,6 @@ export class GlobalErrorBoundary extends Component<Props, State> {
       `Route: ${window.location.pathname}`,
       `UserAgent: ${navigator.userAgent}`,
     ];
-
-    // Try to get user id from localStorage session
     try {
       const storageKey = Object.keys(localStorage).find(k => k.includes("supabase") && k.includes("auth"));
       if (storageKey) {
@@ -39,42 +65,33 @@ export class GlobalErrorBoundary extends Component<Props, State> {
         lines.push(`UserID: ${session?.user?.id || "unknown"}`);
       }
     } catch { lines.push("UserID: unknown"); }
-
-    // Last WCA error
     try {
       const lastErr = localStorage.getItem("last_wca_error");
       if (lastErr) lines.push(`Last WCA Error: ${lastErr}`);
-    } catch {}
-
-    lines.push("");
-    lines.push(`Error: ${error?.message || "Unknown"}`);
-    lines.push("");
-    lines.push(`Stack:\n${error?.stack || "N/A"}`);
-
+    } catch { /* best-effort */ }
+    lines.push("", `Error: ${error?.message || "Unknown"}`, "", `Stack:\n${error?.stack || "N/A"}`);
     if (errorInfo?.componentStack) {
-      lines.push("");
-      lines.push(`Component Stack:\n${errorInfo.componentStack}`);
+      lines.push("", `Component Stack:\n${errorInfo.componentStack}`);
     }
-
     return lines.join("\n");
   }
 
   private handleCopy = () => {
-    navigator.clipboard.writeText(this.getDiagnosticInfo()).catch(() => {});
+    navigator.clipboard.writeText(this.getDiagnosticInfo()).catch((err) => { log.error("[Clipboard] copy failed:", { detail: err }); });
   };
 
   private handleReload = () => {
     window.location.reload();
   };
 
-  render() {
+  override render() {
     if (!this.state.hasError) return this.props.children;
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="max-w-lg w-full text-center space-y-6">
           <div className="text-5xl">💥</div>
-          <h1 className="text-xl font-semibold text-foreground">Unexpected runtime error</h1>
+          <h1 className="text-xl font-semibold text-foreground">Qualcosa è andato storto</h1>
           <p className="text-sm text-muted-foreground">
             L'applicazione ha riscontrato un errore imprevisto. Puoi ricaricare la pagina o copiare le informazioni diagnostiche per il supporto.
           </p>
@@ -84,7 +101,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
           <div className="flex gap-3 justify-center">
             <button
               onClick={this.handleReload}
-              className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              className="px-4 py-2 rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 text-primary text-sm font-medium hover:bg-primary/15 hover:border-primary transition-colors"
             >
               Ricarica app
             </button>

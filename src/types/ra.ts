@@ -36,11 +36,14 @@ export interface RAProspect {
 
 export type RALeadStatus =
   | "new"
-  | "contacted"
+  | "first_touch_sent"
+  | "holding"
+  | "engaged"
   | "qualified"
   | "negotiation"
   | "converted"
-  | "lost";
+  | "archived"
+  | "blacklisted";
 
 export interface RAContact {
   id: string;

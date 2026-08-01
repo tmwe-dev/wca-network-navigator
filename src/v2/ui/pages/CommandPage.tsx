@@ -1,0 +1,352 @@
+/**
+ * CommandPage — UNIFIED conversational orchestrator (single logic path).
+ *
+ * Flow: useCommandState (state) + useCommandSubmit (sendMessage).
+ *   classifyIntent → smalltalk | compose-email | plan
+ *   plan → planExecution → planRunner → per-step approval (multi-step)
+ *   plan.steps=[] + shouldForceAiQuery → 1-step ai-query fallback (stesso runner)
+ *   useResultCommentary speaks `spokenSummary` (conversational TTS), not raw results
+ *   Composer uses Prompt Lab via generate-email pipeline (composeEmail tool)
+ *
+ * Legacy hooks non usati (useAgentLoop / useApprovalFlow / useScenarioFlow /
+ * useToolExecution / useCommandPageState / useCommandBriefing / useSuperMarioFlow)
+ * rimossi (zero chiamanti). Doctrine: one logic per task, everywhere.
+ */
+import { useEffect, useRef, useState } from "react";
+import { toast as sonnerToast } from "sonner";
+import VoicePresence from "@/components/workspace/VoicePresence";
+import ConversationSidebar from "./command/ConversationSidebar";
+import type { ToolResult, BulkAction } from "./command/tools/types";
+import type { Message } from "./command/constants";
+import { useGovernance } from "./command/hooks/useGovernance";
+import { useVoiceInput } from "./command/hooks/useVoiceInput";
+import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
+import { useConversation } from "./command/hooks/useConversation";
+import { useCommandState } from "./command/hooks/useCommandState";
+import { useCommandSubmit } from "./command/hooks/useCommandSubmit";
+import { CommandHistory } from "./command/components/CommandHistory";
+import { CommandInput } from "./command/components/CommandInput";
+import { CommandOutput } from "./command/components/CommandOutput";
+// CommandPageBackButton rimosso (Lean Mode 2026-05-19): duplicava la LayoutIconRail
+// a sinistra. Unica sidebar = LayoutIconRail già montata da AuthenticatedLayout.
+import { CommandPageHeader } from "./command/components/CommandPageHeader";
+import { CommandPageBackground } from "./command/components/CommandPageBackground";
+import CommandThread from "./command/components/CommandThread";
+import { Command as CommandIcon, PanelLeft, PanelLeftClose } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
+// NB: lo stato vuoto della Command resta zen (solo titolo + orb + input).
+// BriefingPanel e useCommandBriefing sono stati rimossi (zero chiamanti) per un
+// futuro "next best action" ragionato.
+
+const CommandPage = () => {
+  const state = useCommandState();
+  const conv = useConversation();
+  const governance = useGovernance(state.activeToolKey ?? undefined);
+  const voiceOut = useVoiceOutput();
+  const [conversationsCollapsed, setConversationsCollapsed] = useState(true);
+
+  const submit = useCommandSubmit({
+    addMessage: state.addMessage,
+    setMessages: state.setMessages,
+    setCanvas: state.setCanvas,
+    setFlowPhase: state.setFlowPhase,
+    setShowTools: state.setShowTools,
+    setToolPhase: state.setToolPhase,
+    setChainHighlight: state.setChainHighlight,
+    setExecSteps: state.setExecSteps,
+    setExecProgress: state.setExecProgress,
+    setLiveResult: state.setLiveResult,
+    setPendingApproval: state.setPendingApproval,
+    setPlanState: state.setPlanState,
+    setActiveToolKey: state.setActiveToolKey,
+    setVoiceSpeaking: state.setVoiceSpeaking,
+    resetForNewMessage: state.resetForNewMessage,
+    ts: state.ts,
+    governance,
+    ttsSpeak: (text: string) => voiceOut.speak(text),
+    messages: state.messages,
+    queryContext: state.queryContext,
+    setQueryContext: state.setQueryContext,
+    // Persistent multi-turn memory: every user/assistant turn is appended to
+    // the DB-backed conversation, and the planner sees the FULL history (not
+    // just the last 6 RAM messages) on the next prompt.
+    persistedMessages: conv.messages,
+    persistMessage: conv.addMessage,
+  });
+
+  const voice = useVoiceInput({
+    onTranscript: (text) => state.setInput(text),
+    onAutoSubmit: (text) => {
+      state.setInput("");
+      voiceOut.prime();
+      void submit.sendMessage(text);
+    },
+    silenceMs: 2000,
+    lang: "it-IT",
+  });
+
+  const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
+
+  useEffect(() => {
+    if (voice.error) sonnerToast.error(voice.error);
+  }, [voice.error]);
+
+  // AUTO-PRIME audio sulla PRIMA interazione utente con la pagina (qualsiasi
+  // gesto: click, tap, tasto). Necessario perché l'auto-submit del mic
+  // (silence-detection) chiama submit.sendMessage SENZA gesto sincrono, e
+  // senza un prime() preventivo il browser blocca audio.play() con
+  // NotAllowedError → la voce sembra "morta". Idempotente.
+  useEffect(() => {
+    let primed = false;
+    const handler = () => {
+      if (primed) return;
+      primed = true;
+      try { voiceOut.prime(); } catch { /* ignore */ }
+      window.removeEventListener("pointerdown", handler, true);
+      window.removeEventListener("keydown", handler, true);
+      window.removeEventListener("touchstart", handler, true);
+    };
+    window.addEventListener("pointerdown", handler, true);
+    window.addEventListener("keydown", handler, true);
+    window.addEventListener("touchstart", handler, true);
+    return () => {
+      window.removeEventListener("pointerdown", handler, true);
+      window.removeEventListener("keydown", handler, true);
+      window.removeEventListener("touchstart", handler, true);
+    };
+  }, [voiceOut]);
+
+  useEffect(() => {
+    state.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [state.messages, state.chatEndRef]);
+
+  // TTS: read ONLY the conversational commentary produced by the "Direttore"
+  // (i.e. the message that comments on the actual result). Skip technical
+  // chatter from "Automation", "Orchestratore", "Oracolo", "Communication",
+  // etc. — the user does not want the assistant to read step recaps like
+  // "🔧 Ricerca AI · 383".
+  useEffect(() => {
+    const last = state.messages[state.messages.length - 1];
+    if (!last || last.role !== "assistant" || last.thinking) return;
+    if (last.agentName !== "Direttore") return;
+    const spoken = (last.spokenSummary ?? "").trim();
+    if (spoken) {
+      voiceOut.speak(spoken);
+      return;
+    }
+    if (!last.content || !last.content.trim()) return;
+    const clean = last.content
+      .replace(/[*_`#>]/g, "")
+      .replace(/\n+/g, ". ")
+      .trim()
+      .slice(0, 200);
+    voiceOut.speak(clean);
+     
+  }, [state.messages.length]);
+
+  // Rehydrate visible chat ONLY when the user explicitly loads a conversation
+  // from the sidebar. Do NOT rehydrate during normal message persistence:
+  // DB writes are async and can arrive after the live AI answer, otherwise they
+  // wipe the RAM thread and make assistant messages disappear.
+  const lastRehydratedConvIdRef = useRef<string | null>(null);
+  const pendingConversationLoadRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = conv.conversationId;
+    // Conversation cleared (new conversation): reset the marker so a future
+    // resume can rehydrate again.
+    if (!id) {
+      lastRehydratedConvIdRef.current = null;
+      pendingConversationLoadRef.current = null;
+      return;
+    }
+    if (pendingConversationLoadRef.current !== id) return;
+    if (conv.loading) return;
+    // Already rehydrated this conversation — do nothing on subsequent
+    // message appends (those are already in RAM via addMessage).
+    if (lastRehydratedConvIdRef.current === id) return;
+
+    lastRehydratedConvIdRef.current = id;
+    pendingConversationLoadRef.current = null;
+
+    const visible: Message[] = conv.messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m, idx) => ({
+        id: idx + 1,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date(m.created_at).toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        agentName: m.role === "assistant" ? "Direttore" : undefined,
+      }));
+    state.setMessages(visible);
+
+    const last = [...conv.messages]
+      .reverse()
+      .find((m) => m.role === "tool" && m.tool_result);
+    if (last?.tool_result) {
+      const result = last.tool_result as ToolResult;
+      state.setLiveResult(result);
+      const kind = result.kind;
+      if (kind === "table") state.setCanvas("live-table");
+      else if (kind === "card-grid") state.setCanvas("live-card-grid");
+      else if (kind === "timeline") state.setCanvas("live-timeline");
+      else if (kind === "flow") state.setCanvas("live-flow");
+      else if (kind === "composer") state.setCanvas("live-composer");
+      else if (kind === "report") state.setCanvas("live-report");
+    }
+     
+  }, [conv.conversationId, conv.messages.length, conv.loading]);
+
+  const handleSend = (text?: string) => {
+    const content = (text ?? state.input).trim();
+    if (!content) return;
+    // Sblocca l'autoplay del browser dentro al gesto utente: senza questo
+    // i successivi audio.play() chiamati da useEffect (post-await fetch)
+    // vengono rifiutati con NotAllowedError e la voce sembra "rotta".
+    voiceOut.prime();
+    state.setInput("");
+    void submit.sendMessage(content);
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
+      <PageTitleHeader
+        icon={CommandIcon}
+        title="Command"
+        subtitle="Orchestratore conversazionale"
+        right={
+          <>
+            <button
+              type="button"
+              onClick={() => setConversationsCollapsed((value) => !value)}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+              title={conversationsCollapsed ? "Mostra conversazioni" : "Nascondi conversazioni"}
+              aria-label={conversationsCollapsed ? "Mostra conversazioni" : "Nascondi conversazioni"}
+            >
+              {conversationsCollapsed ? (
+                <PanelLeft className="h-3.5 w-3.5" />
+              ) : (
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <CommandPageHeader
+              flowPhase={state.flowPhase}
+              lang={state.lang}
+              onLangChange={() => state.setLang(state.lang === "it" ? "en" : "it")}
+              onOpenTraceConsole={() => window.dispatchEvent(new CustomEvent("trace-console-open"))}
+            />
+          </>
+        }
+      />
+      <CommandPageBackground />
+
+      <div className="flex-1 flex overflow-hidden relative z-10">
+        <ConversationSidebar
+          conversations={conv.conversations}
+          activeId={conv.conversationId}
+          collapsed={conversationsCollapsed}
+          onSelect={(id) => {
+            state.setCanvas(null);
+            state.setLiveResult(null);
+            state.setFlowPhase("idle");
+            pendingConversationLoadRef.current = id;
+            void conv.loadConversation(id);
+          }}
+          onNew={() => {
+            conv.newConversation();
+            pendingConversationLoadRef.current = null;
+            state.setMessages([]);
+            state.setCanvas(null);
+            state.setFlowPhase("idle");
+          }}
+          onArchive={(id) => conv.archive(id)}
+        />
+        <div
+          className={`flex-1 flex flex-col transition-all duration-700 ease-out ${
+            state.canvas ? "max-w-[50%]" : ""
+          }`}
+        >
+          {isEmpty ? (
+            <CommandHistory
+              messages={[]}
+              isEmpty
+              quickPrompts={[]}
+              onQuickPrompt={(p) => handleSend(p)}
+              chatEndRef={state.chatEndRef}
+            />
+          ) : (
+            <CommandThread
+              messages={state.messages}
+              activeToolKey={state.activeToolKey}
+              showTools={state.showTools}
+              flowPhase={state.flowPhase}
+              toolPhase={state.toolPhase}
+              chainHighlight={state.chainHighlight}
+              planState={state.planState}
+              execSteps={state.execSteps}
+              execProgress={state.execProgress}
+              governance={governance}
+              chatEndRef={state.chatEndRef}
+              onCancel={() => submit.handleCancel()}
+              onApproveStep={() => {
+                if (!state.planState) return;
+                const lastUser = [...state.messages].reverse().find((m: Message) => m.role === "user");
+                void submit.handleApproveStep(state.planState, lastUser?.content ?? "");
+              }}
+              onSuggestedAction={(prompt) => handleSend(prompt)}
+            />
+          )}
+
+          <VoicePresence
+            active={voiceOut.speaking || voice.listening}
+            listening={voice.listening && !voice.speaking}
+            speaking={voice.speaking || voiceOut.speaking}
+          />
+
+          <CommandInput
+            input={state.input}
+            onInputChange={state.setInput}
+            onSend={() => handleSend()}
+            onVoiceToggle={() => voice.toggle()}
+            onVolumeMute={() => voiceOut.toggleMute()}
+            inputFocused={state.inputFocused}
+            onFocus={() => state.setInputFocused(true)}
+            onBlur={() => state.setInputFocused(false)}
+            voiceSpeaking={voiceOut.speaking}
+            voiceListening={voice.listening}
+            voiceSupported={voice.supported}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          />
+        </div>
+
+        <CommandOutput
+          canvas={state.canvas}
+          liveResult={state.liveResult}
+          activeScenarioKey={state.activeToolKey}
+          onClose={() => {
+            state.setCanvas(null);
+            state.setLiveResult(null);
+          }}
+          selectedIds={state.selectedIds}
+          onToggleId={state.toggleSelected}
+          onSelectAll={state.selectAll}
+          onClearSelection={state.clearSelection}
+          onBulkAction={(action: BulkAction, ids: string[]) => {
+            if (ids.length === 0) {
+              sonnerToast.info("Seleziona almeno un elemento");
+              return;
+            }
+            const prompt = action.promptTemplate.replace("{ids}", ids.join(", "));
+            state.clearSelection();
+            handleSend(prompt);
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default CommandPage;
+export { CommandPage };

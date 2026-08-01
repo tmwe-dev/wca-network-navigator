@@ -5,12 +5,12 @@
 // - No execCommand — uses Selection API + InputEvent
 // ══════════════════════════════════════════════════
 
-var AILearn = (function () {
-  var CACHE_PREFIX = "li_dom_schema_";
-  var CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours
-  var MAX_FAILURES = 3;
-  var _learning = false;
-  var _failureCount = 0;
+var AILearn = globalThis.AILearn || (function () {
+  const CACHE_PREFIX = "li_dom_schema_";
+  const CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours
+  const MAX_FAILURES = 3;
+  let _learning = false;
+  let _failureCount = 0;
 
   // ── Composite cache key ──
   function cacheKey(pageType) {
@@ -19,22 +19,22 @@ var AILearn = (function () {
 
   async function getCached(pageType) {
     try {
-      var key = cacheKey(pageType);
-      var data = await chrome.storage.local.get(key);
+      const key = cacheKey(pageType);
+      const data = await chrome.storage.local.get(key);
       if (data && data[key]) {
-        var schema = data[key];
+        const schema = data[key];
         if (schema.learnedAt && Date.now() - schema.learnedAt < CACHE_TTL) {
           return schema;
         }
       }
-    } catch (_) {}
+    } catch (err) { console.debug("[LI Learn]", err?.message); }
     return null;
   }
 
   async function saveSchema(schema, pageType) {
     schema.learnedAt = Date.now();
     schema.pageType = pageType || "profile";
-    var obj = {};
+    const obj = {};
     obj[cacheKey(pageType)] = schema;
     await chrome.storage.local.set(obj);
     _failureCount = 0; // reset on successful learn
@@ -46,7 +46,7 @@ var AILearn = (function () {
       await chrome.storage.local.remove(cacheKey(pageType));
     } else {
       // Clear all schema keys
-      var keys = ["profile", "messaging", "search", "inbox"].map(function (t) { return cacheKey(t); });
+      const keys = ["profile", "messaging", "search", "inbox"].map(function (t) { return cacheKey(t); });
       await chrome.storage.local.remove(keys);
     }
   }
@@ -66,7 +66,7 @@ var AILearn = (function () {
   // ── DOM snapshot capture (injected into page) ──
   function captureDomSnapshot() {
     try {
-      var snapshot = {
+      const snapshot = {
         url: window.location.href,
         title: document.title,
         lang: document.documentElement.lang || navigator.language || "unknown",
@@ -81,8 +81,8 @@ var AILearn = (function () {
         htmlSamples: {},
       };
 
-      var testIds = document.querySelectorAll("[data-testid]");
-      for (var i = 0; i < Math.min(testIds.length, 50); i++) {
+      const testIds = document.querySelectorAll("[data-testid]");
+      for (let i = 0; i < Math.min(testIds.length, 50); i++) {
         snapshot.dataTestIds.push({
           id: testIds[i].getAttribute("data-testid"),
           tag: testIds[i].tagName.toLowerCase(),
@@ -90,8 +90,8 @@ var AILearn = (function () {
         });
       }
 
-      var ariaEls = document.querySelectorAll("[aria-label]");
-      for (var j = 0; j < Math.min(ariaEls.length, 50); j++) {
+      const ariaEls = document.querySelectorAll("[aria-label]");
+      for (let j = 0; j < Math.min(ariaEls.length, 50); j++) {
         snapshot.ariaLabels.push({
           label: ariaEls[j].getAttribute("aria-label"),
           tag: ariaEls[j].tagName.toLowerCase(),
@@ -99,8 +99,8 @@ var AILearn = (function () {
         });
       }
 
-      var roleEls = document.querySelectorAll("[role]");
-      for (var k = 0; k < Math.min(roleEls.length, 50); k++) {
+      const roleEls = document.querySelectorAll("[role]");
+      for (let k = 0; k < Math.min(roleEls.length, 50); k++) {
         snapshot.roles.push({
           role: roleEls[k].getAttribute("role"),
           tag: roleEls[k].tagName.toLowerCase(),
@@ -109,8 +109,8 @@ var AILearn = (function () {
         });
       }
 
-      var headings = document.querySelectorAll("h1, h2, h3");
-      for (var h = 0; h < Math.min(headings.length, 20); h++) {
+      const headings = document.querySelectorAll("h1, h2, h3");
+      for (let h = 0; h < Math.min(headings.length, 20); h++) {
         snapshot.headings.push({
           level: headings[h].tagName,
           text: (headings[h].textContent || "").trim().substring(0, 100),
@@ -118,8 +118,8 @@ var AILearn = (function () {
         });
       }
 
-      var buttons = document.querySelectorAll("button");
-      for (var b = 0; b < Math.min(buttons.length, 30); b++) {
+      const buttons = document.querySelectorAll("button");
+      for (let b = 0; b < Math.min(buttons.length, 30); b++) {
         if (buttons[b].offsetParent === null) continue;
         snapshot.buttons.push({
           text: (buttons[b].textContent || "").trim().substring(0, 60),
@@ -128,8 +128,8 @@ var AILearn = (function () {
         });
       }
 
-      var textboxes = document.querySelectorAll("[contenteditable='true'], textarea, input[type='text']");
-      for (var t = 0; t < Math.min(textboxes.length, 10); t++) {
+      const textboxes = document.querySelectorAll("[contenteditable='true'], textarea, input[type='text']");
+      for (let t = 0; t < Math.min(textboxes.length, 10); t++) {
         snapshot.textboxes.push({
           tag: textboxes[t].tagName.toLowerCase(),
           role: textboxes[t].getAttribute("role") || "",
@@ -138,14 +138,14 @@ var AILearn = (function () {
         });
       }
 
-      var areas = {
+      const areas = {
         navBar: "nav, header, [role='banner']",
         mainContent: "main, [role='main']",
         sidebar: "aside, [role='complementary']",
         messageOverlay: "[class*='msg-overlay'], [class*='messaging']",
       };
-      for (var area in areas) {
-        var el = document.querySelector(areas[area]);
+      for (const area in areas) {
+        const el = document.querySelector(areas[area]);
         if (el) snapshot.htmlSamples[area] = el.outerHTML.substring(0, 1500);
       }
 
@@ -161,39 +161,65 @@ var AILearn = (function () {
     _learning = true;
 
     try {
-      var snapResults = await chrome.scripting.executeScript({
+      const snapResults = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: captureDomSnapshot,
       });
-      var snapshot = snapResults[0] && snapResults[0].result;
+      const snapshot = snapResults[0] && snapResults[0].result;
       if (!snapshot || snapshot.error) {
         _learning = false;
         return null;
       }
 
-      var response = await fetch(supabaseUrl + "/functions/v1/linkedin-ai-extract", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": supabaseKey,
-          "Authorization": "Bearer " + supabaseKey,
-        },
-        body: JSON.stringify({
-          mode: "learnDom",
-          pageType: pageType || "profile",
-          snapshot: snapshot,
-        }),
-      });
+      let bridgeResp = null;
 
-      if (!response.ok) {
-        console.warn("[AI-Learn] Edge function returned", response.status);
+      // OPTIMUS V2 (N2): direct-first
+      if (supabaseUrl && supabaseKey) {
+        console.log("[AI-Learn] direct-first → linkedin-ai-extract");
+        try {
+          const directResp = await fetch(`${supabaseUrl}/functions/v1/linkedin-ai-extract`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+              "apikey": supabaseKey,
+            },
+            body: JSON.stringify({ mode: "learnDom", pageType: pageType || "profile", snapshot: snapshot }),
+          });
+          if (directResp.ok) {
+            const directData = await directResp.json();
+            bridgeResp = { success: true, data: directData };
+          } else {
+            console.warn("[AI-Learn] Direct HTTP", directResp.status);
+          }
+        } catch (directErr) {
+          console.warn("[AI-Learn] Direct failed:", directErr?.message);
+        }
+      }
+
+      // FALLBACK bridge
+      if (!bridgeResp && typeof AiBridge !== "undefined" && AiBridge.aiExtractRequest) {
+        try {
+          bridgeResp = await AiBridge.aiExtractRequest({
+            channel: "linkedin",
+            mode: "learnDom",
+            pageType: pageType || "profile",
+            snapshot: snapshot,
+          });
+        } catch (bridgeErr) {
+          console.warn("[AI-Learn] Bridge fallback failed:", bridgeErr?.message);
+        }
+      }
+
+      if (!bridgeResp || bridgeResp.success === false) {
+        console.warn("[AI-Learn] AI error:", bridgeResp && bridgeResp.error);
         _learning = false;
         return null;
       }
 
-      var data = await response.json();
+      const data = bridgeResp.data || {};
       if (data.schema) {
-        var schema = await saveSchema(data.schema, pageType);
+        const schema = await saveSchema(data.schema, pageType);
         console.log("[AI-Learn] ✅ Selectors learned for '" + pageType + "':", Object.keys(schema).length, "keys");
         _learning = false;
         return schema;
@@ -211,34 +237,34 @@ var AILearn = (function () {
   // ── Schema-based extraction (injected into page) ──
   function extractWithSchema(schema) {
     try {
-      var result = { name: null, headline: null, location: null, about: null, connectionStatus: "unknown" };
+      const result = { name: null, headline: null, location: null, about: null, connectionStatus: "unknown" };
 
       if (schema.nameSelector) {
-        var nameEl = document.querySelector(schema.nameSelector);
+        const nameEl = document.querySelector(schema.nameSelector);
         if (nameEl) result.name = nameEl.textContent.trim();
       }
       if (schema.headlineSelector) {
-        var hlEl = document.querySelector(schema.headlineSelector);
+        const hlEl = document.querySelector(schema.headlineSelector);
         if (hlEl) result.headline = hlEl.textContent.trim();
       }
       if (schema.locationSelector) {
-        var locEl = document.querySelector(schema.locationSelector);
+        const locEl = document.querySelector(schema.locationSelector);
         if (locEl) result.location = locEl.textContent.trim();
       }
       if (schema.aboutSelector) {
-        var aboutEl = document.querySelector(schema.aboutSelector);
+        const aboutEl = document.querySelector(schema.aboutSelector);
         if (aboutEl) result.about = aboutEl.textContent.trim();
       }
       if (schema.photoSelector) {
-        var photoEl = document.querySelector(schema.photoSelector);
+        const photoEl = document.querySelector(schema.photoSelector);
         if (photoEl && photoEl.src) result.photoUrl = photoEl.src;
       }
       if (schema.connectButtonSelector) {
-        var cb = document.querySelector(schema.connectButtonSelector);
+        const cb = document.querySelector(schema.connectButtonSelector);
         if (cb) result.connectionStatus = "not_connected";
       }
       if (schema.messageButtonSelector) {
-        var mb = document.querySelector(schema.messageButtonSelector);
+        const mb = document.querySelector(schema.messageButtonSelector);
         if (mb && !document.querySelector(schema.connectButtonSelector || "____")) result.connectionStatus = "connected";
       }
 
@@ -252,7 +278,7 @@ var AILearn = (function () {
   // ── Type message using Selection API (no execCommand) ──
   function typeMessageWithSchema(schema, messageText) {
     try {
-      var msgBox = null;
+      let msgBox = null;
       if (schema.messageInputSelector) {
         msgBox = document.querySelector(schema.messageInputSelector);
       }
@@ -264,17 +290,17 @@ var AILearn = (function () {
       msgBox.focus();
 
       // Clear and insert using Selection API
-      var sel = window.getSelection();
+      let sel = window.getSelection();
       if (sel) {
         sel.selectAllChildren(msgBox);
         sel.deleteFromDocument();
       }
-      var textNode = document.createTextNode(messageText);
+      const textNode = document.createTextNode(messageText);
       msgBox.appendChild(textNode);
       // Place cursor at end
       sel = window.getSelection();
       if (sel) {
-        var range = document.createRange();
+        const range = document.createRange();
         range.selectNodeContents(msgBox);
         range.collapse(false);
         sel.removeAllRanges();
@@ -282,7 +308,7 @@ var AILearn = (function () {
       }
       msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: messageText, bubbles: true }));
 
-      var sendBtn = null;
+      let sendBtn = null;
       if (schema.sendButtonSelector) {
         sendBtn = document.querySelector(schema.sendButtonSelector);
       }
@@ -305,7 +331,7 @@ var AILearn = (function () {
   // Use learned selectors to click Connect
   function clickConnectWithSchema(schema) {
     try {
-      var btn = null;
+      let btn = null;
       if (schema.connectButtonSelector) {
         btn = document.querySelector(schema.connectButtonSelector);
       }
@@ -336,3 +362,4 @@ var AILearn = (function () {
     clickConnectWithSchema: clickConnectWithSchema,
   };
 })();
+globalThis.AILearn = AILearn;

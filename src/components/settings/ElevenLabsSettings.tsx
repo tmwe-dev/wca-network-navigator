@@ -10,7 +10,12 @@ import { Volume2, Play, Settings2, Loader2, RefreshCw, Square, AlertCircle, Chec
 import { useUpdateSetting } from "@/hooks/useAppSettings";
 import { useAgents } from "@/hooks/useAgents";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { createLogger } from "@/lib/log";
+import { toRecord, toRecordOrNull } from "@/lib/records";
+import VoiceLanguageSelector, { VOICE_LANGUAGE_MAP } from "@/components/voice/VoiceLanguageSelector";
+
+const log = createLogger("ElevenLabsSettings");
 
 interface Voice {
   voice_id: string;
@@ -19,6 +24,39 @@ interface Voice {
   labels: Record<string, string>;
   preview_url: string | null;
   description: string | null;
+}
+
+type ApiStatus = "checking" | "ok" | "invalid_key" | "missing_key" | "error";
+
+const API_STATUSES: readonly ApiStatus[] = [
+  "checking", "ok", "invalid_key", "missing_key", "error",
+] as const;
+
+function parseApiStatus(value: unknown): ApiStatus {
+  return API_STATUSES.includes(value as ApiStatus) ? (value as ApiStatus) : "error";
+}
+
+/** Parser runtime: scarta le voci malformate invece di castare la risposta edge. */
+function parseVoices(value: unknown): Voice[] {
+  if (!Array.isArray(value)) return [];
+  const out: Voice[] = [];
+  for (const raw of value) {
+    const v = toRecordOrNull(raw);
+    if (!v || typeof v.voice_id !== "string" || typeof v.name !== "string") continue;
+    const labels: Record<string, string> = {};
+    for (const [k, lv] of Object.entries(toRecord(v.labels))) {
+      if (typeof lv === "string") labels[k] = lv;
+    }
+    out.push({
+      voice_id: v.voice_id,
+      name: v.name,
+      category: typeof v.category === "string" ? v.category : "premade",
+      labels,
+      preview_url: typeof v.preview_url === "string" ? v.preview_url : null,
+      description: typeof v.description === "string" ? v.description : null,
+    });
+  }
+  return out;
 }
 
 const ACCENT_FLAGS: Record<string, string> = {
@@ -66,10 +104,27 @@ interface ElevenLabsSettingsProps {
 export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettingsProps) {
   const [voices, setVoices] = useState<Voice[]>(FALLBACK_VOICES);
   const [loadingVoices, setLoadingVoices] = useState(false);
-  const [apiStatus, setApiStatus] = useState<"checking" | "ok" | "invalid_key" | "missing_key" | "error">("checking");
+  const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [customVoiceId, setCustomVoiceId] = useState(settings?.elevenlabs_custom_voice_id || "");
+  const [voiceLang, setVoiceLang] = useState<string>(settings?.elevenlabs_language || "it");
+
+  useEffect(() => {
+    if (settings?.elevenlabs_language) setVoiceLang(settings.elevenlabs_language);
+  }, [settings?.elevenlabs_language]);
+
+  const handleLangChange = (lang: string) => {
+    setVoiceLang(lang);
+    updateSetting.mutate({ key: "elevenlabs_language", value: lang });
+    const langEntry = VOICE_LANGUAGE_MAP[lang];
+    if (langEntry && !settings?.elevenlabs_custom_voice_id) {
+      updateSetting.mutate({ key: "elevenlabs_default_voice_id", value: langEntry.voiceId });
+      toast({ title: `Lingua vocale cambiata a ${langEntry.label}. Voce predefinita: ${langEntry.voiceName}` });
+    } else {
+      toast({ title: `Lingua vocale cambiata a ${langEntry?.label || lang}` });
+    }
+  };
 
   const selectedVoiceId = settings?.elevenlabs_default_voice_id || "";
   const ttsEnabled = settings?.elevenlabs_tts_enabled === "true";
@@ -82,11 +137,12 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   const loadVoices = async () => {
     setLoadingVoices(true);
     try {
-      const { data, error } = await supabase.functions.invoke("list-elevenlabs-voices");
-      if (error) throw error;
-      setApiStatus(data.status || "error");
-      if (data.voices?.length > 0) setVoices(data.voices);
-    } catch {
+      const data = await invokeEdge<Record<string, unknown>>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
+      setApiStatus(parseApiStatus(data.status));
+      const parsed = parseVoices(data.voices);
+      if (parsed.length > 0) setVoices(parsed);
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setApiStatus("error");
     } finally {
       setLoadingVoices(false);
@@ -164,6 +220,17 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
       </TabsList>
 
       <TabsContent value="voce" className="m-0 space-y-4">
+        {/* Language Select */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Lingua vocale</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs text-muted-foreground">La lingua determina la voce predefinita per TTS e il riconoscimento vocale (STT)</p>
+            <VoiceLanguageSelector value={voiceLang} onChange={handleLangChange} />
+          </CardContent>
+        </Card>
+
         {/* TTS Toggle */}
         <Card>
           <CardContent className="pt-4">
@@ -230,6 +297,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Esegui"
                 className="shrink-0 h-10 w-10"
                 disabled={!selectedVoiceId}
                 onClick={() => selectedVoiceId && playPreview(selectedVoiceId)}

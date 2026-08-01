@@ -1,23 +1,23 @@
 import { useState, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Trash2, FileText, FileSpreadsheet, Image, File, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
+import { useEmailTemplateAdmin } from "@/hooks/useEmailTemplateAdmin";
+import { removeTemplateFile, uploadTemplateFile, createTemplateSignedUrl } from "@/application/data/templatesStorage";
 
 const FILE_ICONS: Record<string, React.ReactNode> = {
-  pdf: <FileText className="w-8 h-8 text-red-500" />,
-  doc: <FileText className="w-8 h-8 text-blue-500" />,
-  docx: <FileText className="w-8 h-8 text-blue-500" />,
+  pdf: <FileText className="w-8 h-8 text-destructive" />,
+  doc: <FileText className="w-8 h-8 text-muted-foreground" />,
+  docx: <FileText className="w-8 h-8 text-muted-foreground" />,
   xls: <FileSpreadsheet className="w-8 h-8 text-emerald-500" />,
   xlsx: <FileSpreadsheet className="w-8 h-8 text-emerald-500" />,
-  png: <Image className="w-8 h-8 text-purple-500" />,
-  jpg: <Image className="w-8 h-8 text-purple-500" />,
-  jpeg: <Image className="w-8 h-8 text-purple-500" />,
+  png: <Image className="w-8 h-8 text-primary" />,
+  jpg: <Image className="w-8 h-8 text-primary" />,
+  jpeg: <Image className="w-8 h-8 text-primary" />,
 };
 
 const TEMPLATE_CATEGORIES = [
@@ -41,36 +41,24 @@ function formatSize(bytes: number) {
 }
 
 export default function TemplateManager() {
-  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadCategory, setUploadCategory] = useState("altro");
 
-  const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["email-templates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_templates")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const { templates, isLoading, createTemplate, deleteTemplate, invalidate: invalidateTemplates } = useEmailTemplateAdmin();
 
   const deleteMutation = useMutation({
     mutationFn: async (template: { id: string; file_url: string; file_name: string }) => {
       // Delete from storage
       const path = template.file_url.split("/templates/")[1];
       if (path) {
-        await supabase.storage.from("templates").remove([decodeURIComponent(path)]);
+        await removeTemplateFile(decodeURIComponent(path));
       }
       // Delete from db
-      const { error } = await supabase.from("email_templates").delete().eq("id", template.id);
-      if (error) throw error;
+      await deleteTemplate(template.id);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["email-templates"] });
+      invalidateTemplates();
       toast.success("Template eliminato");
     },
     onError: () => toast.error("Errore nell'eliminazione"),
@@ -84,27 +72,23 @@ export default function TemplateManager() {
     try {
       for (const file of Array.from(files)) {
         const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const { error: uploadError } = await supabase.storage
-          .from("templates")
-          .upload(safeName, file);
-        if (uploadError) throw uploadError;
+        await uploadTemplateFile(safeName, file);
 
-        const { data: urlData } = await supabase.storage.from("templates").createSignedUrl(safeName, 60 * 60 * 24 * 365);
+        const signedUrl = await createTemplateSignedUrl(safeName, 60 * 60 * 24 * 365);
 
-        const { error: dbError } = await supabase.from("email_templates").insert({
+        await createTemplate({
           name: file.name.replace(/\.[^/.]+$/, ""),
-          file_url: urlData?.signedUrl || safeName,
+          file_url: signedUrl || safeName,
           file_name: file.name,
           file_size: file.size,
           file_type: file.type || "application/octet-stream",
           category: uploadCategory,
-        } as any);
-        if (dbError) throw dbError;
+        });
       }
       toast.success(`${files.length} file caricati`);
-      qc.invalidateQueries({ queryKey: ["email-templates"] });
-    } catch (err: any) {
-      toast.error("Errore upload: " + (err.message || "Sconosciuto"));
+      invalidateTemplates();
+    } catch (err: unknown) {
+      toast.error("Errore upload: " + (err instanceof Error ? err.message : "Sconosciuto"));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";

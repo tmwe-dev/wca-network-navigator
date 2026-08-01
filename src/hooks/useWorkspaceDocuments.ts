@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createWorkspaceDoc, deleteWorkspaceDoc } from "@/data/workspaceDocs";
+import { uploadWorkspaceDocFile, createWorkspaceDocSignedUrl } from "@/data/workspaceDocsStorage";
+import { toRecordOrNull } from "@/lib/records";
 
 export interface WorkspaceDoc {
   id: string;
@@ -19,37 +21,27 @@ export function useWorkspaceDocuments() {
       const ext = file.name.split(".").pop() || "bin";
       const path = `${crypto.randomUUID()}.${ext}`;
 
-      const { error: uploadErr } = await supabase.storage
-        .from("workspace-docs")
-        .upload(path, file);
-      if (uploadErr) throw uploadErr;
+      await uploadWorkspaceDocFile(path, file);
 
-      const { data: urlData } = await supabase.storage
-        .from("workspace-docs")
-        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      const signedUrl = await createWorkspaceDocSignedUrl(path, 60 * 60 * 24 * 365);
 
-      const { data, error } = await supabase
-        .from("workspace_documents")
-        .insert({
+      const data = await toRecordOrNull(createWorkspaceDoc({
           file_name: file.name,
-          file_url: urlData?.signedUrl || path,
+          file_url: signedUrl || path,
           file_size: file.size,
-        } as any)
-        .select()
-        .single();
-      if (error) throw error;
+        }));
 
       const doc: WorkspaceDoc = {
-        id: (data as any).id,
-        file_name: (data as any).file_name,
-        file_url: (data as any).file_url,
-        file_size: (data as any).file_size,
+        id: String(data?.id ?? ""),
+        file_name: String(data?.file_name ?? file.name),
+        file_url: String(data?.file_url ?? path),
+        file_size: Number(data?.file_size ?? file.size),
       };
       setDocuments((prev) => [...prev, doc]);
       toast({ title: "Documento caricato", description: file.name });
       return doc;
-    } catch (err: any) {
-      toast({ title: "Errore upload", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore upload", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       return null;
     } finally {
       setUploading(false);
@@ -58,7 +50,7 @@ export function useWorkspaceDocuments() {
 
   const remove = async (docId: string) => {
     setDocuments((prev) => prev.filter((d) => d.id !== docId));
-    await supabase.from("workspace_documents").delete().eq("id", docId);
+    await deleteWorkspaceDoc(docId);
   };
 
   return { documents, uploading, upload, remove, setDocuments };

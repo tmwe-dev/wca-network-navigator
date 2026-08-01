@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useMemo, type ReactNode } from "react";
 import { useWorkspaceDocuments, type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import type { EmailQuality } from "@/components/workspace/QualitySelector";
@@ -34,6 +34,8 @@ interface MissionState {
   savePreset: (name: string, id?: string) => void;
   deletePreset: (id: string) => void;
   loadPreset: (preset: WorkspacePreset) => void;
+  context: string;
+  setContext: (v: string) => void;
   quality: EmailQuality;
   setQuality: (q: EmailQuality) => void;
   recipients: SelectedRecipient[];
@@ -55,13 +57,23 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [baseProposal, setBaseProposal] = useState("");
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [context, setContext] = useState("");
   const [quality, setQuality] = useState<EmailQuality>("standard");
   const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
 
   const addRecipient = (r: SelectedRecipient) => {
     setRecipients(prev => {
-      const key = r.contactId ? `${r.partnerId}-${r.contactId}` : r.partnerId;
-      if (prev.some(x => (x.contactId ? `${x.partnerId}-${x.contactId}` : x.partnerId) === key)) return prev;
+      // Dedupe primarily by email (stable identifier from any source).
+      // Fallback to partnerId+contactId when email is missing.
+      const newKey = r.email
+        ? `email:${r.email.toLowerCase()}`
+        : `pc:${r.partnerId || ""}-${r.contactId || ""}`;
+      if (prev.some(x => {
+        const xKey = x.email
+          ? `email:${x.email.toLowerCase()}`
+          : `pc:${x.partnerId || ""}-${x.contactId || ""}`;
+        return xKey === newKey;
+      })) return prev;
       return [...prev, r];
     });
   };
@@ -78,7 +90,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const loadPreset = (preset: WorkspacePreset) => {
     setGoal(preset.goal || "");
     setBaseProposal(preset.base_proposal || "");
-    setReferenceLinks(preset.reference_links || []);
+    setReferenceLinks((preset.reference_links as string[] | null) || []);
+    setContext((preset as Record<string, string>).context || "");
     setActivePresetId(preset.id);
   };
 
@@ -98,16 +111,18 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     if (activePresetId === id) setActivePresetId(null);
   };
 
+  const ctxValue = useMemo(() => ({
+    goal, setGoal, baseProposal, setBaseProposal,
+    referenceLinks, setReferenceLinks, context, setContext,
+    documents, uploading, upload, removeDocument: remove,
+    presets, activePresetId, setActivePresetId,
+    savePreset, deletePreset, loadPreset,
+    quality, setQuality,
+    recipients, addRecipient, removeRecipient: removeRecipientByIdx, clearRecipients,
+  }), [goal, baseProposal, referenceLinks, context, documents, uploading, upload, remove, presets, activePresetId, savePreset, deletePreset, loadPreset, quality, recipients, addRecipient, clearRecipients]);
+
   return (
-    <MissionCtx.Provider value={{
-      goal, setGoal, baseProposal, setBaseProposal,
-      referenceLinks, setReferenceLinks,
-      documents, uploading, upload, removeDocument: remove,
-      presets, activePresetId, setActivePresetId,
-      savePreset, deletePreset, loadPreset,
-      quality, setQuality,
-      recipients, addRecipient, removeRecipient: removeRecipientByIdx, clearRecipients,
-    }}>
+    <MissionCtx.Provider value={ctxValue}>
       {children}
     </MissionCtx.Provider>
   );

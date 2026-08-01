@@ -1,0 +1,64 @@
+/**
+ * DAL — Queries for the deprecated useWhatsAppBackfill (kept for reference only).
+ */
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+export interface BackfillCursorRow {
+  oldest_message_external_id: string | null;
+  oldest_message_at: string | null;
+  reached_beginning: boolean | null;
+  messages_imported: number | null;
+}
+
+export async function getChannelBackfillCursor(externalChatId: string): Promise<BackfillCursorRow | null> {
+  const { data } = await supabase
+    .from("channel_backfill_state")
+    .select("oldest_message_external_id, oldest_message_at, reached_beginning, messages_imported")
+    .eq("channel", "whatsapp")
+    .eq("external_chat_id", externalChatId)
+    .maybeSingle();
+  return (data as BackfillCursorRow | null) ?? null;
+}
+
+export async function upsertChannelMessageIgnoreDup(row: Database["public"]["Tables"]["channel_messages"]["Insert"]): Promise<{ error: { message: string } | null; status: number }> {
+  const { error, status } = await supabase
+    .from("channel_messages")
+    .upsert(row, { onConflict: "message_id_external", ignoreDuplicates: true });
+  return { error, status };
+}
+
+export async function upsertChannelBackfillState(row: Database["public"]["Tables"]["channel_backfill_state"]["Insert"]): Promise<void> {
+  const { error } = await supabase
+    .from("channel_backfill_state")
+    .upsert(row, { onConflict: "operator_id,channel,external_chat_id" });
+  if (error) throw error;
+}
+
+/** Operatore associato a un utente, per il flusso di backfill WhatsApp deprecato. */
+export async function findOperatorIdByUserId(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("operators")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+export interface BackfillStateStatusRow {
+  reached_beginning: boolean | null;
+  oldest_message_at: string | null;
+  messages_imported: number | null;
+}
+
+/** Righe di stato backfill per un canale intero (WhatsApp/LinkedIn), per il riepilogo cursore persistente. */
+export async function findBackfillStateRowsByChannel(
+  channel: "whatsapp" | "linkedin",
+): Promise<BackfillStateStatusRow[] | null> {
+  const { data, error } = await supabase
+    .from("channel_backfill_state")
+    .select("reached_beginning, oldest_message_at, messages_imported")
+    .eq("channel", channel);
+  if (error || !data?.length) return null;
+  return data as BackfillStateStatusRow[];
+}

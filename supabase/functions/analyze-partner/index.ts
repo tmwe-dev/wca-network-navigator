@@ -1,9 +1,10 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { resolveCaller } from "../_shared/ownership.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
+import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
 
 const VALID_SERVICES = [
   'air_freight', 'ocean_fcl', 'ocean_lcl', 'road_freight', 'rail_freight',
@@ -15,16 +16,8 @@ const VALID_PARTNER_TYPES = [
   'freight_forwarder', 'customs_broker', 'carrier', 'nvocc', '3pl', 'courier'
 ]
 
-// ── Credit helpers ──
-async function getUserId(req: Request, supabase: any): Promise<string | null> {
-  const auth = req.headers.get('Authorization')
-  if (!auth) return null
-  const token = auth.replace('Bearer ', '')
-  const { data } = await supabase.auth.getUser(token)
-  return data?.user?.id || null
-}
-
-async function isByok(userId: string, supabase: any): Promise<boolean> {
+// deno-lint-ignore no-explicit-any
+async function isByok(userId: string, supabase: AnySupabaseClient): Promise<boolean> {
   const { data } = await supabase
     .from('user_api_keys')
     .select('api_key')
@@ -35,7 +28,8 @@ async function isByok(userId: string, supabase: any): Promise<boolean> {
   return !!data?.api_key
 }
 
-async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: any) {
+// deno-lint-ignore no-explicit-any
+async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: AnySupabaseClient) {
   const inputCost = Math.ceil(usage.prompt_tokens / 1000 * 1)
   const outputCost = Math.ceil(usage.completion_tokens / 1000 * 2)
   const total = inputCost + outputCost
@@ -55,20 +49,22 @@ async function consumeCredits(userId: string, usage: { prompt_tokens: number; co
     operation: 'ai_call',
     description: `analyze-partner: ${usage.prompt_tokens} in + ${usage.completion_tokens} out`,
   })
-  console.log(`Credits consumed: ${total} (balance: ${credits.balance - total})`)
+  
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ success: false, error: 'AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -76,27 +72,30 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // ── Auth & BYOK check ──
-    const userId = await getUserId(req, supabase)
-    const byok = userId ? await isByok(userId, supabase) : false
+    // ── Auth required (user JWT or service-role w/ body.user_id). No anon. ──
+    const caller = await resolveCaller(req, dynCors)
+    if (caller instanceof Response) return caller
+    const userId = caller.userId
+    const byok = await isByok(userId, supabase)
 
     // ── Pre-check credits ──
-    if (userId && !byok) {
+    if (!byok) {
       const { data: credits } = await supabase.from('user_credits').select('balance').eq('user_id', userId).single()
       if (!credits || credits.balance < 5) {
         return new Response(
           JSON.stringify({ success: false, error: 'Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 402, headers: { ...dynCors, 'Content-Type': 'application/json' } }
         )
       }
     }
 
-    const { partnerId, profileData } = await req.json()
+    const parsed = caller.bodyJson ?? (await req.json().catch(() => ({})))
+    const { partnerId, profileData } = parsed as { partnerId?: string; profileData?: Record<string, unknown> }
 
     if (!partnerId || !profileData) {
       return new Response(
         JSON.stringify({ success: false, error: 'partnerId and profileData required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -129,20 +128,13 @@ Company: ${profileData.company_name}
 City: ${profileData.city}, ${profileData.country_name}
 Profile: ${profileData.profile_description || 'No description available'}
 Certifications: ${(profileData.certifications || []).join(', ') || 'None'}
-Networks: ${(profileData.networks || []).map((n: any) => n.name).join(', ') || 'None'}
+Networks: ${(profileData.networks || []).map((n: Record<string, unknown>) => n.name).join(', ') || 'None'}
 Branch offices: ${branchCount}
 Gold Medallion: ${profileData.gold_medallion || false}
 
 IMPORTANT: Only use service codes from the exact list above. Be conservative - only assign services clearly indicated by the profile.`
 
-    console.log('Calling AI gateway for partner analysis...')
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'You are a logistics classification expert. Always respond with valid JSON.' },
@@ -187,28 +179,25 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
           },
         }],
         tool_choice: { type: 'function', function: { name: 'classify_partner' } },
-      }),
-    })
+      })
 
     if (!response.ok) {
-      const errText = await response.text()
-      console.error('AI error:', response.status, errText)
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Rate limit exceeded, try again later' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...dynCors, 'Content-Type': 'application/json' } }
         )
       }
       return new Response(
         JSON.stringify({ success: false, error: `AI error: ${response.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
     const aiData = await response.json()
 
     // ── Consume credits ──
-    if (userId && !byok && aiData.usage) {
+    if (!byok && aiData.usage) {
       await consumeCredits(userId, {
         prompt_tokens: aiData.usage.prompt_tokens || 0,
         completion_tokens: aiData.usage.completion_tokens || 0,
@@ -218,15 +207,13 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0]
     
     if (!toolCall?.function?.arguments) {
-      console.error('No tool call in response:', JSON.stringify(aiData))
       return new Response(
         JSON.stringify({ success: false, error: 'AI returned no classification' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
     const classification = JSON.parse(toolCall.function.arguments)
-    console.log(`Classification for ${partnerId}:`, JSON.stringify(classification))
 
     // Update partner with summary, type, and rating
     await supabase
@@ -259,13 +246,12 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
         success: true,
         classification,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   }
 })

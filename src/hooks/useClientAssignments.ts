@@ -1,15 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  findAllClientAssignmentsForUser,
+  findClientAssignmentsByAgent,
+  findClientAssignment,
+  insertClientAssignmentReturning,
+} from "@/data/clientAssignments";
 
-export interface ClientAssignment {
-  id: string;
-  source_id: string;
-  source_type: string;
-  agent_id: string;
-  manager_id: string | null;
-  assigned_at: string;
-  user_id: string;
-}
+type ClientAssignmentRow = Database["public"]["Tables"]["client_assignments"]["Row"];
+
+export type ClientAssignment = ClientAssignmentRow;
 
 const QUERY_KEY = ["client-assignments"] as const;
 
@@ -18,15 +20,11 @@ export function useClientAssignments() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("client_assignments" as any)
-        .select("*")
-        .eq("user_id", user.id);
-      if (error) throw error;
-      return (data ?? []) as unknown as ClientAssignment[];
+      return findAllClientAssignmentsForUser(user.id);
     },
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -52,32 +50,20 @@ export function useAssignClient() {
       agentId: string;
       managerId?: string;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       // Check if already assigned
-      const { data: existing } = await supabase
-        .from("client_assignments" as any)
-        .select("id")
-        .eq("source_id", params.sourceId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
+      const existing = await findClientAssignment(params.sourceId, user.id);
       if (existing) return existing; // already assigned
 
-      const { data, error } = await supabase
-        .from("client_assignments" as any)
-        .insert({
-          source_id: params.sourceId,
-          source_type: params.sourceType,
-          agent_id: params.agentId,
-          manager_id: params.managerId || null,
-          user_id: user.id,
-        } as any)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      return insertClientAssignmentReturning({
+        source_id: params.sourceId,
+        source_type: params.sourceType,
+        agent_id: params.agentId,
+        manager_id: params.managerId || null,
+        user_id: user.id,
+      });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
   });
@@ -86,18 +72,12 @@ export function useAssignClient() {
 /** Get all clients assigned to a specific agent */
 export function useAgentClients(agentId: string | undefined) {
   return useQuery({
-    queryKey: ["agent-clients", agentId],
+    queryKey: queryKeys.agents.clients(agentId),
     enabled: !!agentId,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("client_assignments" as any)
-        .select("*")
-        .eq("agent_id", agentId!)
-        .eq("user_id", user.id);
-      if (error) throw error;
-      return (data ?? []) as unknown as ClientAssignment[];
+      return findClientAssignmentsByAgent(agentId!, user.id);
     },
   });
 }

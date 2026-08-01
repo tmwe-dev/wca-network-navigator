@@ -1,76 +1,108 @@
 import { Checkbox } from "@/components/ui/checkbox";
+import { LeadScoreBadge } from "./LeadScoreBadge";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles, Handshake,
-  Globe2, Linkedin, Briefcase
-} from "lucide-react";
-import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { AlertTriangle, MessageCircle, User, Sparkles, Handshake, Plane, Search } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
-import { InteractionMarkers, type InteractionMarker } from "./InteractionMarkers";
+import { HoldingPatternBadge } from "@/components/shared/HoldingPatternBadge";
 import { clean, getContactQuality } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS, capitalizeLabel } from "./contactGridLayout";
+import { ContactActionMenu } from "@/components/cockpit/ContactActionMenu";
+import { adaptImportedContact } from "@/lib/contactActionAdapter";
+import type { ImportedContactRecord } from "@/lib/contactActionAdapter";
+import { EntityRowFlag } from "@/v2/ui/atoms/EntityRowFlag";
+import { ChannelIcons } from "@/v2/ui/atoms/ChannelIcons";
+import { toRecord } from "@/lib/records";
 
 interface ContactCardProps {
-  c: any;
+  c: ImportedContactRecord;
   isActive: boolean;
   isSelected: boolean;
   hasBusinessCard?: boolean;
   onSelect: () => void;
   onToggle: () => void;
+  onViewDetail?: () => void;
   index?: number;
-  interactions?: InteractionMarker[];
+  onFilterClick?: (field: string, value: string) => void;
 }
 
-/** Returns true if the contact is "in holding pattern" (not new) */
 function isInHoldingPattern(status: string | undefined): boolean {
   return !!status && status !== "new";
 }
 
-export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, index, interactions }: ContactCardProps) {
+function Filterable({ field, value, children, onFilterClick, className }: {
+  field: string; value: string | null; children: React.ReactNode;
+  onFilterClick?: (field: string, value: string) => void; className?: string;
+}) {
+  if (!value || !onFilterClick) return <span className={className}>{children}</span>;
+  return (
+    <span
+      className={cn(className, "cursor-pointer hover:underline hover:text-primary transition-colors")}
+      onClick={(e) => { e.stopPropagation(); onFilterClick(field, value); }}
+      title={`Filtra: ${value}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect: _onSelect, onToggle, onViewDetail, index, onFilterClick }: ContactCardProps) {
   const { open: openDrawer } = useContactDrawer();
   const cName = clean(c.company_name);
   const cContact = clean(c.name);
   const cPosition = clean(c.position);
   const cCity = clean(c.city);
   const cOrigin = clean(c.origin);
-  const quality = getContactQuality(c);
+  const cCountry = clean(c.country);
+  const quality = getContactQuality(toRecord(c));
   const isAiProcessed = !!c.deep_search_at;
   const cCompanyAlias = clean(c.company_alias);
   const cContactAlias = clean(c.contact_alias);
-  const displayCompany = cCompanyAlias || cName || "Senza azienda";
+  const rawCompany = cCompanyAlias || cName;
+  const displayCompany = rawCompany ? rawCompany.toUpperCase() : "—";
   const displayContact = cContactAlias || cContact;
+  const isWcaMatched = !!c.wca_partner_id;
+  const cEmail = clean(c.email);
 
-  const ed = c.enrichment_data;
-  const linkedinUrl = ed?.linkedin_url;
-  const companyWebsite = ed?.company_website;
-  const inHolding = isInHoldingPattern(c.lead_status);
-  const lastDate = c.last_interaction_at;
+  const ed = (c.enrichment_data ?? {}) as Record<string, unknown>;
+  const linkedinUrl = ed?.linkedin_url as string | undefined;
+  const companyWebsite = ed?.company_website as string | undefined;
+  const phone = clean((c as { phone?: string | null }).phone ?? null);
+  const whatsapp = !!(ed?.whatsapp_number || ed?.whatsapp);
+  const inHolding = isInHoldingPattern(c.lead_status ?? undefined);
+
+  const handleRowClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-no-filter]')) return;
+    if (rawCompany && onFilterClick) {
+      onFilterClick("company", rawCompany);
+    }
+  };
 
   return (
-    <div className="flex flex-col">
+    <div
+      className={cn(
+        "relative cursor-pointer border-b border-border/40 transition-colors text-xs",
+        "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l",
+        isWcaMatched ? "before:bg-primary/40" : "before:bg-transparent",
+        isActive
+          ? "bg-primary/15"
+          : isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+      )}
+      onClick={handleRowClick}
+      onDoubleClick={() => openDrawer({ sourceType: "contact", sourceId: c.id })}
+    >
+      {/* Row 1 */}
       <div
-        className={cn(
-          "group flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer border-b border-border/30 transition-colors",
-          inHolding && "border-l-2 border-l-muted-foreground/40",
-          isActive
-            ? isAiProcessed
-              ? "bg-amber-500/15"
-              : "bg-primary/15"
-            : isSelected
-            ? "bg-primary/5"
-            : "hover:bg-muted/40"
-        )}
-        onClick={onSelect}
-        onDoubleClick={() => openDrawer({ sourceType: "contact", sourceId: c.id })}
+        className={cn(CONTACT_GRID_CLASS, "px-2 pt-2 pb-0.5")}
+        style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
-        {/* Index + Checkbox */}
-        <div className="flex items-center gap-1 shrink-0 w-[42px]">
+        {/* Col 1: Index + Checkbox */}
+        <div className="flex items-center gap-1" data-no-filter>
           {typeof index === "number" && (
-            <span className="text-[9px] text-muted-foreground font-mono w-[18px] text-right">#{index + 1}</span>
+            <span className="text-[11px] text-primary font-mono font-bold w-[20px] text-right">#{index + 1}</span>
           )}
           <Checkbox
             checked={isSelected}
@@ -80,87 +112,124 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           />
         </div>
 
-        {/* Company — fixed width */}
-        <div className="flex items-center gap-1 w-[180px] shrink-0 min-w-0">
-          <Building2 className="w-3 h-3 text-primary shrink-0" />
-          <span className={`font-semibold truncate ${!cName && !cCompanyAlias ? "text-muted-foreground italic" : "text-foreground"}`}>
-            {displayCompany}
-          </span>
-          {isAiProcessed && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
-          {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
+        {/* Col 2: Bandiera grande + codice paese */}
+        <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="flex">
+          <EntityRowFlag countryCode={cCountry} size="lg" />
+        </Filterable>
+
+        {/* Col 3: Company + posizione + nome contatto */}
+        <div className="min-w-0 overflow-hidden">
+          <div className="flex items-center gap-1.5">
+            <Filterable field="company" value={rawCompany} onFilterClick={onFilterClick}
+              className={cn(
+                "font-semibold truncate text-[12px]",
+                !rawCompany ? "text-muted-foreground italic" : "text-foreground"
+              )}>
+              {displayCompany}
+            </Filterable>
+            {isWcaMatched && (
+              <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
+            )}
+            {inHolding && (
+              <span title="In circuito di attesa" className="shrink-0">
+                <Plane className="w-3.5 h-3.5 text-primary animate-pulse" />
+              </span>
+            )}
+            {(c.interaction_count ?? 0) > 0 && (
+              <HoldingPatternBadge interactionCount={c.interaction_count ?? 0} lastInteractionAt={c.last_interaction_at} size="sm" />
+            )}
+            {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
+            {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+            {displayContact && (
+              <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
+                <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="truncate text-foreground text-[10px]">{displayContact}</span>
+              </Filterable>
+            )}
+            {cPosition && (
+              <span className="text-[10px] text-primary truncate">· {capitalizeLabel(cPosition)}</span>
+            )}
+          </div>
         </div>
 
-        {/* Contact + position */}
-        <div className="flex items-center gap-1 w-[160px] shrink-0 min-w-0">
-          {displayContact ? (
-            <>
-              <User className="w-3 h-3 text-muted-foreground shrink-0" />
-              <span className="truncate text-foreground/80">{displayContact}</span>
-              {cPosition && <span className="text-[10px] text-primary font-medium truncate">• {cPosition}</span>}
-            </>
-          ) : (
-            <span className="text-muted-foreground italic">—</span>
-          )}
-        </div>
-
-        {/* City */}
-        <div className="flex items-center gap-0.5 w-[100px] shrink-0 min-w-0">
+        {/* Col 4: Città + canali (allineati sinistra) */}
+        <div className="min-w-0 overflow-hidden flex flex-col items-start gap-0.5">
           {cCity ? (
-            <>
-              <MapPin className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground truncate">{cCity}</span>
-            </>
+            <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-muted-foreground text-[11px] block max-w-full">
+              {capitalizeLabel(cCity)}
+            </Filterable>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground text-[11px]">—</span>
           )}
+          <div className="flex items-center gap-1.5">
+            <ChannelIcons
+              email={!!cEmail}
+              phone={!!phone}
+              whatsapp={whatsapp}
+              linkedin={!!linkedinUrl}
+              website={!!companyWebsite}
+            />
+            {hasBusinessCard && <Handshake className="w-3 h-3 text-emerald-400" />}
+          </div>
         </div>
 
-        {/* Origin badge */}
-        <div className="w-[70px] shrink-0">
-          {cOrigin ? (
-            <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/20 text-primary font-semibold border-0 truncate max-w-full">
-              {cOrigin}
-            </Badge>
-          ) : null}
-        </div>
-
-        {/* Last interaction date */}
-        {lastDate && (
-          <span className="text-[9px] text-muted-foreground shrink-0">
-            {format(new Date(lastDate), "dd/MM", { locale: it })}
-          </span>
-        )}
-
-        {/* Right indicators */}
-        <div className="flex items-center gap-1 ml-auto shrink-0">
-          {linkedinUrl && (
-            <span className="p-0.5 rounded bg-[hsl(210,80%,55%)]/10">
-              <Linkedin className="w-2.5 h-2.5 text-[hsl(210,80%,55%)]" />
-            </span>
-          )}
-          {companyWebsite && (
-            <span className="p-0.5 rounded bg-emerald-500/10">
-              <Globe2 className="w-2.5 h-2.5 text-emerald-400" />
-            </span>
-          )}
-          {hasBusinessCard && (
-            <Handshake className="w-3 h-3 text-emerald-400" />
-          )}
-          <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
-          <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full ${
-            c.interaction_count > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
-          }`}>
+        {/* Col 5: Score + count + lente + menu */}
+        <div className="flex items-center justify-end gap-1" data-no-filter>
+          <LeadScoreBadge score={c.lead_score ?? undefined} breakdown={c.lead_score_breakdown as Record<string, number> | undefined} />
+          <span className={cn(
+            "inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full",
+            (c.interaction_count ?? 0) > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
+          )}>
             <MessageCircle className="w-2.5 h-2.5" />{c.interaction_count || 0}
           </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
+            className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
+            title="Visualizza dettaglio"
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
+          <ContactActionMenu contact={adaptImportedContact(c)} />
         </div>
       </div>
 
-      {/* Interaction markers row */}
-      {interactions && interactions.length > 0 && (
-        <div className="pl-[50px] pb-1 pt-0.5 border-b border-border/20">
-          <InteractionMarkers markers={interactions} maxVisible={6} />
+      {/* Row 2 — email + lead status + origine */}
+      <div
+        className={cn(CONTACT_GRID_CLASS, "px-2 pb-2")}
+        style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
+      >
+        <div />
+        <div />
+        {/* Col 3: email truncata */}
+        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+          {cEmail ? (
+            <span className="text-muted-foreground truncate text-[10px]">{cEmail}</span>
+          ) : (
+            <span className="text-muted-foreground italic text-[10px]">no email</span>
+          )}
         </div>
-      )}
+        {/* Col 4: lead status + origine */}
+        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+          <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
+          {c.lead_status && c.lead_status !== "new" && (
+            <Filterable field="leadStatus" value={c.lead_status} onFilterClick={onFilterClick}>
+              <span className="text-[9px] text-primary bg-primary/15 px-1.5 py-0 rounded-full font-medium truncate">
+                {c.lead_status}
+              </span>
+            </Filterable>
+          )}
+          {cOrigin && (
+            <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/15 text-primary font-semibold border-0 truncate max-w-[100px]">
+                {capitalizeLabel(cOrigin)}
+              </Badge>
+            </Filterable>
+          )}
+        </div>
+        <div />
+      </div>
     </div>
   );
 }

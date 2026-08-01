@@ -28,6 +28,7 @@ interface UnifiedContactRowProps {
   showCheckbox?: boolean;
   isActive?: boolean;
   className?: string;
+  actionMenu?: React.ReactNode;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -55,6 +56,7 @@ export const UnifiedContactRow = memo(function UnifiedContactRow({
   showCheckbox = false,
   isActive = false,
   className,
+  actionMenu,
 }: UnifiedContactRowProps) {
   const statusCfg = STATUS_CONFIG[contact.status || "new"] || STATUS_CONFIG.new;
 
@@ -110,14 +112,21 @@ export const UnifiedContactRow = memo(function UnifiedContactRow({
       <div className="flex items-center gap-1 shrink-0">
         {CHANNEL_ICONS.map(({ key, icon: Icon, check }) =>
           check(contact) ? (
-            <Icon key={key} className="w-3 h-3 text-muted-foreground/60" />
+            <Icon key={key} className="w-3 h-3 text-muted-foreground" />
           ) : null
         )}
       </div>
 
       {/* Origin */}
       {contact.originLabel && (
-        <span className="text-[9px] text-muted-foreground/50 shrink-0">{contact.originLabel}</span>
+        <span className="text-[9px] text-muted-foreground shrink-0">{contact.originLabel}</span>
+      )}
+
+      {/* Action menu */}
+      {actionMenu && (
+        <div className="shrink-0" onClick={e => e.stopPropagation()}>
+          {actionMenu}
+        </div>
       )}
     </div>
   );

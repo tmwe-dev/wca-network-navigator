@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AGENT_ROLES, AGENT_TEMPLATES, AGENT_DEFAULT_VOICES, AGENT_DEFAULT_KB, ROBIN_VOICE_CALL_URL } from "@/data/agentTemplates";
-import { AGENT_AVATARS, resolveAgentAvatar } from "@/data/agentAvatars";
+import { AGENT_ROLES, AGENT_TEMPLATES, AGENT_DEFAULT_VOICES, AGENT_DEFAULT_KB, ROBIN_VOICE_CALL_URL } from "@/constants/agentTemplates";
+import { AGENT_AVATARS, resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAgents } from "@/hooks/useAgents";
@@ -62,7 +62,7 @@ export function CreateAgentDialog({ open, onOpenChange }: Props) {
         signature_html: signatureHtml,
         voice_call_url: ROBIN_VOICE_CALL_URL,
         knowledge_base: kb,
-      } as any,
+      } as Record<string, unknown>,
       {
         onSuccess: () => {
           toast.success("Agente creato con voce, firma e KB operativa!");

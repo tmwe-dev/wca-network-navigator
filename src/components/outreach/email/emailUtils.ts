@@ -4,6 +4,9 @@
  */
 
 import { FileText, Image } from "lucide-react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("emailUtils");
 
 export function formatBytes(bytes: number | null): string {
   if (!bytes) return "";
@@ -31,15 +34,15 @@ export function decodeRfc2047(input: string): string {
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         try { return new TextDecoder(cs).decode(bytes); }
-        catch { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
+        catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
       }
       const decoded = text.replace(/_/g, " ")
         .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
       const bytes = new Uint8Array(decoded.length);
       for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
       try { return new TextDecoder(cs).decode(bytes); }
-      catch { return decoded; }
-    } catch { return text; }
+      catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return decoded; }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return text; }
   });
 }
 

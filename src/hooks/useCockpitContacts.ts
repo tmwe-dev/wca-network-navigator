@@ -1,9 +1,25 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByIds } from "@/data/partners";
+import { getPartnerContactsByIds, findSocialLinksByPartnerIds, getProspectContactsByIds } from "@/data/partnerRelations";
+import { findCockpitQueue, deleteCockpitQueueBySource, insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
-import type { ContactOrigin } from "@/pages/Cockpit";
+import type { ContactOrigin } from "@/types/cockpit";
+import { createLogger } from "@/lib/log";
+import { getContactsByIds } from "@/data/contacts";
+import { findBusinessCards } from "@/data/businessCards";
+import {
+  deleteActivities,
+  findActivitiesByIds,
+  findSiblingPendingActivityIds,
+  findPendingActivitiesForDate,
+} from "@/data/activities";
+import { addCockpitPreselection } from "@/lib/cockpitPreselection";
+import { queryKeys } from "@/lib/queryKeys";
+
+const log = createLogger("useCockpitContacts");
 
 export interface CockpitContact {
   id: string;
@@ -29,7 +45,7 @@ export interface CockpitContact {
   isScheduledReturn?: boolean;
   isBusinessCard?: boolean;
   deepSearchAt?: string;
-  enrichmentData?: any;
+  enrichmentData?: Record<string, unknown>;
   memberSince?: string;
   memberYears?: number;
   networks?: string[];
@@ -43,12 +59,12 @@ const COUNTRY_LANGUAGE: Record<string, string> = {
   BR: "português", PT: "português", JP: "日本語", CN: "中文",
 };
 
-function inferLanguage(countryCode: string | null): string {
+export function inferLanguage(countryCode: string | null): string {
   if (!countryCode) return "english";
   return COUNTRY_LANGUAGE[countryCode.toUpperCase().trim()] || "english";
 }
 
-function inferChannels(email?: string | null, phone?: string | null, mobile?: string | null): string[] {
+export function inferChannels(email?: string | null, phone?: string | null, mobile?: string | null): string[] {
   const ch: string[] = [];
   if (email) ch.push("email");
   if (phone || mobile) ch.push("whatsapp", "sms");
@@ -56,16 +72,59 @@ function inferChannels(email?: string | null, phone?: string | null, mobile?: st
   return ch;
 }
 
-function computePriority(email?: string | null, phone?: string | null, mobile?: string | null): number {
+export function computePriority(email?: string | null, phone?: string | null, mobile?: string | null): number {
   let p = 1;
   if (email) p += 3;
   if (phone || mobile) p += 2;
   return Math.min(p, 10);
 }
 
-function extractPartnerMeta(partner: any): { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } {
+interface PartnerRow {
+  member_since?: string;
+  enrichment_data?: Record<string, unknown>;
+  company_name?: string;
+  country_code?: string;
+  company_alias?: string;
+  enriched_at?: string;
+  ai_parsed_at?: string;
+  lead_status?: string;
+  id: string;
+}
+
+interface BusinessCardRow {
+  id: string;
+  contact_name?: string | null;
+  company_name?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  event_name?: string | null;
+  met_at?: string | null;
+  created_at?: string;
+}
+
+interface ImportedContactRow {
+  id: string;
+  name?: string | null;
+  company_name?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  country?: string | null;
+  city?: string | null;
+  origin?: string | null;
+  created_at?: string;
+  enrichment_data?: Record<string, unknown> | null;
+  deep_search_at?: string | null;
+  contact_alias?: string | null;
+  company_alias?: string | null;
+}
+
+function extractPartnerMeta(partner: PartnerRow | undefined): { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } {
   if (!partner) return {};
-  const meta: any = {};
+  const meta: { memberSince?: string; memberYears?: number; networks?: string[]; seniority?: string; specialties?: string[] } = {};
   if (partner.member_since) {
     meta.memberSince = partner.member_since;
     const y = new Date().getFullYear() - new Date(partner.member_since).getFullYear();
@@ -73,11 +132,13 @@ function extractPartnerMeta(partner: any): { memberSince?: string; memberYears?:
   }
   const ed = partner.enrichment_data;
   if (ed) {
-    if (ed.company_profile?.specialties?.length) meta.specialties = ed.company_profile.specialties.slice(0, 4);
-    if (ed.contact_profile?.seniority) meta.seniority = ed.contact_profile.seniority;
+    const companyProfile = ed.company_profile as Record<string, unknown> | undefined;
+    const contactProfile = ed.contact_profile as Record<string, unknown> | undefined;
+    if (companyProfile?.specialties && Array.isArray(companyProfile.specialties)) meta.specialties = (companyProfile.specialties as string[]).slice(0, 4);
+    if (contactProfile?.seniority && typeof contactProfile.seniority === "string") meta.seniority = contactProfile.seniority;
     const nets: string[] = [];
-    if (ed.networks && Array.isArray(ed.networks)) nets.push(...ed.networks);
-    if (ed.company_profile?.networks && Array.isArray(ed.company_profile.networks)) nets.push(...ed.company_profile.networks);
+    if (ed.networks && Array.isArray(ed.networks)) nets.push(...(ed.networks as string[]));
+    if (companyProfile?.networks && Array.isArray(companyProfile.networks)) nets.push(...(companyProfile.networks as string[]));
     if (nets.length) meta.networks = [...new Set(nets)];
   }
   return meta;
@@ -96,59 +157,47 @@ function formatRelativeDate(dateStr: string | null): string {
 
 export function useCockpitContacts() {
   const q = useQuery({
-    queryKey: ["cockpit-queue"],
+    queryKey: queryKeys.cockpit.queue,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
 
-      // Fetch queue items
-      const { data: queue, error } = await supabase
-        .from("cockpit_queue")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "queued")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      if (!queue || queue.length === 0) return [];
+      const queue = await findCockpitQueue(user.id);
+      if (queue.length === 0) return [];
 
       // Group source_ids by source_type
-      const pcIds = queue.filter((q: any) => q.source_type === "partner_contact").map((q: any) => q.source_id);
-      const bcIds = queue.filter((q: any) => q.source_type === "business_card").map((q: any) => q.source_id);
-      const prcIds = queue.filter((q: any) => q.source_type === "prospect_contact").map((q: any) => q.source_id);
-      const icIds = queue.filter((q: any) => q.source_type === "contact").map((q: any) => q.source_id);
+      const pcIds = queue.filter(q => q.source_type === "partner_contact").map(q => q.source_id);
+      const bcIds = queue.filter(q => q.source_type === "business_card").map(q => q.source_id);
+      const prcIds = queue.filter(q => q.source_type === "prospect_contact").map(q => q.source_id);
+      const icIds = queue.filter(q => q.source_type === "contact").map(q => q.source_id);
 
-      // Fetch source data in parallel
+      // Fetch source data in parallel using DAL (top-level imports, no dynamic imports)
       const [pcData, bcData, prcData, icData] = await Promise.all([
         pcIds.length > 0
-          ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id, contact_alias").in("id", pcIds).then(r => r.data || [])
+          ? getPartnerContactsByIds(pcIds, "id, name, title, email, direct_phone, mobile, partner_id, contact_alias")
           : Promise.resolve([]),
         bcIds.length > 0
-          ? supabase.from("business_cards").select("id, contact_name, company_name, position, email, phone, mobile, event_name, met_at, created_at").in("id", bcIds).then(r => r.data || [])
+          ? findBusinessCards().then(cards => cards.filter((c: BusinessCardRow) => bcIds.includes(c.id)))
           : Promise.resolve([]),
         prcIds.length > 0
-          ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id, linkedin_url").in("id", prcIds).then(r => r.data || [])
+          ? getProspectContactsByIds(prcIds)
           : Promise.resolve([]),
         icIds.length > 0
-          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias").in("id", icIds).then(r => r.data || [])
+          ? getContactsByIds(icIds, "id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias")
           : Promise.resolve([]),
       ]);
 
       // Fetch social links (LinkedIn) for partner contacts
-      const allPartnerIdsForSocial = [
-        ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
-        ...(pcData as any[]).filter((c: any) => c.partner_id).map((c: any) => c.partner_id),
-      ];
+      const allPartnerIdsForSocial: string[] = [
+        ...queue.filter(q => q.partner_id).map(q => q.partner_id!),
+        ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
+      ].filter(Boolean);
       const uniqueSocialPartnerIds = [...new Set(allPartnerIdsForSocial)];
-      let socialLinksMap: Record<string, string> = {}; // partnerId -> linkedin url
-      let contactSocialMap: Record<string, string> = {}; // contactId -> linkedin url
+      const socialLinksMap: Record<string, string> = {};
+      const contactSocialMap: Record<string, string> = {};
       if (uniqueSocialPartnerIds.length > 0) {
-        const { data: slData } = await supabase
-          .from("partner_social_links")
-          .select("partner_id, contact_id, platform, url")
-          .in("partner_id", uniqueSocialPartnerIds)
-          .eq("platform", "linkedin");
-        for (const sl of slData || []) {
+        const slData = await findSocialLinksByPartnerIds(uniqueSocialPartnerIds, "linkedin");
+        for (const sl of slData) {
           if (sl.contact_id) {
             contactSocialMap[sl.contact_id] = sl.url;
           } else {
@@ -158,36 +207,30 @@ export function useCockpitContacts() {
       }
 
       // Also fetch partner names for partner_contacts
-      const partnerIds = [
-        ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
-        ...(pcData as any[]).filter((c: any) => c.partner_id).map((c: any) => c.partner_id),
-      ];
+      const partnerIds: string[] = [
+        ...queue.filter(q => q.partner_id).map(q => q.partner_id!),
+        ...pcData.filter(c => c.partner_id).map(c => c.partner_id!),
+      ].filter(Boolean);
       const uniquePartnerIds = [...new Set(partnerIds)];
-      let partnersMap: Record<string, any> = {};
+      const partnersMap: Record<string, PartnerRow> = {};
       if (uniquePartnerIds.length > 0) {
-        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since, lead_status").in("id", uniquePartnerIds);
-        for (const p of pData || []) partnersMap[p.id] = p;
+        const pData = await getPartnersByIds(uniquePartnerIds, "id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at, member_since, lead_status");
+        for (const p of pData || []) partnersMap[p.id as string] = p as unknown as PartnerRow;
       }
 
       // Build lookup maps
-      const pcMap: Record<string, any> = {};
-      for (const c of pcData as any[]) pcMap[c.id] = c;
-      const bcMap: Record<string, any> = {};
-      for (const c of bcData as any[]) bcMap[c.id] = c;
-      const prcMap: Record<string, any> = {};
-      for (const c of prcData as any[]) prcMap[c.id] = c;
-      const icMap: Record<string, any> = {};
-      for (const c of icData as any[]) icMap[c.id] = c;
+      const pcMap: Record<string, (typeof pcData)[number]> = {};
+      for (const c of pcData) pcMap[c.id] = c;
+      const bcMap: Record<string, (typeof bcData)[number]> = {};
+      for (const c of bcData) bcMap[c.id] = c;
+      const prcMap: Record<string, (typeof prcData)[number]> = {};
+      for (const c of prcData) prcMap[c.id] = c;
+      const icMap: Record<string, (typeof icData)[number]> = {};
+      for (const c of icData) icMap[String((c as Record<string, unknown>).id)] = c;
 
       // Fetch today's scheduled activities
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data: scheduledActivities } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "pending")
-        .eq("due_date", today)
-        .limit(100);
+      const scheduledActivities = await findPendingActivitiesForDate(user.id, today, 100);
 
       return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [], socialLinksMap, contactSocialMap };
     },
@@ -206,157 +249,115 @@ export function useCockpitContacts() {
       if (st === "partner_contact") {
         const pc = pcMap[sid];
         if (!pc) continue;
-        const partner = partnersMap[pc.partner_id] || partnersMap[item.partner_id];
+        const partner = (pc.partner_id ? partnersMap[pc.partner_id] : undefined) || (item.partner_id ? partnersMap[item.partner_id] : undefined);
         const pMeta = extractPartnerMeta(partner);
         result.push({
-          id: `pc-${pc.id}`,
-          queueId: item.id,
-          name: pc.name || "—",
-          company: partner?.company_name || "—",
-          role: pc.title || "",
-          country: partner?.country_code || "",
-          language: inferLanguage(partner?.country_code),
+          id: `pc-${pc.id}`, queueId: item.id,
+          name: pc.name || "—", company: partner?.company_name || "—",
+          role: pc.title || "", country: partner?.country_code || "",
+          language: inferLanguage(partner?.country_code ?? null),
           lastContact: formatRelativeDate(item.created_at),
           priority: computePriority(pc.email, pc.direct_phone, pc.mobile),
           channels: inferChannels(pc.email, pc.direct_phone, pc.mobile),
-          email: pc.email || "",
-          phone: pc.mobile || pc.direct_phone || "",
-          origin: "wca" as ContactOrigin,
-          originDetail: partner?.company_name || "Partner",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: pc.partner_id || item.partner_id,
-          linkedinUrl: contactSocialMap[pc.id] || socialLinksMap[pc.partner_id] || "",
+          email: pc.email || "", phone: pc.mobile || pc.direct_phone || "",
+          origin: "wca" as ContactOrigin, originDetail: partner?.company_name || "Partner",
+          sourceType: st, sourceId: sid, partnerId: pc.partner_id || item.partner_id,
+          linkedinUrl: contactSocialMap[pc.id] || (pc.partner_id ? socialLinksMap[pc.partner_id] : "") || "",
           contactAlias: pc.contact_alias || undefined,
           companyAlias: partner?.company_alias || undefined,
           deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
-          enrichmentData: partner?.enrichment_data || undefined,
+          enrichmentData: (partner?.enrichment_data as Record<string, unknown>) || undefined,
           leadStatus: partner?.lead_status || "new",
           ...pMeta,
         });
       } else if (st === "business_card") {
-        const bc = bcMap[sid];
+        const bc = bcMap[sid] as BusinessCardRow | undefined;
         if (!bc) continue;
         result.push({
-          id: `bc-${bc.id}`,
-          queueId: item.id,
-          name: bc.contact_name || "—",
-          company: bc.company_name || "—",
-          role: bc.position || "",
-          country: "",
-          language: "english",
-          lastContact: formatRelativeDate(bc.met_at || bc.created_at),
+          id: `bc-${bc.id}`, queueId: item.id,
+          name: bc.contact_name || "—", company: bc.company_name || "—",
+          role: bc.position || "", country: "", language: "english",
+          lastContact: formatRelativeDate(bc.met_at || bc.created_at || null),
           priority: computePriority(bc.email, bc.phone, bc.mobile),
           channels: inferChannels(bc.email, bc.phone, bc.mobile),
-          email: bc.email || "",
-          phone: bc.mobile || bc.phone || "",
+          email: bc.email || "", phone: bc.mobile || bc.phone || "",
           origin: "bca" as ContactOrigin,
           originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: item.partner_id,
-          linkedinUrl: "",
-          isBusinessCard: true,
+          sourceType: st, sourceId: sid, partnerId: item.partner_id,
+          linkedinUrl: "", isBusinessCard: true,
         });
       } else if (st === "prospect_contact") {
         const prc = prcMap[sid];
         if (!prc) continue;
         result.push({
-          id: `prc-${prc.id}`,
-          queueId: item.id,
-          name: prc.name || "—",
-          company: "—",
-          role: prc.role || "",
-          country: "",
-          language: "italiano",
+          id: `prc-${prc.id}`, queueId: item.id,
+          name: prc.name || "—", company: "—",
+          role: prc.role || "", country: "", language: "italiano",
           lastContact: formatRelativeDate(item.created_at),
           priority: computePriority(prc.email, prc.phone, null),
           channels: inferChannels(prc.email, prc.phone, null),
-          email: prc.email || "",
-          phone: prc.phone || "",
-          origin: "report_aziende" as ContactOrigin,
-          originDetail: "Prospect",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: item.partner_id,
+          email: prc.email || "", phone: prc.phone || "",
+          origin: "report_aziende" as ContactOrigin, originDetail: "Prospect",
+          sourceType: st, sourceId: sid, partnerId: item.partner_id,
           linkedinUrl: prc.linkedin_url || "",
         });
       } else if (st === "contact") {
-        const ic = icMap[sid];
+        const ic = icMap[sid] as unknown as ImportedContactRow | undefined;
         if (!ic) continue;
-        // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
-        const icEd = (ic.enrichment_data as any) || {};
-        let icLinkedin = icEd.linkedin_profile_url
-          || icEd.linkedin_url
-          || icEd.social_links?.linkedin
-          || "";
-        // contact_profiles is an OBJECT keyed by ID, not an array
-        if (!icLinkedin && icEd.contact_profiles && typeof icEd.contact_profiles === "object") {
-          const profiles = Object.values(icEd.contact_profiles) as any[];
-          const found = profiles.find((cp: any) => cp.linkedin_url);
-          if (found) icLinkedin = found.linkedin_url;
+        const icEd = ic.enrichment_data || {};
+        const contactProfiles = icEd.contact_profiles as Record<string, Record<string, unknown>> | undefined;
+        let icLinkedin = (icEd.linkedin_profile_url as string) || (icEd.linkedin_url as string) || ((icEd.social_links as Record<string, string> | undefined)?.linkedin) || "";
+        if (!icLinkedin && contactProfiles && typeof contactProfiles === "object") {
+          const profiles = Object.values(contactProfiles);
+          const found = profiles.find((cp) => typeof cp === "object" && cp != null && "linkedin_url" in cp);
+          if (found) icLinkedin = found.linkedin_url as string;
         }
-        // Also check partner_social_links if we have a partner_id
         const icPartnerId = item.partner_id;
-        if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) {
-          icLinkedin = socialLinksMap[icPartnerId];
-        }
-        const icEnrich = (ic.enrichment_data as any) || {};
+        if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) icLinkedin = socialLinksMap[icPartnerId];
         const icMeta: Partial<CockpitContact> = {};
-        if (icEnrich.contact_profile?.seniority) icMeta.seniority = icEnrich.contact_profile.seniority;
-        if (icEnrich.company_profile?.specialties?.length) icMeta.specialties = icEnrich.company_profile.specialties.slice(0, 4);
+        const contactProfile = icEd.contact_profile as Record<string, unknown> | undefined;
+        const companyProfile = icEd.company_profile as Record<string, unknown> | undefined;
+        if (contactProfile?.seniority && typeof contactProfile.seniority === "string") icMeta.seniority = contactProfile.seniority;
+        if (companyProfile?.specialties && Array.isArray(companyProfile.specialties)) icMeta.specialties = (companyProfile.specialties as string[]).slice(0, 4);
         result.push({
-          id: `ic-${ic.id}`,
-          queueId: item.id,
-          name: ic.name || "—",
-          company: ic.company_name || "—",
-          role: ic.position || "",
-          country: ic.country || "",
-          language: inferLanguage(ic.country),
-          lastContact: formatRelativeDate(ic.created_at),
+          id: `ic-${ic.id}`, queueId: item.id,
+          name: ic.name || "—", company: ic.company_name || "—",
+          role: ic.position || "", country: ic.country || "",
+          language: inferLanguage(ic.country || null),
+          lastContact: formatRelativeDate(ic.created_at || null),
           priority: computePriority(ic.email, ic.phone, ic.mobile),
           channels: inferChannels(ic.email, ic.phone, ic.mobile),
-          email: ic.email || "",
-          phone: ic.mobile || ic.phone || "",
-          origin: "manual" as ContactOrigin,
-          originDetail: ic.origin || "Manuale",
-          sourceType: st,
-          sourceId: sid,
-          partnerId: item.partner_id,
+          email: ic.email || "", phone: ic.mobile || ic.phone || "",
+          origin: "manual" as ContactOrigin, originDetail: ic.origin || "Manuale",
+          sourceType: st, sourceId: sid, partnerId: item.partner_id,
           linkedinUrl: icLinkedin,
           contactAlias: ic.contact_alias || undefined,
           companyAlias: ic.company_alias || undefined,
           deepSearchAt: ic.deep_search_at || undefined,
-          enrichmentData: ic.enrichment_data || undefined,
+          enrichmentData: (ic.enrichment_data as Record<string, unknown>) || undefined,
           ...icMeta,
         });
       }
     }
 
     // Add scheduled return activities
+    interface ActivityMeta { name?: string; company?: string; country?: string; email?: string; phone?: string; mobile?: string }
     for (const act of scheduledActivities) {
-      const meta = (act.source_meta || {}) as any;
+      const meta = (act.source_meta || {}) as ActivityMeta;
       const existsAlready = result.some(r => r.sourceId === act.source_id);
       if (existsAlready) continue;
       result.push({
-        id: `act-${act.id}`,
-        queueId: act.id,
-        name: meta.name || act.title || "—",
-        company: meta.company || "—",
-        role: "",
-        country: meta.country || "",
-        language: inferLanguage(meta.country),
+        id: `act-${act.id}`, queueId: act.id,
+        name: meta.name || act.title || "—", company: meta.company || "—",
+        role: "", country: meta.country || "",
+        language: inferLanguage(meta.country || null),
         lastContact: formatRelativeDate(act.created_at),
         priority: act.priority === "high" ? 8 : act.priority === "low" ? 3 : 5,
         channels: inferChannels(meta.email, null, null),
-        email: meta.email || "",
-        phone: meta.phone || meta.mobile || "",
-        origin: "wca" as ContactOrigin,
-        originDetail: `📅 Riprogrammato`,
-        sourceType: act.source_type,
-        sourceId: act.source_id,
-        partnerId: act.partner_id,
-        linkedinUrl: act.partner_id ? (socialLinksMap[act.partner_id] || "") : "",
+        email: meta.email || "", phone: meta.phone || meta.mobile || "",
+        origin: "wca" as ContactOrigin, originDetail: `📅 Riprogrammato`,
+        sourceType: act.source_type, sourceId: act.source_id,
+        partnerId: act.partner_id, linkedinUrl: act.partner_id ? (socialLinksMap[act.partner_id] || "") : "",
         isScheduledReturn: true,
       });
     }
@@ -374,50 +375,60 @@ export function useCockpitContacts() {
   return { contacts, contactsMap, isLoading: q.isLoading };
 }
 
-/**
- * Remove contacts from cockpit_queue
- */
 export function useDeleteCockpitContacts() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (prefixedIds: string[]) => {
-      // We need to find the queue IDs for these contacts
-      // But we can also just delete by source criteria
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const sourceEntries: { type: string; id: string }[] = [];
+      const activityIds: string[] = [];
       for (const pid of prefixedIds) {
         if (pid.startsWith("pc-")) sourceEntries.push({ type: "partner_contact", id: pid.slice(3) });
         else if (pid.startsWith("bc-")) sourceEntries.push({ type: "business_card", id: pid.slice(3) });
         else if (pid.startsWith("prc-")) sourceEntries.push({ type: "prospect_contact", id: pid.slice(4) });
         else if (pid.startsWith("ic-")) sourceEntries.push({ type: "contact", id: pid.slice(3) });
+        else if (pid.startsWith("act-")) activityIds.push(pid.slice(4));
       }
 
-      // Delete from cockpit_queue by source matches
+      let deleted = 0;
       for (const entry of sourceEntries) {
-        await supabase
-          .from("cockpit_queue")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("source_type", entry.type)
-          .eq("source_id", entry.id);
+        deleted += await deleteCockpitQueueBySource(user.id, entry.type, entry.id);
       }
+      if (activityIds.length > 0) {
+        const idsToDelete = new Set(activityIds);
+        const selectedActivities = await findActivitiesByIds(activityIds);
+
+        for (const act of selectedActivities ?? []) {
+          if (!act.user_id || !act.source_id || !act.due_date || act.status !== "pending") continue;
+          const siblingIds = await findSiblingPendingActivityIds({
+            user_id: act.user_id,
+            source_id: act.source_id,
+            due_date: act.due_date,
+            source_type: act.source_type,
+          });
+          for (const sid of siblingIds) idsToDelete.add(sid);
+        }
+
+        deleted += await deleteActivities([...idsToDelete]);
+      }
+      return deleted;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.today });
     },
   });
 }
 
-/**
- * Send partner contacts to cockpit_queue
- */
 export function useSendToCockpit() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (items: { sourceType: string; sourceId: string; partnerId?: string; countryCode?: string }[]) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const inserts = items.map(item => ({
@@ -428,17 +439,10 @@ export function useSendToCockpit() {
         status: "queued",
       }));
 
-      const { error } = await supabase.from("cockpit_queue").upsert(inserts as any, {
-        onConflict: "user_id,source_type,source_id",
-        ignoreDuplicates: true,
-      });
-      if (error) throw error;
+      await insertCockpitQueueItems(inserts);
 
-      // Store source IDs for auto-preselection in Cockpit
-      const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
       addCockpitPreselection(items.map(i => i.sourceId));
 
-      // Auto-assign agents silently for each contact
       for (const item of items) {
         try {
           await autoAssignAgent({
@@ -447,16 +451,16 @@ export function useSendToCockpit() {
             countryCode: item.countryCode || null,
             userId: user.id,
           });
-        } catch (e) {
-          console.warn("[SendToCockpit] Auto-assign failed for", item.sourceId, e);
+        } catch (e: unknown) {
+          log.warn("auto-assign failed", { sourceId: item.sourceId, message: e instanceof Error ? e.message : String(e) });
         }
       }
 
       return inserts.length;
     },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
-      queryClient.invalidateQueries({ queryKey: ["client-assignments"] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clientAssignments.all });
     },
   });
 }

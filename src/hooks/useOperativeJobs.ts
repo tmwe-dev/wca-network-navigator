@@ -1,0 +1,117 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { invokeAi } from "@/lib/ai/invokeAi";
+import { findWorkPlans, createWorkPlan, updateWorkPlan, deleteWorkPlan } from "@/data/workPlans";
+import { getAppSetting } from "@/data/appSettings";
+import { toJsonValue } from "@/lib/jsonGuards";
+
+export interface OperativeJob {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  steps: { channels?: string[]; deadline?: string; target?: string };
+  metadata: { generated_prompt?: string; prompt_generated_at?: string };
+  tags: string[] | null;
+  created_at: string;
+  completed_at: string | null;
+  current_step: number;
+}
+
+const TAG = "operative_job";
+
+export function useOperativeJobs() {
+  const qc = useQueryClient();
+  const key = ["operative-jobs"];
+
+  const query = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) return [];
+      return findWorkPlans(user.id, [TAG]) as unknown as Promise<OperativeJob[]>;
+    },
+  });
+
+  const createJob = useMutation({
+    mutationFn: async (input: { title: string; description: string; channels: string[]; deadline?: string }) => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) throw new Error("Non autenticato");
+      const steps = { channels: input.channels, deadline: input.deadline || null, target: "" };
+      return createWorkPlan({
+        title: input.title, description: input.description,
+        steps: JSON.parse(JSON.stringify(steps)), metadata: JSON.parse("{}"),
+        tags: [TAG], status: "running", user_id: user.id,
+      }) as unknown as Promise<OperativeJob>;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job creato"); },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore creazione job"),
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const upd: Record<string, unknown> = { status };
+      if (status === "completed") upd.completed_at = new Date().toISOString();
+      await updateWorkPlan(id, upd);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
+  });
+
+  const deleteJobMut = useMutation({
+    mutationFn: (id: string) => deleteWorkPlan(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job eliminato"); },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
+  });
+
+  const generatePrompt = useMutation({
+    mutationFn: async (job: OperativeJob) => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const stratValue = user ? await getAppSetting("operative_strategy", user.id) : null;
+      const strategy = stratValue ? JSON.parse(stratValue) : {};
+
+      const systemMsg = `Sei un manager AI operativo. Genera un prompt strutturato per gli agenti sales basandoti sulle istruzioni del job e sulla strategia aziendale.
+
+Il prompt deve contenere:
+1. **Obiettivo**: cosa deve essere raggiunto
+2. **Procedura**: passi da seguire
+3. **Criteri**: regole e vincoli da rispettare
+4. **Esempi**: 1-2 esempi di messaggio ideale
+
+Strategia aziendale: ${JSON.stringify(strategy)}`;
+
+      const userMsg = `Job: "${job.title}"
+Istruzioni: ${job.description || "Nessuna istruzione specifica"}
+Canali: ${(job.steps?.channels || []).join(", ") || "tutti"}
+Scadenza: ${job.steps?.deadline || "non specificata"}`;
+
+      const res = await invokeAi<Record<string, unknown>>("agent-execute", {
+        scope: "agent",
+        context: { source: "useOperativeJobs.generatePrompt", mode: "task" },
+        body: { messages: [{ role: "system", content: systemMsg }, { role: "user", content: userMsg }] },
+      });
+
+      const raw = res?.response ?? res?.content;
+      const prompt = typeof raw === "string" && raw.length > 0 ? raw : "Prompt non generato";
+      await updateWorkPlan(job.id, {
+        metadata: toJsonValue({ ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() }),
+      });
+      return prompt;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt AI generato"); },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore generazione prompt"),
+  });
+
+  const savePrompt = useMutation({
+    mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: Record<string, unknown> | null }) => {
+      await updateWorkPlan(id, {
+        metadata: toJsonValue({ ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() }),
+      });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt salvato"); },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
+  });
+
+  return { jobs: query.data ?? [], isLoading: query.isLoading, createJob, updateStatus, deleteJob: deleteJobMut, generatePrompt, savePrompt };
+}

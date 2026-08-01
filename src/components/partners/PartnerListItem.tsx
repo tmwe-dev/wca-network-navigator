@@ -1,20 +1,24 @@
 import { Checkbox } from "@/components/ui/checkbox";
+import type { PartnerViewModel } from "@/types/partner-views";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Mail, Phone, ChevronRight, User, Brain, Handshake } from "lucide-react";
-import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
+import { Mail, Phone, ChevronRight, User, Handshake } from "lucide-react";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
-import { asEnrichment } from "@/lib/partnerUtils";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
+import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
+import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
+import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
+
+interface ServiceItem { service_category: string }
+interface NetworkItem { id: string; network_name: string }
+interface ContactItem { id: string; name: string; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
 
 interface PartnerListItemProps {
-  partner: any;
+  partner: PartnerViewModel;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
@@ -28,26 +32,25 @@ export function PartnerListItem({
   partner,
   isSelected,
   isChecked,
-  socialLinks,
+  socialLinks: _socialLinks,
   hasBusinessCard,
   onSelect,
   onToggleSelection,
   index,
 }: PartnerListItemProps) {
-  const years = getYearsMember(partner.member_since);
-  const services = partner.partner_services || [];
+  const years = getYearsMember(partner.member_since ?? null);
+  const services: ServiceItem[] = partner.partner_services || [];
   const allServices = [
-    ...services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category)),
-    ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category)),
+    ...services.filter((s) => TRANSPORT_SERVICES.includes(s.service_category)),
+    ...services.filter((s) => SPECIALTY_SERVICES.includes(s.service_category)),
   ];
   const branchCountries = getBranchCountries(partner);
-  const enrichment = asEnrichment(partner.enrichment_data);
-  const hasDeepSearch = !!enrichment?.deep_search_at;
-  const contacts = partner.partner_contacts || [];
-  const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+  const contacts: ContactItem[] = partner.partner_contacts || [];
+  const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
   const contactEmail = primaryContact?.email;
   const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
-  const networks = partner.partner_networks || [];
+  const networks: NetworkItem[] = partner.partner_networks || [];
+  const sherlockLevel = useSherlockLevel("partner", partner.id);
 
   return (
     <div
@@ -62,7 +65,7 @@ export function PartnerListItem({
       <div className="flex items-start gap-2">
         {/* Progressive number */}
         {index !== undefined && (
-          <span className="text-[10px] text-muted-foreground/50 font-mono w-5 shrink-0 text-right mt-2.5">
+          <span className="text-[10px] text-muted-foreground font-mono w-5 shrink-0 text-right mt-2.5">
             {index + 1}
           </span>
         )}
@@ -78,7 +81,7 @@ export function PartnerListItem({
           {/* Row 1: Company name + rating */}
           <div className="flex items-center gap-1.5 min-w-0">
             <p className="font-semibold text-sm truncate">{partner.company_name}</p>
-            {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
+            {(partner.rating ?? 0) > 0 && <MiniStars rating={Number(partner.rating)} />}
           </div>
 
           {/* Row 2: City + years */}
@@ -92,7 +95,7 @@ export function PartnerListItem({
             {primaryContact ? (
               <>
                 <div className="flex items-center gap-1.5 text-[11px]">
-                  <User className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                  <User className="w-3 h-3 text-muted-foreground shrink-0" />
                   <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
                   {contacts.length > 1 && (
                     <span className="text-[10px] text-muted-foreground">+{contacts.length - 1}</span>
@@ -100,7 +103,7 @@ export function PartnerListItem({
                 </div>
                 {contactEmail && (
                   <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 text-[11px] text-sky-400 hover:underline truncate ml-[18px]">
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:underline truncate ml-[18px]">
                     <Mail className="w-3 h-3 shrink-0" />{contactEmail}
                   </a>
                 )}
@@ -112,19 +115,19 @@ export function PartnerListItem({
                 )}
               </>
             ) : (
-              <span className="text-[10px] italic text-destructive/60">Nessun contatto</span>
+              <span className="text-[10px] italic text-destructive">Nessun contatto</span>
             )}
           </div>
 
           {/* Row 4: Service icons */}
           {allServices.length > 0 && (
             <div className="flex items-center gap-1 mt-1.5">
-              {allServices.slice(0, 6).map((s: any, i: number) => {
+              {allServices.slice(0, 6).map((s, i: number) => {
                 const Icon = getServiceIcon(s.service_category);
                 return (
                   <Tooltip key={i}>
                     <TooltipTrigger>
-                      <Icon className="w-3.5 h-3.5 text-sky-500/70" strokeWidth={1.5} />
+                      <Icon className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
                     </TooltipTrigger>
                     <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                   </Tooltip>
@@ -136,13 +139,13 @@ export function PartnerListItem({
           {/* Row 5: Networks */}
           {networks.length > 0 && (
             <div className="flex items-center gap-1 mt-1">
-              {networks.slice(0, 3).map((n: any) => (
-                <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/[0.08] text-amber-500/80 font-medium truncate max-w-[80px]">
+              {networks.slice(0, 3).map((n) => (
+                <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary font-medium truncate max-w-[80px]">
                   {n.network_name.replace("WCA ", "").substring(0, 10)}
                 </span>
               ))}
               {networks.length > 3 && (
-                <span className="text-[9px] text-muted-foreground/60">+{networks.length - 3}</span>
+                <span className="text-[9px] text-muted-foreground">+{networks.length - 3}</span>
               )}
             </div>
           )}
@@ -171,15 +174,9 @@ export function PartnerListItem({
               <TooltipContent>Incontrato personalmente</TooltipContent>
             </Tooltip>
           )}
-          {hasDeepSearch && (
-            <Tooltip>
-              <TooltipTrigger>
-                <Brain className="w-4 h-4 text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.4)]" />
-              </TooltipTrigger>
-              <TooltipContent>
-                Deep Search — {format(new Date(enrichment!.deep_search_at!), "d MMM yyyy", { locale: it })}
-              </TooltipContent>
-            </Tooltip>
+          <EnrichmentBadge partner={partner} variant="icon" />
+          {sherlockLevel && (
+            <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
           )}
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </div>

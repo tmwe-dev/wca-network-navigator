@@ -1,0 +1,45 @@
+{
+  "generated_at_utc": "2026-07-26T01:55:55.244351Z",
+  "partitions_completed": [
+    "001"
+  ],
+  "files_read_manually_cumulative": 20,
+  "files_total_semantic_scope": 3445,
+  "coverage_files_pct": 0.581,
+  "lines_read_manually_cumulative": 11447,
+  "lines_total_semantic_scope": 426729,
+  "coverage_lines_pct": 2.682,
+  "read_method_declaration": "full-content scan (cat + view) per ciascun file, integrato da estrazione regex-based di funzioni, IO, marker, callers via ripgrep. Non 'lettura umana riga-per-riga' in senso stretto: audit strutturale approfondito su tutto il contenuto.",
+  "next_partition": {
+    "id": "002",
+    "file_count": 25,
+    "selection_rule": "top-25 per (lines_total + max_nesting*30) tra src_components/src_v2/edge_functions/edge_shared/src_hooks/src_data/src_lib non ancora letti manualmente",
+    "files": [
+      "supabase/functions/classify-inbound-content/index.ts",
+      "src/v2/ui/templates/NavMenuPopover.tsx",
+      "supabase/functions/process-ai-import/index.ts",
+      "src/hooks/useLinkedInSync.ts",
+      "src/components/email-intelligence/management/SenderEmailPreviewPanel.tsx",
+      "supabase/functions/agent-execute/contextInjection.ts",
+      "supabase/functions/_shared/processManagers/leadProcessManager.ts",
+      "src/v2/ui/pages/prompt-lab/SuggestionsReviewPage.tsx",
+      "supabase/functions/improve-email/index.ts",
+      "supabase/functions/cadence-engine/index.ts",
+      "src/data/cestinone.ts",
+      "src/components/email-intelligence/ManualGroupingTab.tsx",
+      "src/components/ai-control/PendingActionsPanel.tsx",
+      "src/components/cockpit/AIDraftStudio.tsx",
+      "supabase/functions/_shared/aiGateway.ts",
+      "src/components/email-intelligence/AISuggestionsTab.tsx",
+      "supabase/functions/_shared/domainHandler.ts",
+      "src/v2/ui/pages/prompt-lab/GlobalImproverDialog.tsx",
+      "src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx",
+      "supabase/functions/suggest-email-groups/index.ts",
+      "src/components/operations/PartnerListPanel.tsx",
+      "supabase/functions/prompt-test-runner/index.ts",
+      "src/hooks/useImportWizard.ts",
+      "supabase/functions/agent-autonomous-cycle/index.ts",
+      "src/v2/ui/pages/prompt-lab/HarmonizeReviewPanel.tsx"
+    ]
+  }
+}

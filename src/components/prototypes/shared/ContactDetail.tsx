@@ -1,4 +1,4 @@
-import { Mail, Phone, Linkedin, Globe, Building2, MapPin, X, Send } from "lucide-react";
+import { Mail, Phone, Linkedin, Building2, MapPin, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { UnifiedContact } from "./UnifiedContactList";
@@ -22,7 +22,7 @@ export function ContactDetail({ contact, onClose, className }: Props) {
     <div className={cn("flex flex-col h-full", className)}>
       <div className="flex items-center justify-between p-4 border-b border-border/40">
         <h3 className="text-sm font-semibold text-foreground">{contact.name}</h3>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="Chiudi">
           <X className="h-3.5 w-3.5" />
         </Button>
       </div>

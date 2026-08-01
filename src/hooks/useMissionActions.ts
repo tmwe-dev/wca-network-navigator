@@ -1,0 +1,207 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { toast } from "sonner";
+import { useCallback, useRef } from "react";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  findMissionActions,
+  missionPlanExists,
+  insertMissionActions,
+  approvePlannedMissionActions,
+  cancelMissionActions,
+  findActiveMissionActions,
+} from "@/data/missionActions";
+
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useMissionActions");
+type MissionActionRow = Database["public"]["Tables"]["mission_actions"]["Row"];
+type MissionActionInsert = Database["public"]["Tables"]["mission_actions"]["Insert"];
+
+export type MissionAction = MissionActionRow;
+
+export interface MissionPlan {
+  interpretation: string;
+  dangerLevel: "safe" | "moderate" | "critical";
+  actions: { type: string; label: string; details?: string }[];
+  summary: string;
+  totalContacts: number;
+  idempotencyKey: string;
+}
+
+export interface MissionProgress {
+  total: number;
+  completed: number;
+  failed: number;
+  executing: number;
+  approved: number;
+  retry_pending: number;
+  updated_at: string;
+}
+
+function generateIdempotencyKey(data: Record<string, unknown>): string {
+  const str = JSON.stringify(data);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  const day = new Date().toISOString().slice(0, 10);
+  return `mission-${day}-${Math.abs(hash).toString(36)}`;
+}
+
+export function useMissionActions(missionId?: string) {
+  const qc = useQueryClient();
+  const key = ["mission-actions", missionId];
+  const abortRef = useRef<AbortController | null>(null);
+
+  const query = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      if (!missionId) return [];
+      return findMissionActions(missionId);
+    },
+    enabled: !!missionId,
+  });
+
+  const createActions = useMutation({
+    mutationFn: async (input: {
+      missionId: string;
+      plan: MissionPlan;
+    }) => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) throw new Error("Non autenticato");
+
+      if (await missionPlanExists(input.plan.idempotencyKey, user.id)) {
+        throw new Error("Questa missione è già stata pianificata");
+      }
+
+      const rows: MissionActionInsert[] = input.plan.actions.map((a, i) => ({
+        mission_id: input.missionId,
+        user_id: user.id,
+        action_type: a.type,
+        action_label: a.label,
+        status: "planned",
+        idempotency_key: `${input.plan.idempotencyKey}-${i}`,
+        danger_level: input.plan.dangerLevel,
+        position: i,
+        metadata: { details: a.details || "" },
+        recovery_log: [],
+      }));
+
+      return insertMissionActions(rows);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const approveAll = useMutation({
+    mutationFn: async (actionMissionId: string) => {
+      await approvePlannedMissionActions(actionMissionId);
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Piano approvato"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const cancelAll = useMutation({
+    mutationFn: async (actionMissionId: string) => {
+      await cancelMissionActions(actionMissionId);
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.info("Piano annullato"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Execute mission actions via slot-based system */
+  const executeMissionWithSlots = useCallback(async (
+    execMissionId: string,
+    userId: string,
+    onProgress?: (p: MissionProgress) => void,
+  ) => {
+    // Abort any previous execution loop
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    let consecutiveNoSlot = 0;
+
+    while (!controller.signal.aborted) {
+      try {
+        const res = await invokeEdge<{
+          status: string;
+          progress?: MissionProgress;
+          error?: string;
+        }>("mission-executor", {
+          body: { mission_id: execMissionId, user_id: userId },
+          context: "executeMissionWithSlots",
+        });
+
+        if (controller.signal.aborted) break;
+
+        if (res.status === "no_slot") {
+          consecutiveNoSlot++;
+          if (res.progress) onProgress?.(res.progress);
+
+          // Check if truly complete
+          if (res.progress && (res.progress.completed + res.progress.failed) >= res.progress.total) {
+            toast.success(`Missione completata: ${res.progress.completed} successi, ${res.progress.failed} fallimenti`);
+            break;
+          }
+
+          if (consecutiveNoSlot >= 3) {
+            await new Promise(r => setTimeout(r, 5000));
+            consecutiveNoSlot = 0;
+          }
+          continue;
+        }
+
+        consecutiveNoSlot = 0;
+        if (res.progress) {
+          onProgress?.(res.progress);
+          qc.invalidateQueries({ queryKey: queryKeys.missions.actions(execMissionId) });
+        }
+
+        // Check completion
+        if (res.progress && (res.progress.completed + res.progress.failed) >= res.progress.total) {
+          toast.success(`Missione completata: ${res.progress.completed} successi, ${res.progress.failed} fallimenti`);
+          break;
+        }
+      } catch (e) {
+        log.error("Mission execution error:", { error: e });
+        await new Promise(r => setTimeout(r, 10000));
+      }
+    }
+
+    qc.invalidateQueries({ queryKey: key });
+  }, [qc, key]);
+
+  const stopExecution = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+
+  return {
+    actions: query.data ?? [],
+    isLoading: query.isLoading,
+    createActions,
+    approveAll,
+    cancelAll,
+    executeMissionWithSlots,
+    stopExecution,
+    generateIdempotencyKey,
+  };
+}
+
+export function useActiveMissions() {
+  return useQuery({
+    queryKey: queryKeys.missions.activeActions(),
+    queryFn: async () => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) return [];
+      return findActiveMissionActions(user.id);
+    },
+    refetchInterval: 10000,
+  });
+}

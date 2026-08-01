@@ -6,7 +6,7 @@
  * Tutte le chiamate passano per wcaAppApi.ts.
  */
 
-import { wcaScrape, wcaDiscover, wcaLogin } from "@/lib/api/wcaAppApi";
+import { wcaScrape, wcaDiscover } from "@/lib/api/wcaAppApi";
 
 // ─── Types (invariati) ─────────────────────────────────────────
 
@@ -176,8 +176,8 @@ export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
         email: p.email || null,
         phone: p.phone || null,
         website: p.website || null,
-        networks: (p.networks || []).map((n: any) => typeof n === "string" ? { name: n } : n),
-        contacts: (p.contacts || []) as any[],
+        networks: (p.networks || []).map((n: unknown) => typeof n === "string" ? { name: n } : n) as { name: string; expires?: string }[],
+        contacts: (p.contacts || []) as { title: string; name?: string; email?: string; phone?: string; mobile?: string }[],
       },
       contactsFound: p.contacts?.length || 0,
       totalContacts: p.contacts?.length || 0,
@@ -192,12 +192,12 @@ export async function scrapeWcaDirectory(
   countryCode: string,
   network?: string,
   pageIndex?: number,
-  pageSize?: number
+  _pageSize?: number
 ): Promise<DirectoryResult> {
   try {
     const result = await wcaDiscover(countryCode, pageIndex || 1);
 
-    const members: DirectoryMember[] = (result.members || []).map((m: any) => ({
+    const members: DirectoryMember[] = (result.members || []).map((m: { id: number; name?: string; company?: string }) => ({
       company_name: m.name || m.company || "",
       city: undefined,
       country: undefined,

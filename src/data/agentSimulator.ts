@@ -1,0 +1,92 @@
+/**
+ * DAL — agent-simulate edge function client.
+ */
+import { invokeAi } from "@/lib/ai/invokeAi";
+
+export interface SimulatorRequest {
+  agentId: string | null;
+  userMessage: string;
+  sessionContext?: Record<string, unknown> | null;
+  dryRunAI?: boolean;
+}
+
+export interface SimulatorResponse {
+  assembled: { system_prompt: string; char_count: number };
+  persona: {
+    loaded: boolean;
+    tone?: string;
+    language?: string;
+    block_preview?: string;
+    note?: string;
+  };
+  capabilities: {
+    loaded: boolean;
+    execution_mode: string;
+    preferred_model: string | null;
+    temperature: number;
+    max_tokens_per_call: number;
+    max_iterations: number;
+    max_concurrent_tools: number;
+    step_timeout_ms: number;
+  };
+  operative_prompts: {
+    applied: string[];
+    has_mandatory: boolean;
+    matched: { contexts: string[]; tags: string[] };
+    block_preview: string;
+  };
+  tools: {
+    all_registered: string[];
+    effective: string[];
+    filtered_out: string[];
+    approval_map: Array<{ name: string; requires_approval: boolean }>;
+  };
+  hard_guards: {
+    forbidden_tables: string[];
+    destructive_ops_blocked: string[];
+    bulk_caps: Record<string, number>;
+    approval_required_always: string[];
+    notes: string;
+  };
+  dry_run: {
+    model?: string;
+    elapsed_ms?: number;
+    message?: string;
+    proposed_tool_calls?: Array<{
+      name: string;
+      arguments: unknown;
+      would_be_blocked: boolean;
+      would_require_approval: boolean;
+    }>;
+    usage?: Record<string, unknown> | null;
+    error?: string;
+    detail?: string;
+  } | null;
+}
+
+export async function runAgentSimulator(req: SimulatorRequest): Promise<SimulatorResponse> {
+  return await invokeAi<SimulatorResponse>("agent-simulate", {
+    scope: "lab",
+    context: { source: "agentSimulator", mode: "simulate" },
+    body: { ...req },
+  });
+}
+
+export interface EdgeFnSpecLite {
+  id: string;
+  edge_function: string;
+  label: string;
+  description: string;
+  default_model: string;
+  has_tools: boolean;
+  loader_options: Record<string, unknown>;
+}
+
+export async function listEdgeFnPseudoAgents(): Promise<EdgeFnSpecLite[]> {
+  const data = await invokeAi<{ edge_fns?: EdgeFnSpecLite[] }>("agent-simulate", {
+    scope: "lab",
+    context: { source: "agentSimulator", mode: "list-edge-fns" },
+    body: { listEdgeFns: true },
+  });
+  return data?.edge_fns ?? [];
+}

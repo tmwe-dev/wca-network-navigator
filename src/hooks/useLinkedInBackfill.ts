@@ -1,111 +1,263 @@
 /**
- * LinkedIn Backfill - Ultra Conservative
- * Max 1 thread per session, 6x delays vs WhatsApp.
+ * LinkedIn Backfill — Unified: "Scarica Quello Che Manca"
+ * Same logic as WhatsApp backfill:
+ * Phase 1: Discovery → read inbox, detect gaps vs DB
+ * Phase 2: Deep recovery → readThread + backfillThread (scroll-back) per thread
  */
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
+import {
+  upsertChannelMessageDedup,
+  getLastInboundOrOutboundForContact,
+} from "@/data/channelMessages";
+import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
+type BackfillPhase = "idle" | "discovery" | "deep";
 
 type BackfillProgress = {
   status: BackfillStatus;
+  phase: BackfillPhase;
   currentThread: string | null;
+  threadsProcessed: number;
+  threadsTotal: number;
   recoveredMessages: number;
-  errors: number;
   pauseReason: string | null;
-  pauseEndsAt: number | null;
   lastError: string | null;
 };
 
 const INITIAL: BackfillProgress = {
-  status: "idle", currentThread: null, recoveredMessages: 0, errors: 0,
-  pauseReason: null, pauseEndsAt: null, lastError: null,
+  status: "idle", phase: "idle", currentThread: null,
+  threadsProcessed: 0, threadsTotal: 0, recoveredMessages: 0,
+  pauseReason: null, lastError: null,
 };
 
-// Ultra-conservative: 1 thread, long delays
-const MAX_THREADS_PER_SESSION = 1;
-const DELAY_BETWEEN_ACTIONS_MS = 18_000; // 18s between actions (6x WA's ~3s)
-
-function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const interval = setInterval(() => {
-      if (abortRef.current || Date.now() - start >= ms) {
-        clearInterval(interval);
-        resolve(abortRef.current);
-      }
-    }, 250);
-  });
-}
+const MAX_THREADS_PER_SESSION = 5;
+const MAX_SCROLLS_PER_THREAD = 20;
 
 export function useLinkedInBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL);
   const abortRef = useRef(false);
-  const { isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
+  const runningRef = useRef(false);
+  const { readInbox, readThread, backfillThread } = useLinkedInMessagingBridge();
 
   const startBackfill = useCallback(async () => {
-    if (progress.status === "running") return;
+    if (runningRef.current) return;
+    // Single-op guard
+    let guard!: import("@/lib/syncGuard").GuardToken;
+    try {
+      guard = tryAcquire("linkedin", "Backfill");
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "linkedin" } }));
+        }
+        toast.warning("LinkedIn: un'operazione è già in corso, attendi.");
+        return;
+      }
+      throw e;
+    }
+    runningRef.current = true;
     abortRef.current = false;
-    setProgress({ ...INITIAL, status: "running" });
+    setProgress({ ...INITIAL, status: "running", phase: "discovery" });
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) { toast.error("Non autenticato"); return; }
 
-      // Read inbox threads
-      setProgress(p => ({ ...p, currentThread: "Lettura inbox..." }));
+      // ── PHASE 1: Discovery ──
+      await throttle("linkedin", "ping", "Ping estensione");
       const inboxResult = await readInbox();
       if (!inboxResult.success || !inboxResult.threads?.length) {
+        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
         toast.info("Nessun thread LinkedIn trovato");
-        setProgress(p => ({ ...p, status: "done" }));
         return;
       }
 
-      // Only process first thread (ultra-conservative)
-      const thread = inboxResult.threads[0];
-      setProgress(p => ({ ...p, currentThread: thread.name }));
+      if (abortRef.current) { setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" })); return; }
 
-      // Wait before reading thread details
-      const aborted = await sleepAbortable(DELAY_BETWEEN_ACTIONS_MS, abortRef);
-      if (aborted) {
-        setProgress(p => ({ ...p, status: "paused", pauseReason: "Interrotto manualmente" }));
-        return;
+      // Etichette UI / ghost (definite qui per riuso anche nel save preview)
+      const LI_UI_LABELS = new Set([
+        "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
+        "archiviate", "spam", "inmail", "inmails", "sponsorizzato",
+        "sponsored", "tutti", "filtri", "messages", "unread", "archived",
+      ]);
+      const LI_GHOST_BODIES = new Set([
+        "foto", "video", "audio", "gif", "documento", "allegato",
+        "ha reagito", "ha risposto", "ha ritirato un messaggio",
+        "messaggio rimosso", "image", "attachment",
+      ]);
+
+      // ── STEP 1.5: salva SEMPRE i preview dalla sidebar (anche senza threadUrl) ──
+      // In modalità legacy-structural l'estensione non popola threadUrl → senza
+      // questo step il backfill non scriverebbe MAI nulla in DB.
+      let previewSaved = 0;
+      let withUrl = 0;
+      for (const thread of inboxResult.threads) {
+        if (!thread.name || !thread.lastMessage) continue;
+        if (LI_UI_LABELS.has(thread.name.toLowerCase())) continue;
+        const text = thread.lastMessage.trim();
+        if (text.length < 3 || LI_GHOST_BODIES.has(text.toLowerCase())) continue;
+        if (thread.threadUrl) withUrl++;
+        const extId = buildDeterministicId("li", thread.name, text, "");
+        try {
+          const r = await upsertChannelMessageDedup({
+            user_id: user.id,
+            channel: "linkedin",
+            direction: "inbound",
+            from_address: thread.name,
+            body_text: text,
+            message_id_external: extId,
+            thread_id: thread.threadUrl || null,
+          });
+          if (r.inserted) previewSaved++;
+        } catch { /* ignore single failures */ }
       }
+      toast.info(`Preview salvati: ${previewSaved}/${inboxResult.threads.length} (${withUrl} con URL thread)`);
 
-      // Read thread messages
-      if (thread.threadUrl) {
-        const threadResult = await readThread(thread.threadUrl);
-        if (threadResult.success && threadResult.messages?.length) {
-          let saved = 0;
-          for (const msg of threadResult.messages) {
-            const extId = buildDeterministicId("li", thread.name || "", msg.text || "", msg.timestamp);
-            const { error } = await supabase.from("channel_messages").insert({
-              user_id: user.id,
-              channel: "linkedin",
-              direction: msg.direction === "outbound" ? "outbound" : "inbound",
-              from_address: msg.direction === "outbound" ? undefined : thread.name,
-              to_address: msg.direction === "outbound" ? thread.name : undefined,
-              body_text: msg.text,
-              message_id_external: extId,
-            });
-            if (!error) saved++;
-          }
-          setProgress(p => ({ ...p, recoveredMessages: saved }));
-        } else {
-          setProgress(p => ({ ...p, lastError: threadResult.error || "Nessun messaggio trovato" }));
+      // Detect gaps: compare last sidebar message vs last DB message per thread
+      const threadsWithGap: { name: string; threadUrl: string; lastDbText: string | null }[] = [];
+
+      for (const thread of inboxResult.threads) {
+        if (threadsWithGap.length >= MAX_THREADS_PER_SESSION) break;
+        if (!thread.name || !thread.threadUrl) continue;
+
+        const lastMsg = await getLastInboundOrOutboundForContact(
+          user.id, "linkedin", thread.name,
+        );
+
+        const sidebarText = (thread.lastMessage || "").trim().toLowerCase();
+        const dbText = (lastMsg?.body_text || "").trim().toLowerCase();
+
+        if (!lastMsg || (sidebarText && sidebarText !== dbText)) {
+          threadsWithGap.push({ name: thread.name, threadUrl: thread.threadUrl, lastDbText: lastMsg?.body_text || null });
         }
       }
 
-      setProgress(p => ({ ...p, status: "done", currentThread: null }));
-      toast.success(`Backfill LinkedIn completato`);
-    } catch (err: any) {
-      setProgress(p => ({ ...p, status: "error", lastError: err.message }));
-      toast.error(`Errore: ${err.message}`);
+      if (threadsWithGap.length === 0) {
+        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
+        if (withUrl === 0) {
+          toast.warning(
+            "Nessun thread ha threadUrl (modalità legacy-structural). " +
+            "Apri linkedin.com/messaging e clicca su una chat per popolare gli URL, poi riprova.",
+            { duration: 8000 },
+          );
+        } else {
+          toast.success(`LinkedIn aggiornato (${previewSaved} nuovi preview salvati)`);
+        }
+        return;
+      }
+
+      // ── PHASE 2: Deep Recovery ──
+      setProgress(p => ({ ...p, phase: "deep", threadsTotal: threadsWithGap.length, threadsProcessed: 0 }));
+      let totalRecovered = 0;
+
+      for (let i = 0; i < threadsWithGap.length; i++) {
+        if (abortRef.current) {
+          setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
+          toast.info("Recupero interrotto");
+          return;
+        }
+
+        const thread = threadsWithGap[i];
+        setProgress(p => ({ ...p, currentThread: thread.name, threadsProcessed: i }));
+
+        let messages: Array<Record<string, unknown>> = [];
+
+        // Step 1: Read visible messages
+        await throttle("linkedin", "open", `Apri thread: ${thread.name}`);
+        const threadResult = await readThread(thread.threadUrl);
+        if (threadResult.success && threadResult.messages?.length) {
+          await throttle("linkedin", "read", `Leggo messaggi: ${thread.name}`);
+          messages = threadResult.messages as Record<string, unknown>[];
+        }
+
+        // Step 2: Check if anchor is among visible messages
+        if (thread.lastDbText && messages.length > 0) {
+          const foundAnchor = messages.some((m) => {
+            const t = String(m.text || "").trim().toLowerCase();
+            return t === thread.lastDbText!.trim().toLowerCase();
+          });
+
+          // If anchor NOT found → scroll-back with backfillThread
+          if (!foundAnchor) {
+            await throttle("linkedin", "scroll", `Scroll back: ${thread.name}`);
+            const backfillResult = await backfillThread(thread.threadUrl, thread.lastDbText, MAX_SCROLLS_PER_THREAD);
+            if (backfillResult.success && backfillResult.messages?.length) {
+              messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
+            }
+          }
+        } else if (!thread.lastDbText) {
+          // No messages in DB at all → do full backfill
+          await throttle("linkedin", "scroll", `Scroll back: ${thread.name}`);
+          const backfillResult = await backfillThread(thread.threadUrl, "", MAX_SCROLLS_PER_THREAD);
+          if (backfillResult.success && backfillResult.messages?.length) {
+            messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
+          }
+        }
+
+        // Step 3: Save all messages to DB via upsert (ignores duplicates)
+        let chatRecovered = 0;
+        for (const msg of messages) {
+          const text = String(msg.text || "").trim();
+          if (!text) continue;
+          const sender = String(msg.sender || msg.contact || thread.name).trim();
+
+          // Hard-skip: etichette UI come "contatto"
+          if (LI_UI_LABELS.has(sender.toLowerCase())) continue;
+          if (LI_UI_LABELS.has(thread.name.toLowerCase())) continue;
+          // Hard-skip: ghost preview (testo troppo breve, solo numeri, placeholder media)
+          const lowerText = text.toLowerCase();
+          if (text.length < 3) continue;
+          if (/^[0-9]{1,3}$/.test(text)) continue;
+          if (LI_GHOST_BODIES.has(lowerText)) continue;
+
+          const timestamp = String(msg.timestamp || new Date().toISOString());
+          const direction = String(msg.direction || "inbound");
+          const extId = buildDeterministicId("li", thread.name, text, timestamp);
+
+          const dir: "inbound" | "outbound" = direction === "outbound" ? "outbound" : "inbound";
+          const res = await upsertChannelMessageDedup({
+            user_id: user.id,
+            channel: "linkedin",
+            direction: dir,
+            from_address: dir === "outbound" ? undefined : thread.name,
+            to_address: dir === "outbound" ? thread.name : undefined,
+            body_text: text,
+            message_id_external: extId,
+          });
+          if (res.inserted) chatRecovered++;
+          // log used to silence unused var warning
+          void sender;
+        }
+
+        totalRecovered += chatRecovered;
+        setProgress(p => ({ ...p, recoveredMessages: totalRecovered, threadsProcessed: i + 1 }));
+
+        // Pause between threads (human-like)
+        if (i < threadsWithGap.length - 1) {
+          await throttle("linkedin", "betweenThreads", "Pausa tra thread");
+          if (abortRef.current) {
+            setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
+            toast.info("Recupero interrotto");
+            return;
+          }
+        }
+      }
+
+      setProgress(p => ({ ...p, status: "done", phase: "idle", currentThread: null }));
+      toast.success(`LinkedIn: ${totalRecovered} messaggi recuperati da ${threadsWithGap.length} conversazioni`);
+    } catch (err: unknown) {
+      setProgress(p => ({ ...p, status: "error", lastError: err instanceof Error ? err.message : String(err) }));
+      toast.error(`Errore: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      runningRef.current = false;
+      guard.release();
     }
-  }, [progress.status, readInbox, readThread]);
+  }, [readInbox, readThread, backfillThread]);
 
   const stopBackfill = useCallback(() => {
     abortRef.current = true;

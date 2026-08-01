@@ -1,0 +1,1 @@
+ALTER TABLE public.tmwe_oauth_state ADD COLUMN IF NOT EXISTS app_origin text;

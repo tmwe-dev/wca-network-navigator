@@ -1,4 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getJobTerminalLog, setJobTerminalLog } from "@/data/downloadJobs";
+import { createLogger } from "@/lib/log";
+import { toRecord } from "@/lib/records";
+
+const log = createLogger("terminalLog");
 
 /**
  * Terminal log with LOCAL BUFFER — flushes to DB every N entries
@@ -21,10 +25,11 @@ interface BufferState {
 }
 
 function getBuffer(): BufferState {
-  if (!(window as any)[BUFFER_KEY]) {
-    (window as any)[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
+  const w = toRecord(window);
+  if (!w[BUFFER_KEY]) {
+    w[BUFFER_KEY] = { entries: [], flushTimer: null, jobId: null };
   }
-  return (window as any)[BUFFER_KEY];
+  return w[BUFFER_KEY] as BufferState;
 }
 
 /**
@@ -44,18 +49,11 @@ async function flushBuffer(): Promise<void> {
   }
 
   try {
-    const { data } = await supabase
-      .from("download_jobs")
-      .select("terminal_log")
-      .eq("id", jobId)
-      .single();
-    const current = (data?.terminal_log as unknown as LogEntry[] || []);
+    const current = (await getJobTerminalLog(jobId)) as LogEntry[];
     const updated = [...current, ...toFlush].slice(-150);
-    await supabase
-      .from("download_jobs")
-      .update({ terminal_log: updated as any })
-      .eq("id", jobId);
-  } catch {
+    await setJobTerminalLog(jobId, updated);
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     // Silently fail — terminal log is non-critical
   }
 }

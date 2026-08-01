@@ -38,7 +38,7 @@ export function normalizePhone(phone: string): string {
     .map((part) => part.trim())
     .find(Boolean) || phone;
 
-  let cleaned = primaryCandidate.replace(/[\s\-.\(\)]/g, "");
+  let cleaned = primaryCandidate.replace(/[\s\-.()]/g, "");
   // Convert 00xx to +xx
   if (cleaned.startsWith("00")) cleaned = "+" + cleaned.slice(2);
   // Italian mobile (3xx) → +39
@@ -49,7 +49,7 @@ export function normalizePhone(phone: string): string {
 }
 
 export function extractEmail(value: string): string {
-  const match = value.match(/[\w.\-+]+@[\w.\-]+\.\w{2,}/);
+  const match = value.match(/[\w.\-+]+@[\w.-]+\.\w{2,}/);
   return match ? match[0].toLowerCase() : value.toLowerCase();
 }
 
@@ -113,7 +113,7 @@ export function parseCountry(value: string): string {
 // ── Validation ──────────────────────────────────────────────────
 
 function validateEmail(email: string): boolean {
-  return /^[\w.\-+]+@[\w.\-]+\.\w{2,}$/.test(email);
+  return /^[\w.\-+]+@[\w.-]+\.\w{2,}$/.test(email);
 }
 
 /**
@@ -198,14 +198,14 @@ export function validateAndTransform(
  * Takes a raw row object + column_mapping dict and returns transformed values.
  */
 export function transformRow(
-  row: Record<string, any>,
+  row: Record<string, string | undefined>,
   columnMapping: Record<string, string>,
   heuristicMappings?: ColumnMapping[]
 ): Record<string, string | null> {
   const result: Record<string, string | null> = {};
 
   for (const [srcKey, dstCol] of Object.entries(columnMapping)) {
-    if (!TARGET_COLUMNS.includes(dstCol as any)) continue;
+    if (!(TARGET_COLUMNS as readonly string[]).includes(dstCol)) continue;
 
     // Find actual key in row (fuzzy)
     const actualKey = findRowKey(row, srcKey);
@@ -248,7 +248,7 @@ function detectTransformForTarget(targetCol: string): TransformationType {
 }
 
 /** 3-tier key lookup: exact → normalized → fuzzy substring */
-function findRowKey(row: Record<string, any>, targetKey: string): string | undefined {
+function findRowKey(row: Record<string, unknown>, targetKey: string): string | undefined {
   const keys = Object.keys(row);
   if (row[targetKey] !== undefined) return targetKey;
 

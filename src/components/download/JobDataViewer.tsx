@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findPartnersWithContactsByWcaIds, findDirectoryCacheMembers } from "@/application/data/downloadViews";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import {
   CheckCircle, XCircle, Building2, Loader2, MapPin, Radio, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface JobDataViewerProps {
   open: boolean;
@@ -58,7 +59,7 @@ export function JobDataViewer({
   const isJobActive = jobStatus === "running" || jobStatus === "pending";
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["job-data-viewer", processedIds],
+    queryKey: queryKeys.downloads.dataViewer(processedIds),
     queryFn: async () => {
       if (!processedIds.length) return [];
       const chunks: number[][] = [];
@@ -67,16 +68,8 @@ export function JobDataViewer({
       }
       const allPartners: PartnerWithContacts[] = [];
       for (const chunk of chunks) {
-        const { data, error } = await supabase
-          .from("partners")
-          .select(`
-            id, wca_id, company_name, city, country_code, email, phone,
-            partner_contacts (id, name, title, email, direct_phone, mobile, is_primary)
-          `)
-          .in("wca_id", chunk)
-          .order("company_name");
-        if (error) throw error;
-        if (data) allPartners.push(...(data as unknown as PartnerWithContacts[]));
+        const data = await findPartnersWithContactsByWcaIds(chunk);
+        allPartners.push(...(data as PartnerWithContacts[]));
       }
       const idOrder = new Map(processedIds.map((id, idx) => [id, idx]));
       allPartners.sort((a, b) => (idOrder.get(a.wca_id!) ?? 999) - (idOrder.get(b.wca_id!) ?? 999));
@@ -88,11 +81,10 @@ export function JobDataViewer({
 
   // Query failed profile names from directory_cache
   const { data: failedNames } = useQuery({
-    queryKey: ["failed-ids-names", failedIds],
+    queryKey: queryKeys.downloads.failedIdsNames(failedIds),
     queryFn: async () => {
       if (!failedIds.length) return new Map<number, string>();
-      const { data: cacheEntries } = await supabase
-        .from("directory_cache").select("members").eq("country_code", countryCode);
+      const cacheEntries = await findDirectoryCacheMembers(countryCode);
       const nameMap = new Map<number, string>();
       for (const entry of cacheEntries || []) {
         const members = (entry.members || []) as Array<{ wca_id?: number; company_name?: string }>;
@@ -138,12 +130,12 @@ export function JobDataViewer({
   const goPrev = () => setCurrentIndex(i => Math.max(0, i - 1));
   const goNext = () => setCurrentIndex(i => Math.min(total - 1, i + 1));
 
-  const bg = isDark ? "bg-slate-900/95 backdrop-blur-xl border-amber-500/20 text-slate-100" : "bg-white border-slate-200 text-slate-800";
-  const subColor = isDark ? "text-slate-400" : "text-slate-500";
-  const dimColor = isDark ? "text-slate-500" : "text-slate-400";
-  const bodyColor = isDark ? "text-slate-300" : "text-slate-600";
-  const cardBg = isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-slate-50 border-slate-200";
-  const hi = isDark ? "text-amber-400" : "text-sky-600";
+  const bg = "bg-card backdrop-blur-xl border-border text-foreground";
+  const subColor = "text-muted-foreground";
+  const dimColor = "text-muted-foreground";
+  const bodyColor = "text-foreground";
+  const cardBg = "bg-muted/30 border-border";
+  const hi = "text-primary";
 
   // 3D animation styles
   const getCardStyle = (): React.CSSProperties => {
@@ -175,7 +167,7 @@ export function JobDataViewer({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`${bg} sm:max-w-2xl max-h-[85vh] flex flex-col`}>
         <DialogHeader>
-          <DialogTitle className={isDark ? "text-slate-100" : "text-slate-800"}>
+          <DialogTitle className="text-foreground">
             {getCountryFlag(countryCode)} Dati Scaricati — {countryName}
           </DialogTitle>
           <DialogDescription className={subColor}>
@@ -197,8 +189,7 @@ export function JobDataViewer({
             {/* Navigation + Live toggle */}
             <div className="flex items-center justify-between gap-2">
               <Button size="sm" variant="outline" onClick={goPrev}
-                disabled={currentIndex === 0 || liveMode}
-                className={isDark ? "border-slate-700 text-slate-300" : ""}>
+                disabled={currentIndex === 0 || liveMode}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
 
@@ -229,8 +220,7 @@ export function JobDataViewer({
                   </div>
                 )}
                 <Button size="sm" variant="outline" onClick={goNext}
-                  disabled={currentIndex >= total - 1 || liveMode}
-                  className={isDark ? "border-slate-700 text-slate-300" : ""}>
+                  disabled={currentIndex >= total - 1 || liveMode}>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -276,9 +266,9 @@ export function JobDataViewer({
                           {current.partner_contacts.map(c => (
                             <div key={c.id} className={`p-3 rounded-lg border ${cardBg} space-y-1.5`}>
                               <div className="flex items-center gap-2">
-                                <span className={`text-sm font-medium ${bodyColor}`}>{c.name}</span>
+                       <span className={`text-sm font-medium ${bodyColor}`}>{c.name}</span>
                                 {c.is_primary && (
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-500/20 text-amber-500 border-amber-500/30">
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">
                                     Primario
                                   </Badge>
                                 )}
@@ -301,14 +291,14 @@ export function JobDataViewer({
                     {failedIds.length > 0 && (
                       <div className="mt-4">
                         <p className={`text-xs font-medium mb-2 ${subColor}`}>
-                          <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-orange-500" />
+                          <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-destructive" />
                           Profili non scaricati ({failedIds.length})
                         </p>
                         <div className="space-y-1.5">
                           {failedIds.map(fid => (
                             <div key={fid} className={`flex items-center justify-between p-2 rounded-lg border ${cardBg}`}>
                               <div className="flex items-center gap-2">
-                                <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                                <XCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
                                 <span className={`text-xs ${bodyColor}`}>
                                   {failedNames?.get(fid) || `WCA ${fid}`}
                                 </span>
@@ -318,7 +308,7 @@ export function JobDataViewer({
                                 href={`https://members.wcaworld.com/profile/${fid}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border ${isDark ? "border-amber-500/30 text-amber-400 hover:bg-amber-500/10" : "border-sky-500/30 text-sky-600 hover:bg-sky-50"} transition-colors`}
+                                className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
                               >
                                 <ExternalLink className="w-3 h-3" />
                                 Apri su WCA
@@ -339,20 +329,20 @@ export function JobDataViewer({
   );
 }
 
-function DataRow({ icon, value, label, isDark }: { icon: React.ReactNode; value: string | null; label: string; isDark: boolean }) {
+function DataRow({ icon, value, label, isDark: _isDark }: { icon: React.ReactNode; value: string | null; label: string; isDark: boolean }) {
   const has = !!value && value.trim().length > 0;
   return (
     <div className="flex items-center gap-2 text-xs">
       {has ? (
         <CheckCircle className="w-3 h-3 text-emerald-500 flex-shrink-0" />
       ) : (
-        <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+        <XCircle className="w-3 h-3 text-destructive flex-shrink-0" />
       )}
-      <span className={isDark ? "text-slate-500" : "text-slate-400"}>{icon}</span>
+      <span className="text-muted-foreground">{icon}</span>
       {has ? (
-        <span className={isDark ? "text-slate-200" : "text-slate-700"}>{value}</span>
+        <span className="text-foreground">{value}</span>
       ) : (
-        <span className={isDark ? "text-red-400/70" : "text-red-400"}>{label} mancante</span>
+        <span className="text-destructive">{label} mancante</span>
       )}
     </div>
   );

@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 /**
  * Save WCA cookie to app_settings.
@@ -11,21 +9,24 @@ const corsHeaders = {
  * This prevents IP-mismatch session invalidation.
  */
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
-    // ── Soft Auth: accept both user JWT and anon key (extension uses anon key) ──
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return respond({ success: false, message: 'Unauthorized' }, 401)
-    }
-    // Cookie is a shared resource in app_settings — extension calls with anon key are valid
+    // P1.2: enforce extension auth (JWT preferred, anon-key only as legacy fallback
+    // and ONLY from CORS-whitelisted origins — getCorsHeaders already gates this).
+    const auth = await requireExtensionAuth(req, dynCors);
+    if (isExtensionAuthError(auth)) return auth;
 
     const { cookie } = await req.json()
     if (!cookie || typeof cookie !== 'string') {
       return respond({ success: false, message: 'Cookie mancante' }, 400)
+    }
+    if (cookie.length > 20000) {
+      return respond({ success: false, message: 'Cookie troppo lungo' }, 413)
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -37,9 +38,25 @@ Deno.serve(async (req) => {
     const hasWcaCookie = cookie.includes('wca=')
     const isAuthenticated = hasAspxAuth || hasWcaCookie
 
-    console.log(`save-wca-cookie: received cookie (${cookie.length} chars), hasAspxAuth=${hasAspxAuth}, hasWcaCookie=${hasWcaCookie}`)
+    
 
-    // Save cookie to both keys for compatibility
+    // PR-2 Step B: user-scoped session when caller is a real user
+    if (auth.authMethod === "jwt" && auth.userId !== "extension-anon") {
+      await supabase.from('user_wca_sessions').upsert(
+        {
+          user_id: auth.userId,
+          cookie,
+          status: isAuthenticated ? 'ok' : 'unknown',
+          has_aspx_auth: hasAspxAuth,
+          has_wca_cookie: hasWcaCookie,
+          updated_at: now,
+        },
+        { onConflict: 'user_id' },
+      )
+    }
+
+    // Legacy global keys (kept for backward compat — to be removed once all
+    // extensions ship JWT and EXTENSION_AUTH_STRICT=true).
     await supabase.from('app_settings').upsert(
       { key: 'wca_auth_cookie', value: cookie, updated_at: now },
       { onConflict: 'key' }
@@ -66,7 +83,7 @@ Deno.serve(async (req) => {
       ? '✅ Cookie salvato! Sessione WCA attiva.'
       : '⏳ Cookie salvato. Nessun cookie di autenticazione rilevato, verifica reale necessaria.'
 
-    console.log(`save-wca-cookie: status=${status}, message=${message}`)
+    
 
     return respond({
       success: true,
@@ -84,9 +101,9 @@ Deno.serve(async (req) => {
   }
 })
 
-function respond(data: any, status = 200) {
+function respond(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
   })
 }

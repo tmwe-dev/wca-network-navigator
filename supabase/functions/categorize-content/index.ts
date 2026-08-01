@@ -1,25 +1,29 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const { name, text, type } = await req.json();
     if (!name && !text) {
       return new Response(JSON.stringify({ category: "altro" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ category: "altro" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -27,13 +31,7 @@ serve(async (req) => {
       ? ["proposta_servizi", "partnership", "altro"]
       : ["primo_contatto", "follow_up", "richiesta", "partnership", "altro"];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: "google/gemini-3-flash-preview",
         messages: [
           {
@@ -63,13 +61,12 @@ serve(async (req) => {
           },
         ],
         tool_choice: { type: "function", function: { name: "classify" } },
-      }),
-    });
+      });
 
     if (!response.ok) {
       console.error("AI gateway error:", response.status);
       return new Response(JSON.stringify({ category: "altro" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -77,19 +74,22 @@ serve(async (req) => {
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     let category = "altro";
     if (toolCall?.function?.arguments) {
-      try {
-        const args = JSON.parse(toolCall.function.arguments);
-        if (categories.includes(args.category)) category = args.category;
-      } catch { /* fallback */ }
+      const Schema = z.object({ category: z.enum(categories as [string, ...string[]]) });
+      const r = safeParseToolArgs(toolCall.function.arguments, Schema, {
+        fnName: "categorize-content",
+        model: "google/gemini-3-flash-preview",
+        fallback: { category: "altro" },
+      });
+      category = r.data.category;
     }
 
     return new Response(JSON.stringify({ category }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("categorize error:", e);
     return new Response(JSON.stringify({ category: "altro" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

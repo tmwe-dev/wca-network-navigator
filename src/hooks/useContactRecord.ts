@@ -1,6 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { updatePartner } from "@/data/partners";
+import {
+  findPartnerRecord,
+  findImportedContactRecord,
+  findProspectRecord,
+  findBusinessCardRecord,
+} from "@/data/contactRecord";
+import { updateContact } from "@/data/contacts";
+import { updateProspect } from "@/data/prospects";
+import { updateBusinessCard } from "@/data/businessCards";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
+import { queryKeys } from "@/lib/queryKeys";
+import { toRecord } from "@/lib/records";
 
 export interface UnifiedRecord {
   sourceType: RecordSourceType;
@@ -16,8 +27,9 @@ export interface UnifiedRecord {
   position: string | null;
   website: string | null;
   leadStatus: string;
+  emailStatus: "valid" | "bounced" | "invalid";
   note: string | null;
-  enrichmentData: any;
+  enrichmentData: Record<string, unknown> | null;
   deepSearchAt: string | null;
   createdAt: string;
   lastInteractionAt: string | null;
@@ -26,153 +38,107 @@ export interface UnifiedRecord {
   companyAlias: string | null;
   contactAlias: string | null;
   partnerId: string | null;
-  raw: any;
+  raw: Record<string, unknown> | null;
 }
 
 export function useContactRecord(sourceType: RecordSourceType | null, sourceId: string | null) {
   return useQuery({
-    queryKey: ["contact-record", sourceType, sourceId],
+    queryKey: queryKeys.contacts.record(sourceType, sourceId),
     queryFn: async (): Promise<UnifiedRecord | null> => {
       if (!sourceType || !sourceId) return null;
 
       if (sourceType === "partner") {
-        const { data: p, error } = await supabase
-          .from("partners")
-          .select("*, partner_contacts(*), partner_social_links(*)")
-          .eq("id", sourceId)
-          .single();
-        if (error || !p) return null;
-        const primary = (p as any).partner_contacts?.find((c: any) => c.is_primary) || (p as any).partner_contacts?.[0];
-        const liLink = (p as any).partner_social_links?.find((l: any) => l.platform === "linkedin");
+        const p = await findPartnerRecord(sourceId);
+        if (!p) return null;
+        const contacts = (p as Record<string, unknown>).partner_contacts as Array<Record<string, unknown>> | undefined;
+        const socialLinks = (p as Record<string, unknown>).partner_social_links as Array<Record<string, unknown>> | undefined;
+        const primary = contacts?.find(c => c.is_primary) || contacts?.[0];
+        const liLink = socialLinks?.find(l => l.platform === "linkedin");
         return {
           sourceType: "partner", sourceId,
           companyName: p.company_name,
-          contactName: primary?.name || "",
-          email: primary?.email || p.email,
-          phone: primary?.direct_phone || p.phone,
-          mobile: primary?.mobile || p.mobile,
-          country: p.country_name,
-          city: p.city,
-          address: p.address,
-          position: primary?.title || null,
-          website: p.website,
-          leadStatus: p.lead_status,
+          contactName: (primary?.name as string) || "",
+          email: (primary?.email as string) || p.email,
+          phone: (primary?.direct_phone as string) || p.phone,
+          mobile: (primary?.mobile as string) || p.mobile,
+          country: p.country_name, city: p.city, address: p.address,
+          position: (primary?.title as string) || null,
+          website: p.website, leadStatus: p.lead_status,
+          emailStatus: ((p as Record<string, unknown>).email_status as "valid" | "bounced" | "invalid") || "valid",
           note: p.profile_description,
-          enrichmentData: p.enrichment_data,
-          deepSearchAt: p.enriched_at,
-          createdAt: p.created_at || "",
-          lastInteractionAt: p.last_interaction_at,
-          interactionCount: p.interaction_count,
-          linkedinUrl: liLink?.url || (p.enrichment_data as any)?.linkedin_profile_url || null,
+          enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
+          deepSearchAt: p.enriched_at, createdAt: p.created_at || "",
+          lastInteractionAt: p.last_interaction_at, interactionCount: p.interaction_count,
+          linkedinUrl: (liLink?.url as string) || null,
           companyAlias: p.company_alias,
-          contactAlias: primary?.contact_alias || null,
-          partnerId: p.id,
-          raw: p,
+          contactAlias: (primary?.contact_alias as string) || null,
+          partnerId: p.id, raw: p,
         };
       }
 
       if (sourceType === "contact") {
-        const { data: c, error } = await supabase
-          .from("imported_contacts")
-          .select("*")
-          .eq("id", sourceId)
-          .single();
-        if (error || !c) return null;
-        const ed = (c.enrichment_data as any) || {};
+        const c = await findImportedContactRecord(sourceId);
+        if (!c) return null;
+        const ed = (c.enrichment_data as Record<string, unknown>) || {};
         return {
           sourceType: "contact", sourceId,
-          companyName: c.company_name || "",
-          contactName: c.name || "",
-          email: c.email,
-          phone: c.phone,
-          mobile: c.mobile,
-          country: c.country,
-          city: c.city,
-          address: c.address,
-          position: c.position,
-          website: ed.company_website || null,
+          companyName: c.company_name || "", contactName: c.name || "",
+          email: c.email, phone: c.phone, mobile: c.mobile,
+          country: c.country, city: c.city, address: c.address,
+          position: c.position, website: (ed.company_website as string) || null,
           leadStatus: c.lead_status,
+          emailStatus: ((c as Record<string, unknown>).email_status as "valid" | "bounced" | "invalid") || "valid",
           note: c.note,
-          enrichmentData: c.enrichment_data,
-          deepSearchAt: c.deep_search_at,
-          createdAt: c.created_at,
-          lastInteractionAt: c.last_interaction_at,
-          interactionCount: c.interaction_count,
-          linkedinUrl: ed.linkedin_profile_url || ed.linkedin_url || null,
-          companyAlias: c.company_alias,
-          contactAlias: c.contact_alias,
-          partnerId: null,
-          raw: c,
+          enrichmentData: (c.enrichment_data as Record<string, unknown>) ?? null,
+          deepSearchAt: c.deep_search_at as string | null, createdAt: c.created_at,
+          lastInteractionAt: c.last_interaction_at as string | null, interactionCount: c.interaction_count as number,
+          linkedinUrl: (ed.linkedin_profile_url as string) || (ed.linkedin_url as string) || null,
+          companyAlias: c.company_alias as string | null, contactAlias: c.contact_alias as string | null,
+          partnerId: null, raw: toRecord(c),
         };
       }
 
       if (sourceType === "prospect") {
-        const { data: pr, error } = await supabase
-          .from("prospects" as any)
-          .select("*, prospect_contacts(*)")
-          .eq("id", sourceId)
-          .single();
-        if (error || !pr) return null;
-        const p = pr as any;
-        const pc = p.prospect_contacts?.[0];
+        const pr = await findProspectRecord(sourceId);
+        if (!pr) return null;
+        const p = pr;
+        const pc = (p.prospect_contacts as Array<Record<string, unknown>>)?.[0];
         return {
           sourceType: "prospect", sourceId,
-          companyName: p.ragione_sociale || p.company_name || "",
-          contactName: pc?.name || "",
-          email: p.email || pc?.email || null,
-          phone: pc?.phone || null,
-          mobile: null,
-          country: "Italia",
-          city: p.sede_legale || null,
-          address: null,
-          position: pc?.role || null,
-          website: p.website || null,
-          leadStatus: p.lead_status || "new",
+          companyName: String(p.ragione_sociale || p.company_name || ""),
+          contactName: String(pc?.name as string || ""),
+          email: (p.email || pc?.email as string || null) as string | null, phone: (pc?.phone as string || null) as string | null, mobile: null,
+          country: "Italia", city: (p.sede_legale || null) as string | null, address: null,
+          position: (pc?.role as string || null) as string | null, website: (p.website || null) as string | null,
+          leadStatus: String(p.lead_status || "new"),
+          emailStatus: "valid",
           note: null,
-          enrichmentData: p.enrichment_data,
-          deepSearchAt: null,
-          createdAt: p.created_at,
-          lastInteractionAt: p.last_interaction_at,
-          interactionCount: p.interaction_count || 0,
-          linkedinUrl: pc?.linkedin_url || null,
-          companyAlias: null,
-          contactAlias: null,
-          partnerId: null,
-          raw: p,
+          enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
+          deepSearchAt: null, createdAt: String(p.created_at),
+          lastInteractionAt: (p.last_interaction_at || null) as string | null,
+          interactionCount: Number(p.interaction_count || 0),
+          linkedinUrl: (pc?.linkedin_url as string || null) as string | null,
+          companyAlias: null, contactAlias: null, partnerId: null, raw: p as Record<string, unknown>,
         };
       }
 
       if (sourceType === "bca") {
-        const { data: bc, error } = await supabase
-          .from("business_cards")
-          .select("*")
-          .eq("id", sourceId)
-          .single();
-        if (error || !bc) return null;
+        const bc = await findBusinessCardRecord(sourceId);
+        if (!bc) return null;
         return {
           sourceType: "bca", sourceId,
-          companyName: bc.company_name || "",
-          contactName: bc.contact_name || "",
-          email: bc.email,
-          phone: bc.phone,
-          mobile: bc.mobile,
-          country: bc.location,
-          city: null,
-          address: null,
-          position: bc.position,
-          website: null,
+          companyName: bc.company_name || "", contactName: bc.contact_name || "",
+          email: bc.email, phone: bc.phone, mobile: bc.mobile,
+          country: bc.location, city: null, address: null,
+          position: bc.position, website: null,
           leadStatus: bc.match_status || "pending",
+          emailStatus: "valid",
           note: bc.notes,
-          enrichmentData: bc.raw_data,
-          deepSearchAt: null,
-          createdAt: bc.created_at,
-          lastInteractionAt: null,
-          interactionCount: 0,
-          linkedinUrl: null,
-          companyAlias: null,
-          contactAlias: null,
-          partnerId: bc.matched_partner_id,
-          raw: bc,
+          enrichmentData: (bc.raw_data as Record<string, unknown>) ?? null,
+          deepSearchAt: null, createdAt: bc.created_at,
+          lastInteractionAt: null, interactionCount: 0,
+          linkedinUrl: null, companyAlias: null, contactAlias: null,
+          partnerId: bc.matched_partner_id, raw: bc,
         };
       }
 
@@ -189,24 +155,20 @@ export function useUpdateContactRecord() {
     mutationFn: async ({ sourceType, sourceId, updates }: {
       sourceType: RecordSourceType;
       sourceId: string;
-      updates: Record<string, any>;
+      updates: Record<string, unknown>;
     }) => {
       if (sourceType === "partner") {
-        const { error } = await supabase.from("partners").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updatePartner(sourceId, updates);
       } else if (sourceType === "contact") {
-        const { error } = await supabase.from("imported_contacts").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updateContact(sourceId, updates);
       } else if (sourceType === "prospect") {
-        const { error } = await (supabase.from("prospects" as any).update(updates) as any).eq("id", sourceId);
-        if (error) throw error;
+        await updateProspect(sourceId, updates);
       } else if (sourceType === "bca") {
-        const { error } = await supabase.from("business_cards").update(updates).eq("id", sourceId);
-        if (error) throw error;
+        await updateBusinessCard(sourceId, updates);
       }
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ["contact-record", vars.sourceType, vars.sourceId] });
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.record(vars.sourceType, vars.sourceId) });
     },
   });
 }

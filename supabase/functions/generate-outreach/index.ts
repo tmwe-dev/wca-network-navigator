@@ -1,666 +1,389 @@
+import "../_shared/llmFetchInterceptor.ts";
+/**
+ * generate-outreach/index.ts — Orchestrator (~100 LOC).
+ * Delegates to contextAssembler, promptBuilder, responseParser.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
+import type { Quality } from "../_shared/kbSlice.ts";
+import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { assembleOutreachContext } from "./contextAssembler.ts";
+import { buildCalligrafiaSection } from "../_shared/calligrafiaInjector.ts";
+import { buildOutreachPrompts, getModel, type Channel } from "./promptBuilder.ts";
+import { parseOutreachResponse } from "./responseParser.ts";
+import { checkCadence } from "../_shared/cadenceEngine.ts";
+import { loadOperativePrompts, type PromptScope } from "../_shared/operativePromptsLoader.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 
-type Channel = "email" | "linkedin" | "whatsapp" | "sms";
-type Quality = "fast" | "standard" | "premium";
-
-/** Contextual KB injection for outreach */
-async function fetchKbEntriesForOutreach(supabase: any, quality: Quality, channel: Channel): Promise<{ text: string; sections: string[] }> {
-  const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
-  
-  // Select categories based on channel — using ACTUAL DB categories
-  const categories = ["regole_sistema", "filosofia"];
-  if (channel === "email") categories.push("struttura_email", "hook", "cold_outreach");
-  if (channel === "linkedin") categories.push("cold_outreach", "tono");
-  if (channel === "whatsapp") categories.push("tono", "frasi_modello");
-  if (quality !== "fast") categories.push("negoziazione", "chris_voss", "dati_partner");
-  if (quality === "premium") categories.push("arsenale", "persuasione", "obiezioni", "chiusura", "followup", "errori");
-  
-  const { data: entries } = await supabase
-    .from("kb_entries")
-    .select("title, content, category, chapter, tags")
-    .eq("is_active", true)
-    .in("category", categories)
-    .order("priority", { ascending: false })
-    .order("sort_order")
-    .limit(limit);
-
-  if (!entries || entries.length === 0) return { text: "", sections: [] };
-
-  const sections = [...new Set(entries.map((e: any) => e.category))];
-  const text = entries
-    .map((e: any) => `### ${e.title} [${e.chapter}]\n${e.content}`)
-    .join("\n\n---\n\n");
-
-  return { text, sections };
-}
-
-/** Legacy fallback */
-function getKBSlice(fullKB: string, quality: Quality): string {
-  if (!fullKB) return "";
-  if (quality === "premium") return fullKB;
-  const allowedSections = quality === "fast" ? [1, 5] : [1, 2, 3, 4, 5, 6, 7, 8];
-  const sectionRegex = /<!-- SECTION:(\d+) -->/g;
-  const markers: { index: number; section: number }[] = [];
-  let match;
-  while ((match = sectionRegex.exec(fullKB)) !== null) {
-    markers.push({ index: match.index, section: parseInt(match[1]) });
-  }
-  if (markers.length === 0) return fullKB;
-  const parts: string[] = [];
-  for (let i = 0; i < markers.length; i++) {
-    if (allowedSections.includes(markers[i].section)) {
-      const start = markers[i].index;
-      const end = i + 1 < markers.length ? markers[i + 1].index : fullKB.length;
-      parts.push(fullKB.substring(start, end).trim());
-    }
-  }
-  return parts.join("\n\n---\n\n");
-}
-
-function getModel(quality: Quality): string {
-  return quality === "fast"
-    ? "google/gemini-2.5-flash-lite"
-    : "google/gemini-3-flash-preview";
-}
-
-/** Detect language from country code */
-function detectLanguage(countryCode: string): { language: string; languageLabel: string } {
-  const cc = (countryCode || "").toUpperCase().trim();
-  const map: Record<string, { language: string; languageLabel: string }> = {
-    IT: { language: "italiano", languageLabel: "Italian" },
-    ES: { language: "español", languageLabel: "Spanish" },
-    AR: { language: "español", languageLabel: "Spanish" },
-    MX: { language: "español", languageLabel: "Spanish" },
-    CO: { language: "español", languageLabel: "Spanish" },
-    FR: { language: "français", languageLabel: "French" },
-    BE: { language: "français", languageLabel: "French" },
-    DE: { language: "deutsch", languageLabel: "German" },
-    AT: { language: "deutsch", languageLabel: "German" },
-    CH: { language: "deutsch", languageLabel: "German" },
-    PT: { language: "português", languageLabel: "Portuguese" },
-    BR: { language: "português", languageLabel: "Portuguese" },
-    NL: { language: "nederlands", languageLabel: "Dutch" },
-    RU: { language: "русский", languageLabel: "Russian" },
-    TR: { language: "türkçe", languageLabel: "Turkish" },
-    PL: { language: "polski", languageLabel: "Polish" },
-    RO: { language: "română", languageLabel: "Romanian" },
-    GR: { language: "ελληνικά", languageLabel: "Greek" },
-  };
-  return map[cc] || { language: "english", languageLabel: "English" };
-}
-
-/** Check if a string looks like a person's name (vs a job title) */
-function isLikelyPersonName(value: string): boolean {
-  if (!value || value.trim().length < 2) return false;
-  const lower = value.toLowerCase().trim();
-  const roleKeywords = [
-    "department", "pricing", "business development", "manager", "director",
-    "office", "logistics", "operations", "commercial", "sales", "admin",
-    "accounting", "hr", "finance", "marketing", "coordinator", "supervisor",
-    "assistant", "secretary", "procurement", "purchasing", "supply chain",
-    "warehouse", "import", "export", "freight", "shipping", "forwarding",
-    "rappresentante", "responsabile", "direttore", "ufficio", "reparto",
-    "amministrazione", "commerciale", "operativo", "logistica",
-  ];
-  if (roleKeywords.some((kw) => lower.includes(kw))) return false;
-  if (/[&\/]/.test(value)) return false;
-  return true;
-}
-
-/** Channel-specific instructions */
-function getChannelInstructions(channel: Channel): string {
-  switch (channel) {
-    case "email":
-      return `Genera un'email B2B professionale.
-- Includi un oggetto nella prima riga: "Subject: ..."
-- Dopo l'oggetto, corpo in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
-- Tono formale ma umano, personalizzato sul destinatario
-- Termina con saluto di chiusura e nome mittente`;
-
-    case "linkedin":
-      return `Genera un messaggio LinkedIn InMail/DM professionale.
-- NON includere "Subject:" — LinkedIn non ha oggetto
-- Massimo 300 parole — i messaggi LinkedIn devono essere concisi
-- Tono semi-formale, diretto, personale — come un messaggio tra professionisti
-- Fai riferimento al profilo/azienda del destinatario per personalizzare
-- Testo puro, NO HTML
-- Termina con nome mittente`;
-
-    case "whatsapp":
-      return `Genera un messaggio WhatsApp Business professionale.
-- NON includere "Subject:" — WhatsApp non ha oggetto
-- Massimo 150 parole — i messaggi WhatsApp devono essere brevi e diretti
-- Tono informale ma rispettoso, conversazionale
-- Usa emoji moderatamente (1-2 al massimo) per rendere il messaggio più umano
-- Testo puro, NO HTML
-- Vai subito al punto — no formalità eccessive`;
-
-    case "sms":
-      return `Genera un SMS professionale.
-- NON includere "Subject:" — SMS non ha oggetto
-- Massimo 160 caratteri — CRITICO: rispetta rigorosamente il limite SMS
-- Tono ultra-conciso, diretto, essenziale
-- Includi una call-to-action chiara
-- Testo puro, NO HTML
-- Nessun saluto formale — solo il contenuto essenziale e il nome`;
-  }
-}
-
-/** Strip common legal suffixes from company names (fast, no AI needed) */
-function cleanCompanyName(name: string): string {
-  if (!name) return name;
-  return name
-    .replace(/\b(s\.?r\.?l\.?|s\.?p\.?a\.?|s\.?a\.?s\.?|s\.?n\.?c\.?|llc|ltd\.?|inc\.?|gmbh|d\.?o\.?o\.?|corp\.?|pty\.?|plc\.?|co\.?\s*ltd\.?|pvt\.?\s*ltd\.?|s\.?a\.?|ag|ab|as|aps|bv|nv|oy|kft|sro|spol|eirl|sarl|sas|eurl|sl|sa de cv)\b\.?/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+async function checkWhatsAppConsent(
+  supabase: ReturnType<typeof createClient>,
+  partnerId: string | null,
+  userId: string,
+): Promise<boolean> {
+  if (!partnerId) return false;
+  const { count } = await supabase
+    .from("channel_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("partner_id", partnerId)
+    .eq("channel", "whatsapp")
+    .eq("direction", "inbound");
+  return (count || 0) > 0;
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
-    // Auth check
+    // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = claimsData.claims.sub as string;
 
+    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Rate limit ──
+    const rl = checkRateLimit(`generate-outreach:${userId}`, { maxTokens: 10, refillRate: 0.2 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
+
     const {
-      channel = "email",
-      contact_name,
-      contact_email,
-      company_name,
-      country_code = "",
-      language,
-      goal,
-      base_proposal,
-      quality: rawQuality,
-      linkedin_profile,
+      channel = "email", contact_name, contact_email, company_name,
+      country_code = "", language, goal, base_proposal, quality: rawQuality,
+      linkedin_profile, email_type_id, email_type_prompt, email_type_structure, oracle_tone,
+      dry_run = false,
     } = await req.json();
 
     const ch = (["email", "linkedin", "whatsapp", "sms"].includes(channel) ? channel : "email") as Channel;
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    // ── Assemble context ──
+    let ctx;
+    try {
+      ctx = await assembleOutreachContext(supabase, userId, ch, quality, {
+        company_name, contact_name, contact_email, country_code, linkedin_profile, email_type_id,
+      });
+    } catch (e: Record<string, unknown>) {
+      if (e.code === "duplicate_branch") {
+        return new Response(JSON.stringify({ error: "duplicate_branch", message: e.message, recent_contact: e.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
+      }
+      throw e;
+    }
 
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    // ── Cadence check: rispettiamo i tempi e i canali? ──
+    // Bypass in dry_run (es. AI Lab Test Suite): generiamo il messaggio senza
+    // bloccare per regole di cadenza commerciale. Nessun side-effect reale.
+    if (!dry_run && (ch === "email" || ch === "linkedin" || ch === "whatsapp")) {
+      const lastContactDate = ctx.daysSinceLastContact != null && ctx.daysSinceLastContact > 0
+        ? new Date(Date.now() - ctx.daysSinceLastContact * 86400000).toISOString()
+        : null;
 
-    // ─── Recipient Intelligence: query DB for real data ───
-    const intelligence: {
-      sources_checked: string[];
-      data_found: Record<string, boolean>;
-      enrichment_snippet: string;
-      warning: string | null;
-    } = {
-      sources_checked: [],
-      data_found: {},
-      enrichment_snippet: "",
-      warning: null,
-    };
-    const contextParts: string[] = [];
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      let touchesThisWeek = 0;
+      if (ctx.partnerId) {
+        const { count } = await supabase
+          .from("activities")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("source_id", ctx.partnerId)
+          .gte("created_at", weekAgo)
+          .in("status", ["completed", "pending"]);
+        touchesThisWeek = count || 0;
+      }
 
-    // 1) Partners table
-    intelligence.sources_checked.push("partners");
-    let partnerId: string | null = null;
-    if (company_name) {
-      const { data: partnerRows } = await supabase
-        .from("partners")
-        .select("id, company_name, company_alias, enrichment_data, profile_description, city, country_code, website, lead_status")
-        .ilike("company_name", `%${company_name}%`)
-        .limit(1);
-      const partner = partnerRows?.[0];
-      if (partner) {
-        intelligence.data_found.partner = true;
-        partnerId = partner.id;
-        const parts: string[] = [];
-        if (partner.profile_description) parts.push(`Profilo: ${partner.profile_description.slice(0, 500)}`);
-        if (partner.city) parts.push(`Sede: ${partner.city}, ${partner.country_code}`);
-        if (partner.website) parts.push(`Website: ${partner.website}`);
-        if (partner.lead_status) parts.push(`Status CRM: ${partner.lead_status}`);
-        if (partner.enrichment_data) {
-          const ed = partner.enrichment_data as Record<string, any>;
-          if (ed.trade_lanes) parts.push(`Trade Lanes: ${JSON.stringify(ed.trade_lanes).slice(0, 300)}`);
-          if (ed.specializations) parts.push(`Specializzazioni: ${JSON.stringify(ed.specializations).slice(0, 200)}`);
-          if (ed.deep_search_summary) parts.push(`Deep Search: ${String(ed.deep_search_summary).slice(0, 400)}`);
-        }
-        if (parts.length) contextParts.push(`[PARTNER DB]\n${parts.join("\n")}`);
-      } else {
-        intelligence.data_found.partner = false;
+      const hasWhatsAppConsent = ch === "whatsapp"
+        ? await checkWhatsAppConsent(supabase, ctx.partnerId, userId)
+        : false;
+
+      const cadenceResult = checkCadence(
+        ctx.commercialState || "new",
+        lastContactDate,
+        null, // lastChannel non tracciato in ctx
+        touchesThisWeek,
+        ch,
+        hasWhatsAppConsent,
+      );
+
+      if (!cadenceResult.allowed) {
+        console.warn("[generate-outreach] CADENCE_VIOLATION", JSON.stringify({
+          partner_id: ctx.partnerId,
+          channel: ch,
+          state: ctx.commercialState || "new",
+          reasonCode: cadenceResult.reasonCode,
+          reason: cadenceResult.reason,
+          touchesThisWeek,
+        }));
+        return new Response(
+          JSON.stringify({
+            error: "cadence_violation",
+            reasonCode: cadenceResult.reasonCode,
+            message: cadenceResult.reason,
+            suggestedChannel: cadenceResult.suggestedChannel,
+            nextAllowedDate: cadenceResult.nextAllowedDate,
+          }),
+          { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Suggerimento alternanza canali → warning informativo, non blocco
+      if (cadenceResult.suggestedChannel && cadenceResult.suggestedChannel !== ch) {
+        (ctx as Record<string, unknown>).cadenceWarning =
+          `SUGGERIMENTO CADENZA: considera ${cadenceResult.suggestedChannel} invece di ${ch} (alternanza canali).`;
       }
     }
 
-    // 2) Partner contacts
-    intelligence.sources_checked.push("partner_contacts");
-    if (partnerId) {
-      const { data: contactRows } = await supabase
-        .from("partner_contacts")
-        .select("name, title, email, contact_alias")
-        .eq("partner_id", partnerId)
-        .limit(5);
-      if (contactRows && contactRows.length > 0) {
-        intelligence.data_found.contacts = true;
-        const cList = contactRows.map((c: any) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ");
-        contextParts.push(`[CONTATTI AZIENDA]\n${cList}`);
-      } else {
-        intelligence.data_found.contacts = false;
-      }
-    }
-
-    // 3) Partner networks
-    intelligence.sources_checked.push("partner_networks");
-    if (partnerId) {
-      const { data: netRows } = await supabase
-        .from("partner_networks")
-        .select("network_name")
-        .eq("partner_id", partnerId)
-        .limit(10);
-      if (netRows && netRows.length > 0) {
-        intelligence.data_found.networks = true;
-        contextParts.push(`[NETWORK CONDIVISI]\n${netRows.map((n: any) => n.network_name).join(", ")}`);
-      } else {
-        intelligence.data_found.networks = false;
-      }
-    }
-
-    // 4) Partner services
-    intelligence.sources_checked.push("partner_services");
-    if (partnerId) {
-      const { data: svcRows } = await supabase
-        .from("partner_services")
-        .select("service_category")
-        .eq("partner_id", partnerId)
-        .limit(20);
-      if (svcRows && svcRows.length > 0) {
-        intelligence.data_found.services = true;
-        contextParts.push(`[SERVIZI]\n${svcRows.map((s: any) => s.service_category).join(", ")}`);
-      } else {
-        intelligence.data_found.services = false;
-      }
-    }
-
-    // 5) Imported contacts (CRM)
-    intelligence.sources_checked.push("imported_contacts");
-    if (contact_email || company_name) {
-      const q = supabase.from("imported_contacts").select("name, company_name, note, enrichment_data, deep_search_at").limit(1);
-      if (contact_email) q.ilike("email", contact_email);
-      else if (company_name) q.ilike("company_name", `%${company_name}%`);
-      const { data: icRows } = await q;
-      const ic = icRows?.[0];
-      if (ic) {
-        intelligence.data_found.imported_contacts = true;
-        const parts: string[] = [];
-        if (ic.note) parts.push(`Note: ${String(ic.note).slice(0, 300)}`);
-        if (ic.enrichment_data) {
-          const ed = ic.enrichment_data as Record<string, any>;
-          if (ed.summary) parts.push(`Enrichment: ${String(ed.summary).slice(0, 300)}`);
-        }
-        if (parts.length) contextParts.push(`[CRM CONTATTO]\n${parts.join("\n")}`);
-      } else {
-        intelligence.data_found.imported_contacts = false;
-      }
-    }
-
-    // 6) Interaction history
-    intelligence.sources_checked.push("interactions");
-    let interactionHistoryCount = 0;
-    if (partnerId) {
-      const { data: interRows } = await supabase
-        .from("interactions")
-        .select("interaction_type, subject, notes, interaction_date")
-        .eq("partner_id", partnerId)
-        .order("interaction_date", { ascending: false })
-        .limit(5);
-      if (interRows && interRows.length > 0) {
-        intelligence.data_found.interactions = true;
-        interactionHistoryCount = interRows.length;
-        const hist = interRows.map((i: any) => `[${i.interaction_date?.slice(0, 10)}] ${i.interaction_type}: ${i.subject}${i.notes ? ` — ${i.notes.slice(0, 100)}` : ""}`).join("\n");
-        contextParts.push(`[STORIA INTERAZIONI]\n${hist}`);
-      } else {
-        intelligence.data_found.interactions = false;
-      }
-    }
-
-    // 7) Completed activities (email sent previously)
-    intelligence.sources_checked.push("activities");
-    const sourceIdForActivities = partnerId || null;
-    if (sourceIdForActivities) {
-      const { data: actRows } = await supabase
-        .from("activities")
-        .select("email_subject, sent_at, activity_type, status")
-        .eq("source_id", sourceIdForActivities)
-        .in("status", ["completed"])
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (actRows && actRows.length > 0) {
-        intelligence.data_found.activities = true;
-        const acts = actRows.map((a: any) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
-        contextParts.push(`[ATTIVITÀ PRECEDENTI]\nQueste comunicazioni sono GIÀ state inviate — NON ripetere lo stesso messaggio:\n${acts}`);
-      } else {
-        intelligence.data_found.activities = false;
-      }
-    }
-
-    let linkedinSource: "cached" | "live_scraped" | "not_available" = "not_available";
-    // 8b) Client-scraped LinkedIn profile (from extension)
-    if (linkedin_profile && typeof linkedin_profile === "object") {
-      const lp = linkedin_profile as Record<string, string>;
-      const lpParts: string[] = [];
-      if (lp.name) lpParts.push(`Nome: ${lp.name}`);
-      if (lp.headline) lpParts.push(`Headline: ${lp.headline}`);
-      if (lp.location) lpParts.push(`Località: ${lp.location}`);
-      if (lp.about) lpParts.push(`About: ${String(lp.about).slice(0, 800)}`);
-      if (lp.profileUrl) lpParts.push(`URL: ${lp.profileUrl}`);
-      if (lpParts.length > 0) {
-        contextParts.push(`[LINKEDIN PROFILO (scraping live dal browser)]\n${lpParts.join("\n")}`);
-        intelligence.data_found.linkedin_live = true;
-        intelligence.sources_checked.push("linkedin_live_scrape");
-        linkedinSource = "live_scraped";
-      }
-    }
-
-    let websiteSource: "cached" | "not_available" = "not_available";
-    if (partnerId && quality !== "fast") {
-      const { data: partnerFull } = await supabase
-        .from("partners")
-        .select("website, enrichment_data")
-        .eq("id", partnerId)
-        .single();
-      
-      if (partnerFull?.website) {
-        const ed = (partnerFull.enrichment_data || {}) as Record<string, any>;
-        if (ed.website_summary) {
-          websiteSource = "cached";
-          contextParts.push(`[SITO AZIENDALE (cached)]\n${String(ed.website_summary).slice(0, 600)}`);
-          intelligence.data_found.website = true;
-        }
-      }
-    }
-
-    // 9) LinkedIn data from DB cache (no live scraping)
-    if (partnerId && quality === "premium") {
-      const { data: liLinks } = await supabase
-        .from("partner_social_links")
-        .select("url")
-        .eq("partner_id", partnerId)
-        .eq("platform", "linkedin")
-        .limit(1);
-      
-      if (liLinks?.[0]?.url) {
-        const { data: partnerEd } = await supabase
-          .from("partners")
-          .select("enrichment_data")
-          .eq("id", partnerId)
-          .single();
-        const ed = (partnerEd?.enrichment_data || {}) as Record<string, any>;
-
-        if (ed.linkedin_summary) {
-          linkedinSource = "cached";
-          contextParts.push(`[LINKEDIN (cached)]\n${String(ed.linkedin_summary).slice(0, 500)}`);
-          intelligence.data_found.linkedin = true;
-        }
-      }
-    }
-
-    // Build enrichment snippet (max ~2000 chars)
-    const rawSnippet = contextParts.join("\n\n");
-    intelligence.enrichment_snippet = rawSnippet.slice(0, 2000);
-    if (!rawSnippet) {
-      intelligence.warning = "Nessun dato trovato nel DB. L'AI lavora solo con dati base.";
-    }
-
-    // ─── End Recipient Intelligence ───
-
-    // Fetch AI settings
-    const { data: settingsRows } = await supabase
-      .from("app_settings")
-      .select("key, value")
-      .like("key", "ai_%");
-
-    const settings: Record<string, string> = {};
-    (settingsRows || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
-
-    // Resolve recipient name
-    let recipientName = "";
-    if (contact_name && isLikelyPersonName(contact_name)) {
-      recipientName = contact_name;
-    }
-
-    const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
-    const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
-
-    // Sales KB — contextual injection from kb_entries
-    const kbResult = await fetchKbEntriesForOutreach(supabase, quality, ch);
-    const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbResult.text || getKBSlice(fullSalesKB, quality);
-
-    // Language detection
-    const detected = detectLanguage(country_code);
+    // ── Decision Object (Fix 3.1: usa relationship_stage REALE) ──
+    const detected = getLanguageHint(country_code);
     const effectiveLanguage = language || detected.language;
-
-    // Channel-specific instructions
-    const channelInstructions = getChannelInstructions(ch);
-
-    const senderContext = `
-MITTENTE (TU):
-- Nome: ${senderAlias}
-- Azienda: ${senderCompanyAlias}
-- Ruolo: ${settings.ai_contact_role || "N/A"}
-- Email: ${settings.ai_email_signature || "N/A"}
-- Settore: ${settings.ai_sector || "freight_forwarding"}
-- Network: ${settings.ai_networks || "N/A"}
-
-KNOWLEDGE BASE AZIENDALE:
-${settings.ai_knowledge_base || "Non configurata"}
-${salesKBSlice ? `\n# ARSENAL STRATEGICO (${kbResult.sections.join(", ") || "legacy"}):\nApplica queste tecniche nel messaggio.\n\n${salesKBSlice}\n` : ""}
-STILE:
-- Tono: ${settings.ai_tone || "professionale"}
-`;
-
-    const cleanedCompany = cleanCompanyName(company_name || "");
-
-    const recipientContext = `
-DESTINATARIO:
-- Azienda: ${cleanedCompany || company_name || "N/A"}
-- Paese: ${country_code || "N/A"}
-${recipientName ? `- Nome: ${recipientName} (IMPORTANTE: usa SOLO il nome di battesimo nel saluto)` : `- ATTENZIONE: nessun nome persona disponibile. Usa saluto generico ("Gentile responsabile" o equivalente).`}
-${contact_email ? `- Email: ${contact_email}` : ""}
-
-REGOLA: ${recipientName ? `Rivolgiti a ${recipientName}, MAI all'azienda nel saluto.` : `Usa saluto generico. MAI usare nomi di azienda nel saluto.`}
-`;
-
-    // Recipient intelligence block for prompt
-    const intelligenceBlock = intelligence.enrichment_snippet
-      ? `\nINTELLIGENCE DESTINATARIO (dati verificati dal database — USA QUESTI, non inventare):
-${intelligence.enrichment_snippet}
-`
-      : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
-`;
-
-    const systemPrompt = `Sei un esperto copywriter e stratega di vendita B2B nel settore logistica e freight forwarding internazionale.
-NON sei un semplice generatore di testo — sei un consulente che applica tecniche avanzate di vendita e negoziazione dalla Knowledge Base.
-
-# STRATEGIA AUTONOMA
-- LEGGI le tecniche dalla KB e SELEZIONA quelle più appropriate per questo contesto
-- APPLICA almeno 1-2 tecniche nel messaggio (Label, Mirroring, domanda calibrata, urgenza soft...)
-- Se hai dati dal DB sul destinatario → personalizza profondamente
-- Se non hai dati → resta professionale, usa tecniche universali
-- NON inventare MAI informazioni non presenti nei dati forniti
-
-CANALE: ${ch.toUpperCase()}
-${channelInstructions}
-
-REGOLE CRITICHE:
-1. Scrivi INTERAMENTE in ${effectiveLanguage} (paese destinatario: ${country_code} → ${detected.languageLabel})
-2. Personalizza il messaggio sul destinatario SOLO con dati dalla sezione INTELLIGENCE DESTINATARIO
-3. ${ch === "email" ? "NON includere firma — viene aggiunta automaticamente" : "Includi il nome del mittente alla fine"}
-4. ZERO ALLUCINAZIONI — REGOLA ASSOLUTA:
-   - NON inventare MAI nomi di prodotti, servizi, eventi, fiere, presentazioni o fatti
-   - NON attribuire competenze o certificazioni non presenti nei dati
-   - NON inventare statistiche o percentuali
-   - Se i dati sono insufficienti, resta generico ma VERO
-5. Usa i network condivisi come punto di connessione se esistono nei dati
-6. Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
-7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi
-8. Ogni messaggio DEVE avere una CTA chiara — domande aperte > domande chiuse
-9. Struttura: Hook → Valore → CTA (adatta la lunghezza al canale)
-10. LIMITI DI LUNGHEZZA PER CANALE: ${ch === "whatsapp" ? "MAX 100 parole" : ch === "linkedin" ? "MAX 200 parole" : ch === "sms" ? "MAX 160 caratteri" : "MAX 150 parole per primo contatto, 200 per follow-up"}`;
-
-    const userPrompt = `${senderContext}
-${recipientContext}
-${intelligenceBlock}
-GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
-
-PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
-
-Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecniche dalla Knowledge Base.`;
-
-    const model = getModel(quality);
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+    const stage = ctx.relationshipStage; // cold | warm | active | stale | ghosted
+    const isAdvanced = stage === "warm" || stage === "active";
+    const isStaleOrGhosted = stage === "stale" || stage === "ghosted";
+    const decision = {
+      email_type: email_type_id || (stage === "cold" ? "primo_contatto" : isStaleOrGhosted ? "reattivazione" : "follow_up"),
+      // Single source of truth: stage da analyzeRelationshipHistory (NO doppia verità da count)
+      relationship_stage: stage,
+      relationship_detail: {
+        stage,
+        response_rate: ctx.relationshipMetrics.response_rate,
+        unanswered_streak: ctx.relationshipMetrics.unanswered_count,
+        days_since_last_contact: ctx.relationshipMetrics.days_since_last_contact,
+        commercial_state: ctx.relationshipMetrics.commercial_state,
+        total_interactions: ctx.relationshipMetrics.total_interactions,
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
+      language: effectiveLanguage,
+      tone: oracle_tone || (isStaleOrGhosted ? "cordiale_non_insistente" : "professionale"),
+      hook_strategy: ctx.intelligence.data_found.networks ? "shared_network" : ctx.intelligence.data_found.partner ? "company_reference" : "sector_relevance",
+      cta_type: stage === "cold" ? "light_interest_probe" : isAdvanced ? "direct_action" : isStaleOrGhosted ? "soft_reopen" : "micro_commitment",
+      forbidden_elements: [
+        "overclaiming",
+        "multi_cta",
+        ...(stage === "cold" ? ["price", "discount"] : []),
+        ...(isStaleOrGhosted ? ["pressure", "urgency_fake"] : []),
+      ],
+      max_length_lines: ch === "email" ? 12 : ch === "linkedin" ? 6 : 4,
+      persuasion_pattern: email_type_id === "follow_up" ? "strategic_no" : email_type_id === "partnership" ? "loss_aversion" : isStaleOrGhosted ? "pattern_interrupt" : "label_technique",
+    };
+
+    // ── Readiness ──
+    const readiness = {
+      sender: [ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name ? 25 : 0, ctx.settings.ai_company_alias || ctx.settings.ai_company_name ? 25 : 0, ctx.settings.ai_knowledge_base ? 25 : 0, ctx.settings.ai_contact_role ? 15 : 0, ctx.settings.ai_email_signature ? 10 : 0].reduce((a, b) => a + b, 0),
+      recipient: [ctx.intelligence.data_found.partner ? 30 : 0, ctx.intelligence.data_found.contacts ? 15 : 0, ctx.intelligence.data_found.networks ? 20 : 0, ctx.intelligence.data_found.interactions ? 20 : 0, (ctx.intelligence.data_found.linkedin || ctx.intelligence.data_found.linkedin_live) ? 15 : 0].reduce((a, b) => a + b, 0),
+      kb: ctx.salesKBSlice ? Math.min(100, ctx.salesKBSections.length * 15) : 0,
+      scenario: [email_type_id ? 40 : 0, goal ? 30 : 0, base_proposal ? 30 : 0].reduce((a, b) => a + b, 0),
+    };
+    const readinessTotal = Math.round((readiness.sender + readiness.recipient + readiness.kb + readiness.scenario) / 4);
+    const readinessWarnings: string[] = [];
+    if (readiness.sender < 50) readinessWarnings.push("Profilo mittente incompleto: configura alias, azienda e ruolo in Impostazioni AI");
+    if (readiness.recipient < 30) readinessWarnings.push("Pochi dati sul destinatario: arricchisci il partner con LinkedIn, network o note");
+    if (readiness.kb < 30) readinessWarnings.push("Knowledge Base vuota o insufficiente: aggiungi entries in KB per risultati migliori");
+    if (readiness.scenario < 40) readinessWarnings.push("Scenario generico: specifica tipo email, goal e proposta per email più mirate");
+
+    // ── LOVABLE-93: Decision Engine — evaluate before generation ──
+    let decisionEngineBlock = "";
+    if (ctx.partnerId) {
+      try {
+        const { evaluatePartner } = await import("../_shared/decisionEngine.ts");
+        const { state: pState, actions } = await evaluatePartner(supabase, ctx.partnerId, userId);
+        const topAction = actions[0];
+        if (topAction && topAction.action !== "no_action") {
+          const journalistHint = topAction.journalist_role
+            ? `\n- Giornalista suggerito: ${topAction.journalist_role}`
+            : "";
+          decisionEngineBlock = `
+DECISION ENGINE (raccomandazione automatica):
+- Azione: ${topAction.action} (priorità: ${topAction.priority}/5, autonomia: ${topAction.autonomy})
+- Motivo: ${topAction.reasoning}
+- Stato: ${pState.touchCount} touch, ${pState.daysSinceLastOutbound}gg dall'ultimo invio${journalistHint}`;
+        }
+      } catch (decErr) {
+        console.warn("[generate-outreach] Decision Engine failed (non-blocking):", decErr);
+      }
+    }
+
+    // ── Build prompts ──
+    let recipientName = "";
+    if (contact_name && isLikelyPersonName(contact_name)) recipientName = contact_name;
+
+    const { systemPrompt, userPrompt } = buildOutreachPrompts({
+      channel: ch, quality, contact_name, contact_email, company_name, country_code,
+      language, goal, base_proposal, oracle_tone, email_type_id, email_type_prompt, email_type_structure,
+      settings: ctx.settings,
+      enrichmentSnippet: ctx.intelligence.enrichment_snippet,
+      interlocutorBlock: ctx.interlocutorBlock, relationshipBlock: ctx.relationshipBlock,
+      branchBlock: ctx.branchBlock, metInPersonContext: ctx.metInPersonContext,
+      conversationIntelligenceContext: ctx.conversationIntelligenceContext,
+      salesKBSlice: ctx.salesKBSlice, salesKBSections: ctx.salesKBSections,
+      commercialLevers: ctx.settings.ai_commercial_levers || "",
+      decision, readinessTotal,
+      commercialState: ctx.commercialState,
+      touchCount: ctx.touchCount,
+      daysSinceLastContact: ctx.daysSinceLastContact,
+      // Fix 3.2 + 3.3
+      playbookBlock: ctx.playbookBlock,
+      channelDeclaration: ctx.channelDeclaration,
+      // LOVABLE-93: Decision Engine context
+      decisionEngineBlock,
     });
 
-    if (!response.ok) {
-      const status = response.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit, riprova tra poco." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    // ── Prompt Lab injection (UNIFIED loader) ──
+    // Map channel → scope so the WhatsApp Message Gate, LinkedIn limits and
+    // multi-channel sequence rules from the Prompt Lab actually reach this
+    // generator (previously hardcoded prompt only).
+    const promptScope: PromptScope =
+      ch === "whatsapp" ? "whatsapp" :
+      ch === "linkedin" ? "linkedin" :
+      ch === "email" ? "outreach" : "outreach";
+    const promptLab = await loadOperativePrompts(supabase, userId, {
+      scope: promptScope,
+      channel: ch,
+      includeUniversal: true,
+      limit: 6,
+    });
+    const baseFinalSystemPrompt = promptLab.block
+      ? `${promptLab.block}\n\n${systemPrompt}`
+      : systemPrompt;
+    // ── Calligrafia (regole di formattazione email — SSOT KB "calligrafia") ──
+    // Iniettata solo per il canale email; per WhatsApp/LinkedIn la formattazione
+    // è governata da prompt operativi specifici (no HTML).
+    const calligrafiaSection = ch === "email"
+      ? await buildCalligrafiaSection(supabase, userId)
+      : "";
+    const finalSystemPrompt = `${baseFinalSystemPrompt}${calligrafiaSection ? "\n" + calligrafiaSection : ""}`;
+
+    // ── AI call ──
+    const model = getModel(quality);
+    const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_generate_outreach", 1200);
+    const result = await aiChat({
+      models: [model, "openai/gpt-5-mini"],
+      messages: [{ role: "system", content: finalSystemPrompt }, { role: "user", content: userPrompt }],
+      timeoutMs: 40000, maxRetries: 1, max_tokens: maxTokens, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
+      // Funnemail Doctrine 2026-05-10: varietà sui messaggi outreach.
+      temperature: 0.75,
+      presence_penalty: 0.3,
+      frequency_penalty: 0.4,
+      seed: Math.floor(Math.random() * 1_000_000_000),
+    });
+
+    // ── Credits ──
+    const totalCredits = Math.max(1, Math.ceil((result.usage.promptTokens + result.usage.completionTokens * 2) / 1000));
+    await supabase.rpc("deduct_credits", { p_user_id: userId, p_amount: totalCredits, p_operation: "ai_call", p_description: `generate-outreach (${ch}/${quality}): ${result.usage.promptTokens}in + ${result.usage.completionTokens}out` });
+
+    // ── Parse ──
+    const { subject, body } = parseOutreachResponse(result.content || "", ch, ctx.settings);
+
+    // ── GIORNALISTA AI — Editorial review OBBLIGATORIA (parità con generate-email) ──
+    // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto per email/WA/LinkedIn.
+    let finalBody = body;
+    let journalistVerdict: string | null = null;
+    try {
+      if (finalBody) {
+        const optimus = await loadOptimusSettings(supabase, userId);
+        const reviewChannel: "email" | "whatsapp" | "linkedin" =
+          ch === "whatsapp" ? "whatsapp" : ch === "linkedin" ? "linkedin" : "email";
+        const journalistResult = await journalistReview(supabase, userId, {
+          final_draft: finalBody,
+          resolved_brief: {
+            objective: goal ?? undefined,
+            playbook_active: ctx.playbookActive ? "yes" : undefined,
+          },
+          channel: reviewChannel,
+          language: effectiveLanguage || undefined,
+          commercial_state: {
+            lead_status: (ctx.commercialState as string) || "new",
+            touch_count: ctx.touchCount ?? 0,
+            days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
+            has_active_conversation: !!ctx.historyText,
+          },
+          history_summary: ctx.historyText || undefined,
+          kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
+          partner: {
+            id: null,
+            company_name: company_name || null,
+            country: country_code || null,
+          },
+          contact: recipientName ? { name: recipientName } : undefined,
+        }, { mode: optimus.mode, strictness: optimus.strictness });
+        journalistVerdict = journalistResult.verdict;
+        if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
+          finalBody = journalistResult.edited_text;
+        }
       }
-      const text = await response.text();
-      console.error("AI error:", status, text);
-      throw new Error("AI gateway error");
+    } catch (jerr) {
+      // Fail-soft sul generatore (bozza): la review HARD fail-closed resta
+      // garantita a valle in send-email/whatsapp/linkedin prima dell'invio.
+      console.error("[generate-outreach] journalistReview failed:", jerr);
     }
 
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || "";
+    const kbSource = ctx.salesKBSlice ? "kb_entries" : (ctx.settings.ai_sales_knowledge_base ? "legacy_monolithic_deprecated" : "none");
+    const senderAlias = ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name || "";
+    const senderCompanyAlias = ctx.settings.ai_company_alias || ctx.settings.ai_company_name || "";
 
-    // Deduct credits
-    if (result.usage) {
-      const inputTokens = result.usage.prompt_tokens || 0;
-      const outputTokens = result.usage.completion_tokens || 0;
-      const totalCredits = Math.max(1, Math.ceil((inputTokens + outputTokens * 2) / 1000));
-      await supabase.rpc("deduct_credits", {
-        p_user_id: userId,
-        p_amount: totalCredits,
-        p_operation: "ai_call",
-        p_description: `generate-outreach (${ch}/${quality}): ${inputTokens}in + ${outputTokens}out`,
-      });
-    }
-
-    // Parse output
-    let subject = "";
-    let body = content;
-
-    if (ch === "email") {
-      const subjectMatch = content.match(/^Subject:\s*(.+)/i);
-      if (subjectMatch) {
-        subject = subjectMatch[1].trim();
-        body = content.substring(subjectMatch[0].length).trim();
-      }
-      // Convert to HTML if needed
-      if (!/<(p|br|div|ul|ol|h[1-6])\b/i.test(body)) {
-        body = body.split(/\n\n+/).map((para: string) => `<p>${para.replace(/\n/g, "<br>")}</p>`).join("\n");
-      }
-      // Append signature
-      let signatureBlock = settings.ai_email_signature_block || "";
-      if (!signatureBlock.trim()) {
-        const sigParts: string[] = [];
-        if (senderAlias) sigParts.push(senderAlias);
-        if (settings.ai_contact_role) sigParts.push(settings.ai_contact_role);
-        if (senderCompanyAlias) sigParts.push(senderCompanyAlias);
-        if (settings.ai_phone_signature) sigParts.push(`Tel: ${settings.ai_phone_signature}`);
-        if (settings.ai_email_signature) sigParts.push(`Email: ${settings.ai_email_signature}`);
-        if (sigParts.length > 0) signatureBlock = sigParts.join("\n");
-      }
-      if (signatureBlock.trim()) {
-        body = body + `<br><br>${signatureBlock.replace(/\n/g, "<br>")}`;
-      }
-    }
-
-    // Build debug/sources info
-    const _debug = {
-      model,
-      quality,
-      language_detected: detected.languageLabel,
-      language_used: effectiveLanguage,
-      country_code: country_code || "N/A",
-      recipient_name_resolved: recipientName || "(generico)",
-      sender_alias: senderAlias || "(non configurato)",
-      sender_company: senderCompanyAlias || "(non configurato)",
-      sender_role: settings.ai_contact_role || "(non configurato)",
-      kb_loaded: !!settings.ai_knowledge_base,
-      sales_kb_loaded: !!kbResult.text || !!fullSalesKB,
-      sales_kb_sections: kbResult.sections.join(", ") || (quality === "premium" ? "tutte" : quality === "fast" ? "1,5" : "1-8"),
-      goal_used: goal || "(default)",
-      proposal_used: base_proposal || "(default)",
-      tokens_input: result.usage?.prompt_tokens || 0,
-      tokens_output: result.usage?.completion_tokens || 0,
-      credits_consumed: result.usage ? Math.max(1, Math.ceil(((result.usage.prompt_tokens || 0) + (result.usage.completion_tokens || 0) * 2) / 1000)) : 0,
-      channel_instructions: ch.toUpperCase(),
-      settings_keys_found: Object.keys(settings),
-      recipient_intelligence: intelligence,
-      interaction_history_count: interactionHistoryCount,
-      website_source: websiteSource,
-      linkedin_source: linkedinSource,
-    };
-
-    return new Response(
-      JSON.stringify({
-        channel: ch,
-        subject,
-        body,
-        full_content: content,
-        contact_name: recipientName || contact_name || null,
-        contact_email: contact_email || null,
-        company_name: company_name || null,
-        language: effectiveLanguage,
-        quality,
-        model,
-        _debug,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({
+      channel: ch, subject, body: finalBody, full_content: result.content || "",
+      contact_name: recipientName || contact_name || null,
+      contact_email: contact_email || null, company_name: company_name || null,
+      language: effectiveLanguage, quality, model,
+      readiness_score: readinessTotal, readiness_warnings: readinessWarnings,
+      _debug: {
+        model, quality, language_detected: detected.languageLabel, language_used: effectiveLanguage,
+        journalist_verdict: journalistVerdict || "(skipped)",
+        country_code: country_code || "N/A", recipient_name_resolved: recipientName || "(generico)",
+        sender_alias: senderAlias || "(non configurato)", sender_company: senderCompanyAlias || "(non configurato)",
+        sender_role: ctx.settings.ai_contact_role || "(non configurato)",
+        kb_loaded: !!ctx.settings.ai_knowledge_base, sales_kb_loaded: !!ctx.salesKBSlice, kb_source: kbSource,
+        sales_kb_sections: ctx.salesKBSections.join(", ") || (quality === "premium" ? "tutte" : quality === "fast" ? "1,5" : "1-8"),
+        goal_used: goal || "(default)", proposal_used: base_proposal || "(default)",
+        tokens_input: result.usage.promptTokens, tokens_output: result.usage.completionTokens,
+        credits_consumed: totalCredits, model_used: result.modelUsed, ai_attempts: result.attempts,
+        channel_instructions: ch.toUpperCase(), settings_keys_found: Object.keys(ctx.settings),
+        recipient_intelligence: ctx.intelligence, interaction_history_count: ctx.interactionHistoryCount,
+        website_source: ctx.websiteSource, linkedin_source: ctx.linkedinSource,
+        decision_object: decision, readiness, readiness_total: readinessTotal, readiness_warnings: readinessWarnings,
+        relationship_stage: ctx.relationshipStage,
+        relationship_metrics: ctx.relationshipMetrics,
+        playbook_active: ctx.playbookActive,
+        channel_declaration: ctx.channelDeclaration,
+      },
+    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("generate-outreach error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return mapErrorToResponse(e, dynCors);
   }
 });

@@ -1,4 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("useContinuousSpeech");
 
 /**
  * Continuous Speech-to-Text hook.
@@ -6,11 +9,11 @@ import { useState, useRef, useCallback, useEffect } from "react";
  * Auto-restarts on Chrome timeout (~60s).
  * Accumulates text with interim results shown live.
  */
-export function useContinuousSpeech(onFinalText?: (text: string) => void) {
+export function useContinuousSpeech(onFinalText?: (text: string) => void, langCode = "it-IT") {
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const shouldListenRef = useRef(false);
   const accumulatedRef = useRef("");
 
@@ -19,18 +22,16 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   const createRecognition = useCallback(() => {
-    const SR =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
 
     const recognition = new SR();
-    recognition.lang = "it-IT";
+    recognition.lang = langCode;
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (e: any) => {
+    recognition.onresult = (e: SpeechRecognitionEvent) => {
       let interim = "";
       let final = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -49,9 +50,9 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
       setInterimText(interim);
     };
 
-    recognition.onerror = (e: any) => {
+    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
-      console.warn("Speech error:", e.error);
+      log.warn("speech error", { error: e.error });
     };
 
     recognition.onend = () => {
@@ -59,8 +60,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
       if (shouldListenRef.current) {
         try {
           recognition.start();
-        } catch {
-          // already started
+        } catch (e) {
+          log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         }
       } else {
         setListening(false);
@@ -68,7 +69,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     };
 
     return recognition;
-  }, [onFinalText]);
+  }, [langCode, onFinalText]);
 
   const start = useCallback(() => {
     if (!hasSpeechAPI) return;
@@ -84,8 +85,8 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void) {
     try {
       recognition.start();
       setListening(true);
-    } catch {
-      // already started
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     }
   }, [hasSpeechAPI, createRecognition]);
 

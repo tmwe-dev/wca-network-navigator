@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { AVAILABLE_TOOLS } from "@/data/agentTemplates";
+import { AVAILABLE_TOOLS } from "@/constants/agentTemplates";
 import { useAgents, type Agent } from "@/hooks/useAgents";
 import { toast } from "sonner";
 
@@ -22,7 +22,7 @@ export function AgentToolSelector({ agent }: Props) {
 
   const save = () => {
     updateAgent.mutate(
-      { id: agent.id, assigned_tools: selected } as any,
+      { id: agent.id, assigned_tools: selected } as Parameters<typeof updateAgent.mutate>[0],
       { onSuccess: () => toast.success("Tool aggiornati") }
     );
   };

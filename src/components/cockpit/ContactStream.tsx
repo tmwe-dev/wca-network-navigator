@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
-import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye, Linkedin, Loader2, Plane } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2, Linkedin, Loader2, Plane } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
@@ -13,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
-import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
+import type { ViewMode, CockpitFilter } from "@/types/cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 const FLAG: Record<string, string> = {
@@ -53,10 +54,10 @@ interface ContactStreamProps {
 }
 
 export function ContactStream({
-  viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
+  viewMode, searchQuery, onSearchChange: _onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
+  onBulkDeepSearch, onBulkAlias: _onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
 }: ContactStreamProps) {
   const [hideHolding, setHideHolding] = useState(true);
   const { filters: gf } = useGlobalFilters();
@@ -134,8 +135,8 @@ export function ContactStream({
   if (contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
-        <Users className="w-12 h-12 text-muted-foreground/60" />
-        <h3 className="text-sm font-semibold text-foreground/80">Nessun contatto</h3>
+        <Users className="w-12 h-12 text-muted-foreground" />
+        <h3 className="text-sm font-semibold text-foreground">Nessun contatto</h3>
         <p className="text-xs text-muted-foreground max-w-[240px]">
           Importa contatti, scarica da WCA o aggiungi prospect per popolare il Cockpit.
         </p>
@@ -156,7 +157,7 @@ export function ContactStream({
             onCheckedChange={(checked) => checked ? onSelectAll() : onClear()}
             className="h-3.5 w-3.5"
           />
-          <span className="text-xs font-medium text-foreground/80">
+          <span className="text-xs font-medium text-foreground">
             {selectionCount > 0 ? `${selectionCount} selezionati` : `${filteredContacts.length} contatti`}
           </span>
         </div>
@@ -165,7 +166,7 @@ export function ContactStream({
           className={cn(
             "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
             hideHolding
-              ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+              ? "bg-warning/10 text-warning border border-warning/30"
               : "text-muted-foreground hover:text-foreground"
           )}
           title={hideHolding ? "Mostra tutti" : "Nascondi in circuito"}
@@ -184,13 +185,12 @@ export function ContactStream({
         <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkDeepSearch}>
           <Search className="w-3 h-3" /> Deep Search
         </Button>
-        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkAlias}>
-          <Sparkles className="w-3 h-3" /> Alias
-        </Button>
         {onBulkLinkedInLookup && (
-          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
-            {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} LinkedIn
-          </Button>
+          <InfoTooltip content="Cerca l'URL del profilo LinkedIn dei contatti selezionati via Google (non scrape diretto)">
+            <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
+              {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} Trova URL LinkedIn
+            </Button>
+          </InfoTooltip>
         )}
         {onBatchMode && (
           <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0 text-primary" onClick={onBatchMode}>

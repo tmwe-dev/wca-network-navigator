@@ -1,5 +1,17 @@
 import "@testing-library/jest-dom";
 
+// Polyfill File.prototype.text for jsdom (used by parsers)
+if (typeof File !== "undefined" && !File.prototype.text) {
+  (File.prototype as unknown as Record<string, unknown>).text = function () {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(this as never);
+    });
+  };
+}
+
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({

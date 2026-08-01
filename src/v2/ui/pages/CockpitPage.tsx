@@ -1,0 +1,195 @@
+/**
+ * CockpitPage V2 — Standalone V1 content migration (NO wrapper)
+ */
+import { motion, AnimatePresence } from "framer-motion";
+import { TopCommandBar } from "@/components/cockpit/TopCommandBar";
+import { ContactStream } from "@/components/cockpit/ContactStream";
+import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
+import { Mail, Linkedin } from "lucide-react";
+import { StandardPageFrame } from "@/v2/ui/templates/StandardPageFrame";
+import { LinkedInFlowPanel } from "@/components/cockpit/LinkedInFlowPanel";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useCockpitLogic } from "@/hooks/useCockpitLogic";
+import { CockpitWorkspace } from "@/components/cockpit/CockpitWorkspace";
+import type { OracleConfig } from "@/components/email/OraclePanel";
+// Re-export cockpit types for backwards compatibility
+export type {
+  ViewMode,
+  DraftChannel,
+  ContactOrigin,
+  CockpitFilter,
+  ScrapingPhase,
+  LinkedInProfileData,
+  DraftState,
+} from "@/types/cockpit";
+
+export type { CockpitContact } from "@/hooks/useCockpitContacts";
+
+export function CockpitPage() {
+  const logic = useCockpitLogic();
+  const {
+    viewMode, setViewMode, sourceTab, setSourceTab,
+    activeFilters, handleRemoveFilter, executeAIActions,
+    batchMode, setBatchMode, showLinkedInFlow, setShowLinkedInFlow,
+    draftState, setDraftState,
+    draggedContactId, dragCount, handleDragStart, handleDragEnd, handleDrop,
+    handleGenerateAfterReview, handleRegenerate, handleImprove, showQueuedDraft,
+    contacts, contactsMap, isLoading, selection,
+    handleBulkDeepSearch, handleBulkAlias, handleBulkLinkedInLookup,
+    handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,
+    handleBulkDelete, confirmBulkDelete, showDeleteConfirm, setShowDeleteConfirm,
+    contactsForAI, searchQuery, linkedInLookup, assignmentInfoMap,
+    draftQueue, handleStartGeneration, pendingBulkCount,
+  } = logic;
+
+  // Oracle handlers — riutilizzano la pipeline AI esistente del Cockpit.
+  // `config` arriva già con customGoal/brief uniti; useCockpitLogic legge
+  // direttamente dal ComposeAiConfigContext, quindi qui basta triggerare.
+  const handleOracleGenerate = (_config: OracleConfig) => {
+    if (!draftState.contactId || !draftState.channel) {
+      toast.info("Trascina prima un contatto su un canale per generare");
+      return;
+    }
+    handleRegenerate();
+  };
+  const handleOracleImprove = (_config: OracleConfig) => {
+    if (!draftState.body) {
+      toast.info("Genera prima una bozza da migliorare");
+      return;
+    }
+    handleImprove();
+  };
+  const handleLoadTemplate = (subject: string, body: string) => {
+    setDraftState({ ...draftState, subject: subject || draftState.subject, body: body || draftState.body });
+  };
+  const handleInsertImage = (url: string) => {
+    if (!url) return;
+    const tag = `<img src="${url}" alt="" style="max-width:100%;height:auto;" />`;
+    setDraftState({ ...draftState, body: (draftState.body || "") + "\n" + tag });
+  };
+
+  const recipientPartnerId = draftState.contactId
+    ? contactsMap[draftState.contactId]?.partnerId ?? null
+    : null;
+
+  return (
+    <StandardPageFrame testId="page-cockpit" contentOverflow="contain">
+      <div className="flex flex-col h-full overflow-hidden">
+      <TopCommandBar
+        onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
+        searchQuery={searchQuery} onSearchChange={() => {}}
+        contacts={contactsForAI}
+        sourceTab={sourceTab} onSourceTabChange={setSourceTab}
+      />
+      <AnimatePresence>
+        {activeFilters.length > 0 && (
+          <ActiveFilterChips filters={activeFilters} onRemove={handleRemoveFilter} />
+        )}
+      </AnimatePresence>
+      <div className="flex-1 flex gap-0 overflow-hidden min-h-0 relative">
+        <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
+          <ContactStream
+            viewMode={viewMode} searchQuery={searchQuery} onSearchChange={() => {}} filters={activeFilters}
+            contacts={contacts} isLoading={isLoading}
+            onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+            selectedIds={selection.selectedIds} onToggle={selection.toggle}
+            onSelectAll={selection.selectAll} onClear={selection.clear}
+            isAllSelected={selection.isAllSelected} selectionCount={selection.count}
+            onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
+            onBulkLinkedInLookup={handleBulkLinkedInLookup}
+            isLinkedInLookupRunning={linkedInLookup.progress.status === "running"}
+            onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
+            onSingleLinkedInLookup={handleSingleLinkedInLookup}
+            onBulkDelete={handleBulkDelete}
+            onBatchMode={() => setBatchMode(true)}
+            activeContactId={draftState.contactId}
+            enrichmentState={draftState.contactId ? {
+              isActive: true, scrapingPhase: draftState.scrapingPhase, linkedinProfile: draftState.linkedinProfile,
+            } : undefined}
+            assignmentMap={assignmentInfoMap}
+          />
+        </div>
+        {showLinkedInFlow && selection.count > 0 ? (
+          <div className="flex-1 flex items-stretch justify-center p-6 min-w-[320px]">
+            <LinkedInFlowPanel
+              selectedContacts={contacts.filter(c => selection.selectedIds.has(c.id)).map(c => ({ id: c.id, name: c.name, company: c.company, linkedinUrl: c.linkedinUrl }))}
+              onClose={() => setShowLinkedInFlow(false)}
+            />
+          </div>
+        ) : batchMode && selection.count > 0 && !draftState.contactId ? (
+          <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4 text-center max-w-md">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Mail className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Generazione Batch</h3>
+              <p className="text-sm text-muted-foreground">{selection.count} contatti selezionati. Trascina sul workspace per generare in batch.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowLinkedInFlow(true)} className="flex items-center gap-1.5 text-xs text-[#0077B5] hover:underline font-medium">
+                  <Linkedin className="w-3.5 h-3.5" /> LinkedIn Flow
+                </button>
+                <span className="text-muted-foreground text-xs">·</span>
+                <button onClick={() => setBatchMode(false)} className="text-xs text-primary hover:underline">← Workspace</button>
+              </div>
+            </motion.div>
+          </div>
+        ) : (
+          <CockpitWorkspace
+            draftState={draftState}
+            setDraftState={setDraftState}
+            recipientPartnerId={recipientPartnerId}
+            onOracleGenerate={handleOracleGenerate}
+            onOracleImprove={handleOracleImprove}
+            onLoadTemplate={handleLoadTemplate}
+            onInsertImage={handleInsertImage}
+            onRegenerate={handleRegenerate}
+            onGenerateAfterReview={handleGenerateAfterReview}
+            onStartGeneration={handleStartGeneration}
+            pendingBulkCount={pendingBulkCount}
+            isDragging={!!draggedContactId}
+            draggedContactId={draggedContactId}
+            dragCount={dragCount}
+            onDrop={(channel, contactId, contactName) => {
+              // Forziamo dragEnd subito per evitare che isDragging resti "true"
+              // se onDragEnd del browser non spara dopo il drop (caso comune in Chrome
+              // quando il drop avviene su un elemento con animazione in corso).
+              handleDragEnd();
+              handleDrop(channel, contactId, contactName);
+            }}
+            onReadProfile={() => {
+              if (draftState.contactId) {
+                const c = contactsMap[draftState.contactId];
+                if (c?.linkedinUrl) handleDrop("linkedin", draftState.contactId, c.name);
+                else toast.info("Nessun URL LinkedIn disponibile — esegui prima LinkedIn Lookup");
+              }
+            }}
+            onDeepSearch={() => { if (draftState.contactId) handleSingleDeepSearch(draftState.contactId); }}
+            contactAvailability={draftState.contactId ? (() => {
+              const c = contactsMap[draftState.contactId!];
+              return c ? { hasEmail: !!c.email, hasPhone: !!c.phone, hasLinkedinUrl: !!c.linkedinUrl } : undefined;
+            })() : undefined}
+            draftQueue={draftQueue}
+            showQueuedDraft={showQueuedDraft}
+          />
+        )}
+      </div>
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare {selection.count} record?</AlertDialogTitle>
+            <AlertDialogDescription>Questa azione è irreversibile.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Elimina</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      </div>
+    </StandardPageFrame>
+  );
+}

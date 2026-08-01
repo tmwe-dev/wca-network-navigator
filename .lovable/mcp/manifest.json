@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "sdk_version": "0.23.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://zrbditqddhjkutzjycgi.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "wca-network-navigator-mcp",
+      "version": "0.1.0",
+      "title": "WCA Network Navigator"
+    },
+    "tools": [
+      {
+        "name": "list_agents",
+        "title": "Elenca agenti AI",
+        "description": "Elenca gli agenti AI configurati nel CRM (nome, ruolo, stato attivo, tools assegnati).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "only_active": {
+              "description": "Se true, restituisce solo gli agenti attivi.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Numero massimo di agenti da restituire (default 50).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_contacts",
+        "title": "Cerca contatti CRM",
+        "description": "Cerca contatti/partner nel CRM per nome azienda o email (case-insensitive). Rispetta RLS: mostra solo i contatti visibili all'utente autenticato.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Testo da cercare (nome azienda o email)."
+            },
+            "limit": {
+              "description": "Massimo record (default 20, max 100).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

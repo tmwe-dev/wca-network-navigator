@@ -1,10 +1,12 @@
 import { useAssignmentMap, useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { findAgentBasicById } from "@/application/data/agents";
+import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Bot, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Props {
   sourceId: string;
@@ -44,15 +46,10 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
   }, [assignment, agents, sourceId, sourceType]);
 
   const { data: agent } = useQuery({
-    queryKey: ["agent-for-record", assignment?.agent_id],
+    queryKey: queryKeys.agents.forRecord(assignment?.agent_id),
     queryFn: async () => {
       if (!assignment?.agent_id) return null;
-      const { data } = await supabase
-        .from("agents")
-        .select("id, name, avatar_emoji, role")
-        .eq("id", assignment.agent_id)
-        .single();
-      return data;
+      return findAgentBasicById(assignment.agent_id);
     },
     enabled: !!assignment?.agent_id,
   });
@@ -75,7 +72,7 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
     );
   }
 
-  const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
+  const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji ?? undefined);
 
   return (
     <div className="space-y-2">
@@ -85,7 +82,7 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
       </div>
       <div className="flex items-center gap-3 bg-primary/5 border border-primary/15 rounded-xl p-3">
         {avatarSrc ? (
-          <img src={avatarSrc} alt={agent.name} className="w-8 h-8 rounded-full ring-2 ring-primary/20" />
+          <OptimizedImage src={avatarSrc} alt={agent.name} className="w-8 h-8 rounded-full ring-2 ring-primary/20" />
         ) : (
           <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-sm font-bold text-primary ring-2 ring-primary/20">
             {agent.avatar_emoji || agent.name.charAt(0)}

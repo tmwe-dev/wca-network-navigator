@@ -5,23 +5,43 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+interface EnrichmentData {
+  company_profile?: {
+    awards?: Array<Record<string, unknown>>;
+    specialties?: string[];
+    recent_news?: string;
+    founded_year?: number;
+    employee_count_estimate?: number;
+  };
+  contact_profiles?: Record<string, {
+    name?: string;
+    linkedin_title?: string;
+    seniority?: string;
+    background?: string;
+    languages?: string[];
+    interests?: string[];
+  }>;
+  deep_search_at?: string;
+  tokens_used?: { credits_consumed?: number; prompt?: number; completion?: number };
+}
+
 interface EnrichmentCardProps {
   partner: {
     id: string;
     enriched_at?: string | null;
-    enrichment_data?: any;
+    enrichment_data?: Record<string, unknown>;
     ai_parsed_at?: string | null;
   };
 }
 
 const seniorityColors: Record<string, string> = {
-  senior: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/30",
-  mid: "bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-500/20 dark:text-sky-200 dark:border-sky-500/30",
-  junior: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/30",
+  senior: "bg-primary/20 text-primary border-primary/30",
+  mid: "bg-muted text-muted-foreground border-border",
+  junior: "bg-emerald-500/20 dark:text-emerald-200 text-emerald-900 border-emerald-500/30",
 };
 
 export function EnrichmentCard({ partner }: EnrichmentCardProps) {
-  const enrichment = partner.enrichment_data as any;
+  const enrichment = partner.enrichment_data as EnrichmentData | undefined;
   if (!enrichment && !partner.enriched_at && !partner.ai_parsed_at) return null;
 
   const companyProfile = enrichment?.company_profile;
@@ -29,8 +49,8 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
   const deepSearchAt = enrichment?.deep_search_at;
   const tokensUsed = enrichment?.tokens_used;
   const hasCompanyData = companyProfile && (
-    companyProfile.awards?.length > 0 ||
-    companyProfile.specialties?.length > 0 ||
+    (companyProfile.awards?.length ?? 0) > 0 ||
+    (companyProfile.specialties?.length ?? 0) > 0 ||
     companyProfile.recent_news ||
     companyProfile.founded_year ||
     companyProfile.employee_count_estimate
@@ -40,9 +60,9 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
   if (!hasCompanyData && !hasContactData && !partner.enriched_at && !partner.ai_parsed_at && !deepSearchAt) return null;
 
   return (
-    <div className="bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 backdrop-blur-sm border border-violet-500/10 rounded-2xl p-4 space-y-3">
+    <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-violet-400" />
+        <Sparkles className="w-4 h-4 text-primary" />
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Enrichment</p>
         {deepSearchAt && (
           <span className="text-[10px] text-muted-foreground ml-auto">
@@ -65,8 +85,8 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       {hasCompanyData && (
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="w-full">
-            <div className="flex items-center gap-2 cursor-pointer hover:bg-violet-500/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
-              <Globe2 className="w-3.5 h-3.5 text-violet-400" />
+            <div className="flex items-center gap-2 cursor-pointer hover:bg-primary/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
+              <Globe2 className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-medium text-foreground">Profilo Aziendale</span>
               <ChevronDown className="w-3 h-3 text-muted-foreground ml-auto" />
             </div>
@@ -87,22 +107,22 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                   )}
                 </div>
               )}
-              {companyProfile.specialties?.length > 0 && (
+              {(companyProfile.specialties?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {companyProfile.specialties.map((s: string, i: number) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-900 dark:bg-violet-500/20 dark:text-violet-200 border border-violet-300 dark:border-violet-500/30">
+                  {companyProfile.specialties!.map((s: string, i: number) => (
+                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
                       {s}
                     </span>
                   ))}
                 </div>
               )}
-              {companyProfile.awards?.length > 0 && (
+              {(companyProfile.awards?.length ?? 0) > 0 && (
                 <div className="space-y-1">
-                  {companyProfile.awards.map((a: any, i: number) => {
-                    const label = typeof a === "string" ? a : (a?.name || a?.recipient || JSON.stringify(a));
+                  {companyProfile.awards!.map((a: Record<string, unknown>, i: number) => {
+                    const label = typeof a === "string" ? a : String(a?.name || a?.recipient || JSON.stringify(a));
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
-                        <Award className="w-3 h-3 text-amber-500" />
+                        <Award className="w-3 h-3 text-primary" />
                         <span>{label}{typeof a === "object" && a?.year ? ` (${a.year})` : ""}</span>
                       </div>
                     );
@@ -121,8 +141,8 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       {hasContactData && (
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="w-full">
-            <div className="flex items-center gap-2 cursor-pointer hover:bg-violet-500/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
-              <Briefcase className="w-3.5 h-3.5 text-violet-400" />
+            <div className="flex items-center gap-2 cursor-pointer hover:bg-primary/5 rounded-lg px-2 py-1.5 -mx-2 transition-colors">
+              <Briefcase className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-medium text-foreground">
                 Profili Contatti ({Object.keys(contactProfiles).length})
               </span>
@@ -131,8 +151,8 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="space-y-2 mt-1.5">
-              {Object.entries(contactProfiles).map(([id, profile]: [string, any]) => (
-                <div key={id} className="bg-card/60 border border-violet-500/10 rounded-lg p-2.5 space-y-1.5">
+              {Object.entries(contactProfiles).map(([id, profile]) => (
+                <div key={id} className="bg-card/60 border border-primary/10 rounded-lg p-2.5 space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-medium text-foreground">{profile.name}</span>
                     {profile.linkedin_title && (
@@ -152,12 +172,12 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                   )}
                   <div className="flex flex-wrap gap-1">
                     {profile.languages?.map((l: string, i: number) => (
-                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-sky-100 text-sky-900 dark:bg-sky-500/20 dark:text-sky-200">
+                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground">
                         {l}
                       </span>
                     ))}
                     {profile.interests?.map((int: string, i: number) => (
-                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-200">
+                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 dark:text-emerald-200 text-emerald-900">
                         {int}
                       </span>
                     ))}
@@ -170,16 +190,16 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       )}
 
       {/* Token consumption */}
-      {tokensUsed && tokensUsed.credits_consumed > 0 && (
-        <div className="flex items-center gap-2 pt-1 border-t border-violet-500/10">
+      {tokensUsed && (tokensUsed.credits_consumed ?? 0) > 0 && (
+        <div className="flex items-center gap-2 pt-1 border-t border-primary/10">
           <Coins className={cn("w-3.5 h-3.5", 
-            tokensUsed.credits_consumed > 50 ? "text-destructive" : 
-            tokensUsed.credits_consumed > 20 ? "text-amber-500" : "text-emerald-500"
+            (tokensUsed.credits_consumed ?? 0) > 50 ? "text-destructive" : 
+            (tokensUsed.credits_consumed ?? 0) > 20 ? "text-primary" : "text-emerald-500"
           )} />
           <span className="text-[10px] text-muted-foreground">
             {tokensUsed.credits_consumed} crediti AI
           </span>
-          <span className="text-[9px] text-muted-foreground/60 ml-auto">
+          <span className="text-[9px] text-muted-foreground ml-auto">
             {tokensUsed.prompt?.toLocaleString()}↑ {tokensUsed.completion?.toLocaleString()}↓
           </span>
         </div>

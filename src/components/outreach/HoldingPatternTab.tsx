@@ -1,3 +1,6 @@
+// @deprecated — Dead code. OutreachPage imports HoldingPatternCommandCenter instead.
+// TODO: Delete this file in next cleanup pass.
+
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -9,24 +12,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { HoldingPatternIndicator } from "@/components/contacts/HoldingPatternIndicator";
-import {
-  useHoldingPatternList,
-  useHoldingTimeline,
-  type HoldingItem,
-  type TimelineEntry,
-} from "@/hooks/useHoldingPattern";
+import { useHoldingPatternList, useHoldingTimeline, type HoldingItem } from "@/hooks/useHoldingPattern";
 import { cn } from "@/lib/utils";
 import type { LeadStatus } from "@/hooks/useContacts";
-import { supabase } from "@/integrations/supabase/client";
+import { updateLeadStatus } from "@/application/data/partners";
+import { updateProspectLeadStatus } from "@/application/data/prospects";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
+import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
+
+const log = createLogger("HoldingPatternTab");
 
 /* ── Status groups ── */
 const GROUPS: { key: string; label: string; color: string; count?: number }[] = [
-  { key: "contacted", label: "Contattati", color: "text-primary" },
-  { key: "in_progress", label: "In Corso", color: "text-amber-500" },
+  { key: "first_touch_sent", label: "Primo Contatto", color: "text-primary" },
+  { key: "holding", label: "In Attesa", color: "text-amber-500" },
   { key: "negotiation", label: "Trattativa", color: "text-chart-3" },
 ];
 
@@ -51,7 +54,7 @@ const TIMELINE_ICONS: Record<string, typeof Mail> = {
 };
 
 export function HoldingPatternTab() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { data: items = [], isLoading } = useHoldingPatternList();
   const [selected, setSelected] = useState<HoldingItem | null>(null);
   const { data: timeline = [], isLoading: tlLoading } = useHoldingTimeline(selected);
@@ -68,14 +71,17 @@ export function HoldingPatternTab() {
 
   const handleChangeStatus = async (item: HoldingItem, newStatus: LeadStatus) => {
     try {
-      const table =
-        item.source === "partner" ? "partners" :
-        item.source === "prospect" ? ("prospects" as any) :
-        "imported_contacts";
-      await supabase.from(table).update({ lead_status: newStatus } as any).eq("id", item.id);
-      queryClient.invalidateQueries({ queryKey: ["holding-pattern-list"] });
+      if (item.source === "partner") {
+        await updateLeadStatus("partners", item.id, newStatus);
+      } else if (item.source === "prospect") {
+        await updateProspectLeadStatus(item.id, newStatus);
+      } else {
+        await updateLeadStatus("imported_contacts", item.id, newStatus);
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.holdingPatternList() });
       toast.success("Stato aggiornato");
-    } catch {
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       toast.error("Errore aggiornamento stato");
     }
   };
@@ -135,10 +141,16 @@ export function HoldingPatternTab() {
                         )}
                       >
                         <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{item.name}</div>
+                          <div className="font-medium truncate">{item.name}</div>
                           <div className="text-[10px] text-muted-foreground truncate">
                             {item.email || "—"} · {SOURCE_LABELS[item.source] || item.source}
                           </div>
+                          {(item.agentEmoji || item.tutorName) && (
+                            <div className="text-[9px] text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+                              {item.agentEmoji && <span>{item.agentEmoji}</span>}
+                              {item.tutorName && <span className="truncate">{item.tutorName}</span>}
+                            </div>
+                          )}
                         </div>
                         <HoldingPatternIndicator status={item.leadStatus as LeadStatus} />
                       </button>
@@ -156,7 +168,7 @@ export function HoldingPatternTab() {
         {!selected ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center space-y-1">
-              <ArrowRight className="w-5 h-5 text-muted-foreground/30 mx-auto" />
+              <ArrowRight className="w-5 h-5 text-muted-foreground mx-auto" />
               <p className="text-xs text-muted-foreground">Seleziona un contatto</p>
             </div>
           </div>
@@ -165,6 +177,18 @@ export function HoldingPatternTab() {
             <div className="px-4 py-3 border-b border-border/40">
               <h3 className="text-sm font-semibold">{selected.name}</h3>
               <p className="text-xs text-muted-foreground">{selected.email || "Nessun contatto"}</p>
+              {(selected.agentEmoji || selected.tutorName) && (
+                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground">
+                  {selected.agentEmoji && <span className="text-sm">{selected.agentEmoji}</span>}
+                  {selected.agentName && <span className="font-medium">{selected.agentName}</span>}
+                  {selected.tutorName && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <span>Tutor: {selected.tutorName}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">

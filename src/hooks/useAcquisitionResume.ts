@@ -3,10 +3,17 @@
  * Checks for active/paused acquisition jobs on mount and restores state.
  */
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getPartnersByCountries } from "@/data/partners";
+import { findActiveOrPausedAcquisitionJobs, findDirectoryCacheMembers } from "@/data/acquisitionResumeQueries";
 import { toast } from "@/hooks/use-toast";
-import type { QueueItem } from "@/components/acquisition/types";
+import type { QueueItem } from "@/types/acquisition";
+import { createLogger } from "@/lib/log";
+import { toJsonValue } from "@/lib/typedJson";
+
+const log = createLogger("useAcquisitionResume");
 import type { PipelineStatus, LiveStats } from "./useAcquisitionPipeline";
+import { upsertDirectoryCache } from "@/data/directoryCache";
+import { updateDownloadJob } from "@/data/downloadJobs";
 
 interface ResumeSetters {
   setActiveJobId: (id: string | null) => void;
@@ -29,13 +36,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
   useEffect(() => {
     (async () => {
       try {
-        const { data: activeJobs } = await supabase
-          .from("download_jobs")
-          .select("*")
-          .eq("job_type", "acquisition")
-          .in("status", ["running", "paused"])
-          .order("created_at", { ascending: false })
-          .limit(1);
+        const activeJobs = await findActiveOrPausedAcquisitionJobs();
 
         if (activeJobs && activeJobs.length > 0) {
           const job = activeJobs[0];
@@ -53,16 +54,13 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           }));
 
           // Enrich names from partners table
-          const { data: partners } = await supabase
-            .from("partners")
-            .select("wca_id, company_name, city")
-            .in("wca_id", wcaIds);
+          const partners = await getPartnersByCountries([job.country_code], "wca_id, company_name, city");
           if (partners) {
             for (const p of partners) {
-              const qi = queueItems.find((q) => q.wca_id === p.wca_id);
+              const qi = queueItems.find((q) => q.wca_id === (p.wca_id as number));
               if (qi) {
-                qi.company_name = p.company_name;
-                qi.city = p.city;
+                qi.company_name = String(p.company_name ?? "");
+                qi.city = String(p.city ?? "");
               }
             }
           }
@@ -70,19 +68,17 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           // Enrich remaining from directory_cache
           const stillMissing = queueItems.filter(q => q.company_name.startsWith("WCA "));
           if (stillMissing.length > 0) {
-            const { data: cacheEntries } = await supabase
-              .from("directory_cache")
-              .select("members")
-              .eq("country_code", job.country_code);
+            const cacheEntries = await findDirectoryCacheMembers(job.country_code);
             if (cacheEntries) {
               for (const entry of cacheEntries) {
-                const members = (entry.members as any[]) || [];
-                for (const m of members) {
+                const members = (entry.members as unknown[]) || [];
+              for (const raw of members) {
+                  const m = raw as Record<string, unknown>;
                   if (!m.wca_id || !m.company_name) continue;
-                  const qi = stillMissing.find(q => q.wca_id === m.wca_id);
+                  const qi = stillMissing.find(q => q.wca_id === (m.wca_id as number));
                   if (qi) {
-                    qi.company_name = m.company_name;
-                    if (m.city) qi.city = m.city;
+                    qi.company_name = String(m.company_name);
+                    if (m.city) qi.city = String(m.city);
                   }
                 }
               }
@@ -97,23 +93,20 @@ export function useAcquisitionResume(setters: ResumeSetters) {
               const { scrapeWcaDirectory } = await import("@/lib/api/wcaScraper");
               const scanResult = await scrapeWcaDirectory(job.country_code, job.network_name || "");
               if (scanResult?.success && scanResult?.members) {
-                const membersJson = scanResult.members.map((m: any) => ({
+                const membersJson = scanResult.members.map((m) => ({
                   company_name: m.company_name,
                   city: m.city,
                   country_code: job.country_code,
                   wca_id: m.wca_id,
                 }));
-                await supabase.from("directory_cache").upsert(
-                  {
+                await upsertDirectoryCache({
                     country_code: job.country_code,
                     network_name: job.network_name || "",
-                    members: membersJson as any,
+                    members: toJsonValue(membersJson),
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
-                  },
-                  { onConflict: "country_code,network_name" }
-                );
+                  });
                 for (const m of scanResult.members) {
                   if (!m.wca_id || !m.company_name) continue;
                   const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
@@ -124,7 +117,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 }
               }
             } catch (scanErr) {
-              console.warn("Re-scan directory for names failed:", scanErr);
+              log.warn("re-scan directory failed", { message: scanErr instanceof Error ? scanErr.message : String(scanErr) });
             }
           }
 
@@ -146,7 +139,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
             pauseRef.current = true;
 
             if (job.status === "running") {
-              await supabase.from("download_jobs").update({ status: "paused" }).eq("id", job.id);
+              await updateDownloadJob(job.id, { status: "paused" });
             }
 
             toast({
@@ -162,7 +155,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           }
         }
       } catch (err) {
-        console.error("Failed to check active acquisition jobs:", err);
+        log.error("check active acquisition jobs failed", { message: err instanceof Error ? err.message : String(err) });
       } finally {
         setResumeLoading(false);
       }

@@ -1,24 +1,44 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { WifiOff } from "lucide-react";
+import { createLogger } from "@/lib/log";
+import { checkProfileConnection } from "@/application/data/profiles";
+import { useAuth } from "@/providers/AuthProvider";
+
+const log = createLogger("ConnectionBanner");
 
 /**
  * Shows a red banner when DB connection is lost.
  * Redirects to /auth if auth expires mid-session.
+ * Only polls when a session is active.
  */
 export function ConnectionBanner() {
   const [dbLost, setDbLost] = useState(false);
+  const { status, event } = useAuth();
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const hasSession = status === "authenticated";
 
+  // React to specific auth events
   useEffect(() => {
-    // Lightweight heartbeat every 30s
+    if (event === "TOKEN_REFRESHED") setDbLost(false);
+    if (event === "SIGNED_OUT") {
+      setDbLost(false);
+      navigate("/auth", { replace: true });
+    }
+  }, [event, navigate]);
+
+  // Heartbeat only when session is active
+  useEffect(() => {
+    if (!hasSession) {
+      clearInterval(intervalRef.current);
+      return;
+    }
+
     const heartbeat = async () => {
       try {
-        const { error } = await supabase.from("profiles").select("id").limit(1);
+        const { error } = await checkProfileConnection();
         if (error) {
-          // RLS error means connection works, auth might be expired
           if (error.code === "PGRST301" || error.message?.includes("JWT")) {
             setDbLost(false);
             navigate("/auth", { replace: true });
@@ -28,26 +48,15 @@ export function ConnectionBanner() {
         } else {
           setDbLost(false);
         }
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         setDbLost(true);
       }
     };
 
     intervalRef.current = setInterval(heartbeat, 30000);
     return () => clearInterval(intervalRef.current);
-  }, [navigate]);
-
-  // Also listen for auth state changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "TOKEN_REFRESHED") setDbLost(false);
-      if (event === "SIGNED_OUT") {
-        setDbLost(false);
-        navigate("/auth", { replace: true });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [hasSession, navigate]);
 
   if (!dbLost) return null;
 

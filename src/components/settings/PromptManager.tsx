@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
-import { DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem, CONTENT_CATEGORIES } from "@/data/defaultContentPresets";
+import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
+import { DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem, CONTENT_CATEGORIES } from "@/constants/defaultContentPresets";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import {
-  Plus, Trash2, Save, Loader2, Sparkles, Pencil,
-  Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target, Mail,
-} from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Sparkles, Handshake, RefreshCw, Search, Briefcase, Globe, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("PromptManager");
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   primo_contatto: Handshake,
@@ -26,11 +26,11 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  primo_contatto: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  follow_up: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  richiesta: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+  primo_contatto: "bg-primary/10 text-primary border-primary/20",
+  follow_up: "bg-primary/10 text-primary border-primary/20",
+  richiesta: "bg-muted text-muted-foreground border-border",
   proposta_servizi: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  partnership: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+  partnership: "bg-muted text-muted-foreground border-border",
   altro: "bg-muted text-muted-foreground border-border",
 };
 
@@ -60,15 +60,15 @@ export function PromptManager() {
 
   // Parse stored items
   const customEmailTypes: EmailType[] = useMemo(() => {
-    try { return JSON.parse(settings?.email_oracle_types || "[]"); } catch { return []; }
+    try { return JSON.parse(settings?.email_oracle_types || "[]"); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
   }, [settings?.email_oracle_types]);
 
   const goals: ContentItem[] = useMemo(() => {
-    try { return JSON.parse(settings?.workspace_goals || "null") || DEFAULT_GOALS; } catch { return DEFAULT_GOALS; }
+    try { return JSON.parse(settings?.workspace_goals || "null") || DEFAULT_GOALS; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return DEFAULT_GOALS; }
   }, [settings?.workspace_goals]);
 
   const proposals: ContentItem[] = useMemo(() => {
-    try { return JSON.parse(settings?.workspace_proposals || "null") || DEFAULT_PROPOSALS; } catch { return DEFAULT_PROPOSALS; }
+    try { return JSON.parse(settings?.workspace_proposals || "null") || DEFAULT_PROPOSALS; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return DEFAULT_PROPOSALS; }
   }, [settings?.workspace_proposals]);
 
   // Unify all into a single list
@@ -183,14 +183,15 @@ export function PromptManager() {
     if (!editPrompt.trim()) return;
     setImproving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("improve-email", {
+      const data = await invokeAi<Record<string, unknown>>("improve-email", {
+        scope: "email",
+        context: { source: "PromptManager.improve_email" },
         body: { html: editPrompt, tone: editTone, improveType: "prompt" },
       });
-      if (error) throw error;
-      if (data?.html) setEditPrompt(data.html);
+      if (data?.html) setEditPrompt(String(data.html));
       toast.success("Prompt migliorato con AI");
-    } catch (e: any) {
-      toast.error("Errore AI: " + (e.message || "sconosciuto"));
+    } catch (e: unknown) {
+      toast.error("Errore AI: " + ((e instanceof Error ? e.message : String(e)) || "sconosciuto"));
     } finally {
       setImproving(false);
     }
@@ -215,7 +216,7 @@ export function PromptManager() {
   }, [allPrompts]);
 
   const sourceLabel = (s: string) => s === "email_type" ? "Tipo Email" : s === "goal" ? "Goal" : "Proposta";
-  const sourceColor = (s: string) => s === "email_type" ? "bg-primary/10 text-primary" : s === "goal" ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600";
+  const sourceColor = (s: string) => s === "email_type" ? "bg-primary/10 text-primary" : s === "goal" ? "bg-primary/10 text-primary" : "bg-emerald-500/10 text-emerald-600";
 
   return (
     <div className="space-y-4">
@@ -293,7 +294,7 @@ export function PromptManager() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={editSource} onValueChange={(v: any) => setEditSource(v)}>
+              <Select value={editSource} onValueChange={(v) => setEditSource(v as "email_type" | "goal" | "proposal")}>
                 <SelectTrigger className="h-9 text-xs flex-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email_type" className="text-xs">Tipo Email</SelectItem>

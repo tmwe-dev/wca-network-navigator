@@ -1,0 +1,328 @@
+/**
+ * agent-simulate — Prompt Lab simulator.
+ *
+ * Given { agentId, userMessage, sessionContext?, dryRunAI? } returns the
+ * EXACT prompt assembly that agent-loop would build for that agent, plus
+ * the tool whitelist after capabilities filtering, persona block, prompt
+ * lab block, hard-guards summary. Optionally fires a single AI call
+ * (NO tool execution) so you can see what the model would propose.
+ *
+ * READ-ONLY: this function never executes tools, never persists.
+ */
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import {
+  loadAgentCapabilities,
+  filterToolsByCapabilities,
+  toolRequiresApproval,
+  DEFAULT_CAPABILITIES,
+} from "../_shared/agentCapabilitiesLoader.ts";
+import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
+import { EDGE_FN_REGISTRY, getEdgeFnSpec, isEdgeFnAgentId } from "../_shared/edgeFnPromptRegistry.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
+
+// Mirror of agent-loop tool registry. Kept here so the simulator stays
+// in sync without importing the live function (each edge fn is isolated).
+const TOOL_DEFINITIONS = [
+  { type: "function", function: { name: "navigate", description: "Navigate to a route within the app." } },
+  { type: "function", function: { name: "read_page", description: "Read current page structure." } },
+  { type: "function", function: { name: "click", description: "Click an element by CSS selector." } },
+  { type: "function", function: { name: "type_text", description: "Type text into an input/textarea." } },
+  { type: "function", function: { name: "read_dom", description: "Read outerHTML of a DOM element." } },
+  { type: "function", function: { name: "list_kb", description: "List KB entries." } },
+  { type: "function", function: { name: "read_kb", description: "Read full content of a KB entry." } },
+  { type: "function", function: { name: "scrape_url", description: "Scrape a website URL." } },
+  { type: "function", function: { name: "ask_user", description: "Ask the user a clarification question." } },
+  { type: "function", function: { name: "finish", description: "Complete the mission with a final answer." } },
+] as const;
+
+// Hard guards summary — informational, sourced from src/v2/agent/policy/hardGuards.ts.
+// Kept short on purpose: this is what the UI surfaces, not the enforcement itself.
+const HARD_GUARDS_SUMMARY = {
+  forbidden_tables: [
+    "auth.*", "storage.*", "realtime.*", "supabase_functions.*", "vault.*",
+  ],
+  destructive_ops_blocked: ["DELETE physical (auto-converted to soft-delete)", "DROP", "TRUNCATE"],
+  bulk_caps: { default: 50, outreach_send: 25 },
+  approval_required_always: ["execute_bulk_outreach", "send_email (bulk)", "update_*_status_bulk"],
+  notes: "Hard guards are enforced server-side and CANNOT be bypassed by capabilities or prompts.",
+};
+
+function jsonResp(body: unknown, status: number, cors: Record<string, string>): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
+serve(async (req: Request) => {
+  const cors = getCorsHeaders(req.headers.get("origin"));
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+
+  try {
+    // ── Auth (required: simulator reads user-scoped Prompt Lab) ──
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "");
+    let userId: string | null = null;
+    if (token) {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
+      );
+      const { data: { user } } = await sb.auth.getUser(token);
+      if (user) userId = user.id;
+    }
+    if (!userId) return jsonResp({ error: "Auth richiesta" }, 401, cors);
+
+    const body = await req.json().catch(() => ({}));
+    const agentId = typeof body.agentId === "string" ? body.agentId : null;
+    const userMessage = typeof body.userMessage === "string" ? body.userMessage : "";
+    const sessionContext = body.sessionContext ?? null;
+    const dryRunAI = body.dryRunAI === true;
+    const listEdgeFns = body.listEdgeFns === true;
+
+    // ── Special endpoint: return the edge-fn pseudo-agent registry. ──
+    // The Simulator UI calls this once to populate the dropdown without
+    // hitting the agents table.
+    if (listEdgeFns) {
+      return jsonResp({
+        edge_fns: EDGE_FN_REGISTRY.map((s) => ({
+          id: s.id,
+          edge_function: s.edgeFunction,
+          label: s.label,
+          description: s.description,
+          default_model: s.defaultModel,
+          has_tools: s.hasTools,
+          loader_options: s.loaderOptions,
+        })),
+      }, 200, cors);
+    }
+
+    if (!userMessage.trim()) {
+      return jsonResp({ error: "userMessage obbligatorio" }, 400, cors);
+    }
+
+    const supabaseSrv = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // ── Branch: pseudo-agent for an AI edge function ──
+    if (isEdgeFnAgentId(agentId)) {
+      const spec = getEdgeFnSpec(agentId!);
+      if (!spec) return jsonResp({ error: `Edge function pseudo-agent sconosciuto: ${agentId}` }, 404, cors);
+
+      const lab = await loadOperativePrompts(supabaseSrv, userId, spec.loaderOptions);
+      const promptLabBlock = lab.block ? `\n\n${lab.block}` : "";
+      const systemPrompt = `${spec.basePrompt}${promptLabBlock}`;
+
+      let dryRun: Record<string, unknown> | null = null;
+      if (dryRunAI) {
+        const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+        if (!LOVABLE_API_KEY) {
+          dryRun = { error: "LOVABLE_API_KEY non configurata" };
+        } else {
+          const start = Date.now();
+          const resp = await aiFetch({
+              model: spec.defaultModel.startsWith("claude") ? "google/gemini-2.5-flash" : spec.defaultModel,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userMessage },
+              ],
+              temperature: 0.2,
+              max_tokens: 500,
+            });
+          const elapsed = Date.now() - start;
+          if (!resp.ok) {
+            const txt = await resp.text();
+            dryRun = { error: `AI gateway ${resp.status}`, detail: txt.slice(0, 400), elapsed_ms: elapsed };
+          } else {
+            const data = await resp.json();
+            const msg = data.choices?.[0]?.message;
+            dryRun = {
+              model: spec.defaultModel,
+              elapsed_ms: elapsed,
+              message: msg?.content ?? "",
+              proposed_tool_calls: [],
+              usage: data.usage ?? null,
+            };
+          }
+        }
+      }
+
+      return jsonResp({
+        kind: "edge_fn",
+        edge_fn: {
+          id: spec.id,
+          edge_function: spec.edgeFunction,
+          label: spec.label,
+          description: spec.description,
+          default_model: spec.defaultModel,
+          has_tools: spec.hasTools,
+          loader_options: spec.loaderOptions,
+        },
+        assembled: {
+          system_prompt: systemPrompt,
+          char_count: systemPrompt.length,
+        },
+        persona: { loaded: false, note: "Le edge function di classificazione/generazione non usano persona DB. Sono comandate solo dal base prompt + Prompt Lab." },
+        capabilities: {
+          loaded: false,
+          execution_mode: "edge-function",
+          preferred_model: spec.defaultModel,
+          temperature: 0.2,
+          max_tokens_per_call: 500,
+          max_iterations: 1,
+          max_concurrent_tools: 0,
+          step_timeout_ms: 30000,
+        },
+        operative_prompts: {
+          applied: lab.appliedNames,
+          has_mandatory: lab.hasMandatory,
+          matched: lab.matched,
+          block_preview: lab.block ?? "",
+        },
+        tools: {
+          all_registered: [],
+          effective: [],
+          filtered_out: [],
+          approval_map: [],
+        },
+        hard_guards: HARD_GUARDS_SUMMARY,
+        dry_run: dryRun,
+      }, 200, cors);
+    }
+
+    // ── 1. Persona ──
+    const persona = agentId ? await loadAgentPersona(supabaseSrv, agentId, userId) : null;
+    const personaBlock = renderPersonaBlock(persona);
+
+    // ── 2. Capabilities ──
+    const capabilities = agentId
+      ? await loadAgentCapabilities(supabaseSrv, agentId)
+      : { ...DEFAULT_CAPABILITIES };
+
+    // ── 3. Operative prompts (Prompt Lab) ──
+    const lab = await loadOperativePrompts(supabaseSrv, userId, {
+      scope: "agent-loop",
+      includeUniversal: true,
+      limit: 5,
+    });
+
+    // ── 4. Tool whitelist after filtering ──
+    const effectiveTools = filterToolsByCapabilities(TOOL_DEFINITIONS as unknown as Array<{ function: { name: string } }>, capabilities);
+    const allToolNames = TOOL_DEFINITIONS.map((t) => t.function.name);
+    const effectiveToolNames = effectiveTools.map((t) => (t as { function: { name: string } }).function.name);
+    const filteredOut = allToolNames.filter((n) => !effectiveToolNames.includes(n));
+    const toolsApproval = effectiveToolNames.map((name) => ({
+      name,
+      requires_approval: toolRequiresApproval(name, capabilities),
+    }));
+
+    // ── 5. Assemble system prompt EXACTLY like agent-loop ──
+    const promptLabBlock = lab.block ? `\n\n${lab.block}` : "";
+    const personaBlockStr = personaBlock ? `\n\n${personaBlock}` : "";
+    const sessionCtxStr = sessionContext
+      ? `CONTESTO PAGINA: ${JSON.stringify(sessionContext).slice(0, 1000)}`
+      : "";
+    const systemPrompt = `Sei LUCA, direttore del CRM WCA Network Navigator. Italiano, asciutto, operativo.
+
+OBIETTIVO ATTUALE: ${userMessage}
+${sessionCtxStr}${personaBlockStr}${promptLabBlock}
+
+Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pagina se ti serve capire dove sei, esplora la KB se ti serve contesto, chiedi all'utente se sei bloccato, chiama \`finish\` quando hai concluso. Se una ricerca torna vuota, prova varianti prima di rinunciare. Le regole inviolabili sono nei PROMPT OPERATIVI sopra; i blocchi tecnici (azioni distruttive, bulk, tabelle vietate) sono già imposti dal sistema.`;
+
+    // ── 6. Optional dry-run AI call (single iteration, NO execution) ──
+    let dryRun: Record<string, unknown> | null = null;
+    if (dryRunAI) {
+      const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+      if (!LOVABLE_API_KEY) {
+        dryRun = { error: "LOVABLE_API_KEY non configurata" };
+      } else {
+        const model = capabilities.preferredModel ?? "google/gemini-2.5-flash";
+        const start = Date.now();
+        const resp = await aiFetch({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            tools: effectiveTools,
+            temperature: capabilities.temperature ?? 0.2,
+            max_tokens: capabilities.maxTokensPerCall ?? 500,
+          });
+        const elapsed = Date.now() - start;
+        if (!resp.ok) {
+          const txt = await resp.text();
+          dryRun = { error: `AI gateway ${resp.status}`, detail: txt.slice(0, 400), elapsed_ms: elapsed };
+        } else {
+          const data = await resp.json();
+          const msg = data.choices?.[0]?.message;
+          const proposedToolCalls = (msg?.tool_calls ?? []).map((tc: Record<string, unknown>) => {
+            const fn = tc.function as Record<string, unknown>;
+            let args: unknown = {};
+            try {
+              args = typeof fn.arguments === "string" ? JSON.parse(fn.arguments) : fn.arguments;
+            } catch { /* leave as raw */ }
+            const name = fn.name as string;
+            return {
+              name,
+              arguments: args,
+              would_be_blocked: !effectiveToolNames.includes(name),
+              would_require_approval: toolRequiresApproval(name, capabilities),
+            };
+          });
+          dryRun = {
+            model,
+            elapsed_ms: elapsed,
+            message: msg?.content ?? "",
+            proposed_tool_calls: proposedToolCalls,
+            usage: data.usage ?? null,
+          };
+        }
+      }
+    }
+
+    return jsonResp({
+      assembled: {
+        system_prompt: systemPrompt,
+        char_count: systemPrompt.length,
+      },
+      persona: persona
+        ? { loaded: true, tone: persona.tone, language: persona.language, block_preview: personaBlock }
+        : { loaded: false, note: "Nessuna persona DB; verrà usata solo l'identità di base dell'agente." },
+      capabilities: {
+        loaded: capabilities.loaded,
+        execution_mode: capabilities.executionMode,
+        preferred_model: capabilities.preferredModel,
+        temperature: capabilities.temperature,
+        max_tokens_per_call: capabilities.maxTokensPerCall,
+        max_iterations: capabilities.maxIterations,
+        max_concurrent_tools: capabilities.maxConcurrentTools,
+        step_timeout_ms: capabilities.stepTimeoutMs,
+      },
+      operative_prompts: {
+        applied: lab.appliedNames,
+        has_mandatory: lab.hasMandatory,
+        matched: lab.matched,
+        block_preview: lab.block ?? "",
+      },
+      tools: {
+        all_registered: allToolNames,
+        effective: effectiveToolNames,
+        filtered_out: filteredOut,
+        approval_map: toolsApproval,
+      },
+      hard_guards: HARD_GUARDS_SUMMARY,
+      dry_run: dryRun,
+    }, 200, cors);
+  } catch (e) {
+    return jsonResp(
+      { error: e instanceof Error ? e.message : "Errore sconosciuto" },
+      500,
+      cors,
+    );
+  }
+});

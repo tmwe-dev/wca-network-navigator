@@ -1,20 +1,36 @@
 import { lazy, type ComponentType } from "react";
 
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("lazyRetry");
+
 /**
- * Wrapper around React.lazy that retries the import once after a delay
- * if the initial fetch fails (e.g. chunk load error after deploy).
+ * Wrapper around React.lazy that retries the dynamic import once after a delay
+ * if the initial fetch fails (e.g., chunk load error after a deploy or proxy hiccup).
+ * This prevents white screens when users have stale chunks cached or when the
+ * Lovable Preview proxy intermittently fails to serve a chunk.
+ *
+ * Signature mirrors React.lazy itself (ComponentType<any>) so callers don't have
+ * to constrain props to Record<string, unknown>.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function lazyRetry<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
   retryDelay = 1500
 ) {
   return lazy(() =>
-    factory().catch(() =>
-      new Promise<{ default: T }>((resolve, reject) => {
+    factory().catch((err) => {
+      log.warn("dynamic import failed, retrying", { retryDelayMs: retryDelay, error: err });
+      return new Promise<{ default: T }>((resolve, reject) => {
         setTimeout(() => {
-          factory().then(resolve).catch(reject);
+          factory()
+            .then(resolve)
+            .catch((err2) => {
+              log.error("[lazyRetry] retry failed", { detail: err2 });
+              reject(err2);
+            });
         }, retryDelay);
-      })
-    )
+      });
+    })
   );
 }

@@ -7,10 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Loader2, CheckCircle2, FileText, Download, KeyRound, Package } from "lucide-react";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+import { downloadRaExtensionZip } from "@/lib/whatsappExtensionZip";
+
+const log = createLogger("RASettings");
 
 interface RASettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: any;
+  updateSetting: { mutateAsync: (params: { key: string; value: string }) => Promise<unknown> };
 }
 
 export function RASettings({ settings, updateSetting }: RASettingsProps) {
@@ -31,7 +35,7 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
       await updateSetting.mutateAsync({ key: "ra_username", value: raUser.trim() });
       await updateSetting.mutateAsync({ key: "ra_password", value: raPass.trim() });
       toast.success("Credenziali Report Aziende salvate!");
-    } catch { toast.error("Errore nel salvataggio"); }
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
     finally { setSaving(false); }
   };
 
@@ -90,7 +94,11 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
                   Scarica l'estensione Chrome per ReportAziende, installala e clicca <strong>"🚀 Connetti"</strong>.
                 </p>
               </div>
-              <Button className="w-full" size="lg" onClick={() => window.open("/download-ra-extension.html", "_blank")}>
+              <Button className="w-full" size="lg" onClick={() => {
+                void downloadRaExtensionZip()
+                  .then(() => toast.success("Estensione ReportAziende scaricata!"))
+                  .catch(() => toast.error("File non disponibile"));
+              }}>
                 <Download className="w-4 h-4 mr-2" /> Scarica Estensione RA
               </Button>
               <p className="text-[11px] text-muted-foreground text-center">

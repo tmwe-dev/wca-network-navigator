@@ -4,10 +4,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Bot, Send, Loader2, X, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
+import { createLogger } from "@/lib/log";
+import { queryKeys } from "@/lib/queryKeys";
+
+const log = createLogger("ImportAssistant");
 
 interface Message {
   role: "user" | "assistant";
@@ -44,8 +48,11 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("import-assistant", {
+      const data = await invokeAi<Record<string, unknown>>("unified-assistant", {
+        scope: "import",
+        context: { source: "ImportAssistant.import_assistant" },
         body: {
+          scope: "import",
           messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
           context: {
             activeLogId,
@@ -53,31 +60,28 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
           },
         },
       });
-
-      if (error) throw error;
-
-      if (data?.error) {
-        toast({ title: "Errore AI", description: data.error, variant: "destructive" });
-        setMessages([...allMessages, { role: "assistant", content: `⚠️ ${data.error}` }]);
+      if ((data as Record<string, unknown>)?.error) {
+        toast({ title: "Errore AI", description: String((data as Record<string, unknown>).error), variant: "destructive" });
+        setMessages([...allMessages, { role: "assistant", content: `⚠️ ${(data as Record<string, unknown>).error}` }]);
       } else {
-        setMessages([...allMessages, { role: "assistant", content: data.content || "Nessuna risposta" }]);
+        setMessages([...allMessages, { role: "assistant", content: String((data as Record<string, unknown>)?.content || "Nessuna risposta") }]);
 
         // Refresh data if the assistant modified something
-        if (data.data_modified) {
-          queryClient.invalidateQueries({ queryKey: ["import-logs"] });
-          queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-          queryClient.invalidateQueries({ queryKey: ["import-errors"] });
+        if ((data as Record<string, unknown>)?.data_modified) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
+          queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors("") });
           if (activeLogId) {
-            queryClient.invalidateQueries({ queryKey: ["import-log", activeLogId] });
-            queryClient.invalidateQueries({ queryKey: ["imported-contacts", activeLogId] });
-            queryClient.invalidateQueries({ queryKey: ["import-errors", activeLogId] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.imports.log(activeLogId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported(activeLogId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors(activeLogId) });
           }
-          queryClient.invalidateQueries({ queryKey: ["partners"] });
-          queryClient.invalidateQueries({ queryKey: ["activities"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
         }
       }
     } catch (err) {
-      console.error("Import assistant error:", err);
+      log.error("import assistant error", { message: err instanceof Error ? err.message : String(err) });
       setMessages([...allMessages, { role: "assistant", content: "❌ Errore di comunicazione con l'assistente." }]);
     } finally {
       setLoading(false);

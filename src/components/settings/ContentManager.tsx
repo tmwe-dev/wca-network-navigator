@@ -1,9 +1,9 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadWorkspaceDocFile, createWorkspaceDocSignedUrl } from "@/application/data/workspaceDocsStorage";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { useWorkspacePresets } from "@/hooks/useWorkspacePresets";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
-import { DEFAULT_GOALS, DEFAULT_PROPOSALS, ContentItem, CONTENT_CATEGORIES } from "@/data/defaultContentPresets";
+import { DEFAULT_GOALS, DEFAULT_PROPOSALS, ContentItem, CONTENT_CATEGORIES } from "@/constants/defaultContentPresets";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   BookOpen, Target, FileText, Link2, Plus, Trash2, Save, Loader2,
   Upload, ExternalLink, X, File, RefreshCw,
@@ -22,6 +21,10 @@ import {
   ChevronDown, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+import { useWorkspaceDocs } from "@/hooks/useWorkspaceDocs";
+
+const log = createLogger("ContentManager");
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   primo_contatto: Handshake,
@@ -41,7 +44,7 @@ function formatSize(bytes: number) {
 }
 
 function hostname(url: string) {
-  try { return new URL(url).hostname; } catch { return url; }
+  try { return new URL(url).hostname; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return url; }
 }
 
 function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }: {
@@ -115,13 +118,15 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
     if (isNew && editText.trim()) {
       setCategorizing(true);
       try {
-        const { data, error } = await supabase.functions.invoke("categorize-content", {
+        const data = await invokeAi<{ category?: string }>("categorize-content", {
+          scope: "strategic",
+          context: { source: "ContentManager.categorize_content" },
           body: { name: editName.trim(), text: editText.trim(), type: contentType === "proposal" ? "proposal" : "goal" },
         });
-        if (!error && data?.category) {
+        if (data?.category) {
           finalCategory = data.category;
         }
-      } catch { /* fallback to manual */ }
+      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to manual */ }
       setCategorizing(false);
     }
 
@@ -275,19 +280,18 @@ export default function ContentManager() {
   const { presets, isLoading: loadingPresets } = useWorkspacePresets();
   const { data: settings, isLoading: loadingSettings } = useAppSettings();
   const updateSetting = useUpdateSetting();
-  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [newLinkUrl, setNewLinkUrl] = useState("");
 
   const goals: ContentItem[] = useMemo(() => {
     if (!settings?.custom_goals) return [];
-    try { return JSON.parse(settings.custom_goals); } catch { return []; }
+    try { return JSON.parse(settings.custom_goals); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
   }, [settings]);
 
   const proposals: ContentItem[] = useMemo(() => {
     if (!settings?.custom_proposals) return [];
-    try { return JSON.parse(settings.custom_proposals); } catch { return []; }
+    try { return JSON.parse(settings.custom_proposals); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
   }, [settings]);
 
   useEffect(() => {
@@ -302,18 +306,11 @@ export default function ContentManager() {
     updateSetting.mutate({ key, value: JSON.stringify(items) });
   };
 
-  const { data: documents = [], isLoading: loadingDocs } = useQuery({
-    queryKey: ["workspace-documents-all"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("workspace_documents").select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const { documents, isLoading: loadingDocs, createDoc, deleteDoc, invalidate: invalidateDocs } = useWorkspaceDocs();
 
   const allLinks = useMemo(() => {
     const set = new Set<string>();
-    presets.forEach(p => (p.reference_links || []).forEach(l => set.add(l)));
+    presets.forEach(p => ((p.reference_links as string[] | null) || []).forEach((l: string) => set.add(l)));
     return Array.from(set);
   }, [presets]);
 
@@ -324,23 +321,21 @@ export default function ContentManager() {
     try {
       for (const file of Array.from(files)) {
         const path = `${crypto.randomUUID()}.${file.name.split(".").pop() || "bin"}`;
-        const { error: upErr } = await supabase.storage.from("workspace-docs").upload(path, file);
-        if (upErr) throw upErr;
-        const { data: urlData } = await supabase.storage.from("workspace-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
-        const { error: dbErr } = await supabase.from("workspace_documents").insert({
-          file_name: file.name, file_url: urlData?.signedUrl || path, file_size: file.size,
+        await uploadWorkspaceDocFile(path, file);
+        const signedUrl = await createWorkspaceDocSignedUrl(path, 60 * 60 * 24 * 365);
+        await createDoc({
+          file_name: file.name, file_url: signedUrl || path, file_size: file.size,
         });
-        if (dbErr) throw dbErr;
       }
       toast.success(`${files.length} documento/i caricato/i`);
-      qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
-    } catch (err: any) { toast.error("Errore upload: " + err.message); }
+      invalidateDocs();
+    } catch (err: unknown) { toast.error("Errore upload: " + (err instanceof Error ? err.message : String(err))); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 
   const handleDeleteDoc = async (id: string) => {
-    await supabase.from("workspace_documents").delete().eq("id", id);
-    qc.invalidateQueries({ queryKey: ["workspace-documents-all"] });
+    await deleteDoc(id);
+    invalidateDocs();
     toast.success("Documento eliminato");
   };
 
@@ -349,10 +344,10 @@ export default function ContentManager() {
     if (!newLinkUrl.trim()) return;
     const target = presets[0];
     if (!target) { toast.error("Crea prima un preset nel Workspace"); return; }
-    const links = [...(target.reference_links || []), newLinkUrl.trim()];
+    const links = [...((target.reference_links as string[] | null) || []), newLinkUrl.trim()];
     save.mutate({
-      id: target.id, name: target.name, goal: target.goal, base_proposal: target.base_proposal,
-      document_ids: target.document_ids, reference_links: links,
+      id: target.id, name: target.name, goal: target.goal ?? "", base_proposal: target.base_proposal ?? "",
+      document_ids: (target.document_ids as string[] | null) ?? [], reference_links: links,
     }, { onSuccess: () => { setNewLinkUrl(""); toast.success("Link aggiunto"); } });
   };
 
@@ -410,7 +405,7 @@ export default function ContentManager() {
           {documents.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">Nessun documento caricato</p>
           ) : (
-            documents.map((d: any) => (
+            documents.map((d) => (
               <Card key={d.id}>
                 <CardContent className="py-2 px-3 flex items-center gap-3">
                   <File className="w-5 h-5 text-muted-foreground shrink-0" />

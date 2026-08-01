@@ -1,15 +1,16 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgendaPartnerCards } from "@/application/data/agendaPartners";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
-import { Search, Mail, Phone, Globe, User, Building2, MapPin } from "lucide-react";
+import { Search, Mail, Phone, User, Building2, MapPin } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface PartnerCard {
   id: string;
@@ -28,24 +29,24 @@ interface PartnerCard {
 
 const leadStatusLabel: Record<string, string> = {
   new: "Nuovo — mai contattato",
-  contacted: "Contattato — in attesa di risposta",
-  qualified: "Qualificato — lead valido",
+  first_touch_sent: "Primo contatto — in attesa di risposta",
+  holding: "In attesa — nurturing diradato",
+  engaged: "Agganciato — dialogo attivo",
+  qualified: "Qualificato — bisogno esplicito",
+  negotiation: "Trattativa — proposta in corso",
   converted: "Convertito — cliente attivo",
-  lost: "Perso — opportunità chiusa",
+  archived: "Archiviato — opportunità chiusa",
+  blacklisted: "Blacklist — non contattare",
 };
 
 export default function AgendaCardView() {
   const [search, setSearch] = useState("");
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["agenda-card-partners"],
+    queryKey: queryKeys.partners.agendaCard(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, phone, website, wca_id, lead_status, partner_networks(network_name), partner_contacts(name, email, mobile, title)")
-        .order("updated_at", { ascending: false })
-        .limit(200);
-      return (data || []) as PartnerCard[];
+      const data = await findAgendaPartnerCards(200);
+      return data as PartnerCard[];
     },
   });
 
@@ -173,7 +174,7 @@ export default function AgendaCardView() {
                           className={cn(
                             "text-[8px] px-1.5 py-0 h-4 shrink-0",
                             p.lead_status === "qualified" && "border-emerald-500/30 text-emerald-500",
-                            p.lead_status === "contacted" && "border-blue-500/30 text-blue-500",
+                            p.lead_status === "first_touch_sent" && "border-blue-500/30 text-blue-500",
                             p.lead_status === "new" && "border-muted-foreground/30 text-muted-foreground"
                           )}
                         >
@@ -210,12 +211,12 @@ export default function AgendaCardView() {
                   {/* Data row */}
                   <div className="flex items-center gap-2 text-[10px]">
                     <InfoTooltip content={hasEmail ? `Email: ${allEmails.join(", ")}` : "Nessuna email disponibile"}>
-                      <span className={cn("flex items-center gap-1", hasEmail ? "text-emerald-500" : "text-muted-foreground/30")}>
+                      <span className={cn("flex items-center gap-1", hasEmail ? "text-emerald-500" : "text-muted-foreground")}>
                         <Mail className="w-3 h-3" /> Email
                       </span>
                     </InfoTooltip>
                     <InfoTooltip content={hasPhone ? `Telefono: ${allPhones.join(", ")}` : "Nessun telefono disponibile"}>
-                      <span className={cn("flex items-center gap-1", hasPhone ? "text-blue-400" : "text-muted-foreground/30")}>
+                      <span className={cn("flex items-center gap-1", hasPhone ? "text-blue-400" : "text-muted-foreground")}>
                         <Phone className="w-3 h-3" /> Tel
                       </span>
                     </InfoTooltip>

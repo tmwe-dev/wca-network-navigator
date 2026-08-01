@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgendaPartnersByCountry } from "@/application/data/downloadViews";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Mail, Phone, Building2, Globe, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Search, Mail, Phone, Building2, CheckCircle2, Clock } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface PartnerRow {
   id: string;
@@ -36,15 +37,11 @@ export function DownloadAgendaView() {
   }, [activeJob]);
 
   const { data: partners } = useQuery({
-    queryKey: ["download-agenda-partners", activeJob?.country_code],
+    queryKey: queryKeys.partners.downloadAgenda(activeJob?.country_code),
     queryFn: async () => {
       if (!activeJob) return [];
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, email, phone, wca_id, partner_networks(network_name), partner_contacts(name, email, mobile)")
-        .eq("country_code", activeJob.country_code)
-        .order("company_name");
-      return (data || []) as PartnerRow[];
+      const data = await findAgendaPartnersByCountry(activeJob.country_code);
+      return data as PartnerRow[];
     },
     enabled: !!activeJob?.country_code,
   });
@@ -124,7 +121,7 @@ export function DownloadAgendaView() {
                     {isProcessed ? (
                       <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
                     ) : (
-                      <Clock className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                      <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
                     )}
                   </div>
                   <span className="text-muted-foreground truncate">{p.city}</span>
@@ -144,12 +141,12 @@ export function DownloadAgendaView() {
                   {hasEmail ? (
                     <Mail className="w-3 h-3 text-emerald-500" />
                   ) : (
-                    <Mail className="w-3 h-3 text-muted-foreground/20" />
+                    <Mail className="w-3 h-3 text-muted-foreground" />
                   )}
                   {hasPhone ? (
                     <Phone className="w-3 h-3 text-blue-400" />
                   ) : (
-                    <Phone className="w-3 h-3 text-muted-foreground/20" />
+                    <Phone className="w-3 h-3 text-muted-foreground" />
                   )}
                 </div>
 

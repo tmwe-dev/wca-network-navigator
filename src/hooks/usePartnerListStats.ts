@@ -2,9 +2,25 @@ import { useMemo } from "react";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { asEnrichment } from "@/lib/partnerUtils";
 
+interface PartnerLike extends Record<string, unknown> {
+  raw_profile_html?: string | null;
+  profile_description?: string | null;
+  enrichment_data?: unknown;
+  email?: string | null;
+  phone?: string | null;
+  company_alias?: string | null;
+  ai_parsed_at?: string | null;
+  partner_contacts?: Array<{
+    email?: string | null;
+    direct_phone?: string | null;
+    mobile?: string | null;
+    contact_alias?: string | null;
+  }>;
+}
+
 interface UsePartnerListStatsArgs {
   countryCodes: string[];
-  partners: any[] | undefined;
+  partners: PartnerLike[] | undefined;
 }
 
 export function usePartnerListStats({ countryCodes, partners }: UsePartnerListStatsArgs) {
@@ -56,29 +72,31 @@ export function usePartnerListStats({ countryCodes, partners }: UsePartnerListSt
     const list = partners || [];
     const total = list.length;
     let withProfile = 0, withDeep = 0, withEmail = 0, withPhone = 0, withAliasCo = 0, withAliasCt = 0;
-    list.forEach((p: any) => {
-      if (p.raw_profile_html) withProfile++;
+    list.forEach((p) => {
+      // Sorgente verità: profile_description (sync WCA). Fallback su raw_profile_html per backward-compat.
+      if (p.profile_description || p.raw_profile_html) withProfile++;
       if (asEnrichment(p.enrichment_data)?.deep_search_at) withDeep++;
-      if (p.email || (p.partner_contacts || []).some((c: any) => c.email)) withEmail++;
-      if (p.phone || (p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile)) withPhone++;
+      if (p.email || (p.partner_contacts || []).some((c) => c.email)) withEmail++;
+      if (p.phone || (p.partner_contacts || []).some((c) => c.direct_phone || c.mobile)) withPhone++;
       if (p.company_alias) withAliasCo++;
-      if ((p.partner_contacts || []).some((c: any) => c.contact_alias)) withAliasCt++;
+      if ((p.partner_contacts || []).some((c) => c.contact_alias)) withAliasCt++;
     });
     return { total, withProfile, withDeep, withEmail, withPhone, withAliasCo, withAliasCt };
   }, [serverStats, partners]);
 
   const verified = useMemo(() => {
     const list = partners || [];
-    const missingEmailList = list.filter((p: any) => !p.email && !(p.partner_contacts || []).some((c: any) => c.email));
-    const emailVerified = missingEmailList.length === 0 || missingEmailList.every((p: any) => !!p.raw_profile_html);
-    const missingPhoneList = list.filter((p: any) => !p.phone && !(p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile));
-    const phoneVerified = missingPhoneList.length === 0 || missingPhoneList.every((p: any) => !!p.raw_profile_html);
-    const missingDeepList = list.filter((p: any) => !asEnrichment(p.enrichment_data)?.deep_search_at);
-    const deepVerified = missingDeepList.length === 0 || missingDeepList.every((p: any) => !!asEnrichment(p.enrichment_data)?.deep_search_at);
-    const missingAliasCoList = list.filter((p: any) => !p.company_alias);
-    const aliasCoVerified = missingAliasCoList.length === 0 || missingAliasCoList.every((p: any) => !!p.ai_parsed_at);
-    const missingAliasCtList = list.filter((p: any) => !(p.partner_contacts || []).some((c: any) => c.contact_alias));
-    const aliasCtVerified = missingAliasCtList.length === 0 || missingAliasCtList.every((p: any) => !!p.ai_parsed_at);
+    const hasProfile = (p: PartnerLike) => !!(p.profile_description || p.raw_profile_html);
+    const missingEmailList = list.filter((p) => !p.email && !(p.partner_contacts || []).some((c) => c.email));
+    const emailVerified = missingEmailList.length === 0 || missingEmailList.every(hasProfile);
+    const missingPhoneList = list.filter((p) => !p.phone && !(p.partner_contacts || []).some((c) => c.direct_phone || c.mobile));
+    const phoneVerified = missingPhoneList.length === 0 || missingPhoneList.every(hasProfile);
+    const missingDeepList = list.filter((p) => !asEnrichment(p.enrichment_data)?.deep_search_at);
+    const deepVerified = missingDeepList.length === 0 || missingDeepList.every((p) => !!asEnrichment(p.enrichment_data)?.deep_search_at);
+    const missingAliasCoList = list.filter((p) => !p.company_alias);
+    const aliasCoVerified = missingAliasCoList.length === 0 || missingAliasCoList.every((p) => !!p.ai_parsed_at);
+    const missingAliasCtList = list.filter((p) => !(p.partner_contacts || []).some((c) => c.contact_alias));
+    const aliasCtVerified = missingAliasCtList.length === 0 || missingAliasCtList.every((p) => !!p.ai_parsed_at);
     return { email: emailVerified, phone: phoneVerified, deep: deepVerified, aliasCo: aliasCoVerified, aliasCt: aliasCtVerified };
   }, [partners]);
 

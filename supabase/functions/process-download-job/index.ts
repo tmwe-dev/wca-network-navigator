@@ -1,9 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { assertJobOwned } from "../_shared/ownership.ts";
+
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Download job progress tracker.
@@ -11,9 +12,11 @@ const corsHeaders = {
  * This function only manages job state (status, completion, verification).
  */
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const _dynCors = getCorsHeaders(origin);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -32,12 +35,17 @@ Deno.serve(async (req) => {
     if (userError || !userData?.user?.id) {
       return respond({ success: false, error: 'Unauthorized' }, 401)
     }
+    const userId = userData.user.id
 
     const { jobId, action } = await req.json()
 
     if (!jobId) {
       return respond({ success: false, error: 'jobId is required' }, 400)
     }
+
+    // ── Ownership guard: job MUST belong to the authenticated user ──
+    const ownErr = await assertJobOwned(supabase, jobId, userId, getCorsHeaders(origin))
+    if (ownErr) return ownErr
 
     // Fetch the job
     const { data: job, error: jobError } = await supabase
@@ -93,10 +101,10 @@ Deno.serve(async (req) => {
   }
 })
 
-function respond(data: any, status = 200) {
+function respond(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
   })
 }
 
@@ -104,7 +112,7 @@ function respond(data: any, status = 200) {
  * Verify that all WCA IDs in the directory_cache for a country+network
  * have been downloaded to the partners table.
  */
-async function verifyDownloadCompleteness(supabase: any, countryCode: string, networkName: string) {
+async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode: string, networkName: string) {
   try {
     const { data: cacheRows } = await supabase
       .from('directory_cache')
@@ -118,7 +126,9 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
       const members = cache.members as Array<{ id: number }> | number[]
       if (!members || !Array.isArray(members) || members.length === 0) continue
 
-      const wcaIds: number[] = members.map((m: any) => typeof m === 'object' ? m.id : m).filter(Boolean)
+      const wcaIds = (members as Array<{ id: number } | number>)
+        .map((member) => typeof member === "object" ? member.id : member)
+        .filter((id): id is number => Number.isFinite(id))
       if (wcaIds.length === 0) continue
 
       const { data: partners } = await supabase
@@ -126,7 +136,7 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
         .select('wca_id')
         .in('wca_id', wcaIds)
 
-      const foundIds = new Set((partners || []).map((p: any) => p.wca_id))
+      const foundIds = new Set((partners || []).map((p: Record<string, unknown>) => p.wca_id))
       const allPresent = wcaIds.every(id => foundIds.has(id))
 
       await supabase
@@ -137,7 +147,7 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
         })
         .eq('id', cache.id)
 
-      console.log(`Verification for ${countryCode}/${networkName}: ${foundIds.size}/${wcaIds.length} — verified: ${allPresent}`)
+      
     }
   } catch (err) {
     console.error('Verification error:', err)
@@ -147,7 +157,7 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
 /**
  * Auto-update network_configs flags based on actual data in the database.
  */
-async function updateNetworkConfigsFromData(supabase: any, networkName: string) {
+async function updateNetworkConfigsFromData(supabase: SupabaseClient, networkName: string) {
   try {
     if (!networkName || networkName === 'Tutti' || networkName === '') return
 
@@ -162,16 +172,16 @@ async function updateNetworkConfigsFromData(supabase: any, networkName: string) 
 
       if (!networkPartners || networkPartners.length === 0) continue
 
-      const partnerIds = networkPartners.map((p: any) => p.partner_id)
+      const partnerIds = networkPartners.map((p: Record<string, unknown>) => p.partner_id)
 
       const { data: contacts } = await supabase
         .from('partner_contacts')
         .select('email, direct_phone, mobile, name')
         .in('partner_id', partnerIds)
 
-      const hasEmails = (contacts || []).some((c: any) => c.email)
-      const hasPhones = (contacts || []).some((c: any) => c.direct_phone || c.mobile)
-      const hasNames = (contacts || []).some((c: any) => c.name && !/Members\s*only/i.test(c.name))
+      const hasEmails = (contacts || []).some((c: Record<string, unknown>) => c.email)
+      const hasPhones = (contacts || []).some((c: Record<string, unknown>) => c.direct_phone || c.mobile)
+      const hasNames = (contacts || []).some((c: Record<string, unknown>) => c.name && !/Members\s*only/i.test(c.name as string))
 
       await supabase
         .from('network_configs')
@@ -183,7 +193,7 @@ async function updateNetworkConfigsFromData(supabase: any, networkName: string) 
         })
         .eq('network_name', net)
 
-      console.log(`Updated network_configs for "${net}": emails=${hasEmails}, phones=${hasPhones}, names=${hasNames}`)
+      
     }
   } catch (err) {
     console.error('updateNetworkConfigsFromData error:', err)

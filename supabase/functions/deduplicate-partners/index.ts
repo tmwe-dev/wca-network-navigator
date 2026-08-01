@@ -1,14 +1,36 @@
+/**
+ * deduplicate-partners — Finds and merges duplicate partner records.
+ *
+ * Groups partners by normalized company_name + country_code, identifies duplicates,
+ * and merges them by keeping the most data-rich record as primary.
+ *
+ * @endpoint POST /functions/v1/deduplicate-partners
+ * @auth Required (Bearer token)
+ * @rateLimit 5 requests/minute per user
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
+    // Auth check — E2.1: authGuard terse (contratto HTTP byte-identico al pre-E2).
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (isAuthError(auth)) return auth;
+    const userId = auth.userId;
+
+    // Rate limit
+    const rl = checkRateLimit(`dedup:${userId}`, { maxTokens: 5, refillRate: 0.1 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -24,7 +46,7 @@ Deno.serve(async (req) => {
     if (fetchErr) throw fetchErr;
 
     // Group by company_name + country_code
-    const groups: Record<string, any[]> = {};
+    const groups: Record<string, Array<Record<string, unknown>>> = {};
     for (const p of allPartners || []) {
       const key = `${p.company_name.toLowerCase().trim()}|${p.country_code}`;
       if (!groups[key]) groups[key] = [];
@@ -36,9 +58,10 @@ Deno.serve(async (req) => {
     let totalMerged = 0;
     let totalDeleted = 0;
 
+    type ScoredPartner = Record<string, unknown> & { score: number; id: string; company_name: string; country_code: string };
     for (const [key, members] of duplicateGroups) {
       // Score each member: higher = more complete
-      const scored = members.map((m) => {
+      const scored: ScoredPartner[] = members.map((m: Record<string, unknown>) => {
         let score = 0;
         if (m.logo_url) score += 10;
         if (m.enrichment_data) score += 10;
@@ -49,7 +72,7 @@ Deno.serve(async (req) => {
         if (m.rating) score += 2;
         if (m.member_since) score += 2;
         if (m.wca_id) score += 1;
-        return { ...m, score };
+        return { ...m, score } as ScoredPartner;
       });
 
       scored.sort((a, b) => b.score - a.score);
@@ -112,12 +135,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Deduplicate relations on the keeper (remove duplicate services/networks/certs)
-    // For partner_services: remove duplicate service_category per partner
-    const { data: dupServices } = await supabase.rpc("get_directory_counts"); // dummy - we do it manually
-    // Actually let's do a manual cleanup query approach
-    // We'll handle this in a follow-up if needed
-
     return new Response(
       JSON.stringify({
         success: true,
@@ -126,12 +143,12 @@ Deno.serve(async (req) => {
         totalDeleted,
         log,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   }
 });

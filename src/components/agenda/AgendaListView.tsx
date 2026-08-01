@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findAgendaPartnerRelations } from "@/application/data/agendaPartners";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,9 +12,12 @@ import { Search, Mail, Phone, ArrowUpDown } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { queryKeys } from "@/lib/queryKeys";
+import { getPartnersByLeadStatusFromView } from "@/application/data/partners";
 
 interface PartnerRow {
   id: string;
+  partner_id: string;
   company_name: string;
   city: string;
   country_code: string;
@@ -22,9 +25,12 @@ interface PartnerRow {
   email: string | null;
   phone: string | null;
   lead_status: string;
-  updated_at: string;
-  partner_networks: { network_name: string }[];
-  partner_contacts: { name: string; email: string | null; mobile: string | null }[];
+  updated_at?: string;
+  touch_count?: number;
+  last_outbound_at?: string | null;
+  days_since_last_outbound?: number;
+  partner_networks?: { network_name: string }[];
+  partner_contacts?: { name: string; email: string | null; mobile: string | null }[];
 }
 
 type SortKey = "company_name" | "country_name" | "updated_at";
@@ -35,14 +41,42 @@ export default function AgendaListView() {
   const [sortAsc, setSortAsc] = useState(false);
 
   const { data: partners, isLoading } = useQuery({
-    queryKey: ["agenda-list-partners"],
+    queryKey: queryKeys.partners.agendaList(),
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, phone, lead_status, updated_at, partner_networks(network_name), partner_contacts(name, email, mobile)")
-        .order("updated_at", { ascending: false })
-        .limit(500);
-      return (data || []) as PartnerRow[];
+      // Use v_pipeline_lead materialized view for faster queries with pre-computed touch_count, last_outbound_at
+      const viewRows = await getPartnersByLeadStatusFromView(
+        ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted"],
+        "partner_id, company_name, city, country_code, country_name, email, phone, lead_status, touch_count, last_outbound_at, days_since_last_outbound"
+      );
+
+      // Enrich with partner relations (networks, contacts) from main table for display
+      if (viewRows.length === 0) return [];
+
+      const partnerIds = viewRows.map(r => r.partner_id);
+      const enrichedData = await findAgendaPartnerRelations(partnerIds);
+
+      const enrichmentMap = new Map(
+        (enrichedData || []).map(e => [e.id, { networks: e.partner_networks, contacts: e.partner_contacts }])
+      );
+
+      const result = viewRows.map(row => ({
+        id: row.partner_id,
+        partner_id: row.partner_id,
+        company_name: row.company_name,
+        city: row.city || "",
+        country_code: row.country_code,
+        country_name: row.country_name,
+        email: row.email,
+        phone: row.phone,
+        lead_status: row.lead_status,
+        touch_count: row.touch_count,
+        last_outbound_at: row.last_outbound_at,
+        days_since_last_outbound: row.days_since_last_outbound,
+        partner_networks: (enrichmentMap.get(row.partner_id)?.networks || []) as PartnerRow["partner_networks"],
+        partner_contacts: (enrichmentMap.get(row.partner_id)?.contacts || []) as PartnerRow["partner_contacts"],
+      })) as PartnerRow[];
+
+      return result;
     },
   });
 
@@ -128,10 +162,10 @@ export default function AgendaListView() {
                   <TableCell className="py-1.5 text-muted-foreground">{p.city}</TableCell>
                   <TableCell className="py-1.5 text-muted-foreground">{p.country_name}</TableCell>
                   <TableCell className="py-1.5">
-                    {hasEmail ? <Mail className="w-3.5 h-3.5 text-emerald-500" /> : <Mail className="w-3.5 h-3.5 text-muted-foreground/20" />}
+                    {hasEmail ? <Mail className="w-3.5 h-3.5 text-emerald-500" /> : <Mail className="w-3.5 h-3.5 text-muted-foreground" />}
                   </TableCell>
                   <TableCell className="py-1.5">
-                    {hasPhone ? <Phone className="w-3.5 h-3.5 text-blue-400" /> : <Phone className="w-3.5 h-3.5 text-muted-foreground/20" />}
+                    {hasPhone ? <Phone className="w-3.5 h-3.5 text-blue-400" /> : <Phone className="w-3.5 h-3.5 text-muted-foreground" />}
                   </TableCell>
                   <TableCell className="py-1.5">
                     <div className="flex gap-1">
@@ -147,7 +181,7 @@ export default function AgendaListView() {
                     <Badge variant="outline" className={cn(
                       "text-[8px] px-1.5 py-0 h-4",
                       p.lead_status === "qualified" && "border-emerald-500/30 text-emerald-500",
-                      p.lead_status === "contacted" && "border-blue-500/30 text-blue-500",
+                      p.lead_status === "first_touch_sent" && "border-blue-500/30 text-blue-500",
                     )}>
                       {p.lead_status}
                     </Badge>

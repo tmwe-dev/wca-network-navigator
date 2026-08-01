@@ -3,7 +3,6 @@ import { useOperationsCenter, type AgentTaskLive, type EmailQueueItem, type Acti
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Activity, Bot, Mail, Download, Clock, CheckCircle2,
   AlertTriangle, Loader2, Pause, Send, Eye, Calendar
@@ -15,8 +14,8 @@ import type { DownloadJob } from "@/hooks/useDownloadJobs";
 
 // ── Status helpers ──
 const STATUS_COLORS: Record<string, string> = {
-  running: "text-primary", pending: "text-amber-400", completed: "text-emerald-400",
-  failed: "text-destructive", paused: "text-amber-400", sent: "text-emerald-400",
+  running: "text-primary", pending: "text-primary", completed: "text-emerald-400",
+  failed: "text-destructive", paused: "text-primary", sent: "text-emerald-400",
   sending: "text-primary", cancelled: "text-muted-foreground",
 };
 
@@ -25,12 +24,12 @@ function StatusIcon({ status }: { status: string }) {
     case "running": case "sending": return <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />;
     case "completed": case "sent": return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />;
     case "failed": return <AlertTriangle className="h-3.5 w-3.5 text-destructive" />;
-    case "paused": return <Pause className="h-3.5 w-3.5 text-amber-400" />;
+    case "paused": return <Pause className="h-3.5 w-3.5 text-primary" />;
     default: return <Clock className="h-3.5 w-3.5 text-muted-foreground" />;
   }
 }
 
-function StatCard({ label, value, icon: Icon, accent }: { label: string; value: number; icon: any; accent?: string }) {
+function StatCard({ label, value, icon: Icon, accent }: { label: string; value: number; icon: React.ElementType; accent?: string }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm p-3">
       <div className={cn("rounded-lg p-2 bg-muted/40", accent)}>
@@ -92,7 +91,7 @@ function DownloadPanel({ jobs }: { jobs: DownloadJob[] }) {
                 </div>
               </>
             )}
-            {job.error_message && <div className="text-[10px] text-destructive/80">⚠️ {job.error_message}</div>}
+            {job.error_message && <div className="text-[10px] text-destructive">⚠️ {job.error_message}</div>}
             <div className="text-[10px] text-muted-foreground">
               {job.contacts_found_count} contatti trovati · <TimeLabel date={job.created_at} />
             </div>
@@ -120,7 +119,7 @@ function AgentTasksPanel({ tasks }: { tasks: AgentTaskLive[] }) {
             </div>
             <Badge variant="outline" className="text-[10px]">{task.task_type}</Badge>
           </div>
-          <div className="text-xs text-foreground/80">{task.description}</div>
+          <div className="text-xs text-foreground">{task.description}</div>
           {task.result_summary && (
             <div className="text-[10px] text-muted-foreground italic truncate">{task.result_summary}</div>
           )}
@@ -179,13 +178,13 @@ function EmailQueuePanel({ emails }: { emails: EmailQueueItem[] }) {
                 </span>
               )}
               {email.scheduled_at && email.status === "pending" && (
-                <span className="flex items-center gap-0.5 text-[10px] text-amber-400">
+                <span className="flex items-center gap-0.5 text-[10px] text-primary">
                   <Calendar className="h-3 w-3" />
                 </span>
               )}
             </div>
           </div>
-          <div className="text-[11px] text-foreground/70 truncate">{email.subject}</div>
+          <div className="text-[11px] text-foreground truncate">{email.subject}</div>
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>{email.recipient_email}</span>
             {email.scheduled_at && email.status === "pending" ? (
@@ -196,7 +195,7 @@ function EmailQueuePanel({ emails }: { emails: EmailQueueItem[] }) {
               <TimeLabel date={email.created_at} />
             )}
           </div>
-          {email.error_message && <div className="text-[10px] text-destructive/80">⚠️ {email.error_message}</div>}
+          {email.error_message && <div className="text-[10px] text-destructive">⚠️ {email.error_message}</div>}
         </div>
       ))}
     </div>
@@ -211,7 +210,7 @@ function ActivitiesPanel({ activities }: { activities: ActivityLive[] }) {
         <div key={act.id} className={cn(
           "rounded-lg border p-3 space-y-1",
           act.status === "pending" && act.due_date && isPast(new Date(act.due_date)) ? "border-destructive/30 bg-destructive/5" :
-          act.status === "pending" ? "border-amber-500/30 bg-amber-500/5" :
+          act.status === "pending" ? "border-primary/30 bg-primary/5" :
           "border-border/40 bg-muted/10"
         )}>
           <div className="flex items-center justify-between">
@@ -252,11 +251,11 @@ export function OperationsCenter() {
       <div className="flex-shrink-0 p-4 border-b border-border/50">
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
           <StatCard label="Download attivi" value={stats.activeDownloads} icon={Download} accent="text-primary" />
-          <StatCard label="Task agenti" value={stats.runningTasks} icon={Bot} accent="text-violet-400" />
-          <StatCard label="Email in coda" value={stats.pendingEmails} icon={Mail} accent="text-amber-400" />
+          <StatCard label="Task agenti" value={stats.runningTasks} icon={Bot} accent="text-primary" />
+          <StatCard label="Email in coda" value={stats.pendingEmails} icon={Mail} accent="text-primary" />
           <StatCard label="Email inviate" value={stats.sentEmails} icon={Send} accent="text-emerald-400" />
-          <StatCard label="Email lette" value={stats.openedEmails} icon={Eye} accent="text-blue-400" />
-          <StatCard label="Attività aperte" value={stats.pendingActivities} icon={Activity} accent="text-orange-400" />
+          <StatCard label="Email lette" value={stats.openedEmails} icon={Eye} accent="text-muted-foreground" />
+          <StatCard label="Attività aperte" value={stats.pendingActivities} icon={Activity} accent="text-primary" />
         </div>
       </div>
 

@@ -1,8 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  Target, Handshake, RefreshCw, Search, Briefcase, Globe, FileText,
-  Pencil, Check, Plus,
-} from "lucide-react";
+import { Target, Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Pencil, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +11,15 @@ import {
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import {
   CONTENT_CATEGORIES, DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem,
-} from "@/data/defaultContentPresets";
+} from "@/constants/defaultContentPresets";
 import { toast } from "@/hooks/use-toast";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/log";
 
-const ICON_MAP: Record<string, any> = {
+const log = createLogger("ContentPicker");
+
+const ICON_MAP: Record<string, LucideIcon> = {
   Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target,
 };
 
@@ -49,7 +50,7 @@ export default function ContentPicker({
   const items = useMemo<ContentItem[]>(() => {
     try {
       return settings?.[settingsKey] ? JSON.parse(settings[settingsKey]) : defaults;
-    } catch { return defaults; }
+    } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return defaults; }
   }, [settings?.[settingsKey]]);
 
   const grouped = useMemo(() => {
@@ -144,8 +145,8 @@ export default function ContentPicker({
                         <div
                           key={globalIdx}
                           className={cn(
-                            "group relative rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/40 hover:bg-primary/5",
-                            isSelected ? "border-primary/50 bg-primary/10" : "border-border/50 bg-card",
+                           "group relative rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/40 hover:bg-primary/5",
+                            isSelected ? "border-primary/50 bg-primary/10" : "border-border bg-card",
                           )}
                           onClick={() => handleSelect(item)}
                         >

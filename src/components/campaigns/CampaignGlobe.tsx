@@ -6,7 +6,7 @@ import { TexturedEarth, SimpleEarth } from "./TexturedEarth";
 import { AuroraBorealis } from "./AuroraBorealis";
 import { Loader2 } from "lucide-react";
 import { usePartnersForGlobe, usePartnersByCountryForGlobe, type GlobePartner, type CountryWithPartners } from "@/hooks/usePartnersForGlobe";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 
 // Optimized components
 import { InstancedCountryMarkers } from "./globe/InstancedCountryMarkers";
@@ -61,7 +61,7 @@ function Earth({
         currentRotation.current.y = resetStartRotationRef.current.y + (targetRotation.current.y - resetStartRotationRef.current.y) * eased + delta * 0.08 * eased;
         
         // Smooth zoom out
-        const currentZ = camera.position.z;
+        const _currentZ = camera.position.z;
         const targetZ = resetStartZoomRef.current + (targetZoom.current - resetStartZoomRef.current) * eased;
         camera.position.z = targetZ;
         
@@ -179,7 +179,7 @@ function GlobeScene({
   countryPartners,
   userInteracting,
   isResetting,
-  onStartReset
+  onStartReset: _onStartReset
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;
@@ -265,12 +265,12 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
-          <p className="text-muted-foreground text-sm">Caricamento globo...</p>
-        </div>
-      </div>
+       <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-background via-background to-muted/20">
+         <div className="flex flex-col items-center gap-4">
+           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+           <p className="text-muted-foreground text-sm">Caricamento globo...</p>
+         </div>
+       </div>
     );
   }
 
@@ -300,7 +300,7 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
       {/* Minimal legend - bottom left corner */}
       <div className="absolute bottom-3 left-3 flex items-center gap-3 text-[10px] text-muted-foreground bg-black/40 backdrop-blur-sm rounded px-2 py-1">
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-amber-400" />
+          <div className="w-2 h-2 rounded-full bg-primary" />
           <span>Partner</span>
         </div>
         <div className="flex items-center gap-1">
@@ -311,3 +311,5 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
     </div>
   );
 }
+
+export default CampaignGlobe;

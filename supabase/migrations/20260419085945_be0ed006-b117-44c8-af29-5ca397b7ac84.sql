@@ -1,0 +1,4 @@
+UPDATE public.kb_entries
+SET content = E'EMAIL: canale primario per primo contatto e business formale. Sempre permesso.\n\nWHATSAPP: canale di RELAZIONE, NON di acquisizione.\n- VIETATO come primo contatto. Consentito SOLO SE:\n  (a) stato >= engaged, OPPURE\n  (b) contatto ha iniziato su WhatsApp, OPPURE\n  (c) numero dato esplicitamente.\n- E: orario 9:00-18:00 locale, NO weekend, max 2-3 righe.\n- Se condizioni non soddisfatte → blocca azione, notifica Director.\n- Tono: conversazionale ma professionale, no formattazione pesante.\n\nLINKEDIN:\n- Connection request: 1 riga personalizzata, NO pitch\n- InMail/messaggio: solo dopo connessione accettata\n- Follow-up via LinkedIn: max 2 messaggi, poi tornare a email',
+    updated_at = now()
+WHERE id = '6212bb5b-8524-4f8c-b0b7-a9f174e21160';

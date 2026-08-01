@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run typecheck:strict
+      # `--max-warnings 0` era rosso da tempo e veniva scavalcato: un gate
+      # sempre rosso non protegge nulla. Il ratchet impone 0 errori e un
+      # budget per regola che scende a ogni batch di bonifica.
+      - run: npm run lint:ratchet
+      - run: npm run debt:check
+      - run: npm run audit:security
+      - run: npm run i18n:check
+      - run: npm run audit:function-auth
+      - run: npm run typecheck:public
+      - run: npm run format:check
+      - name: README stats freshness
+        run: node scripts/gen-readme-stats.mjs --check
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run --coverage
+      - name: Check coverage thresholds
+        run: |
+          npx vitest run --coverage --reporter=json-summary 2>/dev/null || true
+          echo "Coverage thresholds enforced in vitest.config.ts"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Bundle size guard (blocking)
+        env:
+          BUNDLE_GUARD_WARN_ONLY: "0"
+          BUNDLE_MAX_KB: "3500"
+        run: npm run bundle:check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Core blocking suite: solo smoke (8 spec) — fail = PR bloccata.
+      # La full suite (66 spec) gira ogni notte in e2e-nightly.yml.
+      - run: npx playwright test e2e/smoke --reporter=blob
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/

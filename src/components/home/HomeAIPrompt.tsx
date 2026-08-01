@@ -1,13 +1,44 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Send, Loader2, Bot, X, Sparkles } from "lucide-react";
+import { Mic, MicOff, Send, Loader2, Bot, X, Sparkles, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { cn } from "@/lib/utils";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { VOICE_LANGUAGE_MAP } from "@/components/voice/VoiceLanguageSelector";
 import type { BriefingAction, AgentStatusItem } from "@/hooks/useDailyBriefing";
+import { createLogger } from "@/lib/log";
+import { aiQueryTool } from "@/v2/ui/pages/command/tools/aiQueryTool";
+import type { ToolResult } from "@/v2/ui/pages/command/tools/types";
+
+const log = createLogger("HomeAIPrompt");
+
+function formatQueryResultAsMarkdown(result: ToolResult): string {
+  if (result.kind === "table") {
+    const count = result.meta?.count ?? result.rows.length;
+    const title = result.title ?? "Risultati";
+    const sample = result.rows.slice(0, 10);
+    const cols = result.columns.slice(0, 4);
+    const header = `**${title}** — trovati **${count}** risultati.\n\n`;
+    if (sample.length === 0) {
+      return header + "_Nessuna riga da mostrare._";
+    }
+    const head = "| " + cols.map((c) => c.label).join(" | ") + " |";
+    const sep = "| " + cols.map(() => "---").join(" | ") + " |";
+    const body = sample
+      .map((r) => "| " + cols.map((c) => String(r[c.key] ?? "—")).join(" | ") + " |")
+      .join("\n");
+    const more = count > sample.length ? `\n\n_…e altri ${count - sample.length}. Apri **/v2/command** per vederli tutti e selezionarli._` : "";
+    return header + head + "\n" + sep + "\n" + body + more;
+  }
+  if (result.kind === "result") {
+    return `**${result.title ?? "Risultato"}**\n\n${result.message ?? ""}`;
+  }
+  return `**${(result as { title?: string }).title ?? "Risultato"}**`;
+}
 
 interface Props {
   className?: string;
@@ -71,8 +102,19 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
   const [response, setResponse] = useState<string | null>(null);
   const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { data: settings } = useAppSettings();
 
-  const speech = useContinuousSpeech((text) => setInput(text));
+  const currentVoiceLang = useMemo(() => {
+    const savedLang = settings?.elevenlabs_language;
+    return savedLang && VOICE_LANGUAGE_MAP[savedLang] ? savedLang : "it";
+  }, [settings?.elevenlabs_language]);
+
+  const currentVoiceConfig = useMemo(
+    () => VOICE_LANGUAGE_MAP[currentVoiceLang] || VOICE_LANGUAGE_MAP.it,
+    [currentVoiceLang]
+  );
+
+  const speech = useContinuousSpeech((text) => setInput(text), currentVoiceConfig.sttCode);
 
   const smartPrompts = useMemo(() => buildSmartPrompts(systemStats, briefingActions), [systemStats, briefingActions]);
 
@@ -104,30 +146,68 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     const newMessages = [...history, { role: "user", content: cleanMsg }];
 
     try {
-      let data: any, error: any;
+      let data: unknown;
       if (targetAgent) {
         // Route to agent-execute
-        ({ data, error } = await supabase.functions.invoke("agent-execute", {
+        data = await invokeAi<Record<string, unknown>>("agent-execute", {
+          scope: "agent",
           body: { agent_id: targetAgent.id, messages: newMessages },
-        }));
+          context: { source: "HomeAIPrompt", route: "/v2", mode: "agent-execute" },
+        });
+      } else if (aiQueryTool.match(cleanMsg)) {
+        // UNIFIED with /v2/command: read-intent prompts go through the
+        // AI Query Planner + safe executor (same pipeline as the Direttore).
+        const result = (await aiQueryTool.execute(cleanMsg, {
+          originalPrompt: cleanMsg,
+          history: newMessages,
+        })) as ToolResult;
+        const raw = formatQueryResultAsMarkdown(result);
+        setResponse(raw);
+        setHistory([...newMessages, { role: "assistant", content: raw }]);
+        return;
       } else {
-        // Default: ai-assistant
-        ({ data, error } = await supabase.functions.invoke("ai-assistant", {
+        // Default: ai-assistant — Charter R1: scope "home"
+        data = await invokeAi<Record<string, unknown>>("ai-assistant", {
+          scope: "home",
           body: { messages: newMessages },
-        }));
+          context: { source: "HomeAIPrompt", route: "/v2", mode: "tool-decision" },
+        });
       }
-      if (error) throw error;
-      const raw = data?.content || data?.message || "";
+      const raw = String((data as Record<string, unknown>)?.content || (data as Record<string, unknown>)?.message || "");
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
       setResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
-    } catch (e: any) {
-      setResponse("⚠️ " + (e.message || "Errore di comunicazione"));
+    } catch (e: unknown) {
+      setResponse("⚠️ " + ((e instanceof Error ? e.message : String(e)) || "Errore di comunicazione"));
     } finally {
       setLoading(false);
       inputRef.current?.focus();
     }
   }, [input, loading, history, agents]);
+
+  const playTTS = useCallback(async (text: string) => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            text: text.slice(0, 3000),
+            voiceId: settings?.elevenlabs_custom_voice_id || currentVoiceConfig.voiceId,
+            language: currentVoiceLang,
+          }),
+        }
+      );
+      if (!res.ok) return;
+      const blob = await res.blob();
+      new Audio(URL.createObjectURL(blob)).play();
+    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
+  }, [currentVoiceConfig.voiceId, currentVoiceLang, settings?.elevenlabs_custom_voice_id]);
 
   return (
     <div className={cn("w-full max-w-2xl mx-auto space-y-3", className)}>
@@ -145,9 +225,14 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
                 <Bot className="h-3.5 w-3.5" />
                 Segretario Operativo
               </div>
-              <button onClick={() => setResponse(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => playTTS(response!)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                  <Volume2 className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => setResponse(null)} className="text-muted-foreground hover:text-foreground p-1">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
             <div className="ai-prose max-w-none">
               <AIMarkdown content={response} />
@@ -160,22 +245,23 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       <div className="relative rounded-2xl border border-border bg-card shadow-glass backdrop-blur-2xl overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
           <Button
+            type="button"
             variant="ghost"
-            size="icon"
             className={cn(
-              "h-10 w-10 shrink-0 rounded-full transition-all",
+              "h-10 shrink-0 rounded-xl border px-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all",
               speech.listening
-                ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
-                : "text-muted-foreground hover:text-foreground"
+                ? "border-accent/50 bg-accent/30 text-accent-foreground hover:bg-accent/35"
+                : "border-accent/35 bg-accent/15 text-accent-foreground hover:bg-accent/25"
             )}
             onClick={speech.toggle}
-            aria-label={speech.listening ? "Stop ascolto" : "Parla"}
+            aria-label={speech.listening ? "Ferma ascolto" : `Avvia ascolto in ${currentVoiceConfig.label}`}
           >
             {speech.listening ? (
-              <MicOff className="h-5 w-5 animate-pulse" />
+              <MicOff className="h-4 w-4 animate-pulse" />
             ) : (
-              <Mic className="h-5 w-5" />
+              <Mic className="h-4 w-4" />
             )}
+            <span>{speech.listening ? "Stop" : "Parla"}</span>
           </Button>
 
           <input
@@ -199,6 +285,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             )}
             onClick={() => send()}
             disabled={loading || !input.trim()}
+            aria-label="Invia"
           >
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />

@@ -4,14 +4,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Target, FileText, Paperclip, Link2, X, Plus, Loader2, Save, Trash2,
-  ExternalLink,
-} from "lucide-react";
+import { Target, FileText, Paperclip, Link2, X, Plus, Loader2, ExternalLink } from "lucide-react";
 import { type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { toast } from "@/hooks/use-toast";
 import ContentPicker from "@/components/shared/ContentPicker";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("GoalBar");
 
 interface GoalBarProps {
   goal: string;
@@ -47,21 +47,21 @@ function formatSize(bytes: number) {
 }
 
 function tryHostname(url: string) {
-  try { return new URL(url).hostname; } catch { return url; }
+  try { return new URL(url).hostname; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return url; }
 }
 
 export default function GoalBar({
   goal, baseProposal, onGoalChange, onBaseProposalChange,
   documents, onUploadDocument, onRemoveDocument, uploading,
   referenceLinks, onAddLink, onRemoveLink,
-  presets, activePresetId, onLoadPreset, onSavePreset, onDeletePreset,
+  presets, activePresetId, onLoadPreset, onSavePreset, onDeletePreset: _onDeletePreset,
 }: GoalBarProps) {
   const safeDocuments = documents ?? [];
   const safeLinks = referenceLinks ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
   const [linkInput, setLinkInput] = useState("");
   const [presetName, setPresetName] = useState("");
-  const [showSave, setShowSave] = useState(false);
+  const [_showSave, setShowSave] = useState(false);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,13 +76,13 @@ export default function GoalBar({
     setLinkInput("");
   };
 
-  const handlePresetSelect = (value: string) => {
+  const _handlePresetSelect = (value: string) => {
     if (value === "__save__") { setShowSave(true); return; }
     const preset = presets.find((p) => p.id === value);
     if (preset) onLoadPreset(preset);
   };
 
-  const handleSavePreset = () => {
+  const _handleSavePreset = () => {
     const name = presetName.trim();
     if (!name) { toast({ title: "Inserisci un nome", variant: "destructive" }); return; }
     onSavePreset(name, activePresetId || undefined);
@@ -103,11 +103,11 @@ export default function GoalBar({
           </TabsTrigger>
           <TabsTrigger value="docs" className="mission-tab h-6 gap-1.5">
             <Paperclip className="w-3.5 h-3.5" /> Documenti
-            {safeDocuments.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-violet-300 hover:bg-violet-500/20">{safeDocuments.length}</Badge>}
+            {safeDocuments.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-chart-4 hover:bg-violet-500/20">{safeDocuments.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="links" className="mission-tab h-6 gap-1.5">
             <Link2 className="w-3.5 h-3.5" /> Link
-            {safeLinks.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-violet-300 hover:bg-violet-500/20">{safeLinks.length}</Badge>}
+            {safeLinks.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-chart-4 hover:bg-violet-500/20">{safeLinks.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
@@ -172,7 +172,7 @@ export default function GoalBar({
                         <p className="text-[11px] font-medium text-foreground truncate">{tryHostname(link)}</p>
                         <p className="text-[9px] text-muted-foreground truncate">{link}</p>
                       </div>
-                      <ExternalLink className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                      <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
                     </a>
                   </div>
                 ))}

@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import {
   Search, FolderOpen, Globe, MapPin, Tag, CalendarIcon, Plane, PlaneLanding, List,
-  ArrowUpAZ, X, Filter, ChevronDown, Sparkles, Handshake
+  ArrowUpAZ, X, Filter, ChevronDown, Sparkles, Handshake, Download
 } from "lucide-react";
+import { findContactsForExport } from "@/application/data/contacts";
+import { toast } from "sonner";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
@@ -21,11 +23,14 @@ import { ContactAIBar, type AICommand } from "./ContactAIBar";
 const STATUSES: { value: LeadStatus | "all"; label: string }[] = [
   { value: "all", label: "Tutti" },
   { value: "new", label: "Nuovo" },
-  { value: "contacted", label: "Contattato" },
-  { value: "in_progress", label: "In corso" },
+  { value: "first_touch_sent", label: "Primo contatto" },
+  { value: "holding", label: "In attesa" },
+  { value: "engaged", label: "Agganciato" },
+  { value: "qualified", label: "Qualificato" },
   { value: "negotiation", label: "Trattativa" },
   { value: "converted", label: "Cliente" },
-  { value: "lost", label: "Perso" },
+  { value: "archived", label: "Archiviato" },
+  { value: "blacklisted", label: "Blacklist" },
 ];
 
 const GROUP_MODES = [
@@ -40,6 +45,7 @@ const SORT_OPTIONS = [
   { value: "name", label: "Nome A→Z" },
   { value: "city", label: "Città A→Z" },
   { value: "date", label: "Data ↓" },
+  { value: "score", label: "Score ↓" },
 ];
 
 interface Props {
@@ -209,6 +215,40 @@ export function ContactFiltersBar({
         </Select>
 
         <div className="ml-auto flex items-center gap-1">
+          {/* Export CSV */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1.5 gap-1 text-[10px]"
+            onClick={async () => {
+              try {
+                const data = await findContactsForExport({
+                  country: filters.country,
+                  origin: filters.origin,
+                  leadStatus: filters.leadStatus,
+                  importLogId: filters.importLogId,
+                });
+                if (!data?.length) { toast.info("Nessun contatto da esportare"); return; }
+                const headers = ["Nome","Azienda","Email","Telefono","Paese","Stato","Score","Origine","Data"];
+                const rows = data.map((c) => [
+                  c.name, c.company_name, c.email, c.phone, c.country, c.lead_status, c.lead_score, c.origin,
+                  c.created_at ? new Date(c.created_at).toLocaleDateString("it-IT") : ""
+                ]);
+                const csv = [headers.join(","), ...rows.map(r => r.map((v) => `"${(v || "").toString().replace(/"/g, '""')}"`).join(","))].join("\n");
+                const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `contatti_export_${new Date().toISOString().split("T")[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success(`${data.length} contatti esportati`);
+              } catch { toast.error("Errore export"); }
+            }}
+            title="Export CSV"
+          >
+            <Download className="w-3 h-3" />
+          </Button>
           {/* Filter toggle */}
           <Button
             variant={filtersOpen ? "default" : "ghost"}

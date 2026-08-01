@@ -1,24 +1,27 @@
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { RALeadStatus } from "@/types/ra";
+import type { RALeadStatus, RAProspect } from "@/types/ra";
 
 const LEAD_STATUS_LABELS: Record<RALeadStatus, { label: string; color: string }> = {
-  new: { label: "Nuovo", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  contacted: { label: "Contattato", color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
-  qualified: { label: "Qualificato", color: "bg-green-500/20 text-green-400 border-green-500/30" },
-  negotiation: { label: "Negoziazione", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  new: { label: "Nuovo", color: "bg-muted text-muted-foreground border-border" },
+  first_touch_sent: { label: "Primo contatto", color: "bg-primary/20 text-primary border-primary/30" },
+  holding: { label: "In attesa", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+  engaged: { label: "Agganciato", color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  qualified: { label: "Qualificato", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  negotiation: { label: "Negoziazione", color: "bg-primary/20 text-primary border-primary/30" },
   converted: { label: "Convertito", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  lost: { label: "Perso", color: "bg-red-500/20 text-red-400 border-red-500/30" },
+  archived: { label: "Archiviato", color: "bg-destructive/20 text-destructive border-destructive/30" },
+  blacklisted: { label: "Blacklist", color: "bg-destructive/40 text-destructive border-destructive/50" },
 };
 
 interface RACompanyHeaderProps {
-  prospect: any;
+  prospect: RAProspect;
 }
 
 export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   return (
     <div className="flex-shrink-0 p-6 border-b border-white/5 bg-white/2 backdrop-blur-xl">
@@ -37,13 +40,13 @@ export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
               </Badge>
             )}
             {prospect.codice_ateco && (
-              <Badge className="gap-1 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+              <Badge className="gap-1 bg-primary/20 text-primary border border-primary/30">
                 {prospect.codice_ateco}
               </Badge>
             )}
             {prospect.lead_status && (
-              <Badge className={`gap-1 border ${LEAD_STATUS_LABELS[prospect.lead_status]?.color}`}>
-                {LEAD_STATUS_LABELS[prospect.lead_status]?.label}
+              <Badge className={`gap-1 border ${LEAD_STATUS_LABELS[prospect.lead_status as RALeadStatus]?.color}`}>
+                {LEAD_STATUS_LABELS[prospect.lead_status as RALeadStatus]?.label}
               </Badge>
             )}
           </div>

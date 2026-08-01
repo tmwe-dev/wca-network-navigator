@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface BriefingAction {
   label: string;
@@ -16,20 +17,40 @@ export interface AgentStatusItem {
   lastTask: string | null;
 }
 
-export interface DailyBriefing {
-  summary: string;
-  actions: BriefingAction[];
-  agentStatus: AgentStatusItem[];
+export interface BriefingStats {
+  totalContacts: number;
+  inHolding: number;
+  notContacted: number;
+  scheduledToday: number;
 }
 
-export function useDailyBriefing() {
+export interface DailyBriefing {
+  /** Legacy single summary (fallback) */
+  summary?: string;
+  /** 3-tab sections */
+  completed: string;
+  todo: string;
+  suspended: string;
+  actions: BriefingAction[];
+  agentStatus: AgentStatusItem[];
+  stats: BriefingStats;
+}
+
+/**
+ * @param enabled - When false, the (slow, ~2-5s) edge function call is deferred.
+ *                  Default true preserves backward compatibility for existing callers.
+ */
+export function useDailyBriefing(enabled: boolean = true) {
   return useQuery<DailyBriefing>({
-    queryKey: ["daily-briefing"],
-    staleTime: 15 * 60 * 1000, // 15 min cache
+    queryKey: queryKeys.dailyBriefing.all,
+    staleTime: 15 * 60 * 1000,
+    enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("daily-briefing");
-      if (error) throw error;
-      return data as DailyBriefing;
+      return invokeAi<DailyBriefing>("daily-briefing", {
+        scope: "briefing",
+        context: { source: "useDailyBriefing" },
+        body: {},
+      });
     },
   });
 }

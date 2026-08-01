@@ -1,8 +1,25 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
-import { downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
+import { Download, Zap, MessageCircle, Linkedin, Mail, FileText, Globe } from "lucide-react";
+import {
+  downloadEmailExtensionZip,
+  downloadPartnerConnectExtensionZip,
+  downloadLinkedInExtensionZip,
+  downloadRaExtensionZip,
+  downloadWhatsAppExtensionZip,
+  downloadWcaExtensionZip,
+  EMAIL_EXTENSION_REQUIRED_VERSION,
+  PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION,
+  RA_EXTENSION_REQUIRED_VERSION,
+  WCA_EXTENSION_REQUIRED_VERSION,
+  WHATSAPP_EXTENSION_REQUIRED_VERSION,
+  LINKEDIN_EXTENSION_REQUIRED_VERSION,
+} from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
+
+const log = createLogger("ExtensionsTab");
 
 export function ExtensionsTab() {
   return (
@@ -12,117 +29,184 @@ export function ExtensionsTab() {
         <p className="text-sm text-muted-foreground">Scarica e installa le estensioni per abilitare i canali di comunicazione.</p>
       </div>
 
-      <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-1">
+      <div className="space-y-1 rounded-lg border border-border bg-muted/50 p-3">
         <p className="text-xs font-medium">Istruzioni di installazione:</p>
-        <ol className="text-[11px] text-muted-foreground list-decimal list-inside space-y-0.5">
+        <ol className="list-inside list-decimal space-y-0.5 text-[11px] text-muted-foreground">
           <li>Scarica lo ZIP dell'estensione</li>
           <li>Decomprimi il file</li>
-          <li>Apri <code className="font-mono bg-muted px-1 rounded">chrome://extensions</code></li>
+          <li>Apri <code className="rounded bg-muted px-1 font-mono">chrome://extensions</code></li>
           <li>Attiva <strong>Modalità sviluppatore</strong> (toggle in alto a destra)</li>
           <li>Clicca <strong>Carica estensione non pacchettizzata</strong> e seleziona la cartella</li>
           <li>Ricarica questa pagina</li>
         </ol>
       </div>
 
-      {/* Partner Connect */}
       <Card>
-        <CardContent className="pt-5">
-          <div className="flex items-center justify-between">
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Zap className="w-5 h-5 text-primary" />
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Zap className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">Partner Connect</p>
-                <p className="text-xs text-muted-foreground">Scraping, Deep Search, Hydra Memory</p>
+                <p className="text-sm font-medium">Partner Connect</p>
+                <p className="text-xs text-muted-foreground">Scraping, Deep Search, Hydra Memory · ultima v{PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => {
-              fetch("/partner-connect-extension.zip")
-                .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "partner-connect-extension.zip"; a.click(); URL.revokeObjectURL(a.href); toast.success("Partner Connect scaricato!"); })
-                .catch(() => toast.error("File non disponibile"));
+              void downloadPartnerConnectExtensionZip()
+                .then(() => toast.success("Partner Connect scaricato!"))
+                .catch((e) => toast.error(e instanceof Error ? e.message : "File non disponibile"));
             }}>
-              <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="partner-connect" />
         </CardContent>
       </Card>
 
-      {/* WhatsApp */}
       <Card>
-        <CardContent className="pt-5">
-          <div className="flex items-center justify-between">
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <MessageCircle className="w-5 h-5 text-emerald-600" />
+              <div className="rounded-lg bg-primary/10 p-2">
+                <MessageCircle className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">WhatsApp Direct Send</p>
-                <p className="text-xs text-muted-foreground">Invio automatico messaggi WhatsApp</p>
+                <p className="text-sm font-medium">WhatsApp Direct Send</p>
+                <p className="text-xs text-muted-foreground">
+                  Invio automatico messaggi WhatsApp · ultima v{WHATSAPP_EXTENSION_REQUIRED_VERSION}
+                </p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={async () => {
               try {
                 await downloadWhatsAppExtensionZip();
-                toast.success("Estensione WhatsApp scaricata!");
-              } catch {
-                toast.error("File non disponibile");
+                toast.success("Estensione WhatsApp scaricata!", {
+                  description:
+                    "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
+                  duration: 15000,
+                });
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                log.warn("operation failed", { error: msg });
+                toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
               }
             }}>
-              <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{WHATSAPP_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="whatsapp" />
         </CardContent>
       </Card>
 
-      {/* LinkedIn */}
       <Card>
-        <CardContent className="pt-5">
-          <div className="flex items-center justify-between">
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#0A66C2]/10">
-                <Linkedin className="w-5 h-5 text-[#0A66C2]" />
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Linkedin className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">LinkedIn Cookie Sync</p>
-                <p className="text-xs text-muted-foreground">Login automatico e invio messaggi LinkedIn</p>
+                <p className="text-sm font-medium">LinkedIn Cookie Sync</p>
+                <p className="text-xs text-muted-foreground">
+                  Login automatico e invio messaggi LinkedIn · ultima v{LINKEDIN_EXTENSION_REQUIRED_VERSION}
+                </p>
+                <p className="mt-1 font-mono text-xs font-semibold text-primary">
+                  linkedin-extension-{LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => {
-              fetch("/linkedin-extension.zip")
-                .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); toast.success("LinkedIn extension scaricata!"); })
-                .catch(() => toast.error("File non disponibile — pacchettizzazione necessaria"));
+            <Button variant="outline" size="sm" onClick={async () => {
+              try {
+                await downloadLinkedInExtensionZip();
+                toast.success("LinkedIn extension scaricata!", {
+                  description:
+                    "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
+                  duration: 15000,
+                });
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                log.warn("operation failed", { error: msg });
+                toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
+              }
             }}>
-              <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{LINKEDIN_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="linkedin" />
         </CardContent>
       </Card>
 
-      {/* Email Client */}
       <Card>
-        <CardContent className="pt-5">
-          <div className="flex items-center justify-between">
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Mail className="w-5 h-5 text-primary" />
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Mail className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">Email Client Universale</p>
-                <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche</p>
+                <p className="text-sm font-medium">Email Client Universale</p>
+                <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche · ultima v{EMAIL_EXTENSION_REQUIRED_VERSION}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => {
-              fetch("/email-extension.zip")
-                .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "email-extension.zip"; a.click(); URL.revokeObjectURL(a.href); toast.success("Email Client scaricato!"); })
+              void downloadEmailExtensionZip()
+                .then(() => toast.success("Email Client scaricato!"))
                 .catch(() => toast.error("File non disponibile"));
             }}>
-              <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{EMAIL_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="email" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">ReportAziende Cookie Sync</p>
+                <p className="text-xs text-muted-foreground">Acquisizione dati e sincronizzazione cookie · ultima v{RA_EXTENSION_REQUIRED_VERSION}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              void downloadRaExtensionZip()
+                .then(() => toast.success("ReportAziende scaricato!"))
+                .catch(() => toast.error("File non disponibile"));
+            }}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{RA_EXTENSION_REQUIRED_VERSION}
+            </Button>
+          </div>
+          <ExtensionDownloadCatalog channel="ra" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Globe className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">WCA Cookie Sync</p>
+                <p className="text-xs text-muted-foreground">Login automatico, cookie e contatti WCA · ultima v{WCA_EXTENSION_REQUIRED_VERSION}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              void downloadWcaExtensionZip()
+                .then(() => toast.success("WCA Cookie Sync scaricato!"))
+                .catch(() => toast.error("File non disponibile"));
+            }}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{WCA_EXTENSION_REQUIRED_VERSION}
+            </Button>
+          </div>
+          <ExtensionDownloadCatalog channel="wca" />
         </CardContent>
       </Card>
     </div>

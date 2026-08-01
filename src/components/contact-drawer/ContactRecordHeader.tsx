@@ -4,11 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 
-const SOURCE_LABELS: Record<RecordSourceType, { label: string; color: string }> = {
+const SOURCE_LABELS: Partial<Record<RecordSourceType, { label: string; color: string }>> = {
   partner: { label: "WCA Partner", color: "bg-chart-1/15 text-chart-1 border-chart-1/30" },
   contact: { label: "Contatto", color: "bg-chart-3/15 text-chart-3 border-chart-3/30" },
   prospect: { label: "Prospect RA", color: "bg-chart-4/15 text-chart-4 border-chart-4/30" },
-  bca: { label: "Biglietto", color: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+  bca: { label: "Biglietto", color: "bg-primary/15 text-primary border-primary/30" },
+  business_card: { label: "Biglietto", color: "bg-primary/15 text-primary border-primary/30" },
+  campaign: { label: "Campagna", color: "bg-chart-2/15 text-chart-2 border-chart-2/30" },
+  task: { label: "Task", color: "bg-chart-5/15 text-chart-5 border-chart-5/30" },
+  voice_session: { label: "Voce", color: "bg-primary/15 text-primary border-primary/30" },
 };
 
 interface Props {
@@ -23,7 +27,7 @@ interface Props {
 }
 
 export function ContactRecordHeader({ sourceType, companyName, contactName, currentIndex, totalCount, onPrev, onNext, onClose }: Props) {
-  const src = SOURCE_LABELS[sourceType];
+  const src = SOURCE_LABELS[sourceType] || { label: sourceType, color: "bg-muted text-muted-foreground border-border" };
   const hasList = totalCount > 1;
 
   return (
@@ -51,18 +55,18 @@ export function ContactRecordHeader({ sourceType, companyName, contactName, curr
       <div className="flex items-center gap-1 flex-shrink-0">
         {hasList && (
           <>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev} disabled={currentIndex <= 0}>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev} disabled={currentIndex <= 0} aria-label="Precedente">
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <span className="text-[10px] text-muted-foreground tabular-nums min-w-[40px] text-center">
               {currentIndex + 1}/{totalCount}
             </span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext} disabled={currentIndex >= totalCount - 1}>
+            <Button variant="ghost" size="icon" aria-label="Successivo" className="h-7 w-7" onClick={onNext} disabled={currentIndex >= totalCount - 1}>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </>
         )}
-        <Button variant="ghost" size="icon" className="h-7 w-7 ml-1" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 ml-1" onClick={onClose} aria-label="Chiudi">
           <X className="w-4 h-4" />
         </Button>
       </div>

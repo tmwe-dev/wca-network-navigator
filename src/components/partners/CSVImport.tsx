@@ -4,12 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { insertPartnersBatch } from "@/application/data/partners";
 import { useQueryClient } from "@tanstack/react-query";
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("CSVImport");
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ParsedPartner {
   company_name: string;
@@ -160,7 +164,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
         description: `${rows.length} righe trovate, ${parsed.length} valide per l'importazione.`,
       });
     } catch (error) {
-      console.error("CSV parse error:", error);
+      log.error("csv parse error", { message: error instanceof Error ? error.message : String(error) });
       toast({
         title: "Errore di parsing",
         description: "Impossibile leggere il file CSV. Controlla il formato.",
@@ -212,9 +216,8 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
       for (let i = 0; i < partners.length; i += batchSize) {
         const batch = partners.slice(i, i + batchSize);
         
-        const { data, error } = await supabase
-          .from("partners")
-          .insert(batch.map(p => ({
+        try {
+          const data = await insertPartnersBatch(batch.map(p => ({
             company_name: p.company_name,
             country_code: p.country_code,
             country_name: p.country_name,
@@ -223,18 +226,15 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             phone: p.phone,
             email: p.email,
             website: p.website,
-            partner_type: p.partner_type as any,
+            partner_type: p.partner_type as string,
             wca_id: p.wca_id,
             is_active: true,
-          })))
-          .select();
-
-        if (error) {
-          console.error("Batch insert error:", error);
-          failedCount += batch.length;
-          errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`);
-        } else {
+          })));
           successCount += data?.length || 0;
+        } catch (error) {
+          log.error("batch insert error", { message: error instanceof Error ? error.message : String(error) });
+          failedCount += batch.length;
+          errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         setProgress(Math.round(((i + batch.length) / partners.length) * 100));
@@ -247,15 +247,15 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
       });
 
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partnerStats });
 
       toast({
         title: "Importazione completata",
         description: `${successCount} partner importati con successo.`,
       });
     } catch (error) {
-      console.error("Import error:", error);
+      log.error("import error", { message: error instanceof Error ? error.message : String(error) });
       toast({
         title: "Errore di importazione",
         description: "Si è verificato un errore durante l'importazione.",

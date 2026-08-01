@@ -5,24 +5,50 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { AlertCircle, Building2, Eye, Image, ImageOff, Loader2, Paperclip, Shield, User, Users } from "lucide-react";
+import { AlertCircle, Building2, Calendar, Check, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, RefreshCw, Shield, Sparkles, Star, Tag, User, Users } from "lucide-react";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useMessageAttachments, type ChannelMessage } from "@/hooks/useChannelMessages";
+import { useMessageAttachments, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
-import { supabase } from "@/integrations/supabase/client";
-import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { getImportFilePublicUrl } from "@/application/data/importLogs";
+import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { decodeRfc2047, extractSenderBrand } from "./email/emailUtils";
 import { EmailHtmlFrame } from "./email/EmailHtmlFrame";
 import { AttachmentThumbnail } from "./email/AttachmentThumbnail";
 import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
+import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
+import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
+import { EmailMessageActions } from "./EmailMessageActions";
+import { stripReplyPrefixes } from "@/v2/ui/pages/funnemail-inbox/utils";
+import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
+import { cn } from "@/lib/utils";
+
+interface FunnemailDecisionLite {
+  folder_slug: string | null;
+  override_folder_slug: string | null;
+  urgency?: "critical" | "high" | "normal" | "low";
+  goes_to_agenda?: boolean;
+  reasoning?: string | null;
+  confidence?: number;
+}
+
+type EnrichedMessage = ChannelMessage & {
+  funnemail_decision?: FunnemailDecisionLite | null;
+  funnemail_folder_label?: string | null;
+  funnemail_folder_icon?: string | null;
+  funnemail_group_slug?: string | null;
+  ai_classification_suggestion?: string | null;
+};
 
 type Props = {
-  message: ChannelMessage;
+  message: EnrichedMessage;
   onClose: () => void;
+  onReclassify?: (message: ChannelMessage) => void;
+  reclassifying?: boolean;
 };
 
 function formatDisplayDate(value: string): string {
@@ -34,17 +60,33 @@ function formatDisplayDate(value: string): string {
   return format(date, "dd MMM yyyy HH:mm", { locale: it });
 }
 
-export function EmailDetailView({ message, onClose }: Props) {
+export function EmailDetailView({ message, onClose, onReclassify, reclassifying }: Props) {
+  const navigate = useAppNavigate();
   const { data: attachments = [] } = useMessageAttachments(message.id);
+  const { getGroup } = useEmailAddressGroups();
+  const group = getGroup(message.from_address);
+  const markAsRead = useMarkAsRead();
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
   const [blockRemote, setBlockRemote] = useState(false);
   const displayDate = message.email_date || message.created_at;
+  const decision = message.funnemail_decision ?? null;
+  const effectiveSlug = decision?.override_folder_slug ?? decision?.folder_slug ?? message.funnemail_group_slug ?? null;
+  const folderLabel = message.funnemail_folder_label ?? effectiveSlug;
+  const folderIcon = message.funnemail_folder_icon ?? null;
+  const aiSuggestion = (message.ai_classification_suggestion ?? "").trim();
+  const hasDeepSearch = !!message.partner_id; // partner agganciato → enrichment già avvenuto
+  const urgency = decision?.urgency ?? "normal";
+  const urgencyClass =
+    urgency === "critical" ? "bg-destructive/15 text-destructive border-destructive/30"
+    : urgency === "high" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+    : "bg-muted text-muted-foreground border-border";
   const { bodyHtml, bodyText, isLoading: isContentLoading, isError: isContentError } = useEmailMessageContent(message.id, {
     bodyHtml: message.body_html,
     bodyText: message.body_text,
   });
 
   const decodedSubject = useMemo(() => decodeRfc2047(message.subject || "(nessun oggetto)"), [message.subject]);
+  const cleanSubject = useMemo(() => stripReplyPrefixes(decodedSubject) || "(nessun oggetto)", [decodedSubject]);
   const { brand, detail: senderDetail } = useMemo(() => extractSenderBrand(message.from_address || ""), [message.from_address]);
   const normalizedContent = useMemo(
     () => normalizeEmailContent({ bodyHtml, bodyText }),
@@ -73,8 +115,8 @@ export function EmailDetailView({ message, onClose }: Props) {
       return;
     }
 
-    const { data } = supabase.storage.from("import-files").getPublicUrl(attachment.storage_path);
-    if (data?.publicUrl) window.open(data.publicUrl, "_blank");
+    const publicUrl = getImportFilePublicUrl(attachment.storage_path);
+    if (publicUrl) window.open(publicUrl, "_blank");
   };
 
   const regularAttachments = attachments.filter((attachment) => !attachment.is_inline);
@@ -82,66 +124,240 @@ export function EmailDetailView({ message, onClose }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex-shrink-0 space-y-1 border-b border-border p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-base font-bold text-primary">{brand}</div>
-              <h3 className="truncate text-sm font-semibold">{decodedSubject}</h3>
+      <div className="flex-shrink-0 border-b border-border px-3 py-2 lg:px-4 lg:py-3">
+        {/* Riga azioni: full width, wrap su viewport stretti */}
+        <div className="mb-2 flex w-full flex-wrap items-center justify-end gap-1">
+              {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1.5 text-xs border border-border/40"
+                onClick={() => {
+                  if (!message.read_at) markAsRead.mutate(message.id);
+                  onClose();
+                }}
+                title="Marca come letta e nascondi dalla lista"
+              >
+                <Check className="h-3 w-3" /> Letto, nascondi
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1.5 text-xs border border-border/40"
+                onClick={() => {
+                  const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+                  navigate("/v2/email-composer", {
+                    state: {
+                      prefilledRecipient: {
+                        email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                        name: brand,
+                        company: brand,
+                      },
+                      prefilledSubject: replySubject,
+                    },
+                  });
+                }}
+              >
+                <Reply className="h-3 w-3" /> Rispondi
+              </Button>
+              {message.cc_addresses && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  title="Rispondi a tutti"
+                  onClick={() => {
+                    const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+                    navigate("/v2/email-composer", {
+                      state: {
+                        prefilledRecipient: {
+                          email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                          name: brand,
+                          company: brand,
+                        },
+                        prefilledSubject: replySubject,
+                      },
+                    });
+                  }}
+                >
+                  <ReplyAll className="h-3 w-3" />
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
+                  navigate("/v2/email-composer", {
+                    state: {
+                      prefilledSubject: fwdSubject,
+                      prefilledBody: normalizedContent.bodyText
+                        ? `\n\n--- Forwarded ---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\nOggetto: ${decodedSubject}\n\n${normalizedContent.bodyText}`
+                        : "",
+                    },
+                  });
+                }}
+              >
+                <Forward className="h-3 w-3" /> Inoltra
+              </Button>
+              <DeepSearchEmailButton
+                email={message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || ""}
+                source={{
+                  displayName: brand,
+                  partnerId: message.partner_id ?? null,
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 px-2 text-xs"
+              />
+              <Button
+                size="sm"
+                variant={blockRemote ? "secondary" : "ghost"}
+                onClick={() => setBlockRemote((prev) => !prev)}
+                className="h-7 px-1.5 text-xs"
+                title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
+              >
+                <ImageOff className="h-3 w-3" />
+              </Button>
+              <Button size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"} onClick={() => setViewMode("safe")} className="h-7 px-1.5 text-xs" title="Vista sicura (normalizzata)">
+                <Shield className="h-3 w-3" />
+              </Button>
+              <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-7 px-1.5 text-xs" title="Vista fedele (originale)">
+                <Eye className="h-3 w-3" />
+              </Button>
+              <EmailMessageActions message={message} />
+              <Button size="sm" variant="ghost" onClick={onClose} className="h-7 px-2 text-[11px]">Chiudi</Button>
+        </div>
+
+        {/* Riga identità mittente: full width, subject ha tutto lo spazio */}
+        <div className="flex w-full min-w-0 items-start gap-3">
+          <div className="flex flex-shrink-0 items-start">
+            <CompanyLogo email={message.from_address} name={brand} size={40} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="truncate text-sm font-bold uppercase tracking-wide text-primary">{brand}</span>
+              <CompanyLogoInline email={message.from_address} size={16} />
+              <CountryFlag email={message.from_address} size={16} className="flex-shrink-0" />
+              {hasDeepSearch && (
+                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Deep Search eseguito" />
+              )}
+              <span
+                className="min-w-0 truncate text-xs text-foreground"
+                title={senderDetail || message.from_address || ""}
+              >
+                {senderDetail || message.from_address}
+              </span>
+              <span className="ml-auto whitespace-nowrap text-[11px] text-muted-foreground">
+                {formatDisplayDate(displayDate)}
+              </span>
             </div>
-          </div>
-
-          <div className="flex flex-shrink-0 items-center gap-1">
-            <Button
-              size="sm"
-              variant={blockRemote ? "secondary" : "ghost"}
-              onClick={() => setBlockRemote((prev) => !prev)}
-              className="h-7 gap-1 px-2 text-xs"
-              title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
-            >
-              <ImageOff className="h-3 w-3" />
-            </Button>
-            <Button size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"} onClick={() => setViewMode("safe")} className="h-7 gap-1 px-2 text-xs" title="Vista sicura (normalizzata)">
-              <Shield className="h-3 w-3" />
-            </Button>
-            <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-7 gap-1 px-2 text-xs" title="Vista fedele (originale)">
-              <Eye className="h-3 w-3" />
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">Chiudi</Button>
+            <h3 className="mt-1 break-words text-base font-semibold leading-snug text-foreground">
+              {cleanSubject}
+            </h3>
           </div>
         </div>
 
-        <div className="ml-12 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{senderDetail || message.from_address}</span>
-          <span>→</span>
-          <span>{message.to_address}</span>
-          <span>·</span>
-          <span>{formatDisplayDate(displayDate)}</span>
+        {/* Riga 2: metadata a 3 colonne su tutta la larghezza (no più impilamento) */}
+        <div className="mt-2 grid w-full grid-cols-1 gap-x-4 gap-y-1.5 md:grid-cols-3">
+          {/* Col 1: Gruppo Funnemail */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {group?.groupName ? (
+              <span
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
+                  color: group.groupColor ?? "#3B82F6",
+                }}
+                title={`Gruppo Funny Mail: ${group.groupName}`}
+              >
+                {group.groupIcon && <span>{group.groupIcon}</span>}
+                {group.groupName}
+              </span>
+            ) : null}
+            <InlineGroupAssigner
+              fromAddress={message.from_address}
+              currentGroupName={group?.groupName ?? null}
+            />
+          </div>
+
+          {/* Col 2: Classificazione + Riclassifica */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {folderLabel ? (
+              <Badge variant="outline" className="gap-1 text-[10px]" title={decision?.reasoning ?? "Cartella Funnemail attuale"}>
+                <Tag className="h-3 w-3" />
+                {folderIcon && <span>{folderIcon}</span>}
+                {folderLabel}
+              </Badge>
+            ) : aiSuggestion ? (
+              <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground" title="Categoria suggerita dall'AI">
+                <Sparkles className="h-3 w-3" />
+                Suggerita: {aiSuggestion}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground">
+                <Sparkles className="h-3 w-3" /> Non classificata
+              </Badge>
+            )}
+            {onReclassify && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 gap-1 px-1.5 text-[10px]"
+                disabled={!!reclassifying}
+                onClick={() => onReclassify(message)}
+                title="Riclassifica con l'AI"
+              >
+                <RefreshCw className={cn("h-3 w-3", reclassifying && "animate-spin")} />
+                Riclassifica
+              </Button>
+            )}
+          </div>
+
+          {/* Col 3: Stato/sorgente + CC */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 md:justify-end">
+            {urgency !== "normal" && urgency !== "low" && (
+              <Badge variant="outline" className={cn("gap-1 text-[10px]", urgencyClass)}>
+                {urgency === "critical" ? "Critica" : "Alta"}
+              </Badge>
+            )}
+            {decision?.goes_to_agenda && (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <Calendar className="h-3 w-3" /> Agenda
+              </Badge>
+            )}
+            {message.source_type && message.source_type !== "unknown" && (
+              <Badge variant="secondary" className="gap-1 text-[10px]" title={message.source_type.replace("_", " ")}>
+                {message.source_type === "partner"
+                  ? <Building2 className="h-3 w-3" />
+                  : <User className="h-3 w-3" />}
+                {message.source_type.replace("_", " ")}
+              </Badge>
+            )}
+            {message.cc_addresses && (
+              <span
+                className="inline-flex max-w-[260px] items-center gap-1 truncate text-[11px] text-muted-foreground"
+                title={message.cc_addresses}
+              >
+                <Users className="h-3 w-3" /> CC: {message.cc_addresses}
+              </span>
+            )}
+          </div>
         </div>
 
-        {message.cc_addresses && (
-          <div className="ml-12 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Users className="h-3 w-3" />
-            <span className="font-medium">CC:</span>
-            <span className="truncate">{message.cc_addresses}</span>
-          </div>
-        )}
+        <div className="mt-2">
+          <EmailTechnicalHeaders message={message} />
+        </div>
 
         {blockRemote && sanitizedHtml && normalizedContent.bodyHtml?.match(/https?:\/\//i) && (
-          <button onClick={() => setBlockRemote(false)} className="ml-12 flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
-            <ImageOff className="h-3 w-3" />
-            Immagini remote bloccate — clicca per caricare
+          <button
+            onClick={() => setBlockRemote(false)}
+            className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ImageOff className="h-3 w-3" /> Immagini remote bloccate — clicca per caricare
           </button>
-        )}
-
-        <EmailTechnicalHeaders message={message} />
-
-        {message.source_type && message.source_type !== "unknown" && (
-          <Badge variant="secondary" className="ml-12 gap-1 text-xs">
-            {message.source_type === "partner" ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
-            Associato: {brand}
-          </Badge>
         )}
       </div>
 

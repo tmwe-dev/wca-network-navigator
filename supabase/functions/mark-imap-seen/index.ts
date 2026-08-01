@@ -1,11 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 /* ── CA Certificates (same as check-inbox) ── */
 
@@ -166,9 +163,11 @@ function getCaCertsForHost(host: string): string[] {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -183,45 +182,51 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
     if (authErr || !user) throw new Error("Unauthorized");
 
+    // Step D — opt-in shared mailbox: header x-mailbox-id (UUID di shared_mailboxes)
+    // o NULL per la casella personale (flusso legacy invariato).
+    const mailboxIdHeader = req.headers.get("x-mailbox-id");
+    const mailboxId = mailboxIdHeader && mailboxIdHeader.trim() !== "" ? mailboxIdHeader.trim() : null;
+
     const { message_id } = await req.json();
     if (!message_id || typeof message_id !== "string") {
       return new Response(JSON.stringify({ error: "message_id is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch the message to get imap_uid and uidvalidity
-    const { data: msg, error: msgErr } = await supabase
+    // Fetch the message to get imap_uid and uidvalidity (scoped per user + mailbox).
+    let msgQuery = supabase
       .from("channel_messages")
       .select("imap_uid, uidvalidity, channel")
       .eq("id", message_id)
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    msgQuery = mailboxId
+      ? msgQuery.eq("mailbox_id", mailboxId)
+      : msgQuery.is("mailbox_id", null);
+    const { data: msg, error: msgErr } = await msgQuery.maybeSingle();
 
     if (msgErr) throw msgErr;
     if (!msg) {
-      return new Response(JSON.stringify({ error: "Message not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ success: false, skipped: true, reason: "message_not_found" }), {
+        status: 200, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     if (!msg.imap_uid) {
       // Not an IMAP message (e.g. outbound/manual) — nothing to sync, return success
       return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_imap_uid" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    // Get IMAP credentials
-    const imapHost = Deno.env.get("IMAP_HOST") || "";
-    const imapUser = Deno.env.get("IMAP_USER") || "";
-    const imapPassword = Deno.env.get("IMAP_PASSWORD") || "";
-    if (!imapHost || !imapUser || !imapPassword) {
-      throw new Error("IMAP credentials not configured");
-    }
+    // Get IMAP credentials (personal env legacy oppure shared via resolveMailbox).
+    const resolved = await resolveMailbox(supabase, mailboxId);
+    const imapHost = resolved.imap_host;
+    const imapUser = resolved.imap_user;
+    const imapPassword = resolved.imap_password;
 
     // Connect to IMAP
     const client = new ImapClient({
-      host: imapHost, port: 993, username: imapUser, password: imapPassword,
+      host: imapHost, port: resolved.imap_port || 993, username: imapUser, password: imapPassword,
       secure: true, connectionTimeout: 10000,
       tlsOptions: { caCerts: getCaCertsForHost(imapHost) },
     });
@@ -232,17 +237,16 @@ Deno.serve(async (req) => {
 
     // Set \Seen flag using UID
     await client.setFlags(String(msg.imap_uid), ["\\Seen"], "add", true);
-    console.log(`[mark-imap-seen] Set \\Seen on UID ${msg.imap_uid}`);
 
     await client.disconnect();
 
     return new Response(JSON.stringify({ success: true, uid: msg.imap_uid }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: Record<string, unknown>) {
     console.error(`[mark-imap-seen] Error: ${err.message}`);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

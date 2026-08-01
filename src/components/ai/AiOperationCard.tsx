@@ -28,23 +28,23 @@ const OP_ICONS: Record<AiOperation["op_type"], React.ElementType> = {
 };
 
 const OP_COLORS: Record<AiOperation["op_type"], { bg: string; border: string; icon: string; accent: string }> = {
-  download: { bg: "bg-sky-500/10", border: "border-sky-500/25", icon: "text-sky-400", accent: "bg-sky-500" },
-  deep_search: { bg: "bg-violet-500/10", border: "border-violet-500/25", icon: "text-violet-400", accent: "bg-violet-500" },
-  email_send: { bg: "bg-amber-500/10", border: "border-amber-500/25", icon: "text-amber-400", accent: "bg-amber-500" },
-  linkedin_scrape: { bg: "bg-blue-500/10", border: "border-blue-500/25", icon: "text-blue-400", accent: "bg-blue-500" },
+  download: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
+  deep_search: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
+  email_send: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
+  linkedin_scrape: { bg: "bg-muted", border: "border-border", icon: "text-muted-foreground", accent: "bg-muted-foreground" },
   directory_scan: { bg: "bg-emerald-500/10", border: "border-emerald-500/25", icon: "text-emerald-400", accent: "bg-emerald-500" },
-  enrichment: { bg: "bg-orange-500/10", border: "border-orange-500/25", icon: "text-orange-400", accent: "bg-orange-500" },
-  bulk_update: { bg: "bg-indigo-500/10", border: "border-indigo-500/25", icon: "text-indigo-400", accent: "bg-indigo-500" },
-  import: { bg: "bg-teal-500/10", border: "border-teal-500/25", icon: "text-teal-400", accent: "bg-teal-500" },
-  blacklist_check: { bg: "bg-red-500/10", border: "border-red-500/25", icon: "text-red-400", accent: "bg-red-500" },
-  generic: { bg: "bg-slate-500/10", border: "border-slate-500/25", icon: "text-slate-400", accent: "bg-slate-500" },
+  enrichment: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
+  bulk_update: { bg: "bg-muted", border: "border-border", icon: "text-muted-foreground", accent: "bg-muted-foreground" },
+  import: { bg: "bg-emerald-500/10", border: "border-emerald-500/25", icon: "text-emerald-400", accent: "bg-emerald-500" },
+  blacklist_check: { bg: "bg-destructive/10", border: "border-destructive/25", icon: "text-destructive", accent: "bg-destructive" },
+  generic: { bg: "bg-muted", border: "border-border", icon: "text-muted-foreground", accent: "bg-muted-foreground" },
 };
 
 const STATUS_LABELS: Record<AiOperation["status"], { label: string; dot: string }> = {
-  running: { label: "In esecuzione", dot: "bg-amber-400 animate-pulse" },
+  running: { label: "In esecuzione", dot: "bg-primary animate-pulse" },
   completed: { label: "Completato", dot: "bg-emerald-400" },
-  failed: { label: "Errore", dot: "bg-red-400" },
-  queued: { label: "In coda", dot: "bg-slate-400 animate-pulse" },
+  failed: { label: "Errore", dot: "bg-destructive" },
+  queued: { label: "In coda", dot: "bg-muted-foreground animate-pulse" },
 };
 
 export function AiOperationCard({ op }: { op: AiOperation }) {

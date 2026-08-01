@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { rpcGetCountryStats } from "@/data/rpc";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface CountryStats {
   country_code: string;
@@ -22,16 +23,16 @@ export interface CountryStats {
  */
 export function useCountryStats() {
   return useQuery({
-    queryKey: ["country-stats"],
+    queryKey: queryKeys.countryStats,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_country_stats");
-      if (error) throw error;
+      const data = await rpcGetCountryStats();
+      const _error = null;
 
       const byCountry: Record<string, CountryStats> = {};
       let gTotal = 0, gEmail = 0, gPhone = 0, gBoth = 0, gProfile = 0, gNoProfile = 0;
       let gDeep = 0, gAliasCo = 0, gAliasCt = 0;
 
-      (data || []).forEach((r: any) => {
+      (data || []).forEach((r) => {
         const s: CountryStats = {
           country_code: r.country_code,
           total_partners: Number(r.total_partners) || 0,

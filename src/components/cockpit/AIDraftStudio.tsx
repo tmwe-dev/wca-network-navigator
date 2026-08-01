@@ -1,14 +1,26 @@
-import { useState, lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus, Reply, MailOpen } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
-import type { DraftState, DraftChannel, ScrapingPhase } from "@/pages/Cockpit";
+import type { DraftState } from "@/types/cockpit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypewriterText } from "./TypewriterText";
 import { ScrapingPhaseIndicator } from "./ScrapingPhaseIndicator";
 import { useAIDraftActions } from "@/hooks/useAIDraftActions";
+import { JournalistBadge } from "@/v2/ui/atoms/JournalistBadge";
+import OracleContextPanel from "@/components/email/OracleContextPanel";
+import { DraftAttachmentsBar } from "./DraftAttachmentsBar";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
+
+function cleanContactName(name: string | null | undefined): string {
+  if (!name) return "";
+  return name
+    .replace(/^risposta(?:\s+(?:a\s+)?email[^:]*)?:\s*/i, "")
+    .replace(/^re:\s*/i, "")
+    .trim();
+}
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -17,16 +29,18 @@ interface AIDraftStudioProps {
   onDraftChange: (draft: DraftState) => void;
   onRegenerate?: () => void;
   onGenerateAfterReview?: () => void;
+  onStartGeneration?: () => void;
+  pendingBulkCount?: number;
 }
 
-const channelMeta: Record<string, { icon: any; label: string; color: string }> = {
+const channelMeta: Record<string, { icon: React.ElementType; label: string; color: string }> = {
   email: { icon: Mail, label: "Email", color: "text-primary" },
   linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-[hsl(210,80%,55%)]" },
   whatsapp: { icon: MessageCircle, label: "WhatsApp", color: "text-success" },
   sms: { icon: Smartphone, label: "SMS", color: "text-chart-3" },
 };
 
-export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview }: AIDraftStudioProps) {
+export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview, onStartGeneration, pendingBulkCount = 0 }: AIDraftStudioProps) {
   const { goal, baseProposal } = useMission();
   const {
     sending, liDmOpen, setLiDmOpen,
@@ -37,6 +51,13 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
   const isHtmlContent = draft.channel === "email" && /<(p|br|div|ul|ol)\b/i.test(draft.body);
+  const isReplyDraft = !!draft.replySource?.messageId;
+  const displayName = cleanContactName(draft.contactName);
+
+  const openOriginalMail = () => {
+    if (!draft.replySource?.messageId) return;
+    window.open(`/v2/funnemail-inbox?msg=${encodeURIComponent(draft.replySource.messageId)}`, "_blank", "noopener,noreferrer");
+  };
 
   if (!draft.channel) {
     return (
@@ -46,7 +67,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           transition={{ repeat: Infinity, duration: 4 }}
           className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-chart-3/10 flex items-center justify-center mb-4"
         >
-          <Sparkles className="w-7 h-7 text-primary/80" />
+          <Sparkles className="w-7 h-7 text-primary" />
         </motion.div>
         <h3 className="text-sm font-medium text-foreground mb-1">AI Draft Studio</h3>
         <p className="text-xs text-muted-foreground max-w-[200px]">
@@ -62,11 +83,28 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
       <div className="px-4 py-3 border-b border-border/60">
         <div className="flex items-center gap-2 mb-1">
           <Icon className={cn("w-4 h-4", meta?.color)} />
-          <span className="text-sm font-semibold text-foreground">{meta?.label}</span>
+          {isReplyDraft && (
+            <InfoTooltip content="Risposta a email ricevuta">
+              <span className="inline-flex items-center justify-center rounded-md p-0.5 bg-sky-500/20 text-chart-3 border border-sky-400/40">
+                <Reply className="w-3 h-3" />
+              </span>
+            </InfoTooltip>
+          )}
           <span className="text-xs text-muted-foreground">→</span>
-          <span className="text-sm text-foreground/90">{draft.contactName}</span>
+          <span className="text-sm text-foreground truncate">{displayName}</span>
+          {isReplyDraft && (
+            <button
+              type="button"
+              onClick={openOriginalMail}
+              className="ml-auto inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              title="Apri mail originale"
+              aria-label="Apri mail originale"
+            >
+              <MailOpen className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/90">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
           <span>Lingua: {draft.language}</span>
           <span>·</span>
           <span>{draft.companyName}</span>
@@ -88,8 +126,41 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           {draft.scrapingPhase === "reviewing" && draft.linkedinProfile && (
             <ReviewingState draft={draft} onGenerateAfterReview={onGenerateAfterReview} />
           )}
+          {/* Stato post-drop, pre-generazione: mostra il pulsante "Genera" e
+              ricorda all'utente di configurare obiettivo e tono prima di lanciare l'AI. */}
+          {draft.scrapingPhase === "idle" && !draft.body && !draft.isGenerating && onStartGeneration && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-3"
+            >
+              <div className="flex items-center gap-2 text-foreground">
+                <Target className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Pronto per generare</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Configura a sinistra <strong>obiettivo</strong>, <strong>tipo di email</strong> e <strong>tono</strong>,
+                poi premi il pulsante per avviare l'AI. {pendingBulkCount > 0 && (
+                  <>Verrà generata anche una bozza per gli altri <strong>{pendingBulkCount}</strong> contatti in coda.</>
+                )}
+              </p>
+              <button
+                onClick={onStartGeneration}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Sparkles className="w-4 h-4" />
+                Genera {pendingBulkCount > 0 ? `${pendingBulkCount + 1} messaggi` : "messaggio"}
+              </button>
+            </motion.div>
+          )}
+          {draft.channel === "email" && draft.scrapingPhase !== "reviewing" && draft.body && !draft.isGenerating && (
+            <DraftAttachmentsBar draft={draft} onDraftChange={onDraftChange} />
+          )}
           {draft.scrapingPhase !== "reviewing" && (
-            <DraftPreview draft={draft} isHtmlContent={isHtmlContent} />
+            <DraftPreview draft={draft} isHtmlContent={isHtmlContent} onDraftChange={onDraftChange} />
+          )}
+          {draft.body && !draft.isGenerating && (
+            <AgentBadgesPanel draft={draft} />
           )}
         </TabsContent>
 
@@ -169,9 +240,9 @@ function ReviewingState({ draft, onGenerateAfterReview }: { draft: DraftState; o
             {draft.linkedinProfile?.headline && <div className="text-xs text-muted-foreground truncate">{draft.linkedinProfile.headline}</div>}
           </div>
         </div>
-        {draft.linkedinProfile?.location && <div className="text-xs text-muted-foreground/80">📍 {draft.linkedinProfile.location}</div>}
+        {draft.linkedinProfile?.location && <div className="text-xs text-muted-foreground">📍 {draft.linkedinProfile.location}</div>}
         {draft.linkedinProfile?.about && (
-          <div className="text-xs text-muted-foreground/90 bg-background/50 rounded-lg p-2.5 max-h-[120px] overflow-y-auto leading-relaxed">
+          <div className="text-xs text-muted-foreground bg-background/50 rounded-lg p-2.5 max-h-[120px] overflow-y-auto leading-relaxed">
             {draft.linkedinProfile.about}
           </div>
         )}
@@ -193,22 +264,31 @@ function ReviewingState({ draft, onGenerateAfterReview }: { draft: DraftState; o
   );
 }
 
-function DraftPreview({ draft, isHtmlContent }: { draft: DraftState; isHtmlContent: boolean }) {
+function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftState; isHtmlContent: boolean; onDraftChange: (d: DraftState) => void }) {
+  const isReady = !draft.isGenerating && !!draft.body;
   return (
     <>
       {draft.channel === "email" && (
         <div>
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Oggetto</label>
-          <div className="mt-1 text-sm font-medium text-foreground">
-            {draft.isGenerating && !draft.subject ? <span className="text-muted-foreground/70">Generazione in corso...</span>
-              : draft.subject ? <TypewriterText text={draft.subject} speed={25} />
-              : <span className="text-muted-foreground/70">In attesa...</span>}
-          </div>
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Oggetto</label>
+          {isReady ? (
+            <input
+              value={draft.subject}
+              onChange={(e) => onDraftChange({ ...draft, subject: e.target.value })}
+              className="mt-1 w-full text-sm font-medium text-foreground bg-card border border-border/60 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+          ) : (
+            <div className="mt-1 text-sm font-medium text-foreground">
+              {draft.isGenerating && !draft.subject ? <span className="text-muted-foreground">Generazione in corso...</span>
+                : draft.subject ? <TypewriterText text={draft.subject} speed={25} />
+                : <span className="text-muted-foreground">In attesa...</span>}
+            </div>
+          )}
         </div>
       )}
       <div>
-        <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Messaggio</label>
-        <div className="mt-2 text-sm text-foreground/90 leading-relaxed">
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Messaggio</label>
+        <div className="mt-2 text-sm text-foreground leading-relaxed">
           {draft.isGenerating && !draft.body ? (
             <div className="space-y-3">
               <ScrapingPhaseIndicator phase={draft.scrapingPhase} linkedinProfile={draft.linkedinProfile} />
@@ -216,12 +296,50 @@ function DraftPreview({ draft, isHtmlContent }: { draft: DraftState; isHtmlConte
                 <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: [0.3, 0.5, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.3 }} className="h-3 rounded bg-muted/50" style={{ width: `${70 + i * 10}%` }} />
               ))}
             </div>
-          ) : draft.body ? (
-            isHtmlContent ? <TypewriterText text={draft.body} speed={8} isHtml /> : <TypewriterText text={draft.body} speed={12} />
-          ) : <span className="text-muted-foreground/70">In attesa...</span>}
+          ) : isReady ? (
+            <textarea
+              value={draft.body}
+              onChange={(e) => onDraftChange({ ...draft, body: e.target.value })}
+              rows={isHtmlContent ? 16 : 10}
+              className="w-full text-sm text-foreground bg-card border border-border/60 rounded p-2 font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary/50 resize-y"
+            />
+          ) : <span className="text-muted-foreground">In attesa...</span>}
         </div>
       </div>
     </>
+  );
+}
+
+function AgentBadgesPanel({ draft }: { draft: DraftState }) {
+  const tr = draft.type_resolution;
+  const ds = draft._forgeDebug;
+  return (
+    <div className="space-y-2 pt-2 border-t border-border/40">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Agenti coinvolti</div>
+      <div className="flex flex-wrap gap-1.5 text-[10px]">
+        {ds?.quality && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-primary/5 border-primary/30 text-primary">
+            <Search className="h-2.5 w-2.5" /> Sherlock · {ds.quality}
+          </span>
+        )}
+        {draft.context_summary?.kb_sections && draft.context_summary.kb_sections.length > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-success/10 border-success/30 text-success">
+            <BookOpen className="h-2.5 w-2.5" /> KB ×{draft.context_summary.kb_sections.length}
+          </span>
+        )}
+        {tr?.was_overridden && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-warning/10 border-warning/30 text-warning">
+            <AlertTriangle className="h-2.5 w-2.5" /> Tipo → {tr.resolved_type}
+          </span>
+        )}
+      </div>
+      {draft.journalist_review && (
+        <JournalistBadge review={draft.journalist_review} />
+      )}
+      {draft.context_summary && (
+        <OracleContextPanel summary={draft.context_summary} hasRecipient />
+      )}
+    </div>
   );
 }
 
@@ -229,7 +347,7 @@ function SourcesTab({ draft }: { draft: DraftState }) {
   if (!draft._debug) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <Brain className="w-8 h-8 text-muted-foreground/30 mb-2" />
+        <Brain className="w-8 h-8 text-muted-foreground mb-2" />
         <p className="text-xs text-muted-foreground">Genera un messaggio per vedere le fonti e i log AI</p>
       </div>
     );
@@ -286,7 +404,7 @@ function SourcesTab({ draft }: { draft: DraftState }) {
             {d.recipient_intelligence.enrichment_snippet && (
               <details className="group">
                 <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Mostra contesto iniettato nel prompt ▸</summary>
-                <pre className="mt-1 text-[9px] text-muted-foreground/90 whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[150px] overflow-y-auto">{d.recipient_intelligence.enrichment_snippet}</pre>
+                <pre className="mt-1 text-[9px] text-muted-foreground whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[150px] overflow-y-auto">{d.recipient_intelligence.enrichment_snippet}</pre>
               </details>
             )}
           </>
@@ -304,8 +422,8 @@ function SourcesTab({ draft }: { draft: DraftState }) {
             </div>
             {draft.linkedinProfile.name && <div className="text-xs font-medium text-foreground">{draft.linkedinProfile.name}</div>}
             {draft.linkedinProfile.headline && <div className="text-[11px] text-muted-foreground">{draft.linkedinProfile.headline}</div>}
-            {draft.linkedinProfile.about && <div className="text-[10px] text-muted-foreground/80 line-clamp-3">{draft.linkedinProfile.about}</div>}
-            {draft.linkedinProfile.location && <div className="text-[10px] text-muted-foreground/60">📍 {draft.linkedinProfile.location}</div>}
+            {draft.linkedinProfile.about && <div className="text-[10px] text-muted-foreground line-clamp-3">{draft.linkedinProfile.about}</div>}
+            {draft.linkedinProfile.location && <div className="text-[10px] text-muted-foreground">📍 {draft.linkedinProfile.location}</div>}
           </div>
         )}
       </DebugSection>
@@ -358,7 +476,22 @@ function VariablesTab({ draft, goal, baseProposal }: { draft: DraftState; goal: 
   );
 }
 
-function ActionButtons({ draft, sending, waBridge, liBridge, pcBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy, onDraftChange }: any) {
+/** Props della barra azioni: solo ciò che serve a decidere il canale d'invio. */
+interface ActionButtonsProps {
+  draft: DraftState;
+  sending: boolean;
+  waBridge: { isAvailable: boolean };
+  liBridge: { isAvailable: boolean };
+  pcBridge?: { isAvailable: boolean };
+  onSendEmail: () => void;
+  onSendWhatsApp: () => void;
+  onSendLinkedIn: () => void;
+  onConnectLinkedIn: () => void;
+  onCopy: () => void;
+  onDraftChange: (draft: DraftState) => void;
+}
+
+function ActionButtons({ draft, sending, waBridge, liBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy }: ActionButtonsProps) {
   if (draft.channel === "email" && draft.contactEmail) {
     return (
       <button onClick={onSendEmail} disabled={sending} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
@@ -403,7 +536,7 @@ function ActionButtons({ draft, sending, waBridge, liBridge, pcBridge, onSendEma
 
 /* ── Tiny helpers ── */
 
-function DebugSection({ icon: Icon, color, label, children }: { icon: any; color: string; label: string; children: React.ReactNode }) {
+function DebugSection({ icon: Icon, color, label, children }: { icon: React.ElementType; color: string; label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
@@ -424,7 +557,7 @@ function DebugRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function SourceBadge({ source }: { source: string }) {
+function SourceBadge({ source }: { source?: string }) {
   return (
     <span className={`font-mono text-[10px] ${source === "live_scraped" ? "text-success" : source === "cached" ? "text-chart-3" : "text-muted-foreground"}`}>
       {source === "live_scraped" ? "🔴 Live" : source === "cached" ? "📦 Cache" : "—"}

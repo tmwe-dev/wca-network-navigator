@@ -1,0 +1,88 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { queryKeys } from "@/lib/queryKeys";
+import { getActiveAgentsForUser, getAgentTasksForUser } from "@/data/agentDashboardQueries";
+
+export interface AgentWithTasks {
+  id: string;
+  name: string;
+  role: string;
+  avatar_emoji: string;
+  is_active: boolean;
+  tasks: AgentTaskRow[];
+}
+
+export interface AgentTaskRow {
+  id: string;
+  agent_id: string;
+  task_type: string;
+  description: string;
+  status: string;
+  result_summary: string | null;
+  execution_log: Array<Record<string, unknown>>;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  target_filters: unknown;
+}
+
+export function useAgentDashboard() {
+  const agentsQuery = useQuery({
+    queryKey: queryKeys.agents.dashboard.agents,
+    queryFn: async () => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) return [];
+      const agents = await getActiveAgentsForUser(user.id);
+      return agents as Array<{ id: string; name: string; role: string; avatar_emoji: string; is_active: boolean }>;
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const tasksQuery = useQuery({
+    queryKey: queryKeys.agents.dashboard.tasks(),
+    queryFn: async () => {
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      if (!user) return [];
+      const data = await getAgentTasksForUser(user.id);
+      return data as AgentTaskRow[];
+    },
+    refetchInterval: 15_000,
+  });
+
+  // Realtime refresh
+  useEffect(() => {
+    const ch = supabase
+      .channel("agent-dash-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "agent_tasks" }, () => {
+        tasksQuery.refetch();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  const agents = agentsQuery.data ?? [];
+  const tasks = tasksQuery.data ?? [];
+
+  const agentsWithTasks: AgentWithTasks[] = agents.map(a => ({
+    ...a,
+    tasks: tasks.filter(t => t.agent_id === a.id),
+  }));
+
+  const stats = {
+    total: tasks.length,
+    pending: tasks.filter(t => t.status === "pending" || t.status === "proposed").length,
+    running: tasks.filter(t => t.status === "running").length,
+    completed: tasks.filter(t => t.status === "completed").length,
+    failed: tasks.filter(t => t.status === "failed").length,
+  };
+
+  return {
+    agents: agentsWithTasks,
+    tasks,
+    stats,
+    isLoading: agentsQuery.isLoading || tasksQuery.isLoading,
+    refetch: () => { agentsQuery.refetch(); tasksQuery.refetch(); },
+  };
+}

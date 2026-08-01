@@ -1,9 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search, Sparkles, Settings, Menu, Radar, Network, Users, CalendarCheck, X, ArrowLeft } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
+import { Search, Sparkles, Settings, Radar, Network, Users, CalendarCheck, X, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useAllActivities } from "@/hooks/useActivities";
@@ -14,7 +13,10 @@ import { QuickFilters, type FilterChip } from "./shared/QuickFilters";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { StatsBar } from "./shared/StatsBar";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
+import { queryKeys } from "@/lib/queryKeys";
+import { findPrototypeContacts } from "@/application/data/uiShellQueries";
+import { toRecords } from "@/lib/records";
 
 const TABS = [
   { key: "outreach", label: "Outreach", icon: Radar },
@@ -32,22 +34,23 @@ const FILTER_CHIPS: FilterChip[] = [
 
 function usePartnerContacts() {
   return useQuery({
-    queryKey: ["proto-partner-contacts"],
+    queryKey: queryKeys.contacts.proto.partnerContacts(),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("partner_contacts")
-        .select("id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)")
-        .limit(200);
+      const { data, error } = await findPrototypeContacts(
+        "id, first_name, last_name, email, phone, mobile, position, partners(id, company_name, country_code)",
+        200,
+        false,
+      );
       if (error) throw error;
-      return (data || []).map((pc: any) => ({
-        id: pc.id,
-        name: [pc.first_name, pc.last_name].filter(Boolean).join(" ") || "—",
-        company: pc.partners?.company_name || "—",
-        email: pc.email || undefined,
-        phone: pc.phone || pc.mobile || undefined,
-        country: pc.partners?.country_code || undefined,
+      return toRecords(data).map((pc: Record<string, unknown>) => ({
+        id: String(pc.id),
+        name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
+        company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",
+        email: pc.email as string || undefined,
+        phone: (pc.phone || pc.mobile) as string || undefined,
+        country: (pc.partners as Record<string, unknown>)?.country_code as string || undefined,
         origin: "WCA",
-        partnerId: pc.partners?.id || null,
+        partnerId: (pc.partners as Record<string, unknown>)?.id as string || null,
       })) as UnifiedContact[];
     },
     staleTime: 60_000,
@@ -55,7 +58,7 @@ function usePartnerContacts() {
 }
 
 export function FocusFlowShell() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [activeTab, setActiveTab] = useState<string>("outreach");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aiQuery, setAiQuery] = useState("");
@@ -64,7 +67,7 @@ export function FocusFlowShell() {
   const { contacts: cockpitRaw = [] } = useCockpitContacts();
   const { data: partnerContacts = [] } = usePartnerContacts();
   const { data: activities = [] } = useAllActivities();
-  const { data: prospectStats } = useProspectStats();
+  const { data: _prospectStats } = useProspectStats();
 
   const cockpitContacts: UnifiedContact[] = useMemo(() =>
     cockpitRaw.map(c => ({
@@ -91,15 +94,15 @@ export function FocusFlowShell() {
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Header minimal */}
       <header className="h-12 border-b border-border/60 flex items-center gap-3 px-4 shrink-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")} aria-label="Indietro">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-semibold text-foreground">WCA Partners</span>
         <div className="flex-1" />
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Impostazioni">
           <Sparkles className="h-4 w-4 text-primary" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/settings")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/settings")} aria-label="Impostazioni">
           <Settings className="h-4 w-4" />
         </Button>
       </header>
@@ -115,7 +118,7 @@ export function FocusFlowShell() {
             className="pl-10 pr-4 h-9 text-sm bg-background border-border/60 rounded-lg"
           />
           {aiQuery && (
-            <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8"
+            <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8" aria-label="Chiudi"
               onClick={() => setAiQuery("")}>
               <X className="h-3.5 w-3.5" />
             </Button>

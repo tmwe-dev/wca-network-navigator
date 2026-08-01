@@ -3,17 +3,17 @@
 // Constants, error codes, config persistence
 // ══════════════════════════════════════════════
 
-var Config = (function () {
-  var WA_BASE = "https://web.whatsapp.com";
+var Config = globalThis.Config || (function () {
+  const WA_BASE = "https://web.whatsapp.com";
 
-  var APP_URL_PATTERNS = [
+  const APP_URL_PATTERNS = [
     /^https:\/\/[^/]*\.lovable\.app\//i,
     /^https:\/\/[^/]*\.lovableproject\.com\//i,
     /^https?:\/\/localhost(?::\d+)?\//i,
     /^https?:\/\/127\.0\.0\.1(?::\d+)?\//i,
   ];
 
-  var ERROR = {
+  const ERROR = {
     NO_CONFIG:         "ERR_NO_CONFIG",
     SESSION_FAILED:    "ERR_SESSION_FAILED",
     SEND_FAILED:       "ERR_SEND_FAILED",
@@ -29,17 +29,17 @@ var Config = (function () {
   };
 
   // Allowed actions whitelist for bridge validation
-  var ALLOWED_ACTIONS = [
+  const ALLOWED_ACTIONS = [
     "ping", "setConfig", "verifySession", "sendWhatsApp",
     "readUnread", "learnDom", "diagnosticDom", "readThread",
     "backfillChat",
   ];
 
-  var MAX_STRING_LENGTH = 5000;
+  const MAX_STRING_LENGTH = 5000;
 
-  var _url = "";
-  var _key = "";
-  var _token = "";
+  let _url = "";
+  let _key = "";
+  let _token = "";
 
   function isAppUrl(url) {
     return typeof url === "string" && APP_URL_PATTERNS.some(function (p) { return p.test(url); });
@@ -47,11 +47,12 @@ var Config = (function () {
 
   async function load() {
     try {
-      var data = await chrome.storage.local.get(["supabaseUrl", "anonKey", "authToken"]);
+      const data = await chrome.storage.local.get(["supabaseUrl", "anonKey"]);
       _url = data.supabaseUrl || "";
       _key = data.anonKey || "";
-      _token = data.authToken || "";
-    } catch (_) {}
+      // authToken is never persisted — always received fresh via setConfig
+      _token = "";
+    } catch (err) { console.debug("[WA Config]", err?.message); }
   }
 
   async function save(url, key, token) {
@@ -59,8 +60,9 @@ var Config = (function () {
     _key = key || "";
     _token = token || "";
     try {
-      await chrome.storage.local.set({ supabaseUrl: _url, anonKey: _key, authToken: _token });
-    } catch (_) {}
+      // Only persist non-sensitive config. authToken is kept in memory only.
+      await chrome.storage.local.set({ supabaseUrl: _url, anonKey: _key });
+    } catch (err) { console.debug("[WA Config]", err?.message); }
   }
 
   function getUrl() { return _url; }
@@ -87,3 +89,4 @@ var Config = (function () {
     errorResponse: errorResponse,
   };
 })();
+globalThis.Config = Config;

@@ -1,21 +1,20 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import {
-  Search, Telescope, Inbox, LayoutGrid, Plane, RotateCcw, X, ArrowUpDown,
-} from "lucide-react";
+import { Search, Telescope, Plane, RotateCcw, X, ArrowUpDown } from "lucide-react";
+import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
 import { useToggleFavorite } from "@/hooks/usePartners";
-import { getCountryFlag, getYearsMember } from "@/lib/countries";
+import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -24,6 +23,8 @@ import { usePartnerListStats } from "@/hooks/usePartnerListStats";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { IconIndicator, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
+import { createActivities } from "@/application/data/activities";
 
 /* ── Props ── */
 interface PartnerListPanelProps {
@@ -44,16 +45,18 @@ export function PartnerListPanel({
   countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
-  directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
+  directoryOnly: _directoryOnlyProp, onDirectoryOnlyChange: _onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const g = useGlobalFilters();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   type ProgressFilterKey = "deep" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hideHolding, setHideHolding] = useState(true);
+  const [activeCountryTab, setActiveCountryTab] = useState<string | null>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const activeSearch = g.filters.networkSearch.trim();
   const activeSort = g.filters.networkSort;
@@ -87,9 +90,9 @@ export function PartnerListPanel({
     }
   }, [loadMoreInView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const toggleFavorite = useToggleFavorite();
+  const _toggleFavorite = useToggleFavorite();
 
-  const { stats, verified, missingDeep } = usePartnerListStats({ countryCodes, partners });
+  const { stats, verified, missingDeep: _missingDeep } = usePartnerListStats({ countryCodes, partners });
   const totalCount = paginatedData?.pages?.[0]?.total ?? stats.total;
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {
@@ -106,40 +109,63 @@ export function PartnerListPanel({
 
   // ── Filtered & sorted partners ──
   const holdingCount = useMemo(() => {
-    return (partners || []).filter((p: any) => p.lead_status && p.lead_status !== "new").length;
+    return (partners || []).filter((p: { lead_status?: string }) => p.lead_status && p.lead_status !== "new").length;
   }, [partners]);
 
   const filteredPartners = useMemo(() => {
     let list = partners || [];
 
-    // Quality, holding and sort are now applied server-side in usePartnersPaginated
-    // Only keep client-side filters that can't be pushed to SQL
     if (progressFilter === "deep") {
-      list = list.filter((p: any) => !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at));
+      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
+    }
+
+    // Country tab filter
+    if (activeCountryTab) {
+      list = list.filter((p: { country_code?: string }) => p.country_code === activeCountryTab);
     }
 
     return list;
-  }, [partners, progressFilter]);
+  }, [partners, progressFilter, activeCountryTab]);
+
+  // Country tab counts for the tab bar
+  const countryTabCounts = useMemo(() => {
+    if (countryCodes.length <= 1) return [];
+    let list = partners || [];
+    if (progressFilter === "deep") {
+      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
+    }
+    const counts: Record<string, number> = {};
+    for (const p of list as { country_code?: string }[]) {
+      const cc = p.country_code || "??";
+      counts[cc] = (counts[cc] || 0) + 1;
+    }
+    return countryCodes.map(cc => ({ code: cc, name: countryNames[countryCodes.indexOf(cc)] || cc, count: counts[cc] || 0 }));
+  }, [countryCodes, countryNames, partners, progressFilter]);
+
+  // Reset active tab when countries change
+  useEffect(() => {
+    setActiveCountryTab(null);
+  }, [countryCodes.join(",")]);
 
   const togglePartnerSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }, []);
 
   const handleSendTo = useCallback(async (destination: "cockpit" | "workspace") => {
     if (selectedIds.size === 0) return;
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     const userId = user?.id;
     if (!userId) { toast.error("Utente non autenticato"); return; }
-    const partnerList = (partners || []).filter((p: any) => selectedIds.has(p.id));
+    const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
 
     if (destination === "cockpit") {
       const items: { source_type: string; source_id: string; partner_id: string; user_id: string; status: string }[] = [];
-      for (const p of partnerList as any[]) {
-        const contacts = (p.partner_contacts || []) as any[];
+      for (const p of partnerList as { id: string; partner_contacts?: { id: string; is_primary?: boolean; name?: string; email?: string; mobile?: string; direct_phone?: string }[] }[]) {
+        const contacts = p.partner_contacts || [];
         if (contacts.length > 0) {
           for (const c of contacts) {
             items.push({ source_type: "partner_contact", source_id: c.id, partner_id: p.id, user_id: userId, status: "queued" });
@@ -149,17 +175,16 @@ export function PartnerListPanel({
         }
       }
       if (items.length > 0) {
-        const { error } = await supabase.from("cockpit_queue").upsert(items as any, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
-        if (error) { toast.error("Errore: " + error.message); return; }
+        await insertCockpitQueueItems(items);
         // Store for auto-preselection in Cockpit
         const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
         addCockpitPreselection(items.map(i => i.source_id));
       }
       toast.success(`${partnerList.length} partner inviati a Cockpit`);
     } else {
-      const inserts = partnerList.map((p: any) => {
+      const inserts = partnerList.map((p: { id: string; company_name?: string; country_code?: string; city?: string; partner_contacts?: { id: string; is_primary?: boolean; name?: string; email?: string }[] }) => {
         const contacts = p.partner_contacts || [];
-        const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+        const primary = contacts.find((c) => c.is_primary) || contacts[0];
         return {
           activity_type: "send_email" as const,
           title: `Email a ${p.company_name}`,
@@ -178,8 +203,7 @@ export function PartnerListPanel({
           user_id: userId,
         };
       });
-      const { error } = await supabase.from("activities").insert(inserts as any);
-      if (error) { toast.error("Errore: " + error.message); return; }
+      await createActivities(inserts as Parameters<typeof createActivities>[0]);
       toast.success(`${inserts.length} partner inviati a Workspace`);
     }
     setSelectedIds(new Set());
@@ -194,7 +218,7 @@ export function PartnerListPanel({
   // Auto-select first partner when list loads and nothing is selected
   useEffect(() => {
     if (!selectedPartnerId && filteredPartners.length > 0 && onSelectPartner) {
-      onSelectPartner((filteredPartners[0] as any).id);
+      onSelectPartner((filteredPartners[0] as { id: string }).id);
     }
   }, [filteredPartners, selectedPartnerId, onSelectPartner]);
 
@@ -317,7 +341,7 @@ export function PartnerListPanel({
               isDark={isDark}
               onDownload={() => {}}
               onDeepSearch={() => {
-                const ids = filteredPartners.map((p: any) => p.id);
+                const ids = filteredPartners.map((p: { id: string }) => p.id);
                 if (ids.length > 0) onDeepSearch?.(ids);
               }}
               onGenerateAlias={(type) => onGenerateAliases?.(countryCodes, type)}
@@ -326,8 +350,19 @@ export function PartnerListPanel({
             />
           )}
 
-          {/* ROW 3: Hide holding pattern toggle */}
+          {/* ROW 3: Select all + Hide holding pattern toggle */}
           <div className="flex items-center gap-2">
+            <Checkbox
+              checked={filteredPartners.length > 0 && selectedIds.size === filteredPartners.length}
+              onCheckedChange={(checked) => {
+                if (checked) setSelectedIds(new Set(filteredPartners.map((p: { id: string }) => p.id)));
+                else setSelectedIds(new Set());
+              }}
+              aria-label="Seleziona tutti"
+              className="shrink-0"
+            />
+            <span className="text-[10px] text-muted-foreground">Tutti</span>
+            <div className="w-px h-3 bg-border/50 mx-1" />
             <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Plane className="w-3 h-3" />Nascondi in circuito ({holdingCount})
@@ -336,21 +371,76 @@ export function PartnerListPanel({
 
           {/* SELECTION ACTION BAR */}
           {selectedIds.size > 0 && (
-            <div className={cn("flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-2", "bg-primary/5 border-primary/20")}>
-              <span className="text-xs font-bold text-primary">{selectedIds.size} selezionati</span>
-              <div className="flex-1" />
-              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("cockpit")}>
-                <Inbox className="w-3 h-3" /> Cockpit
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("workspace")}>
-                <LayoutGrid className="w-3 h-3" /> Workspace
-              </Button>
-              <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
-                ✕
-              </Button>
-            </div>
+            <UnifiedBulkActionBar
+              count={selectedIds.size}
+              sourceType="partner"
+              onClear={() => setSelectedIds(new Set())}
+              onCockpit={() => handleSendTo("cockpit")}
+              onWorkspace={() => handleSendTo("workspace")}
+              onDeepSearch={onDeepSearch ? () => {
+                const ids = Array.from(selectedIds);
+                if (ids.length > 0) onDeepSearch(ids);
+              } : undefined}
+              deepSearchLoading={deepSearchRunning}
+              onLinkedIn={() => {
+                const partner = (partners || []).find((p: { id: string }) => selectedIds.has(p.id));
+                if (partner) {
+                  const name = (partner as { company_name?: string }).company_name || "";
+                  window.open(`https://www.google.com/search?q=${encodeURIComponent(name + " LinkedIn")}`, "_blank");
+                }
+              }}
+              onWhatsApp={() => {
+                const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
+                for (const p of partnerList as { id: string; partner_contacts?: { mobile?: string; direct_phone?: string }[] }[]) {
+                  const contacts = p.partner_contacts || [];
+                  const c = contacts.find((c) => c.mobile || c.direct_phone);
+                  if (c) {
+                    const phone = (c.mobile || c.direct_phone || "").replace(/[^0-9+]/g, "");
+                    if (phone) { window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank"); break; }
+                  }
+                }
+              }}
+              onCampaign={() => {
+                navigate("/v2/email-composer", {
+                  state: { partnerIds: Array.from(selectedIds) },
+                });
+              }}
+            />
           )}
         </div>
+
+        {/* ═══ COUNTRY TABS ═══ */}
+        {countryTabCounts.length > 1 && (
+          <div ref={tabsRef} className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 overflow-x-auto scrollbar-none flex-shrink-0">
+            <button
+              onClick={() => setActiveCountryTab(null)}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+                activeCountryTab == null
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Tutti
+            </button>
+            {countryTabCounts.map(({ code, name, count }) => (
+              <button
+                key={code}
+                onClick={() => setActiveCountryTab(code === activeCountryTab ? null : code)}
+                className={cn(
+                  "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
+                  activeCountryTab === code
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <span>{getCountryFlag(code)}</span>
+                <span className="truncate max-w-[80px]">{name}</span>
+                <span className="opacity-70">({count})</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ═══ PARTNER LIST (Virtualized) ═══ */}
         <PartnerVirtualList

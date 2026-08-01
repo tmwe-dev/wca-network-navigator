@@ -1,3 +1,4 @@
+import type { RAProspect } from "@/types/ra";
 import { useState } from "react";
 import { Mail, Phone, Briefcase, ChevronDown, Copy, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,17 +8,20 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { RALeadStatus, RAContact, RAInteraction } from "@/types/ra";
 import { LEAD_STATUS_LABELS } from "./RACompanyHeader";
+import { createLogger } from "@/lib/log";
 
-const LEAD_STATUS_OPTIONS: RALeadStatus[] = ["new", "contacted", "qualified", "negotiation", "converted", "lost"];
+const log = createLogger("RACompanySidebar");
+
+const LEAD_STATUS_OPTIONS: RALeadStatus[] = ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted", "archived", "blacklisted"];
 
 function formatDate(dateString: string) {
   try {
     return new Date(dateString).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
-  } catch { return "—"; }
+  } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return "—"; }
 }
 
 interface RACompanySidebarProps {
-  prospect: any;
+  prospect: RAProspect;
   contacts: RAContact[];
   interactions: RAInteraction[];
   onLeadStatusChange: (status: RALeadStatus) => void;

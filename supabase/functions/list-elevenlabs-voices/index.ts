@@ -1,22 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { edgeError, edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+interface VoiceRaw {
+  voice_id?: string;
+  name?: string;
+  category?: string;
+  labels?: Record<string, string>;
+  preview_url?: string;
+  description?: string;
+}
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
+
+  // Auth check — _shared/authGuard (terse: { error: CODE }), contratto invariato
+  try {
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (isAuthError(auth)) return auth;
+  } catch {
+    return edgeErrorWithStatus("AUTH_INVALID", "AUTH_INVALID", 401, dynCors);
   }
 
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
   if (!ELEVENLABS_API_KEY) {
-    return new Response(
-      JSON.stringify({ error: "ELEVENLABS_API_KEY not configured", voices: [], status: "missing_key" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // status 200 legacy preservato: la UI mostra lo stato "missing_key" senza toast di errore
+    return edgeErrorWithStatus("VALIDATION_ERROR", "ELEVENLABS_API_KEY not configured", 200, dynCors, {
+      voices: [],
+      status: "missing_key",
+    });
   }
 
   try {
@@ -26,14 +43,14 @@ serve(async (req) => {
 
     if (!response.ok) {
       const status = response.status;
-      return new Response(
-        JSON.stringify({ error: `ElevenLabs API error: ${status}`, voices: [], status: status === 401 ? "invalid_key" : "api_error" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return edgeErrorWithStatus("UPSTREAM_ERROR", `ElevenLabs API error: ${status}`, 200, dynCors, {
+        voices: [],
+        status: status === 401 ? "invalid_key" : "api_error",
+      });
     }
 
     const data = await response.json();
-    const voices = (data.voices || []).map((v: any) => ({
+    const voices = (data.voices || []).map((v: VoiceRaw) => ({
       voice_id: v.voice_id,
       name: v.name,
       category: v.category || "premade",
@@ -44,13 +61,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ voices, status: "ok", total: voices.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("list-elevenlabs-voices error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal error", voices: [], status: "error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return edgeError("INTERNAL_ERROR", "Internal error", undefined, dynCors, {
+      voices: [],
+      status: "error",
+    });
   }
 });

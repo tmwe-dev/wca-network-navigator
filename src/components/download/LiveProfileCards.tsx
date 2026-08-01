@@ -1,13 +1,14 @@
 import { useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { findLiveProfilePartners } from "@/application/data/downloadViews";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Mail, Phone, Globe, User, Sparkles } from "lucide-react";
+import { Mail, Phone, Globe, User, Sparkles } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ProfileData {
   id: string;
@@ -38,17 +39,14 @@ export function LiveProfileCards() {
 
   // Fetch last 20 processed partners
   const { data: profiles } = useQuery({
-    queryKey: ["live-profiles", processedIds.slice(-20).join(",")],
+    queryKey: queryKeys.downloads.liveProfiles(processedIds.slice(-20).join(",")),
     queryFn: async () => {
       const lastIds = processedIds.slice(-20);
       if (lastIds.length === 0) return [];
-      const { data } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, email, phone, website, wca_id, partner_networks(network_name), partner_contacts(name, email, title)")
-        .in("wca_id", lastIds);
+      const data = await findLiveProfilePartners(lastIds);
       // Sort by processedIds order (most recent last)
       const idOrder = new Map(lastIds.map((id, i) => [id, i]));
-      return ((data || []) as ProfileData[]).sort((a, b) =>
+      return (data as ProfileData[]).sort((a, b) =>
         (idOrder.get(b.wca_id!) ?? 0) - (idOrder.get(a.wca_id!) ?? 0)
       );
     },
@@ -65,7 +63,7 @@ export function LiveProfileCards() {
 
   if (!profiles || profiles.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground/50">
+      <div className="h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center">
           <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
           <p className="text-xs">I profili appariranno qui durante il download</p>
@@ -144,7 +142,7 @@ export function LiveProfileCards() {
                 <div className="mt-2 pt-2 border-t border-border/30 space-y-1">
                   {p.partner_contacts.slice(0, 3).map((c, ci) => (
                     <div key={ci} className="flex items-center gap-1.5 text-[10px]">
-                      <User className="w-2.5 h-2.5 text-muted-foreground/50" />
+                      <User className="w-2.5 h-2.5 text-muted-foreground" />
                       <span className="font-medium truncate">{c.name}</span>
                       {c.title && <span className="text-muted-foreground truncate">· {c.title}</span>}
                       {c.email && <Mail className="w-2.5 h-2.5 text-emerald-400 ml-auto shrink-0" />}

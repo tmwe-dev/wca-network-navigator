@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { WCA_COUNTRIES_MAP, WCA_COUNTRIES, type WCACountry } from "@/data/wcaCountries";
+import { WCA_COUNTRIES, type WCACountry } from "@/catalogs/wcaCountries";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  getAllActivePartnersForGlobe,
+  getActivePartnersByCountryForGlobe,
+  getBusinessCardsForCampaignRaw,
+  getBcaCountryCountsRaw,
+} from "@/data/globePartnersQueries";
 
 export interface GlobePartner {
   id: string;
@@ -41,28 +47,23 @@ const PRECOMPUTED_COUNTRIES: CountryWithPartners[] = WCA_COUNTRIES.map(country =
 // Fetch all partners for globe visualization
 export function usePartnersForGlobe() {
   return useQuery({
-    queryKey: ["partners-globe"],
+    queryKey: queryKeys.partners.globe,
     queryFn: async () => {
-      const { data: partners, error } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, partner_type")
-        .eq("is_active", true)
-        .order("company_name");
-
-      if (error) throw error;
+      const allPartners = await getAllActivePartnersForGlobe();
 
       // Reset counts efficiently
       const countryCounts: Record<string, number> = {};
-      
+
       // Add lat/lng from country data with O(1) lookups
-      const globePartners: GlobePartner[] = (partners || []).map(p => {
-        countryCounts[p.country_code] = (countryCounts[p.country_code] || 0) + 1;
-        const country = PRECOMPUTED_COUNTRIES_MAP[p.country_code];
+      const globePartners: GlobePartner[] = allPartners.map((p) => {
+        const cc = String(p.country_code || "");
+        countryCounts[cc] = (countryCounts[cc] || 0) + 1;
+        const country = PRECOMPUTED_COUNTRIES_MAP[cc];
         return {
           ...p,
           lat: country?.lat || 0,
           lng: country?.lng || 0,
-        };
+        } as GlobePartner;
       });
 
       // Update counts in pre-computed countries (single pass)
@@ -84,29 +85,21 @@ export function usePartnersForGlobe() {
     },
     staleTime: 5_000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 8_000, // Auto-refresh every 8s for near-realtime
+    refetchInterval: 30_000,
   });
 }
 
 // Fetch partners for a specific country
 export function usePartnersByCountryForGlobe(countryCode: string | null) {
   return useQuery({
-    queryKey: ["partners-globe-country", countryCode],
+    queryKey: queryKeys.partners.globeCountry(countryCode),
     queryFn: async () => {
       if (!countryCode) return [];
 
-      const { data, error } = await supabase
-        .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, partner_type")
-        .eq("is_active", true)
-        .eq("country_code", countryCode)
-        .order("company_name");
-
-      if (error) throw error;
-
+      const allData = await getActivePartnersByCountryForGlobe(countryCode);
       const country = PRECOMPUTED_COUNTRIES_MAP[countryCode];
-      
-      return (data || []).map(p => ({
+
+      return allData.map((p): GlobePartner => ({
         ...p,
         lat: country?.lat || 0,
         lng: country?.lng || 0,
@@ -115,6 +108,58 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
     enabled: !!countryCode,
     staleTime: 5_000,
     gcTime: 5 * 60 * 1000,
-    refetchInterval: 8_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useBusinessCardsForCampaign(countryCode: string | null) {
+  return useQuery({
+    queryKey: queryKeys.businessCards.campaign(countryCode),
+    queryFn: async () => {
+      if (!countryCode) return [];
+
+      const data = await getBusinessCardsForCampaignRaw();
+
+      return (data ?? [])
+        .filter((bc) => {
+          if (bc.partner?.country_code === countryCode) return true;
+          if (bc.location?.toUpperCase().includes(countryCode)) return true;
+          return false;
+        })
+        .map((bc) => ({
+          id: bc.matched_partner_id || bc.id,
+          company_name: bc.partner?.company_name || bc.company_name || "N/A",
+          city: bc.partner?.city || bc.location || "",
+          country_code: bc.partner?.country_code || countryCode,
+          country_name: bc.partner?.country_name || "",
+          email: bc.partner?.email || bc.email,
+          partner_type: null,
+          partner_certifications: [],
+          partner_services: [],
+          is_bca: true,
+          bca_event: bc.event_name,
+          bca_contact: bc.contact_name,
+          bca_met_at: bc.met_at,
+        }));
+    },
+    enabled: !!countryCode,
+    staleTime: 30_000,
+  });
+}
+
+export function useBcaCountryCounts() {
+  return useQuery({
+    queryKey: queryKeys.businessCards.countryCounts,
+    queryFn: async () => {
+      const data = await getBcaCountryCountsRaw();
+
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((row) => {
+        const countryCode = row.partner?.country_code;
+        if (countryCode) counts[countryCode] = (counts[countryCode] || 0) + 1;
+      });
+      return counts;
+    },
+    staleTime: 60_000,
   });
 }

@@ -1,0 +1,27 @@
+import { useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("NotFound");
+
+const NotFound = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    log.warn("404 not found", { pathname: location.pathname });
+  }, [location.pathname]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-muted">
+      <div className="text-center">
+        <h1 className="mb-4 text-4xl font-bold">404</h1>
+        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
+        <a href="/v2" className="text-primary underline hover:text-primary">
+          Return to Home
+        </a>
+      </div>
+    </div>
+  );
+};
+
+export default NotFound;

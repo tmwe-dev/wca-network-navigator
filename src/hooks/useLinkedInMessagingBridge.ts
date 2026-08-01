@@ -5,19 +5,66 @@
  * Ultra-conservative: long timeouts, no aggressive polling.
  */
 import { useState, useCallback, useEffect, useRef } from "react";
+import { createLogger } from "@/lib/log";
 
+const log = createLogger("useLinkedInMessagingBridge");
+
+// P0.3 — Threads e messages portano gli ID reali fino al consumer (sync).
+export type LinkedInThreadDTO = {
+  name: string;
+  threadUrl: string | null;
+  profileUrl: string | null;
+  linkedinId: string | null;
+  profileId: string | null;
+  threadId: string | null;
+  unread: boolean | null;
+  lastMessage: string | null;
+  lastActivity: string | null;
+  method?: "optimus" | "structural" | "ax_tree" | string;
+  confidence?: number;
+};
+export type LinkedInMessageDTO = {
+  text: string;
+  sender: string | null;
+  timestamp: string | null;
+  direction: "inbound" | "outbound" | "unknown" | string;
+  method?: "optimus" | "structural" | "ax_tree" | string;
+  confidence?: number;
+};
 type BridgeResponse = {
   success: boolean;
   error?: string;
-  threads?: Array<{ name: string; lastMessage: string; unread: boolean; threadUrl: string }>;
-  messages?: Array<{ text: string; sender: string; timestamp: string; direction: string }>;
-  [key: string]: any;
+  threads?: LinkedInThreadDTO[];
+  messages?: LinkedInMessageDTO[];
+  method?: string;
+  confidence?: number;
+  [key: string]: unknown;
 };
 
+// ── Ensure LinkedIn extension has Supabase config (re-sendable) ──
+let liMsgConfigSentAt = 0;
+function ensureLiMsgConfig(force = false) {
+  // Re-send config every 5 minutes or when forced (e.g. after re-mount)
+  if (!force && liMsgConfigSentAt && Date.now() - liMsgConfigSentAt < 5 * 60_000) return;
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return;
+  liMsgConfigSentAt = Date.now();
+  log.debug("→ sending setConfig to LinkedIn extension");
+  window.postMessage({
+    direction: "from-webapp-li",
+    action: "setConfig",
+    requestId: `li_setConfig_${Date.now()}`,
+    supabaseUrl: url,
+    supabaseAnonKey: key,
+  }, window.location.origin);
+}
+
 // ── LinkedIn extension bridge (for ping, send, verify) ──
-function sendToLinkedInExt(action: string, data: Record<string, any> = {}, timeoutMs = 15000): Promise<BridgeResponse> {
+function sendToLinkedInExt(action: string, data: Record<string, unknown> = {}, timeoutMs = 15000): Promise<BridgeResponse> {
+  ensureLiMsgConfig();
   return new Promise((resolve) => {
-    const requestId = `li_msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const requestId = `li_msg_${crypto.randomUUID()}`;
     const timer = setTimeout(() => {
       window.removeEventListener("message", handler);
       resolve({ success: false, error: "timeout" });
@@ -38,9 +85,9 @@ function sendToLinkedInExt(action: string, data: Record<string, any> = {}, timeo
 }
 
 // ── FireScrape bridge (for reading pages) ──
-function sendToFireScrape(action: string, data: Record<string, any> = {}, timeoutMs = 30000): Promise<any> {
+function sendToFireScrape(action: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
-    const requestId = `fs_li_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const requestId = `fs_li_${crypto.randomUUID()}`;
     const timer = setTimeout(() => {
       window.removeEventListener("message", handler);
       resolve({ success: false, error: "timeout" });
@@ -65,13 +112,14 @@ async function checkFireScrape(): Promise<boolean> {
   try {
     const r = await sendToFireScrape("ping", {}, 4000);
     return r?.success === true;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return false;
   }
 }
 
 // ── Parse LinkedIn inbox markdown into threads ──
-function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
+function _parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
   const threads: NonNullable<BridgeResponse["threads"]> = [];
   if (!markdown) return threads;
 
@@ -85,7 +133,7 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
     const line = lines[i].trim();
 
     // Detect thread URL from markdown links
-    const threadLinkMatch = line.match(/\[.*?\]\((https:\/\/www\.linkedin\.com\/messaging\/thread\/[^\)]+)\)/);
+    const threadLinkMatch = line.match(/\[.*?\]\((https:\/\/www\.linkedin\.com\/messaging\/thread\/[^)]+)\)/);
     if (threadLinkMatch) {
       currentUrl = threadLinkMatch[1];
     }
@@ -99,7 +147,11 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
       if (candidateName && candidateName.length > 2 && candidateName.length < 60 && !/^http/i.test(candidateName)) {
         // Save previous thread if we have one
         if (currentName && (currentPreview || currentUrl)) {
-          threads.push({ name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl });
+          threads.push({
+            name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl,
+            profileUrl: null, linkedinId: null, profileId: null, threadId: null, lastActivity: null,
+            method: "firescrape", confidence: 0.5,
+          });
         }
         currentName = candidateName;
         currentPreview = "";
@@ -135,7 +187,7 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
     }
 
     // Detect thread URLs in href format
-    const hrefMatch = line.match(/https:\/\/www\.linkedin\.com\/messaging\/thread\/[^\s\)\"]+/);
+    const hrefMatch = line.match(/https:\/\/www\.linkedin\.com\/messaging\/thread\/[^\s)"]+/);
     if (hrefMatch && !currentUrl) {
       currentUrl = hrefMatch[0];
     }
@@ -143,14 +195,18 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
 
   // Don't forget the last thread
   if (currentName && (currentPreview || currentUrl)) {
-    threads.push({ name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl });
+    threads.push({
+      name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl,
+      profileUrl: null, linkedinId: null, profileId: null, threadId: null, lastActivity: null,
+      method: "firescrape", confidence: 0.5,
+    });
   }
 
   return threads;
 }
 
 // ── Parse LinkedIn thread markdown into messages ──
-function parseThreadMarkdown(markdown: string, contactName: string): NonNullable<BridgeResponse["messages"]> {
+function _parseThreadMarkdown(markdown: string, contactName: string): NonNullable<BridgeResponse["messages"]> {
   const messages: NonNullable<BridgeResponse["messages"]> = [];
   if (!markdown) return messages;
 
@@ -241,23 +297,34 @@ export function useLinkedInMessagingBridge() {
 
   // ── READ INBOX: Direct call to LinkedIn extension (same as test page) ──
   const readInbox = useCallback(async (): Promise<BridgeResponse> => {
-    console.log("[LI Bridge] Reading inbox via LinkedIn extension (direct)...");
+    log.debug("reading inbox via extension");
     const result = await sendToLinkedInExt("readLinkedInInbox", {}, 35000);
-    console.log("[LI Bridge] readInbox result:", JSON.stringify(result).slice(0, 500));
+    log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
     return { ...result, source: "linkedin-ext" };
   }, []);
 
   // ── READ THREAD: Direct call to LinkedIn extension (same as test page) ──
   const readThread = useCallback(async (threadUrl: string): Promise<BridgeResponse> => {
-    console.log("[LI Bridge] Reading thread via LinkedIn extension (direct):", threadUrl);
+    log.debug("reading thread via extension", { threadUrl });
     const result = await sendToLinkedInExt("readLinkedInThread", { threadUrl }, 30000);
-    console.log("[LI Bridge] readThread result:", JSON.stringify(result).slice(0, 500));
+    log.debug("readThread result", { preview: JSON.stringify(result).slice(0, 500) });
+    return { ...result, source: "linkedin-ext" };
+  }, []);
+
+  // ── BACKFILL THREAD: Scroll-back to retrieve older messages ──
+  const backfillThread = useCallback(async (threadUrl: string, lastKnownText: string, maxScrolls = 20): Promise<BridgeResponse> => {
+    log.debug("backfill thread via extension", { threadUrl });
+    const result = await sendToLinkedInExt("backfillLinkedInThread", { threadUrl, lastKnownText, maxScrolls }, 120000);
+    log.debug("backfillThread result", { preview: JSON.stringify(result).slice(0, 500) });
     return { ...result, source: "linkedin-ext" };
   }, []);
 
   // ── SEND MESSAGE: Always via LinkedIn extension ──
   const sendMessage = useCallback(async (profileUrl: string, text: string): Promise<BridgeResponse> => {
-    return sendToLinkedInExt("sendMessage", { url: profileUrl, message: text }, 20000);
+    // P7 — Timeout 120s: l'estensione può impiegare 30-60s per waitForLoad +
+    // tab activation + clickMessage + polling textbox + invio. 90s era ai
+    // limiti, 120s lascia margine senza far percepire blocchi all'utente.
+    return sendToLinkedInExt("sendMessage", { url: profileUrl, message: text }, 120000);
   }, []);
 
   // ── DIAGNOSTIC: via LinkedIn extension ──
@@ -265,5 +332,5 @@ export function useLinkedInMessagingBridge() {
     return sendToLinkedInExt("diagnosticLinkedInDom", {}, 30000);
   }, []);
 
-  return { isAvailable, isFireScrapeAvailable, readInbox, readThread, sendMessage, diagnosticDom };
+  return { isAvailable, isFireScrapeAvailable, readInbox, readThread, backfillThread, sendMessage, diagnosticDom };
 }

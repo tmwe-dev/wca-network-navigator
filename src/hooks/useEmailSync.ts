@@ -4,8 +4,11 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { resetEmailSyncState } from "@/data/emailSyncState";
 import { toast } from "sonner";
 import { callCheckInbox } from "@/lib/checkInbox";
+import { queryKeys } from "@/lib/queryKeys";
+import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 
 export function useResetSync() {
   const queryClient = useQueryClient();
@@ -17,15 +20,10 @@ export function useResetSync() {
       } = await supabase.auth.getSession();
       if (!session) throw new Error("Non autenticato");
 
-      const { error } = await supabase
-        .from("email_sync_state")
-        .update({ last_uid: 0, stored_uidvalidity: null })
-        .eq("user_id", session.user.id);
-
-      if (error) throw error;
+      await resetEmailSyncState(session.user.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
       toast.success("🔄 Sync resettata — premi 'Scarica Tutto' per riscaricare tutta la inbox");
     },
     onError: (err: Error) => {
@@ -36,18 +34,28 @@ export function useResetSync() {
 
 export function useCheckInbox() {
   const queryClient = useQueryClient();
+  const { activeMailbox } = useActiveMailbox();
+  const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
 
   return useMutation({
-    mutationFn: callCheckInbox,
-    onSuccess: (data) => {
+    // "Scarica nuove" deve recuperare tutte le nuove UID della casella attiva.
+    // BODY.PEEK lato IMAP evita auto-read: non serve limitarci a UNSEEN, altrimenti
+    // le mail già lette da altri client restano invisibili nell'app.
+    mutationFn: () => callCheckInbox(mailboxId, { unreadOnly: false }),
+    onSuccess: (raw) => {
       // Realtime handles list updates; only refresh count
-      queryClient.invalidateQueries({ queryKey: ["email-count"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
 
-      if (data.total > 0) {
-        toast.success(`📬 ${data.total} email scaricate (${data.matched} con contatto)`);
-      } else {
-        toast.info("Nessuna nuova email");
+      // callCheckInbox restituisce `unknown` (Vol. II §5.1 strangler).
+      // Qui facciamo narrowing difensivo invece di assumere lo shape.
+      const data = raw as { total?: number; matched?: number } | null;
+      const total = typeof data?.total === "number" ? data.total : 0;
+      const matched = typeof data?.matched === "number" ? data.matched : 0;
+
+      if (total > 0) {
+        toast.success(`📬 ${total} email scaricate (${matched} con contatto)`);
       }
+      window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "email" } }));
     },
     onError: (err: Error) => {
       toast.error(`Errore scaricamento posta: ${err.message}`);

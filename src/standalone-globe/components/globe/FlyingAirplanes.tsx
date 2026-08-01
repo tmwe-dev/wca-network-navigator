@@ -44,7 +44,7 @@ export function FlyingAirplanes({ countries, isActive }: Props) {
   const routesRef = useRef<FlightRoute[]>([]);
   const lastRouteTimeRef = useRef<number>(0);
   const airplaneRefs = useRef<THREE.Mesh[]>([]);
-  const trailRefs = useRef<THREE.Line[]>([]);
+  const _trailRefs = useRef<THREE.Line[]>([]);
   
   // Get countries with partners for realistic routes
   const countriesWithPartners = useMemo(() => 

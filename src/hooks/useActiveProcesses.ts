@@ -3,6 +3,8 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DeepSearchContext } from "@/hooks/useDeepSearchRunner";
+import { queryKeys } from "@/lib/queryKeys";
+import { findEmailQueueStatusRows } from "@/data/emailCampaigns";
 
 export interface ActiveProcess {
   id: string;
@@ -33,10 +35,11 @@ export function useActiveProcesses() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "download_job_events", filter: "event_type=eq.countdown" },
         (payload) => {
-          const row = payload.new as any;
-          const jobId = row.job_id;
-          const secs = (row.payload as any)?.seconds || 0;
-          const type = (row.payload as any)?.type || "delay";
+          const row = payload.new as Record<string, unknown>;
+          const jobId = row.job_id as string;
+          const rowPayload = row.payload as Record<string, unknown> | null;
+          const secs = (rowPayload?.seconds as number) || 0;
+          const type = (rowPayload?.type as string) || "delay";
           
           setCountdowns((prev) => ({ ...prev, [jobId]: { seconds: secs, type, at: Date.now() } }));
           
@@ -74,15 +77,12 @@ export function useActiveProcesses() {
 
   // Global email queue count (pending + sending)
   const { data: emailQueueCounts } = useQuery({
-    queryKey: ["email-queue-global-counts"],
+    queryKey: queryKeys.email.queueGlobalCounts,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_campaign_queue")
-        .select("status", { count: "exact", head: false })
-        .in("status", ["pending", "sending"]);
-      if (error) return { pending: 0, sending: 0, total: 0 };
-      const pending = (data || []).filter((r: any) => r.status === "pending").length;
-      const sending = (data || []).filter((r: any) => r.status === "sending").length;
+      const data = await findEmailQueueStatusRows();
+      if (!data) return { pending: 0, sending: 0, total: 0 };
+      const pending = data.filter((r) => r.status === "pending").length;
+      const sending = data.filter((r) => r.status === "sending").length;
       return { pending, sending, total: pending + sending };
     },
     refetchInterval: 10000,

@@ -1,0 +1,172 @@
+/**
+ * FunnemailGroupHeader — header collassabile di un gruppo nella lista mail
+ * con menu Azioni di gruppo (segna lette / assegna gruppo / archivia / elimina).
+ */
+import { useState } from "react";
+import { ChevronDown, ChevronRight, MoreHorizontal, MailOpen, Tag, Archive, Trash2, Loader2, CheckSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/providers/AuthProvider";
+import { findSenderGroupNamesByUser } from "@/application/data/senderManagement";
+import { cn } from "@/lib/utils";
+
+interface Props {
+  label: string;
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+  busy?: boolean;
+  onMarkAllRead: () => void;
+  onAssignGroup: (groupName: string) => void;
+  onArchiveAll: () => void;
+  onDeleteAll: () => void;
+  onSelectAll?: () => void;
+}
+
+const CONFIRM_THRESHOLD = 20;
+
+interface SenderGroupRow {
+  nome_gruppo: string;
+  colore: string | null;
+  icon: string | null;
+}
+
+export function FunnemailGroupHeader({
+  label, count, expanded, onToggle, busy,
+  onMarkAllRead, onAssignGroup, onArchiveAll, onDeleteAll,
+  onSelectAll,
+}: Props) {
+  const { user } = useAuth();
+  const { data: groupsList = [] } = useQuery({
+    queryKey: ["email-sender-groups", "list", user?.id ?? "anon"],
+    enabled: !!user?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<SenderGroupRow[]> => {
+      const data = await findSenderGroupNamesByUser(user!.id);
+      // Mapping esplicito: la view espone colore/icon nullable, il tipo di dominio no.
+      const out: SenderGroupRow[] = [];
+      for (const g of data) {
+        if (typeof g.nome_gruppo !== "string") continue;
+        out.push({ nome_gruppo: g.nome_gruppo, colore: g.colore, icon: g.icon });
+      }
+      return out;
+    },
+  });
+  const [confirm, setConfirm] = useState<null | "archive" | "delete">(null);
+
+  const requireConfirm = (action: "archive" | "delete") => {
+    if (count > CONFIRM_THRESHOLD) {
+      setConfirm(action);
+    } else {
+      if (action === "archive") onArchiveAll(); else onDeleteAll();
+    }
+  };
+
+  return (
+    <>
+      <div className={cn(
+        "sticky top-0 z-10 flex items-center gap-1 border-b border-border bg-muted/70 px-2 py-1.5 backdrop-blur",
+      )}>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex flex-1 items-center gap-1.5 text-left"
+        >
+          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          <span className="truncate text-xs font-semibold">{label}</span>
+          <span className="rounded-full bg-background px-1.5 py-0 text-[10px] font-bold text-muted-foreground">
+            {count}
+          </span>
+        </button>
+        {onSelectAll && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 gap-1 px-1.5 text-[10px]"
+            title={`Seleziona tutte le ${count} email di "${label}"`}
+            onClick={onSelectAll}
+          >
+            <CheckSquare className="h-3 w-3" />
+            Seleziona tutte
+          </Button>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-6 w-6" title="Azioni gruppo">
+              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <MoreHorizontal className="h-3.5 w-3.5" />}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={onMarkAllRead}>
+              <MailOpen className="h-3.5 w-3.5 mr-2" />Segna tutte come lette
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Tag className="h-3.5 w-3.5 mr-2" />Assegna gruppo a tutte…
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-64 overflow-auto">
+                {groupsList.length === 0 && (
+                  <DropdownMenuItem disabled>Nessun gruppo definito</DropdownMenuItem>
+                )}
+                {groupsList.map((g) => (
+                  <DropdownMenuItem
+                    key={g.nome_gruppo}
+                    onClick={() => onAssignGroup(g.nome_gruppo)}
+                  >
+                    {g.icon && <span className="mr-2">{g.icon}</span>}
+                    <span>{g.nome_gruppo}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => requireConfirm("archive")}>
+              <Archive className="h-3.5 w-3.5 mr-2" />Archivia tutte
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => requireConfirm("delete")}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-2" />Elimina tutte (cestino)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <AlertDialog open={confirm != null} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-sm">
+              {confirm === "archive" ? "Archiviare" : "Cestinare"} {count} email di "{label}"?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              {confirm === "archive"
+                ? "Le email verranno spostate nella cartella Archive (operazione reversibile)."
+                : "Le email verranno spostate nel cestino (soft-delete, recuperabili dal Trash)."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirm === "archive") onArchiveAll();
+                else if (confirm === "delete") onDeleteAll();
+                setConfirm(null);
+              }}
+            >
+              Conferma
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

@@ -2,10 +2,14 @@ import { useState, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import { createLogger } from "@/lib/log";
+import { toRecordOrNull } from "@/lib/records";
+
+const log = createLogger("PartnerAIBar");
 
 interface Props {
   viewContext?: {
@@ -35,34 +39,33 @@ export function PartnerAIBar({ viewContext }: Props) {
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
+      const data = await invokeAi<Record<string, unknown>>("ai-assistant", {
+        scope: "partners",
         body: {
           messages: newMessages,
-          context: viewContext ? {
-            source: "partner_hub",
-            viewLevel: viewContext.viewLevel,
-            selectedCountry: viewContext.selectedCountry,
-            totalPartners: viewContext.totalPartners,
-            selectedCount: viewContext.selectedCount,
-          } : undefined,
+          viewContext: viewContext ?? null,
+        },
+        context: {
+          source: "PartnerAIBar",
+          route: "/v2/partners",
+          mode: "tool-decision",
+          extra: toRecordOrNull(viewContext) ?? undefined,
         },
       });
-
-      if (error) throw error;
       if (data?.error) {
-        toast.error(data.error);
+        toast.error(String(data.error));
         setLoading(false);
         return;
       }
 
-      const raw = data?.content || "";
+      const raw = String(data?.content || "");
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
       setLastResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
       setExpanded(true);
-    } catch (e: any) {
-      console.error("PartnerAIBar error:", e);
-      toast.error(e.message || "Errore di comunicazione");
+    } catch (e: unknown) {
+      log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
+      toast.error(e instanceof Error ? e.message : "Errore di comunicazione");
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -72,7 +75,7 @@ export function PartnerAIBar({ viewContext }: Props) {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-1.5">
-        <Bot className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+        <Bot className="w-3.5 h-3.5 text-primary shrink-0" />
         <div className="relative flex-1">
           <Input
             ref={inputRef}
@@ -80,7 +83,7 @@ export function PartnerAIBar({ viewContext }: Props) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Chiedi info su partner, paesi, network, blacklist…"
-            className="h-7 text-xs pr-8 border-violet-500/15 bg-card/60"
+            className="h-7 text-xs pr-8 border-primary/15 bg-card/60"
             disabled={loading}
           />
           <Button
@@ -89,16 +92,16 @@ export function PartnerAIBar({ viewContext }: Props) {
             className="absolute right-0.5 top-1/2 -translate-y-1/2 h-5 w-5"
             onClick={send}
             disabled={loading || !input.trim()}
-          >
+           aria-label="Invia">
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
           </Button>
         </div>
       </div>
 
       {lastResponse && (
-        <div className="bg-violet-500/5 border border-violet-500/15 rounded-md px-2 py-1.5">
+        <div className="bg-primary/5 border border-primary/15 rounded-md px-2 py-1.5">
           <button
-            className="flex items-center gap-1 text-[10px] font-medium text-violet-400 w-full text-left"
+            className="flex items-center gap-1 text-[10px] font-medium text-primary w-full text-left"
             onClick={() => setExpanded(!expanded)}
           >
             <Bot className="w-3 h-3" />

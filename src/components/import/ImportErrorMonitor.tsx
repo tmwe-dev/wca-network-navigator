@@ -8,10 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  AlertCircle, Wand2, Loader2, Download, ChevronDown, ChevronRight,
+  AlertCircle, Wand2, Loader2, ChevronDown, ChevronRight,
   CheckCircle2, XCircle, RotateCcw, Settings2, Play, Pause,
 } from "lucide-react";
-import { exportErrorsToCSV, type ImportError } from "@/hooks/useImportLogs";
+import { type ImportError } from "@/hooks/useImportLogs";
+import { createLogger } from "@/lib/log";
+import type { UseMutationResult } from "@tanstack/react-query";
+
+const log = createLogger("ImportErrorMonitor");
 
 interface ImportErrorMonitorProps {
   errors: ImportError[];
@@ -19,7 +23,7 @@ interface ImportErrorMonitorProps {
   correctedErrors: ImportError[];
   dismissedErrors: ImportError[];
   activeLogId: string | null;
-  fixErrors: any; // UseMutationResult
+  fixErrors: UseMutationResult<void, Error, { importLogId: string | null; customPrompt: string }, unknown>;
 }
 
 export function ImportErrorMonitor({
@@ -55,7 +59,7 @@ export function ImportErrorMonitor({
   // Single batch fix
   const handleSingleBatch = useCallback(async () => {
     if (!activeLogId) return;
-    const prompt = customPrompt.trim() || undefined;
+    const prompt = customPrompt.trim() || "";
     await fixErrors.mutateAsync({ importLogId: activeLogId, customPrompt: prompt });
   }, [activeLogId, fixErrors, customPrompt]);
 
@@ -72,11 +76,11 @@ export function ImportErrorMonitor({
 
     while (hasMore) {
       try {
-        const prompt = customPrompt.trim() || undefined;
-        const result = await fixErrors.mutateAsync({ importLogId: activeLogId, customPrompt: prompt });
-        corrected += result.corrected;
-        dismissed += result.dismissed;
-        hasMore = result.has_more;
+        const prompt = customPrompt.trim() || "";
+        const result = (await fixErrors.mutateAsync({ importLogId: activeLogId, customPrompt: prompt })) as unknown as { corrected: number; dismissed: number; has_more: boolean };
+        corrected += result?.corrected ?? 0;
+        dismissed += result?.dismissed ?? 0;
+        hasMore = !!result?.has_more;
         setBatchProgress({
           processed: corrected + dismissed,
           total,
@@ -86,7 +90,8 @@ export function ImportErrorMonitor({
 
         // Small delay between batches
         if (hasMore) await new Promise((r) => setTimeout(r, 1000));
-      } catch {
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
         hasMore = false;
       }
     }
@@ -215,16 +220,6 @@ export function ImportErrorMonitor({
               Correggi tutti ({pendingErrors.length})
             </Button>
           </>
-        )}
-        {(dismissedErrors.length > 0 || pendingErrors.length > 0) && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => exportErrorsToCSV([...pendingErrors, ...dismissedErrors])}
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" />
-            Esporta CSV errori
-          </Button>
         )}
       </div>
 

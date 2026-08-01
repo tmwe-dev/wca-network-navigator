@@ -1,113 +1,112 @@
 project_id = "zrbditqddhjkutzjycgi"
 
-[functions.scrape-wca-partners]
+[functions.health-check]
+# AUTH: public endpoint by design (load balancer / uptime probe, returns no sensitive data)
 verify_jwt = false
 
+[functions.ai-utility]
+verify_jwt = true
+
 [functions.analyze-partner]
+verify_jwt = true
+
+[functions.email-delivery-webhook]
+# AUTH: enforced in-code via HMAC signature (x-webhook-secret) — see _shared
 verify_jwt = false
 
 [functions.enrich-partner-website]
-verify_jwt = false
-
-[functions.scrape-wca-directory]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-download-job]
-verify_jwt = false
-
-[functions.deep-search-partner]
-verify_jwt = false
+verify_jwt = true
 
 [functions.parse-profile-ai]
-verify_jwt = false
+verify_jwt = true
 
 
 [functions.save-wca-cookie]
-verify_jwt = false
-
-[functions.scrape-wca-blacklist]
+# AUTH: enforced in-code via requireExtensionAuth (JWT user or x-extension-key)
 verify_jwt = false
 
 [functions.get-wca-credentials]
+# AUTH: enforced in-code via Authorization Bearer JWT + auth.getUser()
 verify_jwt = false
 
 [functions.save-ra-cookie]
+# AUTH: enforced in-code via requireExtensionAuth (JWT user or x-extension-key)
 verify_jwt = false
 
 [functions.get-ra-credentials]
+# AUTH: enforced in-code via Authorization Bearer JWT + auth.getUser()
 verify_jwt = false
 
 [functions.save-ra-prospects]
+# AUTH: enforced in-code via requireExtensionAuth (JWT user or x-extension-key)
 verify_jwt = false
 
 [functions.generate-aliases]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-email]
-verify_jwt = false
-
-[functions.check-subscription]
-verify_jwt = false
-
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.customer-portal]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
+verify_jwt = true
 
 [functions.consume-credits]
-verify_jwt = false
-
-[functions.buy-credits]
+# AUTH: enforced in-code via Authorization Bearer JWT + auth.getUser()
 verify_jwt = false
 
 [functions.generate-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.save-linkedin-cookie]
+# AUTH: enforced in-code via requireExtensionAuth (JWT user or x-extension-key)
 verify_jwt = false
 
 [functions.get-linkedin-credentials]
+# AUTH: enforced in-code via JWT + rate-limit 5 req/min/user
 verify_jwt = false
 
 [functions.process-ai-import]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-import-structure]
-verify_jwt = false
+verify_jwt = true
 
 [functions.deduplicate-partners]
-verify_jwt = false
-
-[functions.import-assistant]
-verify_jwt = false
-
-[functions.contacts-assistant]
-verify_jwt = false
-
-[functions.cockpit-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.agent-execute]
-verify_jwt = false
+verify_jwt = true
 
 [functions.elevenlabs-conversation-token]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sync-business-cards]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-inbox]
-verify_jwt = false
-
-[functions.extension-brain]
-verify_jwt = false
+verify_jwt = true
 
 [functions.whatsapp-ai-extract]
+# AUTH: enforced in-code via Authorization Bearer JWT + auth.getUser()
+verify_jwt = false
+
+[functions.analyze-email-edit]
+verify_jwt = true
+
+[functions.pending-action-executor]
+verify_jwt = true
+
+[functions.replay-domain-events]
+# AUTH: enforced in-code via x-cron-secret header (REPLAY_EVENTS_CRON_SECRET)
+verify_jwt = false
+
+[functions.tmwe-oauth-callback]
+# AUTH: public OAuth callback by design (provider redirect, state nonce verified in-code)
+verify_jwt = false
+
+[functions.tmwe-oauth-start]
+# AUTH: public OAuth init by design (returns redirect URL, no sensitive data)
 verify_jwt = false

@@ -1,21 +1,27 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
+    // Auth: solo utenti autenticati possono parsare profili
+    const auth = await requireAuth(req, dynCors);
+    if (isAuthError(auth)) return auth;
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ success: false, error: 'AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -28,7 +34,7 @@ Deno.serve(async (req) => {
     if (!partnerId) {
       return new Response(
         JSON.stringify({ success: false, error: 'partnerId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -42,21 +48,21 @@ Deno.serve(async (req) => {
     if (fetchErr || !partner) {
       return new Response(
         JSON.stringify({ success: false, error: 'Partner not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
     if (!partner.raw_profile_html && !partner.raw_profile_markdown) {
       return new Response(
         JSON.stringify({ success: false, error: 'No raw profile data saved. Re-download the partner first.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
     if (partner.ai_parsed_at && !forceReparse) {
       return new Response(
         JSON.stringify({ success: true, skipped: true, message: 'Already AI-parsed. Use forceReparse=true to re-run.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -83,15 +89,9 @@ REGOLE IMPORTANTI:
 PAGINA PROFILO:
 ${truncated}`
 
-    console.log(`AI parsing profile for partner ${partnerId} (${partner.company_name})...`)
+    
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'Sei un esperto di parsing dati logistici. Rispondi sempre con JSON strutturato tramite tool call.' },
@@ -169,8 +169,7 @@ ${truncated}`
           },
         }],
         tool_choice: { type: 'function', function: { name: 'extract_wca_profile' } },
-      }),
-    })
+      })
 
     if (!response.ok) {
       const errText = await response.text()
@@ -178,12 +177,12 @@ ${truncated}`
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Rate limit exceeded, try again later' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...dynCors, 'Content-Type': 'application/json' } }
         )
       }
       return new Response(
         JSON.stringify({ success: false, error: `AI error: ${response.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -194,15 +193,15 @@ ${truncated}`
       console.error('No tool call in AI response:', JSON.stringify(aiData))
       return new Response(
         JSON.stringify({ success: false, error: 'AI returned no data' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       )
     }
 
     const extracted = JSON.parse(toolCall.function.arguments)
-    console.log(`AI extracted for ${partner.company_name}: ${extracted.contacts?.length || 0} contacts`)
+    
 
     // Update partner with AI-extracted data (only fill gaps, don't overwrite existing good data)
-    const updates: Record<string, any> = { ai_parsed_at: new Date().toISOString() }
+    const updates: Record<string, unknown> = { ai_parsed_at: new Date().toISOString() }
 
     // Fill missing fields from AI extraction
     const { data: current } = await supabase
@@ -234,7 +233,7 @@ ${truncated}`
         .select('id, title, name, email, direct_phone, mobile')
         .eq('partner_id', partnerId)
 
-      const existingByName = new Map<string, any>()
+      const existingByName = new Map<string, Record<string, unknown>>()
       for (const c of (existingContacts || [])) {
         existingByName.set((c.name || '').toLowerCase(), c)
         existingByName.set((c.title || '').toLowerCase(), c)
@@ -247,7 +246,7 @@ ${truncated}`
 
         if (existing) {
           // Update missing fields
-          const contactUpdates: Record<string, any> = {}
+          const contactUpdates: Record<string, unknown> = {}
           if (aiContact.email && !existing.email) contactUpdates.email = aiContact.email
           if (aiContact.phone && !existing.direct_phone) contactUpdates.direct_phone = aiContact.phone
           if (aiContact.mobile && !existing.mobile) contactUpdates.mobile = aiContact.mobile
@@ -276,14 +275,14 @@ ${truncated}`
         .from('partner_networks')
         .select('network_name')
         .eq('partner_id', partnerId)
-      const existingNetSet = new Set((existingNets || []).map((n: any) => n.network_name))
+      const existingNetSet = new Set((existingNets || []).map((n: Record<string, unknown>) => n.network_name))
 
       const newNets = extracted.networks
-        .filter((n: any) => n.name && !existingNetSet.has(n.name))
-        .map((n: any) => ({
+        .filter((n: Record<string, unknown>) => n.name && !existingNetSet.has(n.name))
+        .map((n: Record<string, unknown>) => ({
           partner_id: partnerId,
           network_name: n.name,
-          expires: n.expires ? parseDateString(n.expires) : null,
+          expires: n.expires ? parseDateString(n.expires as string) : null,
         }))
 
       if (newNets.length > 0) {
@@ -298,7 +297,7 @@ ${truncated}`
         .from('partner_certifications')
         .select('certification')
         .eq('partner_id', partnerId)
-      const existingCertSet = new Set((existingCerts || []).map((c: any) => c.certification))
+      const existingCertSet = new Set((existingCerts || []).map((c: Record<string, unknown>) => c.certification))
 
       const newCerts = extracted.certifications
         .filter((c: string) => validCerts.includes(c) && !existingCertSet.has(c))
@@ -316,13 +315,13 @@ ${truncated}`
         extracted,
         contactsFound: extracted.contacts?.length || 0,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   }
 })

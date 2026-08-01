@@ -1,0 +1,239 @@
+/**
+ * useCrmContactsAsCompanies — adapter Contatti CRM → CompanyEntity[]
+ *
+ * Strategia:
+ *  - Recupera la lista paginata corrente di `imported_contacts` (chunks da
+ *    50 via `useContactsPaginated`). NON aggrega lato server: il
+ *    raggruppamento per azienda avviene client-side sulle pagine già caricate.
+ *  - I contatti sono raggruppati per `company_name` (case-insensitive +
+ *    trimming). Fallback al dominio email quando `company_name` è vuoto.
+ *  - I contatti senza azienda né dominio finiscono in un gruppo "Senza
+ *    azienda" coerente con il resto della lista.
+ */
+import { useMemo } from "react";
+import { useContactsPaginated } from "@/hooks/useContactsPaginated";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { deriveCountryCode } from "./countryHints";
+import type {
+  CompanyEntity,
+  ContactEntity,
+} from "@/v2/ui/molecules/CompanyCardList";
+import { toRecord } from "@/lib/records";
+
+interface RawContact {
+  id: string;
+  name?: string | null;
+  company_name?: string | null;
+  company_alias?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  city?: string | null;
+  country?: string | null;
+  position?: string | null;
+  wca_partner_id?: string | null;
+  interaction_count?: number | null;
+  unread_count?: number | null;
+  [k: string]: unknown;
+}
+
+function normalizeCompanyKey(name: string | null | undefined, email: string | null | undefined): {
+  key: string;
+  display: string;
+} {
+  const n = (name || "").trim();
+  if (n) return { key: n.toLowerCase(), display: n };
+  if (email && email.includes("@")) {
+    const dom = email.split("@")[1]?.toLowerCase().trim();
+    if (dom) return { key: `__dom:${dom}`, display: dom };
+  }
+  return { key: "__none", display: "Senza azienda" };
+}
+
+function toContactEntity(c: RawContact, companyId: string): ContactEntity {
+  const row = toRecord(c);
+  const inHolding =
+    row.in_holding_pattern === true || row.lead_status === "holding";
+  return {
+    id: c.id,
+    name: c.name || c.email || "—",
+    role: c.position ?? null,
+    email: c.email ?? null,
+    phone: c.phone ?? c.mobile ?? null,
+    channels: {
+      email: !!c.email,
+      whatsapp: !!(c.mobile && c.mobile.length > 4),
+      linkedin: false,
+      phone: !!(c.phone || c.mobile),
+    },
+    unreadCount: typeof c.unread_count === "number" ? c.unread_count : undefined,
+    inHolding,
+    companyId,
+    raw: c,
+  };
+}
+
+export interface UseCrmContactsAsCompaniesResult {
+  companies: CompanyEntity[];
+  isLoading: boolean;
+  error: unknown;
+  hasMore: boolean;
+  fetchNextPage: () => Promise<unknown>;
+  totalContacts: number;
+}
+
+export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
+  const { filters } = useGlobalFilters();
+
+  const queryFilters = useMemo(
+    () => ({
+      search: filters.search || undefined,
+      countries: Array.from(filters.crmSelectedCountries ?? new Set<string>()) as string[],
+      origins: Array.from(filters.crmOrigin ?? new Set<string>()) as string[],
+      quality: filters.crmQuality !== "all" ? filters.crmQuality : undefined,
+      channel: filters.crmChannel !== "all" ? filters.crmChannel : undefined,
+      wcaMatch: filters.crmWcaMatch !== "all"
+        ? (filters.crmWcaMatch as "matched" | "unmatched")
+        : undefined,
+      holdingPattern: (filters.holdingPattern as "out" | "in" | "all") || "all",
+      sort: "company_asc" as const,
+    }),
+    [filters]
+  );
+
+  const { data, isLoading, error, hasNextPage, fetchNextPage } = useContactsPaginated(
+    queryFilters
+  );
+
+  const allContacts = useMemo<RawContact[]>(() => {
+    const pages = data?.pages ?? [];
+    const all: RawContact[] = [];
+    for (const p of pages) {
+      const list = ((p as { contacts?: unknown[] }).contacts ?? []) as RawContact[];
+      all.push(...list);
+    }
+    return all;
+  }, [data]);
+
+  const companies = useMemo<CompanyEntity[]>(() => {
+    const groups = new Map<string, { display: string; rows: RawContact[] }>();
+    for (const c of allContacts) {
+      const { key, display } = normalizeCompanyKey(
+        c.company_alias || c.company_name,
+        c.email
+      );
+      const g = groups.get(key);
+      if (g) g.rows.push(c);
+      else groups.set(key, { display, rows: [c] });
+    }
+    const out: CompanyEntity[] = [];
+    for (const [key, g] of groups.entries()) {
+      const first = g.rows[0];
+      const id = `crm:${key}`;
+      const contacts = g.rows.map((row) => toContactEntity(row, id));
+      const matched = g.rows.some((r) => !!r.wca_partner_id);
+      // Holding: vero se ALMENO un contatto del gruppo risulta in attesa.
+      // Supporta sia il flag esplicito `in_holding_pattern` sia il
+      // `lead_status === 'holding'` (compatibilità con la pipeline lead).
+      const inHolding = g.rows.some((r) => {
+        const row = r as Record<string, unknown>;
+        return (
+          row.in_holding_pattern === true ||
+          row.lead_status === "holding"
+        );
+      });
+      out.push({
+        id,
+        name: g.display,
+        city: first.city ?? null,
+        countryCode: deriveCountryCode(first.country, first.city),
+        source: "crm",
+        origin: ((): string | null => {
+          const o = (first as Record<string, unknown>).origin as string | null | undefined;
+          return (o && o.trim()) || null;
+        })(),
+        enrichedAt: ((): string | null => {
+          const ts = g.rows
+            .map((r) => (r as Record<string, unknown>).deep_search_at as string | null | undefined)
+            .filter((v): v is string => !!v)
+            .sort()
+            .reverse();
+          return ts[0] ?? null;
+        })(),
+        logoUrl: ((): string | null => {
+          for (const r of g.rows) {
+            const ed = (r as Record<string, unknown>).enrichment_data as
+              | Record<string, unknown>
+              | null
+              | undefined;
+            const logo = ed && (ed.logo_url as string | undefined);
+            if (logo) return logo;
+          }
+          return null;
+        })(),
+        primaryEmail: ((): string | null => {
+          const r = g.rows.find((x) => !!x.email);
+          return (r?.email as string) ?? null;
+        })(),
+        primaryPhone: ((): string | null => {
+          const r = g.rows.find((x) => !!(x.phone || x.mobile));
+          return ((r?.phone as string) || (r?.mobile as string)) ?? null;
+        })(),
+        badge: matched
+          ? { label: "WCA", tone: "wca" }
+          : { label: "CRM", tone: "neutral" },
+        contactsCount: contacts.length,
+        contacts,
+        score: (() => {
+          const scores = g.rows
+            .map((r) => (r as unknown as { lead_score?: number | null }).lead_score)
+            .filter((s): s is number => typeof s === "number");
+          if (!scores.length) return null;
+          return Math.max(...scores);
+        })(),
+        primaryContact: contacts[0]
+          ? { name: contacts[0].name, role: contacts[0].role ?? null }
+          : null,
+        channels: {
+          email: contacts.some((c) => c.channels.email),
+          whatsapp: contacts.some((c) => c.channels.whatsapp),
+          linkedin: contacts.some((c) => c.channels.linkedin),
+          phone: contacts.some((c) => c.channels.phone),
+        },
+        meta: { holding: inHolding },
+        leadStatus: ((): string | null => {
+          // Prendi lo status più "avanzato" disponibile nel gruppo
+          const order = ["blacklisted", "archived", "holding", "qualified", "contacted", "new"];
+          for (const s of order) {
+            if (g.rows.some((r) => (r as Record<string, unknown>).lead_status === s)) return s;
+          }
+          return null;
+        })(),
+        isFavorite: g.rows.some((r) => (r as Record<string, unknown>).is_favorite === true),
+        lastInteractionAt: ((): string | null => {
+          const ts = g.rows
+            .map((r) => (r as Record<string, unknown>).last_interaction_at as string | null | undefined)
+            .filter((v): v is string => !!v)
+            .sort()
+            .reverse();
+          return ts[0] ?? null;
+        })(),
+        interactionCount: g.rows.reduce((s, r) => s + (Number((r as Record<string, unknown>).interaction_count) || 0), 0),
+        hasBca: g.rows.some((r) => !!(r as Record<string, unknown>).business_card_id),
+        bcaCount: g.rows.filter((r) => !!(r as Record<string, unknown>).business_card_id).length,
+        raw: { rows: g.rows },
+      });
+    }
+    out.sort((a, b) => a.name.localeCompare(b.name));
+    return out;
+  }, [allContacts]);
+
+  return {
+    companies,
+    isLoading,
+    error,
+    hasMore: !!hasNextPage,
+    fetchNextPage,
+    totalContacts: allContacts.length,
+  };
+}

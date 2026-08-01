@@ -16,9 +16,9 @@ export function AgentClientList({ agent }: Props) {
   if (!clients || clients.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-        <Users className="w-8 h-8 text-muted-foreground/40" />
+        <Users className="w-8 h-8 text-muted-foreground" />
         <p className="text-xs text-muted-foreground">Nessun cliente assegnato</p>
-        <p className="text-[10px] text-muted-foreground/60">I clienti verranno assegnati automaticamente alla prima attività</p>
+        <p className="text-[10px] text-muted-foreground">I clienti verranno assegnati automaticamente alla prima attività</p>
       </div>
     );
   }
@@ -27,7 +27,7 @@ export function AgentClientList({ agent }: Props) {
     <div className="space-y-1.5 py-2">
       <p className="text-xs text-muted-foreground px-1 mb-2">{clients.length} clienti assegnati</p>
       {clients.map((c) => {
-        const meta = (c as any).source_meta;
+        const _meta = (c as Record<string, unknown>).source_meta;
         return (
           <div
             key={c.id}

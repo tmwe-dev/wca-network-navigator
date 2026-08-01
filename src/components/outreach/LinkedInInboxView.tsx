@@ -2,21 +2,22 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  Linkedin, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
-  Send, X, PanelLeftClose, PanelLeftOpen, Download, Square,
+  Linkedin, Loader2, Search,
+  Send, X, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useLinkedInSync } from "@/hooks/useLinkedInSync";
 import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 import { useLinkedInBackfill } from "@/hooks/useLinkedInBackfill";
-import { supabase } from "@/integrations/supabase/client";
+import { useBackfillState } from "@/hooks/useBackfillState";
 import { toast } from "sonner";
+import { sendLinkedIn as sendLinkedInUnified } from "@/lib/inbox/sendMessage";
 
 type ChatThread = {
   contact: string;
@@ -25,7 +26,7 @@ type ChatThread = {
   messages: ChannelMessage[];
 };
 
-export function LinkedInInboxView() {
+export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string } = {}) {
   const [search, setSearch] = useState("");
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -34,11 +35,12 @@ export function LinkedInInboxView() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: messages = [], isLoading } = useChannelMessages("linkedin");
+  const { data: messages = [], isLoading } = useChannelMessages("linkedin", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
-  const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
-  const { enabled, toggle, isReading, isAvailable, readNow, lastSyncAt } = useLinkedInSync();
-  const { progress: bfProgress, startBackfill, stopBackfill } = useLinkedInBackfill();
+  const { sendMessage } = useLinkedInMessagingBridge();
+  const { isAvailable } = useLinkedInSync();
+  const { progress: bfProgress } = useLinkedInBackfill();
+  const { data: bfState } = useBackfillState("linkedin");
 
   // Group messages by contact
   const threads = useMemo(() => {
@@ -123,48 +125,35 @@ export function LinkedInInboxView() {
     setIsSending(true);
     setReplyText("");
     try {
-      // Use the same approach as TestExtensions: direct postMessage to extension
-      const result = await sendMessage(threadUrl, text);
+      // Unified wrapper: rate limit + circuit breaker + persistence + session tracking
+      const result = await sendLinkedInUnified(
+        { recipient_url: threadUrl, text, thread_id: threadUrl },
+        async (url, body) => sendMessage(url, body)
+      );
       if (!result.success) {
         toast.error(`Invio fallito: ${result.error || "Errore sconosciuto"}`);
         setReplyText(text);
         return;
       }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("channel_messages").insert({
-          user_id: user.id,
-          channel: "linkedin",
-          direction: "outbound",
-          to_address: activeTab,
-          body_text: text,
-          thread_id: threadUrl,
-          message_id_external: `li_out_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        });
-      }
       toast.success("Inviato ✓");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Errore invio");
       setReplyText(text);
     } finally {
       setIsSending(false);
     }
   };
 
-  const nextSyncIn = lastSyncAt
-    ? Math.max(0, Math.round((lastSyncAt + 30 * 60 * 1000 - Date.now()) / 60000))
-    : null;
+  // No more auto-sync timer
 
-  return (
-    <div className="flex h-full bg-background overflow-hidden">
-      {/* Sidebar */}
-      <div className={cn(
-        "flex flex-col border-r border-border bg-background shrink-0 transition-all duration-200",
-        sidebarOpen ? "w-[280px] min-w-[280px]" : "w-[48px] min-w-[48px]"
-      )}>
+  const sidebarNode = (
+    <div className={cn(
+      "flex flex-col h-full border-r border-border bg-background",
+      !sidebarOpen && "w-[48px] min-w-[48px] shrink-0"
+    )}>
         {!sidebarOpen ? (
           <div className="flex flex-col items-center pt-2 gap-2">
-            <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti">
+            <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
               <PanelLeftOpen className="w-4 h-4" />
             </Button>
             <div className="w-8 h-8 rounded-full bg-blue-500/15 flex items-center justify-center">
@@ -180,40 +169,10 @@ export function LinkedInInboxView() {
           <>
             <div className="flex-shrink-0 p-2 space-y-2 border-b border-border">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista">
+                <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
                   <PanelLeftClose className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="outline" onClick={readNow} disabled={isReading || !isAvailable} className="gap-1 h-7 text-[11px] px-2">
-                  {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                  Leggi
-                </Button>
-                <Button size="sm" variant={enabled ? "default" : "outline"} onClick={toggle} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2">
-                  {enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                  {enabled ? "ON" : "OFF"}
-                </Button>
-                <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
-                  {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                  LI
-                </Badge>
-                <Badge variant={isFireScrapeAvailable ? "default" : "secondary"} className="text-[9px] gap-0.5 h-5 px-1.5" title="FireScrape">
-                  {isFireScrapeAvailable ? "🔥" : "⭕"} FS
-                </Badge>
-                {/* Backfill */}
-                {bfProgress.status === "running" || bfProgress.status === "paused" ? (
-                  <Button size="sm" variant="destructive" onClick={stopBackfill} className="gap-1 h-7 text-[11px] px-2">
-                    <Square className="w-3 h-3" /> Stop
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={startBackfill} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2" title="Recupera messaggi (1 thread)">
-                    <Download className="w-3 h-3" /> Backfill
-                  </Button>
-                )}
               </div>
-
-              {/* Sync info */}
-              {enabled && nextSyncIn !== null && (
-                <p className="text-[9px] text-muted-foreground">🔄 Prossimo sync tra ~{nextSyncIn} min</p>
-              )}
 
               {/* Backfill progress */}
               {(bfProgress.status === "running" || bfProgress.status === "paused") && (
@@ -223,9 +182,6 @@ export function LinkedInInboxView() {
                       {bfProgress.status === "paused" ? "⏸ " : "▶ "}
                       <span className="text-foreground font-medium">{bfProgress.currentThread || "Preparazione..."}</span>
                     </p>
-                    {bfProgress.pauseReason && (
-                      <p className="text-yellow-600 dark:text-yellow-400">⚠ {bfProgress.pauseReason}</p>
-                    )}
                     <p>✓ {bfProgress.recoveredMessages} recuperati</p>
                     {bfProgress.lastError && (
                       <p className="text-red-400 truncate" title={bfProgress.lastError}>❌ {bfProgress.lastError}</p>
@@ -235,6 +191,12 @@ export function LinkedInInboxView() {
               )}
               {bfProgress.status === "done" && bfProgress.recoveredMessages > 0 && (
                 <p className="text-[9px] text-green-600">✓ {bfProgress.recoveredMessages} messaggi recuperati</p>
+              )}
+              {!(bfProgress.status === "running" || bfProgress.status === "paused") && bfState && bfState.totalChats > 0 && (
+                <p className="text-[9px] text-muted-foreground">
+                  Backfill: {bfState.completedChats}/{bfState.totalChats} thread completi
+                  {bfState.oldestMessageAt && ` • dal ${new Date(bfState.oldestMessageAt).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}`}
+                </p>
               )}
 
               <div className="relative">
@@ -300,10 +262,11 @@ export function LinkedInInboxView() {
             </ScrollArea>
           </>
         )}
-      </div>
+    </div>
+  );
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+  const mainNode = (
+    <div className="flex h-full flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Tabs */}
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
@@ -396,6 +359,7 @@ export function LinkedInInboxView() {
                   onClick={handleSendReply}
                   disabled={!replyText.trim() || isSending || !isAvailable}
                   className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+                  aria-label="Invia"
                 >
                   {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
@@ -408,11 +372,35 @@ export function LinkedInInboxView() {
               <Linkedin className="w-12 h-12 mx-auto opacity-30" />
               <p className="text-sm">Seleziona una conversazione</p>
               <p className="text-xs">Le chat LinkedIn appariranno come tabs in alto</p>
-              {enabled && <p className="text-[10px]">🔄 Sync automatico ogni 30 minuti</p>}
+              <p className="text-[10px]">Clicca "Leggi" per scaricare i messaggi</p>
             </div>
           </div>
         )}
-      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-full bg-background overflow-hidden">
+      {sidebarOpen ? (
+        <PersistentResizablePanelGroup
+          storageId="inbox-linkedin:list-vs-thread"
+          direction="horizontal"
+          className="h-full w-full"
+        >
+          <ResizablePanel defaultSize={26} minSize={15} maxSize={60} className="min-h-0">
+            {sidebarNode}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={74} minSize={30} className="min-h-0">
+            {mainNode}
+          </ResizablePanel>
+        </PersistentResizablePanelGroup>
+      ) : (
+        <>
+          {sidebarNode}
+          <div className="flex-1 min-w-0 min-h-0">{mainNode}</div>
+        </>
+      )}
     </div>
   );
 }

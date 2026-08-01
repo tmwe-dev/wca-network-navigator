@@ -1,11 +1,15 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useConversation } from "@elevenlabs/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, PhoneOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import VoicePresence from "@/components/intelliflow/VoicePresence";
 import type { Agent } from "@/hooks/useAgents";
+import { createLogger } from "@/lib/log";
+import { useAiInteractionLogger } from "@/hooks/useAiInteractionLogger";
+
+const log = createLogger("AgentVoiceCall");
 
 interface Props {
   agent: Agent;
@@ -14,12 +18,60 @@ interface Props {
 
 export function AgentVoiceCall({ agent, onClose }: Props) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const { logAiInteraction } = useAiInteractionLogger();
+  const bridgeTokenRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
+  const sessionStartRef = useRef<number>(0);
 
   const conversation = useConversation({
-    onConnect: () => setIsConnecting(false),
-    onDisconnect: () => onClose(),
+    onConnect: () => {
+      setIsConnecting(false);
+      sessionStartRef.current = Date.now();
+      void logAiInteraction({
+        interaction_type: "voice_conversation",
+        role: "system",
+        content: `Voice call started with agent ${agent.name}`,
+        agent_id: agent.id,
+        voice_id: agent.elevenlabs_agent_id ?? null,
+        surface: "agent_voice_call",
+        conversation_id: sessionIdRef.current,
+        metadata: { event: "connect", agent_name: agent.name, agent_role: agent.role },
+      });
+    },
+    onDisconnect: () => {
+      void logAiInteraction({
+        interaction_type: "voice_conversation",
+        role: "system",
+        content: `Voice call ended with agent ${agent.name}`,
+        agent_id: agent.id,
+        voice_id: agent.elevenlabs_agent_id ?? null,
+        surface: "agent_voice_call",
+        conversation_id: sessionIdRef.current,
+        duration_ms: sessionStartRef.current ? Date.now() - sessionStartRef.current : null,
+        metadata: { event: "disconnect" },
+      });
+      onClose();
+    },
+    onMessage: (message: unknown) => {
+      // Log every message exchanged in the voice conversation
+      const m = message as { source?: string; message?: string; type?: string };
+      const role: "user" | "assistant" =
+        m.source === "user" ? "user" : "assistant";
+      const text = typeof m.message === "string" ? m.message : "";
+      if (!text.trim()) return;
+      void logAiInteraction({
+        interaction_type: "voice_conversation",
+        role,
+        content: text,
+        agent_id: agent.id,
+        voice_id: agent.elevenlabs_agent_id ?? null,
+        surface: "agent_voice_call",
+        conversation_id: sessionIdRef.current,
+        metadata: { source: m.source, type: m.type },
+      });
+    },
     onError: (err) => {
-      console.error("Voice call error:", err);
+      log.error("voice call error", { message: String(err) });
       setIsConnecting(false);
     },
   });
@@ -32,18 +84,26 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const { data, error } = await supabase.functions.invoke(
+      const data = await invokeEdge<{ token?: string; bridge_token?: string }>(
         "elevenlabs-conversation-token",
-        { body: { agent_id: agent.elevenlabs_agent_id } }
+        {
+          body: { agent_id: agent.elevenlabs_agent_id },
+          context: "AgentVoiceCall.elevenlabs_conversation_token",
+        }
       );
-      if (error || !data?.token) throw new Error("No token received");
+      if (!data?.token) throw new Error("No token received");
+
+      // Store bridge token for the voice session
+      bridgeTokenRef.current = data.bridge_token || null;
 
       await conversation.startSession({
         conversationToken: data.token,
         connectionType: "webrtc",
       });
     } catch (e) {
-      console.error("Failed to start voice call:", e);
+      log.error("start voice call failed", {
+        message: e instanceof Error ? e.message : String(e),
+      });
       setIsConnecting(false);
     }
   }, [agent.elevenlabs_agent_id, conversation]);
@@ -67,14 +127,12 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
           animate={{ scale: 1 }}
           className="flex flex-col items-center gap-6 p-8 rounded-3xl bg-card border border-border/40 shadow-2xl max-w-sm w-full mx-4"
         >
-          {/* Agent identity */}
           <div className="flex flex-col items-center gap-2">
             <span className="text-5xl">{agent.avatar_emoji}</span>
             <h3 className="text-lg font-semibold text-foreground">{agent.name}</h3>
             <span className="text-xs text-muted-foreground capitalize">{agent.role}</span>
           </div>
 
-          {/* Status */}
           <div className="text-sm text-muted-foreground">
             {isConnecting && (
               <span className="flex items-center gap-2">
@@ -86,19 +144,15 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
                 {conversation.isSpeaking ? "Sta parlando…" : "In ascolto…"}
               </span>
             )}
-            {!isConnected && !isConnecting && (
-              <span>Pronto per la chiamata</span>
-            )}
+            {!isConnected && !isConnecting && <span>Pronto per la chiamata</span>}
           </div>
 
-          {/* Voice waveform */}
           <VoicePresence
             active={isConnected}
             speaking={conversation.isSpeaking}
             listening={isConnected && !conversation.isSpeaking}
           />
 
-          {/* Controls */}
           <div className="flex items-center gap-4">
             {!isConnected ? (
               <Button
@@ -125,7 +179,6 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
             )}
           </div>
 
-          {/* Close */}
           {!isConnected && (
             <button
               onClick={onClose}

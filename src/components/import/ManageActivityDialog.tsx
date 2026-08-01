@@ -11,12 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Clock, Save, Loader2 } from "lucide-react";
+import { CalendarIcon, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
+import { updateActivityById } from "@/application/data/uiShellQueries";
 
 interface Activity {
   id: string;
@@ -52,7 +54,7 @@ export function ManageActivityDialog({
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>();
-  const [dueTime, setDueTime] = useState("09:00");
+  const [_dueTime, _setDueTime] = useState("09:00");
 
   useEffect(() => {
     if (activity) {
@@ -73,7 +75,7 @@ export function ManageActivityDialog({
     if (!activity) return;
     setSaving(true);
     try {
-      const updates: Record<string, any> = {
+      const updates: Record<string, unknown> = {
         status,
         priority,
         description: description || null,
@@ -86,14 +88,10 @@ export function ManageActivityDialog({
         updates.completed_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
-        .from("activities")
-        .update(updates)
-        .eq("id", activity.id);
-
+      const { error } = await updateActivityById(activity.id, updates);
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
       toast({ title: "Attività aggiornata" });
       onOpenChange(false);
     } catch (err) {

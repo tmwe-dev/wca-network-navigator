@@ -3,22 +3,40 @@
  * 🤖 Claude Engine V8 · Nessun bridge, chiamate dirette
  */
 
+import { createLogger } from "@/lib/log";
+import { ApiError } from "@/lib/api/apiError";
+import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
+import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
+import {
+  safeParseDiscover,
+  safeParseScrape,
+  safeParseCheckIds,
+  safeParseJobStart,
+} from "./wcaAppApi.schemas";
+
+const _log = createLogger("wcaAppApi");
+
 const BASE = "https://wca-app.vercel.app/api";
 
-// ─── Cookie cache ───────────────────────────────────────────────
-const COOKIE_KEY = "wca_session_cookie";
-const COOKIE_TTL = 8 * 60 * 1000; // 8 min
+/**
+ * assertOk — Vol. II §5.3
+ * Standardizza la conversione Response → ApiError quando lo status non
+ * è ok. Tutti gli endpoint del modulo passano per qui invece di lanciare
+ * `new Error("X failed: 4xx")`.
+ */
+async function assertOk(res: Response, context: string): Promise<void> {
+  if (res.ok) return;
+  throw await ApiError.fromResponse(res, context);
+}
+
+// ─── Cookie cache (SSOT: wcaCookieStore) ────────────────────────
+// P4.2 — usa wcaCookieStore come SSOT, no duplicazione localStorage.
+// P4.4 — pre-refresh: getWcaCookie ritorna null se TTL scaduto; qui aggiungiamo
+// un margine di 1 min per refresh proattivo prima del cutoff.
 
 async function getOrRefreshCookie(): Promise<string> {
-  try {
-    const cached = localStorage.getItem(COOKIE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed.cookie && Date.now() - parsed.savedAt < COOKIE_TTL) {
-        return parsed.cookie;
-      }
-    }
-  } catch {}
+  const cached = getWcaCookie();
+  if (cached) return cached;
 
   const res = await fetch(`${BASE}/login`, {
     method: "POST",
@@ -27,11 +45,34 @@ async function getOrRefreshCookie(): Promise<string> {
   });
   const data = await res.json();
   const cookie = data.cookies || data.cookie;
-  if (!cookie) throw new Error(data.error || "Login WCA fallito");
-  try {
-    localStorage.setItem(COOKIE_KEY, JSON.stringify({ cookie, savedAt: Date.now() }));
-  } catch {}
+  if (!cookie) {
+    throw new ApiError({
+      code: "UNAUTHENTICATED",
+      message: data.error || "Login WCA fallito",
+      details: { context: "wcaLogin" },
+    });
+  }
+  setWcaCookie(cookie);
   return cookie;
+}
+
+/**
+ * P4.3 — Checkpoint gate per chiamate user-facing a wca-app.
+ * Aspetta la green-zone (≥20s tra una richiesta e l'altra) prima di
+ * eseguire fetch verso endpoint sensibili (discover/scrape/enrich/verify).
+ * Background workers (job-start/job-status/worker) sono ESCLUSI: gestiscono
+ * il rate limit lato server.
+ */
+async function gateAndMark(context: string): Promise<void> {
+  const ok = await waitForGreenLight();
+  if (!ok) {
+    throw new ApiError({
+      code: "RATE_LIMITED",
+      message: "WCA checkpoint denied",
+      details: { context },
+    });
+  }
+  markRequestSent();
 }
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -79,7 +120,7 @@ export interface ScrapeProfile {
   certifications?: string[];
   branch_cities?: string[];
   country_code?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ScrapeResult {
@@ -169,7 +210,7 @@ export interface VerifyResult {
 
 export interface PartnersResult {
   success: boolean;
-  partners?: any[];
+  partners?: unknown[];
   total?: number;
   page?: number;
   error?: string;
@@ -195,19 +236,23 @@ export async function wcaDiscover(
   options?: { cookie?: string; networks?: string[]; searchTerm?: string; searchBy?: string; city?: string }
 ): Promise<DiscoverResult> {
   const cookie = options?.cookie || (await getOrRefreshCookie());
-  const filters: Record<string, any> = { country };
+  const filters: Record<string, unknown> = { country };
   if (options?.networks?.length) filters.networks = options.networks;
   if (options?.searchTerm) filters.searchTerm = options.searchTerm;
   if (options?.searchBy) filters.searchBy = options.searchBy;
   if (options?.city) filters.city = options.city;
 
+  await gateAndMark("wcaDiscover");
   const res = await fetch(`${BASE}/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cookies: cookie, page, filters }),
   });
-  if (!res.ok) throw new Error(`Discover failed: ${res.status}`);
-  return res.json();
+  await assertOk(res, "wcaDiscover");
+  const json = await res.json();
+  // Vol. II §5.3 — runtime schema check (best-effort, non-breaking)
+  safeParseDiscover(json);
+  return json;
 }
 
 /** Discover TUTTI i membri (tutte le pagine) */
@@ -233,25 +278,28 @@ export async function wcaDiscoverAll(
 
 /** Scrape profili (SSO auto server-side, no cookie needed) */
 export async function wcaScrape(wcaIds: number[], networkDomain?: string): Promise<ScrapeResult> {
-  const body: Record<string, any> = { wcaIds };
+  const body: Record<string, unknown> = { wcaIds };
   if (networkDomain) body.networkDomain = networkDomain;
+  await gateAndMark("wcaScrape");
   const res = await fetch(`${BASE}/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Scrape failed: ${res.status}`);
-  return res.json();
+  await assertOk(res, "wcaScrape");
+  const json = await res.json();
+  safeParseScrape(json);
+  return json;
 }
 
 /** Salva profilo su Supabase */
-export async function wcaSave(profile: Record<string, any>): Promise<SaveResult> {
+export async function wcaSave(profile: Record<string, unknown>): Promise<SaveResult> {
   const res = await fetch(`${BASE}/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ profile }),
   });
-  if (!res.ok) throw new Error(`Save failed: ${res.status}`);
+  await assertOk(res, "wcaSave");
   return res.json();
 }
 
@@ -262,8 +310,10 @@ export async function wcaCheckIds(ids: number[], country?: string): Promise<Chec
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids, country }),
   });
-  if (!res.ok) throw new Error(`Check-IDs failed: ${res.status}`);
-  return res.json();
+  await assertOk(res, "wcaCheckIds");
+  const json = await res.json();
+  safeParseCheckIds(json);
+  return json;
 }
 
 // ─── Job System (server-side worker) ────────────────────────────
@@ -283,8 +333,10 @@ export async function wcaJobStart(
       searchBy: options?.searchBy,
     }),
   });
-  if (!res.ok) throw new Error(`Job-start failed: ${res.status}`);
-  return res.json();
+  await assertOk(res, "wcaJobStart");
+  const json = await res.json();
+  safeParseJobStart(json);
+  return json;
 }
 
 /** Pausa job */
@@ -294,7 +346,7 @@ export async function wcaJobPause(jobId: string): Promise<JobStartResult> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "pause", jobId }),
   });
-  if (!res.ok) throw new Error(`Job-pause failed: ${res.status}`);
+  await assertOk(res, "wcaJobPause");
   return res.json();
 }
 
@@ -305,7 +357,7 @@ export async function wcaJobResume(jobId: string): Promise<JobStartResult> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "resume", jobId }),
   });
-  if (!res.ok) throw new Error(`Job-resume failed: ${res.status}`);
+  await assertOk(res, "wcaJobResume");
   return res.json();
 }
 
@@ -316,7 +368,7 @@ export async function wcaJobCancel(jobId: string): Promise<JobStartResult> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "cancel", jobId }),
   });
-  if (!res.ok) throw new Error(`Job-cancel failed: ${res.status}`);
+  await assertOk(res, "wcaJobCancel");
   return res.json();
 }
 
@@ -324,7 +376,7 @@ export async function wcaJobCancel(jobId: string): Promise<JobStartResult> {
 export async function wcaJobStatus(jobId?: string): Promise<JobStatusResult> {
   const url = jobId ? `${BASE}/job-status?jobId=${jobId}` : `${BASE}/job-status`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Job-status failed: ${res.status}`);
+  await assertOk(res, "wcaJobStatus");
   return res.json();
 }
 
@@ -332,7 +384,7 @@ export async function wcaJobStatus(jobId?: string): Promise<JobStatusResult> {
 export async function wcaWorkerTrigger(jobId?: string): Promise<WorkerResult> {
   const url = jobId ? `${BASE}/worker?jobId=${jobId}` : `${BASE}/worker`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Worker failed: ${res.status}`);
+  await assertOk(res, "wcaWorkerTrigger");
   return res.json();
 }
 
@@ -344,6 +396,7 @@ export async function wcaEnrich(
   networkDomain: string,
   options?: { originalWcaId?: number; networkName?: string }
 ): Promise<EnrichResult> {
+  await gateAndMark("wcaEnrich");
   const res = await fetch(`${BASE}/enrich`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -354,18 +407,19 @@ export async function wcaEnrich(
       networkName: options?.networkName,
     }),
   });
-  if (!res.ok) throw new Error(`Enrich failed: ${res.status}`);
+  await assertOk(res, "wcaEnrich");
   return res.json();
 }
 
 /** Verifica membro su network specifico */
 export async function wcaVerify(wcaId: number, network: string): Promise<VerifyResult> {
+  await gateAndMark("wcaVerify");
   const res = await fetch(`${BASE}/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ wcaId, network }),
   });
-  if (!res.ok) throw new Error(`Verify failed: ${res.status}`);
+  await assertOk(res, "wcaVerify");
   return res.json();
 }
 
@@ -387,14 +441,14 @@ export async function wcaPartners(options?: {
   if (options?.select) params.set("select", options.select);
 
   const res = await fetch(`${BASE}/partners?${params}`);
-  if (!res.ok) throw new Error(`Partners failed: ${res.status}`);
+  await assertOk(res, "wcaPartners");
   return res.json();
 }
 
 /** Conta partners per paese */
 export async function wcaCountryCounts(): Promise<CountryCountsResult> {
   const res = await fetch(`${BASE}/partners?action=country_counts`);
-  if (!res.ok) throw new Error(`Country-counts failed: ${res.status}`);
+  await assertOk(res, "wcaCountryCounts");
   return res.json();
 }
 

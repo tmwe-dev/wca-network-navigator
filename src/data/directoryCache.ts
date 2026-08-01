@@ -1,0 +1,31 @@
+/**
+ * DAL — directory_cache
+ */
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type DirectoryCacheInsert = Database["public"]["Tables"]["directory_cache"]["Insert"];
+
+export async function upsertDirectoryCache(entry: DirectoryCacheInsert) {
+  const { error } = await supabase.from("directory_cache").upsert(entry, { onConflict: "country_code,network_name" });
+  if (error) throw error;
+}
+
+export async function findDirectoryCache(countryCodes: string[], networks?: string[]) {
+  let q = supabase.from("directory_cache").select("*").in("country_code", countryCodes);
+  if (networks && networks.length > 0) q = q.in("network_name", networks);
+  else q = q.eq("network_name", "");
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Righe cache directory per singolo paese + network (network "" = nessun filtro). */
+export async function findDirectoryCacheByCountryNetwork(countryCode: string, networkName: string) {
+  const { data } = await supabase
+    .from("directory_cache")
+    .select("*")
+    .eq("country_code", countryCode)
+    .eq("network_name", networkName);
+  return data;
+}

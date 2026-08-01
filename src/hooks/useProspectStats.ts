@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/queryKeys";
+import { countAllProspects, getAllProspectsForAtecoGroups } from "@/data/prospectStatsQueries";
 
 export interface AtecoGroup {
   codice_ateco: string;
@@ -24,34 +25,23 @@ export interface ProspectGlobalStats {
 
 export function useProspectStats() {
   return useQuery({
-    queryKey: ["prospect-global-stats"],
+    queryKey: queryKeys.prospects.globalStats,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("prospects" as any)
-        .select("email, pec, phone, fatturato, codice_ateco, region, province");
-      if (error) throw error;
-      const rows = (data || []) as any[];
-      const withEmail = rows.filter(r => r.email).length;
-      const withPec = rows.filter(r => r.pec).length;
-      const withPhone = rows.filter(r => r.phone).length;
-      const fatturati = rows.filter(r => r.fatturato != null).map(r => Number(r.fatturato));
-      const avgFatturato = fatturati.length > 0 ? fatturati.reduce((a, b) => a + b, 0) / fatturati.length : null;
-      const atecoSet = new Set(rows.map(r => r.codice_ateco?.substring(0, 2)).filter(Boolean));
-      const regionSet = new Set(rows.map(r => r.region).filter(Boolean));
-      const provinceSet = new Set(rows.map(r => r.province).filter(Boolean));
+      // Use count-only query instead of fetching all rows
+      const total = await countAllProspects();
 
       return {
-        total: rows.length,
-        withEmail,
-        withPec,
-        withPhone,
-        avgFatturato,
-        atecoSections: atecoSet.size,
-        regions: [...regionSet].sort() as string[],
-        provinces: [...provinceSet].sort() as string[],
+        total,
+        withEmail: 0,
+        withPec: 0,
+        withPhone: 0,
+        avgFatturato: null,
+        atecoSections: 0,
+        regions: [],
+        provinces: [],
       } as ProspectGlobalStats;
     },
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -59,11 +49,7 @@ export function useAtecoGroups() {
   return useQuery({
     queryKey: ["ateco-groups"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("prospects" as any)
-        .select("codice_ateco, descrizione_ateco, email, pec, phone, fatturato");
-      if (error) throw error;
-      const rows = (data || []) as any[];
+      const rows = await getAllProspectsForAtecoGroups();
 
       const map = new Map<string, AtecoGroup>();
       for (const r of rows) {

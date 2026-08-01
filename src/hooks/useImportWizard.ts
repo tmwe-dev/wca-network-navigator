@@ -5,6 +5,9 @@ import { useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const wizardLog = createLogger("useImportWizard");
 import {
   useImportLogs,
   useImportLog,
@@ -16,16 +19,14 @@ import {
   useCreateImportFromParsedRows,
   type ImportLog,
 } from "@/hooks/useImportLogs";
-import {
-  parseFile,
-  transformRow,
-  TARGET_COLUMNS,
-  TARGET_SCHEMA,
-} from "@/lib/import";
+import { parseFile, transformRow, TARGET_COLUMNS } from "@/lib/import";
+import { deleteImportErrors, deleteImportedContactsByLogId, deleteImportLog } from "@/data/importLogs";
+import { findImportDuplicates } from "@/data/contacts";
+import { queryKeys } from "@/lib/queryKeys";
 
 // ── Utility helpers ──
 
-function normalizeKey(key: string): string {
+export function normalizeKey(key: string): string {
   return key
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -36,22 +37,22 @@ function normalizeKey(key: string): string {
     .replace(/^_|_$/g, "");
 }
 
-function isReimportCorrection(headers: string[]): boolean {
+export function isReimportCorrection(headers: string[]): boolean {
   const normalized = headers.map(normalizeKey);
   return normalized.includes("_import_id") || normalized.includes("motivo_errore") || normalized.includes("import_id");
 }
 
-function applyMapping(row: Record<string, any>, mapping: Record<string, string>): Record<string, string | null> {
-  return transformRow(row, mapping);
+function applyMapping(row: Record<string, unknown>, mapping: Record<string, string>): Record<string, string | null> {
+  return transformRow(row as never, mapping);
 }
 
 export interface AiMappingResult {
   column_mapping: Record<string, string>;
-  parsed_rows: any[];
+  parsed_rows: Array<Record<string, unknown>>;
   confidence: number;
   warnings: string[];
   unmapped_columns?: string[];
-  data_quality?: any;
+  data_quality?: Record<string, unknown>;
 }
 
 export function useImportWizard() {
@@ -64,7 +65,7 @@ export function useImportWizard() {
   const [groupName, setGroupName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingRows, setPendingRows] = useState<any[]>([]);
+  const [pendingRows, setPendingRows] = useState<Record<string, unknown>[]>([]);
   const [aiMapping, setAiMapping] = useState<AiMappingResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +83,7 @@ export function useImportWizard() {
   const [uploading, setUploading] = useState(false);
 
   // ── Re-import correction ──
-  const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => {
+  const handleReimportCorrection = useCallback(async (rows: Record<string, unknown>[], headers: string[]) => {
     setUploading(true);
     try {
       const idKey = headers.find(h => {
@@ -118,11 +119,11 @@ export function useImportWizard() {
             if (val && String(val).trim()) updateData[col] = String(val).trim();
           }
           if (Object.keys(updateData).length === 0) return false;
-          const { error } = await supabase
-            .from("imported_contacts")
-            .update(updateData)
-            .eq("id", String(importId).trim());
-          return !error;
+          const { updateContact } = await import("@/data/contacts");
+          try {
+            await updateContact(String(importId).trim(), updateData);
+            return true;
+          } catch { return false; }
         });
         const results = await Promise.all(promises);
         updatedCount += results.filter(Boolean).length;
@@ -130,8 +131,8 @@ export function useImportWizard() {
       }
 
       toast({ title: `${updatedCount} record aggiornati con successo${errorCount > 0 ? ` (${errorCount} saltati)` : ""}` });
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
     } catch (err) {
       toast({ title: "Errore aggiornamento", description: String(err), variant: "destructive" });
     } finally {
@@ -142,12 +143,12 @@ export function useImportWizard() {
   // ── Delete import ──
   const handleDeleteImport = useCallback(async (logId: string) => {
     try {
-      await supabase.from("import_errors").delete().eq("import_log_id", logId);
-      await supabase.from("imported_contacts").delete().eq("import_log_id", logId);
-      await supabase.from("import_logs").delete().eq("id", logId);
+      await deleteImportErrors(logId);
+      await deleteImportedContactsByLogId(logId);
+      await deleteImportLog(logId);
       if (activeLogId === logId) setActiveLogId(null);
-      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
-      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
       toast({ title: "Import eliminato" });
     } catch (err) {
       toast({ title: "Errore eliminazione", description: String(err), variant: "destructive" });
@@ -184,7 +185,7 @@ export function useImportWizard() {
       setPendingRows(rowObjects);
       const sampleSize = Math.min(50, rowObjects.length);
       const step = rowObjects.length / sampleSize;
-      const sample: any[] = [];
+      const sample: Array<Record<string, unknown>> = [];
       for (let i = 0; i < sampleSize; i++) {
         sample.push(rowObjects[Math.floor(i * step)]);
       }
@@ -206,7 +207,7 @@ export function useImportWizard() {
         });
       }
     } catch (err) {
-      console.error(err);
+      wizardLog.error("file analysis failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
@@ -224,7 +225,7 @@ export function useImportWizard() {
       });
       setAiMapping(result);
       toast({ title: `${result.parsed_rows.length} righe estratte (confidence: ${Math.round(result.confidence * 100)}%)` });
-    } catch {}
+    } catch (e) { wizardLog.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   }, [pasteText, analyzeStructure]);
 
   // ── Drag & Drop ──
@@ -251,13 +252,42 @@ export function useImportWizard() {
 
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const uploadMode = pendingFile ? "file" : "paste";
       const fileName = uploadMode === "paste"
         ? `testo_incollato_${new Date().toISOString().slice(0, 10)}`
         : pendingFile?.name || "file_importato";
+
+      // P5.1 — Dedup detection (warn, non bloccante)
+      try {
+        const sourceRows = uploadMode === "file" ? pendingRows : aiMapping.parsed_rows;
+        const mapping = aiMapping.column_mapping || {};
+        const emails: string[] = [];
+        const companies: string[] = [];
+        const emailCol = Object.entries(mapping).find(([, v]) => v === "email")?.[0];
+        const companyCol = Object.entries(mapping).find(([, v]) => v === "company_name")?.[0];
+        for (const r of sourceRows) {
+          const e = emailCol ? (r as Record<string, unknown>)[emailCol] : (r as Record<string, unknown>).email;
+          const c = companyCol ? (r as Record<string, unknown>)[companyCol] : (r as Record<string, unknown>).company_name;
+          if (e && String(e).trim()) emails.push(String(e).trim());
+          if (c && String(c).trim()) companies.push(String(c).trim());
+        }
+        if (emails.length || companies.length) {
+          const dups = await findImportDuplicates(user.id, emails.slice(0, 500), companies.slice(0, 500));
+          if (dups.length > 0) {
+            const byEmail = new Set(dups.filter(d => d.match_email).map(d => d.match_email));
+            const byCompany = new Set(dups.filter(d => d.source === "partner_company").map(d => d.match_company));
+            toast({
+              title: `Possibili duplicati: ${dups.length}`,
+              description: `${byEmail.size} email + ${byCompany.size} aziende già presenti. Verificali nello staging dopo l'import.`,
+            });
+          }
+        }
+      } catch (dedupErr) {
+        wizardLog.debug("dedup check skipped", { error: dedupErr instanceof Error ? dedupErr.message : String(dedupErr) });
+      }
 
       let log: ImportLog;
       if (uploadMode === "file" && pendingFile) {
@@ -272,7 +302,10 @@ export function useImportWizard() {
           return { ...mapped, _raw: row };
         });
         const nonEmptyCount = finalRows.filter(r =>
-          TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
+          TARGET_COLUMNS.some(col => {
+            const val = (r as Record<string, unknown>)[col];
+            return val != null && String(val).trim();
+          })
         ).length;
         const fillRate = nonEmptyCount / finalRows.length;
         if (fillRate < 0.1) {
@@ -360,14 +393,14 @@ export function useImportWizard() {
     const incomplete = contacts.filter(c => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
     const SEP = ";";
-    const escapeCell = (val: any) => {
-      if (val === null || val === undefined) return "";
+    const escapeCell = (val: string) => {
+      if (val == null || val === undefined) return "";
       const s = String(val).replace(/"/g, '""');
       if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) return `"${s}"`;
       return s;
     };
     const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
-    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [
+    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, unknown>) : [
       "company_name", "name", "email", "phone", "mobile", "country", "city", "address", "zip_code"
     ];
     const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
@@ -376,10 +409,10 @@ export function useImportWizard() {
       const motivo = !c.company_name && !c.name
         ? "azienda e nome mancanti"
         : !c.company_name ? "azienda mancante" : "nome mancante";
-      const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, any>;
+      const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, unknown>;
       const row = [
         escapeCell(c.id),
-        ...originalHeaders.map(h => escapeCell(raw[h])),
+        ...originalHeaders.map(h => escapeCell(String(raw[h] ?? ""))),
         escapeCell(motivo),
       ];
       csvRows.push(row.join(SEP));

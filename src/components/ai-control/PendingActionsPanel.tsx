@@ -1,0 +1,506 @@
+/**
+ * PendingActionsPanel — Displays and manages ai_pending_actions
+ * Including prompt refinement suggestions from agent-prompt-refiner.
+ * LOVABLE-93: edit draft prima di approvazione
+ */
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ShieldCheck, XCircle, ChevronDown, ChevronUp, ArrowRight, Edit3, RotateCcw, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { it } from "date-fns/locale";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  findPendingAiActions,
+  updatePendingAction,
+  setDecisionLogReview,
+  findActiveAgentPrompts,
+  updateAgentSystemPrompt,
+} from "@/application/data/aiPendingActions";
+import { invokeAi } from "@/lib/ai/invokeAi";
+import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
+import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
+import { SiblingRiskBadge } from "@/components/ai-control/SiblingRiskBadge";
+import { ACTION_META, SOURCE_META, ApproveGuardedButton } from "./pendingActionsPanel.constants";
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("PendingActionsPanel");
+
+export function PendingActionsPanel() {
+  const qc = useQueryClient();
+  const { dispatch: dispatchApproved } = useApproveAndDispatch();
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  // LOVABLE-93: draft editing state
+  const [draftEditId, setDraftEditId] = useState<string | null>(null);
+  const [editedDraftSubject, setEditedDraftSubject] = useState("");
+  const [editedDraftBody, setEditedDraftBody] = useState("");
+  // Same-Company Sibling Guard: doppia conferma esplicita per id azione
+  const [confirmedRisk, setConfirmedRisk] = useState<Record<string, boolean>>({});
+
+  const { data: actions = [], isLoading } = useQuery({
+    queryKey: queryKeys.ai.pendingActions,
+    queryFn: async () => {
+      return await findPendingAiActions({ actionType: typeFilter, source: sourceFilter });
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (params: { id: string; draftSubject?: string; draftBody?: string }) => {
+      const action = actions.find((a) => a.id === params.id);
+
+      // LOVABLE-93: if draft was edited, update action_payload before approval
+      const updatePayload: Record<string, unknown> = { status: "approved", executed_at: new Date().toISOString() };
+      if (params.draftSubject !== undefined || params.draftBody !== undefined) {
+        updatePayload.action_payload = mergeJsonObject(action?.action_payload, {
+          ...(params.draftSubject !== undefined && { draft_subject: params.draftSubject }),
+          ...(params.draftBody !== undefined && { draft_body: params.draftBody }),
+          user_edited: true,
+        });
+      }
+
+      await updatePendingAction(params.id, updatePayload);
+      if (action?.decision_log_id) {
+        await setDecisionLogReview(action.decision_log_id, "approved");
+      }
+      // Handle prompt_refinement: apply suggestions to agent system_prompt
+      if (action?.action_type === "prompt_refinement" && action.suggested_content) {
+        try {
+          const suggestions = JSON.parse(action.suggested_content);
+          const agents = await findActiveAgentPrompts((await supabase.auth.getSession()).data.session?.user?.id || "");
+          if (agents.length) {
+            const agent = agents[0];
+            let updatedPrompt = agent.system_prompt || "";
+            for (const s of suggestions) {
+              if (s.current_text && updatedPrompt.includes(s.current_text)) {
+                updatedPrompt = updatedPrompt.replace(s.current_text, s.suggested_text);
+              } else if (s.suggested_text) {
+                updatedPrompt += `\n\n${s.suggested_text}`;
+              }
+            }
+            await updateAgentSystemPrompt(agent.id, updatedPrompt);
+          }
+        } catch {
+          /* prompt refinement apply failed */
+        }
+      }
+      // v3.9.56+ pipeline: send_* canalizzati nei bridge browser via
+      // useApproveAndDispatch (LI/WA via estensione, email via send-edge).
+      // Tutti gli altri tipi restano nell'executor server-side.
+      const sendTypes = new Set(["send_email", "send_proposal", "send_whatsapp", "send_linkedin", "linkedin_connect"]);
+      const at = action?.action_type ?? "";
+      if (sendTypes.has(at)) {
+        try {
+          await dispatchApproved(params.id);
+        } catch (e) {
+          log.error("dispatchApproved failed", { error: e instanceof Error ? e.message : String(e) });
+        }
+      } else if (at !== "prompt_refinement") {
+        try {
+          const { error: execError } = await supabase.functions.invoke("pending-action-executor", {
+            body: { pending_action_id: params.id },
+          });
+          if (execError) log.error("Execution failed:", { error: execError });
+        } catch {
+          /* pending-action-executor invocation failed */
+        }
+      }
+    },
+    onSuccess: () => {
+      toast.success("Azione approvata — esecuzione avviata");
+      setDraftEditId(null);
+      qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions });
+    },
+    onError: (err: Error) => toast.error(`Errore nell'approvazione: ${err.message}`),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const action = actions.find((a) => a.id === id);
+      await updatePendingAction(id, { status: "rejected" });
+      if (action?.decision_log_id) {
+        await setDecisionLogReview(action.decision_log_id, "rejected", reason || null);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Azione rifiutata");
+      setRejectId(null);
+      setRejectReason("");
+      qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions });
+    },
+    onError: () => toast.error("Errore nel rifiuto"),
+  });
+
+  // LOVABLE-93: regenerate draft using generate-email function
+  const regenerateDraftMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const action = actions.find((a) => a.id === id);
+      if (!action) throw new Error("Action not found");
+
+      const data = await invokeAi<{ draft_subject?: string; draft_body?: string }>("generate-email", {
+        scope: "email",
+        body: {
+          pending_action_id: id,
+          contact_id: action.contact_id,
+          partner_id: action.partner_id,
+          email_address: action.email_address,
+        },
+        context: { source: "PendingActionsPanel", route: "/v2/ai-control", mode: "regenerate-draft" },
+      });
+      if (data?.draft_subject || data?.draft_body) {
+        // Update local draft state with regenerated content
+        setEditedDraftSubject(data.draft_subject || "");
+        setEditedDraftBody(data.draft_body || "");
+        toast.success("Draft rigenerato");
+      }
+    },
+    onError: (err: Error) => toast.error(`Errore rigenerazione: ${err.message}`),
+  });
+
+  const confidenceColor = (c: number) =>
+    c >= 0.85
+      ? "bg-emerald-500/20 text-emerald-400"
+      : c >= 0.7
+        ? "bg-yellow-500/20 text-yellow-400"
+        : "bg-red-500/20 text-red-400";
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge variant="secondary" className="text-xs">
+          {actions.length} pending
+        </Badge>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40 h-8 text-xs">
+            <SelectValue placeholder="Tipo azione" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti i tipi</SelectItem>
+            {Object.entries(ACTION_META).map(([k, v]) => (
+              <SelectItem key={k} value={k}>
+                {v.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sourceFilter} onValueChange={setSourceFilter}>
+          <SelectTrigger className="w-40 h-8 text-xs">
+            <SelectValue placeholder="Sorgente" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte le sorgenti</SelectItem>
+            {Object.entries(SOURCE_META).map(([k, v]) => (
+              <SelectItem key={k} value={k}>
+                {v.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-40">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      ) : actions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <ShieldCheck className="h-12 w-12 mb-3 text-primary" />
+          <p className="text-sm font-medium">Nessuna azione in attesa</p>
+          <p className="text-xs">L'AI sta lavorando autonomamente.</p>
+        </div>
+      ) : (
+        <ScrollArea className="h-[calc(100vh-280px)]">
+          <div className="space-y-3 pr-2">
+            {actions.map((action) => {
+              const meta = ACTION_META[action.action_type] ?? ACTION_META.send_email;
+              const Icon = meta.icon;
+              const srcMeta = SOURCE_META[action.source ?? "ai_classifier"] ?? SOURCE_META.ai_classifier;
+              const SrcIcon = srcMeta.icon;
+              const expanded = expandedId === action.id;
+              const partnerName = (action as Record<string, unknown> & { partners?: { company_name?: string } })
+                .partners?.company_name;
+
+              return (
+                <div
+                  key={action.id}
+                  className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${meta.color}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-foreground">{meta.label}</span>
+                          <Badge className={`text-[10px] px-1.5 ${confidenceColor(action.confidence ?? 0)}`}>
+                            {Math.round((action.confidence ?? 0) * 100)}%
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] gap-1">
+                            <SrcIcon className="h-2.5 w-2.5" />
+                            {srcMeta.label}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {action.email_address}
+                          {partnerName ? ` · ${partnerName}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      {action.created_at
+                        ? formatDistanceToNow(new Date(action.created_at), { addSuffix: true, locale: it })
+                        : ""}
+                    </span>
+                  </div>
+
+                  {/* Reasoning preview */}
+                  {action.reasoning && (
+                    <button
+                      onClick={() => setExpandedId(expanded ? null : action.id)}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+                    >
+                      {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      <span className={expanded ? "" : "line-clamp-2"}>{action.reasoning}</span>
+                    </button>
+                  )}
+
+                  {/* Same-Company Sibling Guard: rosso + doppia conferma per le azioni di invio */}
+                  {(action.action_type === "send_email" ||
+                    action.action_type === "send_whatsapp" ||
+                    action.action_type === "send_linkedin") && (
+                    <SiblingRiskBadge
+                      partnerId={action.partner_id}
+                      contactId={action.contact_id}
+                      confirmed={!!confirmedRisk[action.id]}
+                      onConfirmedChange={(c) => setConfirmedRisk((prev) => ({ ...prev, [action.id]: c }))}
+                    />
+                  )}
+
+                  {/* LOVABLE-93: Draft editor section for email-like actions */}
+                  {(action.action_type === "reply" ||
+                    action.action_type === "send_email" ||
+                    action.action_type === "forward") &&
+                  draftEditId === action.id ? (
+                    <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
+                      <p className="text-xs font-medium text-foreground">Modifica Draft</p>
+                      {getJsonField<string>(action.action_payload, "draft_subject") !== undefined && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Oggetto</label>
+                          <Input
+                            value={editedDraftSubject}
+                            onChange={(e) => setEditedDraftSubject(e.target.value)}
+                            placeholder="Subject"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      )}
+                      {getJsonField<string>(action.action_payload, "draft_body") !== undefined && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Corpo</label>
+                          <Textarea
+                            value={editedDraftBody}
+                            onChange={(e) => setEditedDraftBody(e.target.value)}
+                            placeholder="Email body"
+                            className="h-24 text-xs resize-none"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 pt-2">
+                        <ApproveGuardedButton
+                          partnerId={action.partner_id ?? null}
+                          contactId={action.contact_id ?? null}
+                          confirmed={!!confirmedRisk[action.id]}
+                          label="Approva Modificato"
+                          className="h-7 text-xs gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                          isSendAction={true}
+                          onApprove={() => {
+                            approveMutation.mutate({
+                              id: action.id,
+                              draftSubject: editedDraftSubject,
+                              draftBody: editedDraftBody,
+                            });
+                            setDraftEditId(null);
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => setDraftEditId(null)}
+                        >
+                          Annulla
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Suggested content preview */}
+                      {action.suggested_content &&
+                        (action.action_type === "reply" ||
+                          action.action_type === "send_email" ||
+                          action.action_type === "forward") && (
+                          <div className="border border-border/30 rounded-lg p-2 text-xs text-muted-foreground bg-muted/20 max-h-24 overflow-y-auto">
+                            {action.suggested_content}
+                          </div>
+                        )}
+                    </>
+                  )}
+
+                  {/* Prompt refinement suggestions */}
+                  {action.action_type === "prompt_refinement" &&
+                    action.suggested_content &&
+                    (() => {
+                      try {
+                        const suggestions = JSON.parse(action.suggested_content);
+                        return (
+                          <div className="space-y-2 border border-border/30 rounded-lg p-3 bg-muted/10">
+                            <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                              <Sparkles className="h-3 w-3" /> Suggerimenti miglioramento prompt:
+                            </p>
+                            {Array.isArray(suggestions) &&
+                              suggestions.map((s: Record<string, string>, idx: number) => (
+                                <div key={idx} className="text-xs space-y-1 border-l-2 border-primary/30 pl-2">
+                                  <p className="font-medium text-foreground">{s.section}</p>
+                                  {s.current_text && (
+                                    <p className="text-muted-foreground line-through">{s.current_text}</p>
+                                  )}
+                                  <p className="flex items-center gap-1 text-emerald-400">
+                                    <ArrowRight className="h-2.5 w-2.5" /> {s.suggested_text}
+                                  </p>
+                                  <p className="text-muted-foreground italic">{s.reason}</p>
+                                </div>
+                              ))}
+                          </div>
+                        );
+                      } catch {
+                        return null;
+                      }
+                    })()}
+
+                  {/* LOVABLE-93: Actions — with draft editing for email-like actions */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    {rejectId === action.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          placeholder="Motivo rifiuto (opzionale)"
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          className="h-7 text-xs flex-1"
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 text-xs"
+                          onClick={() => rejectMutation.mutate({ id: action.id, reason: rejectReason })}
+                        >
+                          Conferma
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setRejectId(null);
+                            setRejectReason("");
+                          }}
+                        >
+                          Annulla
+                        </Button>
+                      </div>
+                    ) : draftEditId === action.id ? null : (
+                      <>
+                        {/* Show draft editing UI for email-like actions with draft fields */}
+                        {(action.action_type === "reply" ||
+                          action.action_type === "send_email" ||
+                          action.action_type === "forward") &&
+                          (getJsonField<string>(action.action_payload, "draft_subject") !== undefined ||
+                            getJsonField<string>(action.action_payload, "draft_body") !== undefined) && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs gap-1 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                                onClick={() => {
+                                  const payload = asJsonObject(action.action_payload);
+                                  setEditedDraftSubject((payload.draft_subject as string | undefined) ?? "");
+                                  setEditedDraftBody((payload.draft_body as string | undefined) ?? "");
+                                  setDraftEditId(action.id);
+                                }}
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                Modifica & Approva
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs gap-1 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10"
+                                onClick={() => regenerateDraftMutation.mutate(action.id)}
+                                disabled={regenerateDraftMutation.isPending}
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Rigenera Draft
+                              </Button>
+                              <ApproveGuardedButton
+                                partnerId={action.partner_id ?? null}
+                                contactId={action.contact_id ?? null}
+                                confirmed={!!confirmedRisk[action.id]}
+                                label="Approva come è"
+                                className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                                isSendAction={true}
+                                onApprove={() => approveMutation.mutate({ id: action.id })}
+                              />
+                            </>
+                          )}
+                        {/* For non-draft actions, show standard approve */}
+                        {!(
+                          (action.action_type === "reply" ||
+                            action.action_type === "send_email" ||
+                            action.action_type === "forward") &&
+                          (getJsonField<string>(action.action_payload, "draft_subject") !== undefined ||
+                            getJsonField<string>(action.action_payload, "draft_body") !== undefined)
+                        ) && (
+                          <ApproveGuardedButton
+                            partnerId={action.partner_id ?? null}
+                            contactId={action.contact_id ?? null}
+                            confirmed={!!confirmedRisk[action.id]}
+                            label="Approva"
+                            className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                            isSendAction={["send_email", "send_whatsapp", "send_linkedin"].includes(action.action_type)}
+                            onApprove={() => approveMutation.mutate({ id: action.id })}
+                          />
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                          onClick={() => setRejectId(action.id)}
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Rifiuta
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
+  );
+}

@@ -20,8 +20,8 @@ type RAResponse = {
   errors?: number;
   currentCompany?: string;
   log?: Array<{ time: string; msg: string }>;
-  data?: any;
-  results?: any[];
+  data?: Record<string, unknown>;
+  results?: Array<Record<string, unknown>>;
   version?: string;
 };
 
@@ -71,9 +71,9 @@ export function useRAExtensionBridge() {
   }, []);
 
   const sendMessage = useCallback(
-    (action: string, payload?: Record<string, any>, timeoutMs = 600000): Promise<RAResponse> => {
+    (action: string, payload?: Record<string, unknown>, timeoutMs = 600000): Promise<RAResponse> => {
       return new Promise((resolve) => {
-        const requestId = `ra_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const requestId = `ra_${action}_${crypto.randomUUID()}`;
 
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);
@@ -100,7 +100,7 @@ export function useRAExtensionBridge() {
 
   /** Phase 1: Search only — returns list of companies without scraping profiles */
   const searchOnly = useCallback(
-    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: any; delaySeconds?: number }) => {
+    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: Record<string, unknown>; delaySeconds?: number }) => {
       return sendMessage("searchOnly", { params }, 600000); // 10min timeout
     },
     [sendMessage]

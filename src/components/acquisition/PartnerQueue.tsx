@@ -27,7 +27,7 @@ interface PartnerQueueProps {
   onPartnerClick?: (wcaId: number) => void;
 }
 
-export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll, onPartnerClick }: PartnerQueueProps) {
+export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll, onPartnerClick }: PartnerQueueProps) {
   const selectedCount = items.filter((i) => selectedIds.has(i.wca_id)).length;
   const allSelected = items.length > 0 && selectedCount === items.length;
 
@@ -81,7 +81,7 @@ export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSele
                 ) : item.status === "error" ? (
                   <Circle className="w-4 h-4 text-destructive fill-destructive" />
                 ) : (
-                  <Circle className="w-3.5 h-3.5 text-muted-foreground/40" />
+                  <Circle className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
               </div>
 
@@ -100,7 +100,7 @@ export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSele
                 )}>
                   {item.company_name}
                 </div>
-                <div className="text-[10px] text-muted-foreground/70 truncate">{item.city}</div>
+                <div className="text-[10px] text-muted-foreground truncate">{item.city}</div>
               </div>
 
               {/* Already downloaded badge */}

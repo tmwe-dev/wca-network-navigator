@@ -1,4 +1,4 @@
-import { useDownloadJobs, type DownloadJob } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { ActiveJobCard } from "./ActiveJobCard";
 import { JobQueue } from "./JobQueue";
 import { useTheme, t } from "./theme";

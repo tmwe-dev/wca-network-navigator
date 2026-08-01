@@ -2,9 +2,20 @@
  * Directory scanning logic — extracted from useAcquisitionPipeline.tsx
  * Pure async function that returns scan results without managing React state.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { toJsonValue } from "@/lib/typedJson";
+import { findPartnerWcaIdsByCountry, findPartnerIdsByWcaIds } from "@/data/partners";
+import { findDirectoryCacheByCountryNetwork } from "@/data/directoryCache";
+import { findPartnerNetworksByPartnerIds } from "@/data/partnerNetworks";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { isApiError } from "@/lib/api/apiError";
+import { createLogger } from "@/lib/log";
 import type { QueueItem } from "@/components/acquisition/types";
 import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
+import { upsertDirectoryCache } from "@/data/directoryCache";
+import { findPartnerContacts, findPartnerNetworks, findPartnerServices, findPartnerSocialLinks } from "@/data/partnerRelations";
+import { asEnrichment } from "@/lib/partnerUtils";
+
+const log = createLogger("scanDirectory");
 
 export interface ScanResult {
   queue: QueueItem[];
@@ -21,11 +32,7 @@ export async function scanDirectory(
 
   // Gather existing partner WCA IDs
   for (const code of selectedCountries) {
-    const { data: partners } = await supabase
-      .from("partners")
-      .select("wca_id")
-      .eq("country_code", code)
-      .not("wca_id", "is", null);
+    const partners = await findPartnerWcaIdsByCountry(code);
     partners?.forEach((p) => {
       if (p.wca_id) existingWcaIds.add(p.wca_id);
     });
@@ -36,54 +43,61 @@ export async function scanDirectory(
     const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [""];
 
     for (const net of networkFilter) {
-      const { data: cached } = await supabase
-        .from("directory_cache")
-        .select("*")
-        .eq("country_code", code)
-        .eq("network_name", net);
+      const cached = await findDirectoryCacheByCountryNetwork(code, net);
 
       if (cached && cached.length > 0) {
         for (const entry of cached) {
-          const members = (entry.members as any[]) || [];
-          members.forEach((m: any) => {
-            if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
+          const members = (entry.members as Array<Record<string, unknown>>) || [];
+          members.forEach((m) => {
+            const wcaId = m.wca_id as number | undefined;
+            if (wcaId && !allMembers.find((x) => x.wca_id === wcaId)) {
               allMembers.push({
-                wca_id: m.wca_id,
-                company_name: m.company_name || `WCA ${m.wca_id}`,
+                wca_id: wcaId,
+                company_name: (m.company_name as string) || `WCA ${wcaId}`,
                 country_code: code,
-                city: m.city || "",
+                city: (m.city as string) || "",
                 status: "pending",
-                alreadyDownloaded: existingWcaIds.has(m.wca_id),
+                alreadyDownloaded: existingWcaIds.has(wcaId),
               });
             }
           });
         }
       } else {
-        const { data: scanResult } = await supabase.functions.invoke(
-          "scrape-wca-directory",
-          { body: { countryCode: code, network: net } }
-        );
+        type ScrapeResult = { members?: Array<{ wca_id: number; company_name?: string; city?: string }> };
+        let scanResult: ScrapeResult | null = null;
+        try {
+          scanResult = await invokeEdge<ScrapeResult>("scrape-wca-directory", {
+            body: { countryCode: code, network: net },
+            context: "scanDirectory",
+          });
+        } catch (err) {
+          // Vol. II §4.4: errori transient di scan non devono bloccare
+          // l'intero ciclo di paesi/network. Loggiamo e continuiamo.
+          if (isApiError(err)) {
+            log.warn("scrape-wca-directory failed", { code, net, errCode: err.code });
+          } else {
+            log.warn("scrape-wca-directory unknown error", { code, net });
+          }
+          scanResult = null;
+        }
 
         if (scanResult?.members) {
-          const membersJson = scanResult.members.map((m: any) => ({
+          const membersJson = scanResult.members.map((m) => ({
             company_name: m.company_name,
             city: m.city,
             country_code: code,
             wca_id: m.wca_id,
           }));
-          await supabase.from("directory_cache").upsert(
-            {
+          await upsertDirectoryCache({
               country_code: code,
               network_name: net,
-              members: membersJson as any,
+              members: toJsonValue(membersJson),
               total_results: scanResult.members.length,
               scanned_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-            },
-            { onConflict: "country_code,network_name" }
-          );
+            });
 
-          scanResult.members.forEach((m: any) => {
+          scanResult.members.forEach((m) => {
             if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
               allMembers.push({
                 wca_id: m.wca_id,
@@ -117,18 +131,12 @@ export async function enrichQueueWithNetworks(
   if (wcaIdsInDb.length === 0) return {};
 
   try {
-    const { data: partnersWithIds } = await supabase
-      .from("partners")
-      .select("id, wca_id")
-      .in("wca_id", wcaIdsInDb);
+    const partnersWithIds = await findPartnerIdsByWcaIds(wcaIdsInDb);
 
     if (!partnersWithIds || partnersWithIds.length === 0) return {};
 
     const partnerIds = partnersWithIds.map(p => p.id);
-    const { data: networkRows } = await supabase
-      .from("partner_networks")
-      .select("partner_id, network_name")
-      .in("partner_id", partnerIds);
+    const networkRows = await findPartnerNetworksByPartnerIds(partnerIds);
 
     if (!networkRows) return {};
 
@@ -141,7 +149,8 @@ export async function enrichQueueWithNetworks(
       }
     }
     return wcaIdToNetworks;
-  } catch {
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
     return {};
   }
 }
@@ -150,17 +159,19 @@ export async function enrichQueueWithNetworks(
  * Load full partner preview data for a given WCA ID.
  */
 export async function loadPartnerPreview(wcaId: number) {
-  const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
+  const { findPartnerByWcaId } = await import("@/data/partners");
+  const partner = await findPartnerByWcaId(wcaId);
   if (!partner) return null;
 
-  const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
-    supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
-    supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
-    supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
-    supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
+  const [contacts, nets, svcs, socialLinks] = await Promise.all([
+    findPartnerContacts(partner.id, "name, title, email, direct_phone, mobile"),
+    findPartnerNetworks(partner.id),
+    findPartnerServices(partner.id),
+    findPartnerSocialLinks(partner.id),
   ]);
 
-  const ed = partner.enrichment_data as any;
+  interface SocialLinkRow { platform?: string; url?: string; [key: string]: unknown }
+  const ed = asEnrichment(partner.enrichment_data);
 
   return {
     company_name: partner.company_name,
@@ -170,17 +181,17 @@ export async function loadPartnerPreview(wcaId: number) {
     logo_url: partner.logo_url || undefined,
     contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
     services: (svcs || []).map(s => s.service_category),
-    key_markets: ed?.key_markets || [],
-    key_routes: ed?.key_routes || [],
+    key_markets: (ed as Record<string, unknown>)?.key_markets as string[] || [],
+    key_routes: ((ed as Record<string, unknown>)?.key_routes as Array<{ from: string; to: string }> | string[] || []).map(r => typeof r === "string" ? { from: r, to: "" } : r),
     networks: (nets || []).map(n => n.network_name),
     rating: partner.rating ? Number(partner.rating) : undefined,
     website: partner.website || undefined,
     profile_description: partner.profile_description || undefined,
-    linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
-    warehouse_sqm: ed?.warehouse_sqm,
-    employees: ed?.employee_count,
-    founded: ed?.founding_year ? String(ed.founding_year) : undefined,
-    fleet: ed?.has_own_fleet ? (ed.fleet_details || "Sì") : undefined,
+    linkedin_links: ((socialLinks || []) as SocialLinkRow[]).filter((l) => l.platform === "linkedin" && l.url).map((l) => ({ name: "LinkedIn", url: l.url! })),
+    warehouse_sqm: (ed as Record<string, unknown>)?.warehouse_sqm as number | undefined,
+    employees: (ed as Record<string, unknown>)?.employee_count as number | undefined,
+    founded: (ed as Record<string, unknown>)?.founding_year ? String((ed as Record<string, unknown>).founding_year) : undefined,
+    fleet: (ed as Record<string, unknown>)?.has_own_fleet ? ((ed as Record<string, unknown>).fleet_details as string || "Sì") : undefined,
     contactSource: "extension" as const,
   };
 }

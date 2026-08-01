@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Database, Users, Mail, Search, Mic, Brain, Shield, Zap, FileText, Layers, GitMerge, CreditCard, Upload, BarChart3, Bell, BookOpen } from "lucide-react";
+import { Database, Mail, Search, Mic, Brain, Shield, FileText, Layers, GitMerge, CreditCard, Upload, BarChart3, Bell, BookOpen } from "lucide-react";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -188,7 +188,7 @@ const ToolActivationBar = ({ scenarioKey, visible, phase = "active", chainHighli
                 <div key={step} className="flex items-center gap-1">
                   <motion.span
                     className={`text-[7px] tracking-[0.15em] font-mono transition-all duration-500 ${
-                      isCurrent ? "text-primary/50" : isActive ? "text-muted-foreground/25" : "text-muted-foreground/10"
+                      isCurrent ? "text-primary" : isActive ? "text-muted-foreground" : "text-muted-foreground"
                     }`}
                     animate={isCurrent ? { opacity: [0.4, 0.8, 0.4] } : {}}
                     transition={{ duration: 1.5, repeat: Infinity }}
@@ -196,7 +196,7 @@ const ToolActivationBar = ({ scenarioKey, visible, phase = "active", chainHighli
                     {step}
                   </motion.span>
                   {i < chainSteps.length - 1 && (
-                    <span className={`text-[7px] ${isActive ? "text-muted-foreground/15" : "text-muted-foreground/6"}`}>→</span>
+                    <span className={`text-[7px] ${isActive ? "text-muted-foreground" : "text-muted-foreground"}`}>→</span>
                   )}
                 </div>
               );
@@ -205,7 +205,7 @@ const ToolActivationBar = ({ scenarioKey, visible, phase = "active", chainHighli
 
           {/* Operational Tools */}
           <div className="flex items-center gap-1 py-2 px-1 flex-wrap">
-            <span className="text-[8px] text-muted-foreground/15 tracking-[0.2em] uppercase mr-2 font-mono">TOOLS</span>
+            <span className="text-[8px] text-muted-foreground tracking-[0.2em] uppercase mr-2 font-mono">TOOLS</span>
             {tools.map((tool, i) => {
               const revealed = i < revealedCount;
               return (
@@ -242,7 +242,7 @@ const ToolActivationBar = ({ scenarioKey, visible, phase = "active", chainHighli
           {/* Sources */}
           {sources.length > 0 && (
             <div className="flex items-center gap-1 py-1 px-1 flex-wrap">
-              <span className="text-[8px] text-muted-foreground/15 tracking-[0.2em] uppercase mr-2 font-mono">FONTI</span>
+              <span className="text-[8px] text-muted-foreground tracking-[0.2em] uppercase mr-2 font-mono">FONTI</span>
               {sources.map((src, i) => (
                 <motion.span
                   key={src.name}

@@ -1,3 +1,4 @@
+import type { RAProspect } from "@/types/ra";
 import { TrendingUp, DollarSign, Users, Star } from "lucide-react";
 
 function formatCurrency(n: number | null) {
@@ -8,7 +9,7 @@ function formatCurrency(n: number | null) {
 }
 
 interface RACompanyKPIProps {
-  prospect: any;
+  prospect: RAProspect;
 }
 
 export function RACompanyKPI({ prospect }: RACompanyKPIProps) {
@@ -28,7 +29,7 @@ export function RACompanyKPI({ prospect }: RACompanyKPIProps) {
 }
 
 function KPICard({ icon: Icon, iconColor, label, value, subtitle }: {
-  icon: any; iconColor: string; label: string; value: string; subtitle?: string;
+  icon: React.ElementType; iconColor: string; label: string; value: string; subtitle?: string;
 }) {
   return (
     <div className="p-4 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-xl hover:border-white/20 transition-colors">

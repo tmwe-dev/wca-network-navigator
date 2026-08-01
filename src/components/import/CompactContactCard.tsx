@@ -21,6 +21,18 @@ function countryFlag(country: string | null): string {
   return String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
 }
 
+// Origin-based left border accent
+function getOriginAccent(origin: string | null): string {
+  switch (origin?.toLowerCase()) {
+    case "wca": return "from-chart-1/60 to-chart-1/20";
+    case "import": return "from-chart-3/60 to-chart-3/20";
+    case "bca": return "from-amber-500/60 to-amber-500/20";
+    case "manual": return "from-emerald-500/60 to-emerald-500/20";
+    case "report_aziende": return "from-chart-4/60 to-chart-4/20";
+    default: return "from-muted-foreground/40 to-muted-foreground/10";
+  }
+}
+
 export function CompactContactCard({
   contact,
   isSelected,
@@ -34,7 +46,7 @@ export function CompactContactCard({
 
   return (
     <div
-      className={`group relative rounded-lg border p-2.5 text-xs transition-all ${
+      className={`group relative rounded-lg border p-2.5 text-xs transition-all overflow-hidden ${
         transferred
           ? "opacity-50 bg-muted/30"
           : isSelected
@@ -42,6 +54,8 @@ export function CompactContactCard({
           : "border-border hover:border-primary/30 hover:shadow-sm"
       }`}
     >
+      {/* Origin accent border */}
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l ${getOriginAccent(c.origin)}`} />
       <div className="flex items-start gap-2">
         <Checkbox
           checked={isSelected}
@@ -63,7 +77,7 @@ export function CompactContactCard({
             <div className="text-muted-foreground truncate">
               {c.name}
               {c.position && (
-                <span className="ml-1 text-[10px] text-primary/70">• {c.position}</span>
+                <span className="ml-1 text-[10px] text-primary">• {c.position}</span>
               )}
             </div>
           )}
@@ -113,6 +127,7 @@ export function CompactContactCard({
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onQuickEmail(); }}
               title="Crea attività email"
+              aria-label="Invia"
             >
               <Mail className="w-3 h-3" />
             </Button>
@@ -124,6 +139,7 @@ export function CompactContactCard({
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onQuickCall(); }}
               title="Crea attività chiamata"
+              aria-label="Chiama"
             >
               <Phone className="w-3 h-3" />
             </Button>
@@ -135,6 +151,7 @@ export function CompactContactCard({
               className="h-6 w-6"
               onClick={(e) => { e.stopPropagation(); onViewDetail(); }}
               title="Dettaglio"
+              aria-label="Visualizza"
             >
               <Eye className="w-3 h-3" />
             </Button>

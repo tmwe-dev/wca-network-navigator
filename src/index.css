@@ -1,65 +1,225 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=Quicksand:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Protezione swipe-back/forward del trackpad senza rompere gli scroll
+ * interni: blocchiamo il chaining orizzontale a livello di html/body
+ * (impedisce navigazione browser) e di #root (impedisce che uno scroll
+ * orizzontale interno arrivato a fine corsa propaghi alla pagina).
+ * Lo scroll verticale e i container annidati restano intatti. */
+html, body {
+  overscroll-behavior-x: none;
+}
+#root {
+  overscroll-behavior-x: contain;
+}
+
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 215 25% 15%;
+    /* Premium Navy & Gold Palette — ported from WueForm (light) */
+    /* Font for Amber default theme */
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --background: 220 25% 97%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 215 25% 27%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 199 89% 94%;
-    --accent-foreground: 199 89% 30%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 20%;
+    --primary-foreground: 60 9% 98%;
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 60 9% 98%;
+    --accent: 213 94% 68%;
+    --accent-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
+    --destructive-foreground: 60 9% 98%;
+    --success: 160 84% 39%;
+    --success-foreground: 60 9% 98%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 199 89% 48%;
-    --radius: 0.5rem;
-    --sidebar-background: 215 28% 17%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 22%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 25% 25%;
-    --sidebar-ring: 199 89% 48%;
-    --chart-1: 199 89% 48%;
+    --warning-foreground: 222 47% 11%;
+    --gold: 45 93% 47%;
+    --gold-light: 45 93% 58%;
+    --gold-dark: 40 88% 38%;
+    --gold-foreground: 222 47% 11%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+    --radius: 1rem;
+    /* Field background — leggermente più chiaro del background per identificare aree compilabili */
+    --field: 0 0% 100%;
+    --field-foreground: 222 47% 11%;
+    /* Design system IntelliFlow (kept) */
+    --info: 262 60% 66%;
+    --info-foreground: 262 60% 95%;
+    /* Glass & gradients */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.3;
+    --glass-shadow: 220 25% 10% / 0.1;
+    /* Theme-aware glass surfaces (pannelli/canvas/command bar).
+     * In light: superficie chiara, bordo scuro tenue. In dark: viceversa. */
+    --glass-surface: 0 0% 100%;
+    --glass-edge: 220 13% 18%;
+    --gradient-start: 217 91% 60%;
+    --gradient-mid: 213 94% 68%;
+    --gradient-end: 199 89% 70%;
+    --glow-primary: 217 91% 60%;
+    --glow-gold: 45 93% 55%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217 91% 60%;
+    --chart-1: 217 91% 60%;
     --chart-2: 173 80% 40%;
     --chart-3: 262 83% 58%;
-    --chart-4: 38 92% 50%;
+    --chart-4: 45 93% 47%;
     --chart-5: 0 84% 60%;
+    /* Theme accent variables — Amber default (light) */
+    --theme-accent-bg: rgba(146, 64, 14, 0.08);
+    --theme-accent-border: rgba(180, 83, 9, 0.15);
+    --theme-accent-hover: rgba(146, 64, 14, 0.12);
+    --theme-accent-icon-bg: rgba(180, 83, 9, 0.08);
+    --theme-header-start: rgba(120, 60, 10, 0.45);
+    --theme-header-mid: rgba(180, 100, 30, 0.25);
+    --theme-header-end: rgba(220, 160, 80, 0.08);
+    --theme-cta-border-mid: rgba(180, 120, 60, 0.15);
+    --theme-cta-border-end: rgba(200, 140, 70, 0.25);
+    --theme-dot-color: rgba(180, 130, 60, 0.5);
+    --theme-active-bg: rgba(146, 64, 14, 0.8);
+    --theme-active-border: rgba(180, 83, 9, 0.5);
+    --theme-icon-active: rgba(146, 64, 14, 1);
+    --theme-notice-bg: rgba(69, 26, 3, 0.7);
+    --theme-notice-border: rgba(146, 64, 14, 0.4);
+    --theme-section-bg: rgba(146, 64, 14, 0.04);
+  }
+
+  /* Lilac-Blue theme — light */
+  .theme-lilac {
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --primary: 245 75% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 252 78% 70%;
+    --accent: 262 83% 70%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 245 75% 55%;
+    --gradient-start: 245 75% 55%;
+    --gradient-mid: 262 83% 70%;
+    --gradient-end: 280 80% 78%;
+    --glow-primary: 245 75% 55%;
+    --sidebar-primary: 245 75% 55%;
+    --sidebar-ring: 245 75% 55%;
+    --info: 245 75% 55%;
+    --theme-accent-bg: rgba(79, 70, 229, 0.08);
+    --theme-accent-border: rgba(99, 89, 232, 0.15);
+    --theme-accent-hover: rgba(79, 70, 229, 0.12);
+    --theme-accent-icon-bg: rgba(99, 89, 232, 0.08);
+    --theme-header-start: rgba(40, 20, 80, 0.45);
+    --theme-header-mid: rgba(70, 40, 120, 0.25);
+    --theme-header-end: rgba(100, 80, 160, 0.08);
+    --theme-cta-border-mid: rgba(120, 80, 200, 0.15);
+    --theme-cta-border-end: rgba(140, 100, 220, 0.25);
+    --theme-dot-color: rgba(139, 92, 246, 0.5);
+    --theme-active-bg: rgba(79, 70, 229, 0.8);
+    --theme-active-border: rgba(99, 89, 232, 0.5);
+    --theme-icon-active: rgba(79, 70, 229, 1);
+    --theme-notice-bg: rgba(30, 27, 75, 0.7);
+    --theme-notice-border: rgba(79, 70, 229, 0.4);
+    --theme-section-bg: rgba(79, 70, 229, 0.04);
+  }
+
+  /* Space theme — light */
+  .theme-space {
+    --font-sans: 'Quicksand', system-ui, sans-serif;
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 187 85% 53%;
+    --accent: 192 91% 60%;
+    --accent-foreground: 222 47% 11%;
+    --ring: 199 89% 48%;
+    --gradient-start: 222 47% 20%;
+    --gradient-mid: 199 89% 48%;
+    --gradient-end: 187 85% 60%;
+    --glow-primary: 192 91% 60%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-ring: 199 89% 48%;
+    --info: 199 89% 48%;
+    --theme-accent-bg: rgba(15, 23, 42, 0.08);
+    --theme-accent-border: rgba(34, 211, 238, 0.15);
+    --theme-accent-hover: rgba(15, 23, 42, 0.12);
+    --theme-accent-icon-bg: rgba(34, 211, 238, 0.08);
+    --theme-header-start: rgba(5, 10, 30, 0.5);
+    --theme-header-mid: rgba(10, 20, 50, 0.3);
+    --theme-header-end: rgba(20, 40, 80, 0.1);
+    --theme-cta-border-mid: rgba(34, 211, 238, 0.12);
+    --theme-cta-border-end: rgba(56, 189, 248, 0.2);
+    --theme-dot-color: rgba(56, 189, 248, 0.4);
+    --theme-active-bg: rgba(15, 23, 42, 0.8);
+    --theme-active-border: rgba(34, 211, 238, 0.5);
+    --theme-icon-active: rgba(34, 211, 238, 1);
+    --theme-notice-bg: rgba(15, 23, 42, 0.7);
+    --theme-notice-border: rgba(34, 211, 238, 0.4);
+    --theme-section-bg: rgba(15, 23, 42, 0.04);
+  }
+
+  /* Notte theme — light overrides */
+  .theme-notte {
+    --font-sans: 'Nunito', system-ui, sans-serif;
+    --background: 25 15% 95%;
+    --foreground: 25 25% 15%;
+    --card: 30 20% 98%;
+    --card-foreground: 25 25% 15%;
+    --primary: 38 70% 45%;
+    --primary-foreground: 30 20% 98%;
+    --accent: 35 50% 70%;
+    --accent-foreground: 25 25% 15%;
+    --border: 30 15% 85%;
+    --ring: 38 70% 45%;
+    --secondary: 35 40% 75%;
+    --gradient-start: 30 60% 35%;
+    --gradient-mid: 38 70% 50%;
+    --gradient-end: 45 80% 60%;
+    --glow-primary: 38 70% 50%;
+    --sidebar-primary: 38 70% 45%;
+    --sidebar-ring: 38 70% 45%;
+    --info: 38 70% 45%;
+    --theme-accent-bg: rgba(180, 130, 50, 0.08);
+    --theme-accent-border: rgba(200, 150, 70, 0.15);
+    --theme-accent-hover: rgba(180, 130, 50, 0.15);
+    --theme-accent-icon-bg: rgba(200, 150, 70, 0.1);
+    --theme-dot-color: rgba(200, 150, 70, 0.4);
+    --theme-active-bg: rgba(180, 130, 50, 0.8);
+    --theme-active-border: rgba(200, 150, 70, 0.5);
+    --theme-icon-active: rgba(180, 130, 50, 1);
+    --theme-section-bg: rgba(180, 130, 50, 0.04);
+    --field: 30 20% 99%;
+    --field-foreground: 25 25% 15%;
   }
 
   .dark {
+    --font-sans: 'Inter', system-ui, sans-serif;
     --background: 222 47% 7%;
     --foreground: 210 40% 98%;
     --card: 216 34% 11%;
     --card-foreground: 210 40% 98%;
     --popover: 216 34% 12%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 100% 56%;
+    --primary: 268 80% 65%;
+    --glass-surface: 240 5% 8%;
+    --glass-edge: 0 0% 100%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 25% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 216 34% 14%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 262 71% 40%;
-    --accent-foreground: 213 31% 91%;
+    --secondary: 260 25% 17%;
+    --secondary-foreground: 260 30% 98%;
+    --muted: 260 28% 17%;
+    --muted-foreground: 260 20% 75%;
+    --accent: 268 60% 30%;
+    --accent-foreground: 260 31% 91%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
     --success: 142 71% 35%;
@@ -68,20 +228,79 @@
     --warning-foreground: 0 0% 100%;
     --border: 216 34% 17%;
     --input: 216 34% 17%;
-    --ring: 210 100% 56%;
-    --sidebar-background: 222 47% 5%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 100% 56%;
+    --ring: 268 80% 65%;
+    /* Field background dark — più scuro del background per evidenziare i campi */
+    --field: 222 47% 4%;
+    --field-foreground: 210 40% 98%;
+    /* Design system IntelliFlow */
+    --info: 268 60% 66%;
+    --info-foreground: 268 60% 95%;
+    --sidebar-background: 262 47% 5%;
+    --sidebar-foreground: 260 30% 98%;
+    --sidebar-primary: 268 80% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 13%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 216 34% 14%;
-    --sidebar-ring: 210 100% 56%;
-    --chart-1: 199 89% 55%;
+    --sidebar-accent: 260 25% 13%;
+    --sidebar-accent-foreground: 260 30% 98%;
+    --sidebar-border: 260 34% 14%;
+    --sidebar-ring: 268 80% 65%;
+    --chart-1: 268 80% 60%;
     --chart-2: 173 80% 50%;
     --chart-3: 262 83% 65%;
     --chart-4: 38 92% 55%;
     --chart-5: 0 84% 65%;
+  }
+
+  /* Dark + Lilac */
+  .dark.theme-lilac {
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --primary: 252 78% 70%;
+    --accent: 262 83% 60%;
+    --ring: 252 78% 70%;
+    --gradient-start: 245 75% 55%;
+    --gradient-mid: 262 83% 65%;
+    --gradient-end: 280 80% 75%;
+    --glow-primary: 252 78% 70%;
+    --sidebar-primary: 252 78% 70%;
+    --sidebar-ring: 252 78% 70%;
+    --info: 252 78% 70%;
+  }
+
+  /* Dark + Space */
+  .dark.theme-space {
+    --font-sans: 'Quicksand', system-ui, sans-serif;
+    --background: 220 40% 5%;
+    --card: 220 35% 8%;
+    --primary: 192 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --accent: 187 85% 53%;
+    --ring: 192 91% 60%;
+    --gradient-start: 222 47% 15%;
+    --gradient-mid: 199 89% 48%;
+    --gradient-end: 187 85% 60%;
+    --glow-primary: 192 91% 60%;
+    --sidebar-primary: 192 91% 60%;
+    --sidebar-ring: 192 91% 60%;
+    --info: 192 91% 60%;
+    --field: 220 40% 3%;
+  }
+
+  /* Dark + Notte */
+  .dark.theme-notte {
+    --font-sans: 'Nunito', system-ui, sans-serif;
+    --background: 25 15% 5%;
+    --card: 25 12% 8%;
+    --primary: 38 70% 55%;
+    --primary-foreground: 25 15% 5%;
+    --accent: 35 50% 35%;
+    --ring: 38 70% 55%;
+    --gradient-start: 30 60% 25%;
+    --gradient-mid: 38 70% 45%;
+    --gradient-end: 45 80% 55%;
+    --glow-primary: 38 70% 55%;
+    --sidebar-primary: 38 70% 55%;
+    --sidebar-ring: 38 70% 55%;
+    --info: 38 70% 55%;
+    --field: 25 15% 3%;
   }
 }
 
@@ -91,10 +310,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56,139,253,0.12), transparent),
       radial-gradient(ellipse 60% 40% at 80% 80%, rgba(138,75,255,0.07), transparent);
     min-height: 100vh;
+  }
+  /* Forza il font del tema su TUTTI gli elementi (input, button, dialog, command palette, ecc.)
+     che altrimenti userebbero il font di sistema del browser. */
+  button, input, textarea, select, optgroup, [role="dialog"], [role="menu"], [cmdk-root] {
+    font-family: var(--font-sans);
   }
 }
 
@@ -596,5 +821,194 @@
   /* Focus ring consistent */
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* Mobile touch-friendly spacing */
+  @media (max-width: 767px) {
+    .touch-target {
+      min-height: 44px;
+    }
+    .dialog-mobile {
+      max-height: 80vh;
+    }
+  }
+
+  /* Safe area for bottom nav */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Email body HTML renderer */
+.email-body-render {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.email-body-render p {
+  margin-bottom: 0.75em;
+}
+.email-body-render a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.email-body-render a:hover {
+  opacity: 0.8;
+}
+.email-body-render blockquote {
+  border-left: 3px solid hsl(var(--primary) / 0.3);
+  padding-left: 1em;
+  margin: 0.75em 0;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+.email-body-render ul,
+.email-body-render ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+.email-body-render li {
+  margin-bottom: 0.25em;
+}
+.email-body-render h1, .email-body-render h2, .email-body-render h3 {
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: hsl(var(--primary));
+}
+.email-body-render table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+  font-size: 0.85em;
+}
+.email-body-render td, .email-body-render th {
+  border: 1px solid hsl(var(--border));
+  padding: 0.35em 0.5em;
+}
+.email-body-render img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.email-body-render hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1em 0;
+}
+
+/* ── Ported from WueForm: theme-aware accents + glass + gradients ── */
+@layer utilities {
+  .theme-btn {
+    background: var(--theme-accent-bg);
+    border: 1px solid var(--theme-accent-border);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .theme-btn:hover { background: var(--theme-accent-hover); }
+  .theme-section {
+    background: var(--theme-section-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .theme-notice {
+    background: var(--theme-notice-bg);
+    border: 1px solid var(--theme-notice-border);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .theme-active-toggle {
+    background: var(--theme-active-bg);
+    border-color: var(--theme-active-border);
+  }
+  .theme-icon-active { color: var(--theme-icon-active); }
+
+  .glass {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 0 8px 32px hsl(var(--glass-shadow));
+  }
+  .glass-subtle {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-mid)), hsl(var(--gradient-end)));
+  }
+  .gradient-gold {
+    background: linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold)), hsl(var(--gold-light)));
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gradient-gold-text {
+    background: linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold)), hsl(var(--gold-light)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .border-gold {
+    border: 2px solid transparent;
+    background:
+      linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+      linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold)), hsl(var(--gold-light))) border-box;
+  }
+  .ring-gold {
+    box-shadow: 0 0 0 2px hsl(var(--gold) / 0.3), 0 0 0 4px hsl(var(--gold) / 0.1);
+  }
+}
+
+/* =========================================================================
+ * Text Intensity (gradazione globale del colore testo)
+ * Pilotata da [data-text-intensity] su <html>. Default: normal (no override).
+ * Agisce solo sui token di FOREGROUND per non alterare sfondi/colori brand.
+ * ========================================================================= */
+@layer base {
+  /* LIGHT — più "nero" verso max */
+  html[data-text-intensity="soft"]:not(.dark) {
+    --foreground: 222 30% 32%;
+    --card-foreground: 222 30% 32%;
+    --popover-foreground: 222 30% 32%;
+    --muted-foreground: 220 9% 56%;
+  }
+  html[data-text-intensity="strong"]:not(.dark) {
+    --foreground: 222 60% 7%;
+    --card-foreground: 222 60% 7%;
+    --popover-foreground: 222 60% 7%;
+    --muted-foreground: 220 12% 36%;
+  }
+  html[data-text-intensity="max"]:not(.dark) {
+    --foreground: 0 0% 0%;
+    --card-foreground: 0 0% 0%;
+    --popover-foreground: 0 0% 0%;
+    --muted-foreground: 0 0% 25%;
+  }
+
+  /* DARK — più "bianco" verso max */
+  html[data-text-intensity="soft"].dark {
+    --foreground: 210 25% 78%;
+    --card-foreground: 210 25% 78%;
+    --popover-foreground: 210 25% 78%;
+    --muted-foreground: 260 15% 65%;
+  }
+  html[data-text-intensity="strong"].dark {
+    --foreground: 210 40% 99%;
+    --card-foreground: 210 40% 99%;
+    --popover-foreground: 210 40% 99%;
+    --muted-foreground: 260 22% 85%;
+  }
+  html[data-text-intensity="max"].dark {
+    --foreground: 0 0% 100%;
+    --card-foreground: 0 0% 100%;
+    --popover-foreground: 0 0% 100%;
+    --muted-foreground: 0 0% 92%;
   }
 }

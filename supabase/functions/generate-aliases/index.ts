@@ -1,64 +1,100 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import { aiFetch } from "../_shared/aiCallShim.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient>;
+
 
 const BATCH_SIZE = 15;
 
+interface PartnerContactRow {
+  id: string;
+  name: string;
+  title: string | null;
+  contact_alias: string | null;
+}
+
+interface PartnerAliasRow {
+  id: string;
+  company_name: string;
+  company_alias: string | null;
+  country_code?: string | null;
+  partner_contacts: PartnerContactRow[] | null;
+}
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const dynCors = getCorsHeaders(origin);
 
   try {
-    const { countryCodes, partnerIds, contactIds } = await req.json();
+    const { countryCodes, partnerIds, contactIds, userId: bodyUserId } = await req.json();
 
-    const supabase = createClient(
+  const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    // Risolvi user_id (per caricare le regole dal Prompt Lab personali).
+    // Se non disponibile, usiamo solo il prompt baseline.
+    let resolvedUserId: string | null = bodyUserId ?? null;
+    if (!resolvedUserId) {
+      const auth = req.headers.get("authorization");
+      const token = auth?.replace(/^Bearer\s+/i, "");
+      if (token) {
+        const { data } = await supabase.auth.getUser(token);
+        resolvedUserId = data?.user?.id ?? null;
+      }
+    }
+    const promptLab = resolvedUserId
+      ? await loadOperativePrompts(supabase, resolvedUserId, {
+          scope: "general",
+          extraTags: ["aliases", "copywriting"],
+          includeUniversal: true,
+          limit: 4,
+        })
+      : { block: "" };
+    const systemPrompt = promptLab.block
+      ? `${promptLab.block}\n\n${BASE_IDENTITY}`
+      : BASE_IDENTITY;
 
     // ── Branch: imported_contacts (contactIds) ──
     if (contactIds?.length) {
-      return await processImportedContacts(supabase, LOVABLE_API_KEY, contactIds);
+      return await processImportedContacts(supabase, LOVABLE_API_KEY, contactIds, systemPrompt);
     }
 
     // ── Branch: partners by ID ──
     if (partnerIds?.length) {
-      return await processPartnersByIds(supabase, LOVABLE_API_KEY, partnerIds);
+      return await processPartnersByIds(supabase, LOVABLE_API_KEY, partnerIds, systemPrompt);
     }
 
     // ── Branch: partners by country (original) ──
     if (!countryCodes?.length) throw new Error("countryCodes, partnerIds, or contactIds required");
-    return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes);
+    return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes, systemPrompt);
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("generate-aliases error:", e);
     return new Response(
-      JSON.stringify({ error: e.message || "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }
 });
 
-const SYSTEM_PROMPT = `Sei un esperto di comunicazione commerciale italiana. Il tuo compito è generare alias naturali per aziende e contatti, come li userebbe un professionista italiano in un'email.
-
-REGOLE PER ALIAS AZIENDA (company_alias):
-- Rimuovi suffissi legali: SPA, SRL, LLC, Ltd, Inc, GmbH, d.o.o., S.A., Corp, Pty, dba, etc.
-- Rimuovi la città se è nel nome (es. "World Transport Overseas d.o.o. Sarajevo" → "World Transport Overseas")
-- Mantieni il nome riconoscibile e naturale
-- Se il nome è già corto e senza suffissi, lascialo com'è
-
-REGOLE PER ALIAS CONTATTO (contact_alias):
-- Usa SOLO il cognome (es. "Mr. Christian Halpaus" → "Halpaus")
-- Rimuovi titoli (Mr., Mrs., Ms., Dr., Ing., etc.)
-- Se il nome sembra un ruolo e non un nome di persona (es. "President", "Manager", "Operations"), restituisci stringa vuota ""
-- Se c'è solo un nome senza cognome chiaro, usa quel nome
-- NON usare mai nome + cognome insieme`;
+// Identità minimale. Le regole stilistiche complete vivono nel Prompt Lab
+// ("Alias Generation Rules") e vengono iniettate runtime dal loader.
+// Lasciamo qui solo il fallback baseline per quando il Prompt Lab non è
+// disponibile (es. chiamata senza user_id risolvibile).
+const BASE_IDENTITY = `Sei un esperto di comunicazione commerciale italiana. Il tuo compito è generare alias naturali per aziende e contatti.
+Output sempre tramite il tool save_aliases.`;
 
 const TOOL_DEF = {
   type: "function" as const,
@@ -88,20 +124,16 @@ const TOOL_DEF = {
   },
 };
 
-async function callAI(apiKey: string, items: any[]) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+async function callAI(apiKey: string, items: Array<Record<string, unknown>>, systemPrompt: string) {
+  const response = await aiFetch({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: JSON.stringify(items) },
       ],
       tools: [TOOL_DEF],
       tool_choice: { type: "function", function: { name: "save_aliases" } },
-    }),
-  });
+    });
 
   if (!response.ok) {
     const errText = await response.text();
@@ -120,14 +152,14 @@ async function callAI(apiKey: string, items: any[]) {
   return aliases || [];
 }
 
-function ok(data: any) {
+function ok(data: Record<string, unknown>) {
   return new Response(JSON.stringify(data), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
 // ── Process imported_contacts ──
-async function processImportedContacts(supabase: any, apiKey: string, contactIds: string[]) {
+async function processImportedContacts(supabase: SupabaseClient, apiKey: string, contactIds: string[], systemPrompt: string) {
   const { data: contacts, error } = await supabase
     .from("imported_contacts")
     .select("id, company_name, name, company_alias, contact_alias")
@@ -136,7 +168,7 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
   if (error) throw error;
 
   const eligible = (contacts || []).filter(
-    (c: any) => !c.company_alias || !c.contact_alias
+    (c: Record<string, unknown>) => !c.company_alias || !c.contact_alias
   );
 
   if (!eligible.length) return ok({ success: true, processed: 0, message: "Nessun contatto da elaborare" });
@@ -145,7 +177,7 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
 
   for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
     const batch = eligible.slice(i, i + BATCH_SIZE);
-    const items = batch.map((c: any) => ({
+    const items = batch.map((c: Record<string, unknown>) => ({
       id: c.id,
       company_name: c.company_name || "",
       full_name: c.name || "",
@@ -153,7 +185,7 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
       needs_contact_alias: !c.contact_alias,
     }));
 
-    const aliases = await callAI(apiKey, items);
+    const aliases = await callAI(apiKey, items, systemPrompt);
     if (aliases === null) {
       await new Promise((r) => setTimeout(r, 5000));
       i -= BATCH_SIZE;
@@ -161,9 +193,9 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
     }
 
     for (const alias of aliases) {
-      const original = batch.find((c: any) => c.id === alias.id);
+      const original = batch.find((c: Record<string, unknown>) => c.id === alias.id);
       if (!original) continue;
-      const update: any = {};
+      const update: Record<string, unknown> = {};
       if (alias.company_alias && !original.company_alias) update.company_alias = alias.company_alias;
       if (alias.contact_alias && !original.contact_alias) update.contact_alias = alias.contact_alias;
       if (Object.keys(update).length) {
@@ -177,31 +209,31 @@ async function processImportedContacts(supabase: any, apiKey: string, contactIds
 }
 
 // ── Process partners by specific IDs ──
-async function processPartnersByIds(supabase: any, apiKey: string, partnerIds: string[]) {
+async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, partnerIds: string[], systemPrompt: string) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, company_alias, partner_contacts(id, name, title, contact_alias)")
     .in("id", partnerIds);
 
   if (error) throw error;
-  return processPartners(supabase, apiKey, partners || []);
+  return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
 // ── Process partners by country (original logic) ──
-async function processPartnersByCountry(supabase: any, apiKey: string, countryCodes: string[]) {
+async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string, countryCodes: string[], systemPrompt: string) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, country_code, company_alias, partner_contacts(id, name, title, contact_alias)")
     .in("country_code", countryCodes);
 
   if (error) throw error;
-  return processPartners(supabase, apiKey, partners || []);
+  return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
-async function processPartners(supabase: any, apiKey: string, partners: any[]) {
-  const eligible = partners.filter((p: any) => {
+async function processPartners(supabase: SupabaseClient, apiKey: string, partners: PartnerAliasRow[], systemPrompt: string) {
+  const eligible = partners.filter((p) => {
     const contacts = p.partner_contacts || [];
-    return !p.company_alias || contacts.some((c: any) => !c.contact_alias);
+    return !p.company_alias || contacts.some((c) => !c.contact_alias);
   });
 
   if (!eligible.length) return ok({ success: true, processed: 0, message: "Nessun partner da elaborare" });
@@ -252,31 +284,27 @@ async function processPartners(supabase: any, apiKey: string, partners: any[]) {
   for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
     const batch = eligible.slice(i, i + BATCH_SIZE);
 
-    const partnerList = batch.map((p: any) => {
+    const partnerList = batch.map((p) => {
       const contacts = (p.partner_contacts || [])
-        .filter((c: any) => !c.contact_alias)
-        .map((c: any) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
+        .filter((c) => !c.contact_alias)
+        .map((c) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
       return {
         partner_id: p.id,
         company_name: p.company_name,
         needs_company_alias: !p.company_alias,
         contacts,
       };
-    }).filter((p: any) => p.needs_company_alias || p.contacts.length > 0);
+    }).filter((p) => p.needs_company_alias || p.contacts.length > 0);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const response = await aiFetch({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: JSON.stringify(partnerList) },
         ],
         tools: [PARTNER_TOOL],
         tool_choice: { type: "function", function: { name: "save_aliases" } },
-      }),
-    });
+      });
 
     if (!response.ok) {
       const errText = await response.text();
@@ -299,7 +327,7 @@ async function processPartners(supabase: any, apiKey: string, partners: any[]) {
     const { aliases } = JSON.parse(toolCall.function.arguments);
 
     for (const alias of aliases) {
-      const original = batch.find((p: any) => p.id === alias.partner_id);
+      const original = batch.find((p: Record<string, unknown>) => p.id === alias.partner_id);
       if (alias.company_alias && (!original || !original.company_alias)) {
         await supabase.from("partners").update({ company_alias: alias.company_alias }).eq("id", alias.partner_id);
         totalProcessed++;
