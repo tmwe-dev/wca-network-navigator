@@ -33,7 +33,7 @@ export function useCampaignJobs(batchId?: string | null) {
     queryKey: queryKeys.campaigns.jobs(batchId),
     queryFn: async () => {
       if (!batchId) return [] as CampaignJob[];
-      return findCampaignJobsByBatch<CampaignJob>(batchId);
+      return findCampaignJobsByBatch(batchId);
     },
     enabled: !!batchId,
     staleTime: 5_000,

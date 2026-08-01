@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   findConversations, getConversation, createConversation,
   updateConversation, deleteConversation as dalDeleteConversation,
+  parseConversationMessages,
 } from "@/data/aiConversations";
 
 export interface ConversationMessage {
@@ -30,7 +31,15 @@ export function useAIConversation(pageContext: string) {
     const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     const data = await findConversations(user.id, pageContext, 30);
-    if (data) setConversations(data as unknown as Conversation[]);
+    if (data) {
+      setConversations(data.map((row) => ({
+        id: row.id,
+        title: row.title,
+        messages: parseConversationMessages(row.messages),
+        page_context: row.page_context,
+        updated_at: row.updated_at,
+      })));
+    }
   }, [pageContext]);
 
   useEffect(() => {
@@ -42,7 +51,7 @@ export function useAIConversation(pageContext: string) {
       if (list && list.length > 0) {
         const data = list[0];
         setConversationId(data.id);
-        setMessages((data.messages as unknown as ConversationMessage[]) || []);
+        setMessages(parseConversationMessages(data.messages));
       }
       await loadList();
       setLoading(false);
@@ -90,7 +99,7 @@ export function useAIConversation(pageContext: string) {
     const data = await getConversation(id);
     if (data) {
       setConversationId(data.id);
-      setMessages((data.messages as unknown as ConversationMessage[]) || []);
+      setMessages(parseConversationMessages(data.messages));
     }
   }, []);
 

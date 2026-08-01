@@ -7,7 +7,8 @@ vi.mock("@/integrations/supabase/client", () => ({
     functions: { invoke: vi.fn() },
   },
 }));
-vi.mock("@/data/aiConversations", () => ({
+vi.mock("@/data/aiConversations", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/data/aiConversations")>()),
   findConversations: vi.fn(),
   getConversation: vi.fn(),
   createConversation: vi.fn(),

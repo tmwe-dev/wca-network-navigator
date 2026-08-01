@@ -13,6 +13,8 @@ import type {
 } from "@/v2/services/sherlock/sherlockTypes";
 
 
+import { toRecordOrNull, toRecord } from "@/lib/records";
+import { asJsonArray } from "@/lib/typedJson";
 import { createLogger } from "@/lib/log";
 const log = createLogger("sherlockPlaybooks");
 export const sherlockKeys = {
@@ -25,6 +27,61 @@ export const sherlockKeys = {
 type PlaybookRow = Database["public"]["Tables"]["sherlock_playbooks"]["Row"];
 type InvestigationRow = Database["public"]["Tables"]["sherlock_investigations"]["Row"];
 
+
+/** Validatore runtime degli step playbook (colonna Json). Righe non conformi scartate. */
+export function parseSherlockSteps(value: unknown): SherlockStep[] {
+  const out: SherlockStep[] = [];
+  for (const item of asJsonArray<unknown>(value)) {
+    const r = toRecordOrNull(item);
+    if (!r) continue;
+    if (typeof r.order !== "number" || typeof r.label !== "string") continue;
+    if (typeof r.url_template !== "string") continue;
+    out.push({
+      order: r.order,
+      label: r.label,
+      url_template: r.url_template,
+      required_vars: Array.isArray(r.required_vars)
+        ? r.required_vars.filter((v): v is string => typeof v === "string")
+        : [],
+      settle_ms: typeof r.settle_ms === "number" ? r.settle_ms : undefined,
+      channel: typeof r.channel === "string" ? (r.channel as SherlockStep["channel"]) : undefined,
+      ai_extract_prompt: typeof r.ai_extract_prompt === "string" ? r.ai_extract_prompt : "",
+      ai_decide_next: typeof r.ai_decide_next === "boolean" ? r.ai_decide_next : undefined,
+      depends_on: Array.isArray(r.depends_on)
+        ? r.depends_on.filter((v): v is number => typeof v === "number")
+        : undefined,
+    });
+  }
+  return out;
+}
+
+/** Validatore runtime del log step investigazione (colonna Json). */
+export function parseSherlockStepResults(value: unknown): SherlockStepResult[] {
+  const out: SherlockStepResult[] = [];
+  for (const item of asJsonArray<unknown>(value)) {
+    const r = toRecordOrNull(item);
+    if (!r) continue;
+    if (typeof r.order !== "number" || typeof r.label !== "string") continue;
+    out.push({
+      order: r.order,
+      label: r.label,
+      url: typeof r.url === "string" ? r.url : null,
+      channel: (typeof r.channel === "string" ? r.channel : "web") as SherlockStepResult["channel"],
+      status: (typeof r.status === "string" ? r.status : "pending") as SherlockStepResult["status"],
+      markdown: typeof r.markdown === "string" ? r.markdown : "",
+      findings: toRecord(r.findings),
+      confidence: typeof r.confidence === "number" ? r.confidence : null,
+      suggested_next_url: typeof r.suggested_next_url === "string" ? r.suggested_next_url : null,
+      error: typeof r.error === "string" ? r.error : undefined,
+      started_at: typeof r.started_at === "number" ? r.started_at : 0,
+      duration_ms: typeof r.duration_ms === "number" ? r.duration_ms : undefined,
+      ai_duration_ms: typeof r.ai_duration_ms === "number" ? r.ai_duration_ms : undefined,
+      cache_hit: typeof r.cache_hit === "boolean" ? r.cache_hit : undefined,
+    });
+  }
+  return out;
+}
+
 function mapPlaybookRow(row: PlaybookRow): SherlockPlaybook {
   return {
     id: row.id,
@@ -33,7 +90,7 @@ function mapPlaybookRow(row: PlaybookRow): SherlockPlaybook {
     description: row.description,
     is_active: row.is_active,
     sort_order: row.sort_order,
-    steps: (Array.isArray(row.steps) ? row.steps : []) as unknown as SherlockStep[],
+    steps: parseSherlockSteps(row.steps),
     target_fields: row.target_fields,
     estimated_seconds: row.estimated_seconds,
     created_at: row.created_at,
@@ -54,7 +111,7 @@ function mapInvestigationRow(row: InvestigationRow): SherlockInvestigation {
     status: row.status as SherlockInvestigation["status"],
     vars: (row.vars ?? {}) as Record<string, string>,
     findings: (row.findings ?? {}) as Record<string, unknown>,
-    step_log: (Array.isArray(row.step_log) ? row.step_log : []) as unknown as SherlockStepResult[],
+    step_log: parseSherlockStepResults(row.step_log),
     summary: row.summary,
     duration_ms: row.duration_ms,
     started_at: row.started_at,

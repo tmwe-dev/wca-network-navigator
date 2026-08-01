@@ -17,7 +17,9 @@ describe("DAL — bulkJobs", () => {
   });
   it("gets a bulk job", async () => {
     const r = await getBulkJob("b1");
-    expect(r).toEqual({ id: "b1", status: "running" });
+    // Il DAL normalizza la riga DB nel tipo di dominio (payload Json -> record,
+    // contatori nullable -> 0), quindi il confronto è sui campi normalizzati.
+    expect(r).toMatchObject({ id: "b1", status: "running", payload: {}, processed: 0, total: 0 });
   });
   it("returns null when not found", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });

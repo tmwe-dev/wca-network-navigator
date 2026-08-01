@@ -46,7 +46,7 @@ async function convertToExcel(
   headers: string[],
   rows: Record<string, unknown>[],
   sheetName: string
-): Promise<Uint8Array> {
+): Promise<Uint8Array<ArrayBuffer>> {
   try {
     // Dynamic import to avoid bundling xlsx if not needed
     const XLSX = await import("xlsx");
@@ -60,7 +60,9 @@ async function convertToExcel(
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
-    return XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as unknown as Uint8Array;
+    // `type: "array"` restituisce un ArrayBuffer: conversione reale, non cast.
+    const buffer: ArrayBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    return new Uint8Array(buffer);
   } catch (error) {
     log.error("Excel export error:", { error: error });
     throw new Error("Esportazione Excel non disponibile. Usa CSV invece.");
@@ -143,7 +145,7 @@ export function useExportExcel() {
       const excelBuffer = await convertToExcel(columns, data, options.entity);
 
       // Trigger download
-      const blob = new Blob([excelBuffer as unknown as BlobPart], {
+      const blob = new Blob([excelBuffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const link = document.createElement("a");

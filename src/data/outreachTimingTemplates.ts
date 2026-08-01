@@ -4,6 +4,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toJsonValue } from "@/lib/jsonGuards";
+import { asJsonArray } from "@/lib/typedJson";
+import { toRecordOrNull } from "@/lib/records";
 
 export interface TimingStep {
   step: number;
@@ -31,6 +33,46 @@ export interface TimingTemplate {
   updated_at: string;
 }
 
+type TimingTemplateRow = Database["public"]["Tables"]["outreach_timing_templates"]["Row"];
+
+/** Validatore runtime della sequenza (colonna Json). Step non conformi scartati. */
+export function parseTimingSteps(value: unknown): TimingStep[] {
+  const out: TimingStep[] = [];
+  for (const item of asJsonArray<unknown>(value)) {
+    const r = toRecordOrNull(item);
+    if (!r) continue;
+    if (typeof r.step !== "number" || typeof r.channel !== "string") continue;
+    out.push({
+      step: r.step,
+      channel: r.channel,
+      delay_days: typeof r.delay_days === "number" ? r.delay_days : 0,
+      trigger: typeof r.trigger === "string" ? r.trigger : "",
+      tone: typeof r.tone === "string" ? r.tone : "",
+      template_hint: typeof r.template_hint === "string" ? r.template_hint : "",
+    });
+  }
+  return out;
+}
+
+function mapTimingTemplateRow(row: TimingTemplateRow): TimingTemplate {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    template_name: row.template_name,
+    description: row.description,
+    is_system: row.is_system ?? false,
+    source_type: row.source_type,
+    goal: row.goal,
+    sequence: parseTimingSteps(row.sequence),
+    max_attempts: row.max_attempts ?? 0,
+    total_duration_days: row.total_duration_days,
+    preferred_language: row.preferred_language ?? "it",
+    auto_translate: row.auto_translate ?? false,
+    created_at: row.created_at ?? new Date().toISOString(),
+    updated_at: row.updated_at ?? new Date().toISOString(),
+  };
+}
+
 export async function fetchTimingTemplates(): Promise<TimingTemplate[]> {
   const { data, error } = await supabase
     .from("outreach_timing_templates")
@@ -38,7 +80,7 @@ export async function fetchTimingTemplates(): Promise<TimingTemplate[]> {
     .order("is_system", { ascending: false })
     .order("template_name");
   if (error) throw error;
-  return (data ?? []) as unknown as TimingTemplate[]; // drift: sequence is Json in DB vs TimingStep[] in domain type
+  return (data ?? []).map(mapTimingTemplateRow);
 }
 
 export async function createTimingTemplate(
@@ -59,7 +101,7 @@ export async function createTimingTemplate(
     .select()
     .single();
   if (error) throw error;
-  return data as unknown as TimingTemplate; // drift: sequence is Json in DB vs TimingStep[] in domain type
+  return mapTimingTemplateRow(data);
 }
 
 export async function duplicateTimingTemplate(id: string): Promise<TimingTemplate> {

@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 type CampaignJobInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
+export type CampaignJobRow = Database["public"]["Tables"]["campaign_jobs"]["Row"];
 
 export async function insertCampaignJobs(jobs: CampaignJobInsert[]) {
   const { error } = await supabase.from("campaign_jobs").insert(jobs);
@@ -14,14 +15,14 @@ export async function insertCampaignJobs(jobs: CampaignJobInsert[]) {
 }
 
 /** Job di una campagna (batch). */
-export async function findCampaignJobsByBatch<T>(batchId: string): Promise<T[]> {
+export async function findCampaignJobsByBatch(batchId: string): Promise<CampaignJobRow[]> {
   const { data, error } = await supabase
     .from("campaign_jobs")
     .select("*")
     .eq("batch_id", batchId)
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as T[];
+  return data ?? [];
 }
 
 export async function updateCampaignJobById(id: string, updates: Record<string, unknown>): Promise<void> {
@@ -39,12 +40,12 @@ export async function deleteCampaignJobsByIds(ids: string[]): Promise<void> {
 }
 
 /** Ultimi campaign_jobs (per dashboard "Coda"). */
-export async function findRecentCampaignJobs<T = Record<string, unknown>>(limit = 50): Promise<T[]> {
+export async function findRecentCampaignJobs(limit = 50): Promise<CampaignJobRow[]> {
   const { data, error } = await supabase
     .from("campaign_jobs")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as T[];
+  return data ?? [];
 }

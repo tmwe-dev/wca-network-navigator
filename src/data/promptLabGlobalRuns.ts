@@ -4,7 +4,8 @@
  * Ogni "Avvia analisi globale" crea un run. Le proposte vengono aggiornate
  * incrementalmente così il run sopravvive a refresh, crash, errori di rete.
  */
-import { toJsonValue } from "@/lib/typedJson";
+import { toJsonValue, asJsonArray } from "@/lib/typedJson";
+import { toRecord, toRecordOrNull } from "@/lib/records";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { updateValidatedColumn } from "@/data/validatedQuery";
@@ -19,6 +20,48 @@ export interface GlobalRunProposal {
   after?: string;
   status: "pending" | "improving" | "ready" | "skipped" | "error" | "saved";
   error?: string;
+}
+
+const PROPOSAL_STATUSES: ReadonlySet<string> = new Set([
+  "pending", "improving", "ready", "skipped", "error", "saved",
+]);
+
+/**
+ * Validatore runtime delle proposte salvate su colonna Json.
+ * Le righe che non rispettano il contratto minimo vengono scartate (fail closed).
+ */
+export function parseProposals(value: unknown): GlobalRunProposal[] {
+  const raw = typeof value === "string" ? safeJsonParse(value) : value;
+  const out: GlobalRunProposal[] = [];
+  for (const item of asJsonArray<unknown>(raw)) {
+    const r = toRecordOrNull(item);
+    if (!r) continue;
+    if (typeof r.block_id !== "string" || typeof r.label !== "string") continue;
+    if (typeof r.before !== "string") continue;
+    const status = typeof r.status === "string" && PROPOSAL_STATUSES.has(r.status)
+      ? (r.status as GlobalRunProposal["status"])
+      : "pending";
+    out.push({
+      block_id: r.block_id,
+      tab_label: typeof r.tab_label === "string" ? r.tab_label : "",
+      tab_activation: typeof r.tab_activation === "string" ? r.tab_activation : undefined,
+      source: toRecord(r.source),
+      label: r.label,
+      before: r.before,
+      after: typeof r.after === "string" ? r.after : undefined,
+      status,
+      error: typeof r.error === "string" ? r.error : undefined,
+    });
+  }
+  return out;
+}
+
+function safeJsonParse(input: string): unknown {
+  try {
+    return JSON.parse(input);
+  } catch {
+    return null;
+  }
 }
 
 export interface GlobalRun {
@@ -113,12 +156,7 @@ export async function appendProposal(
   if (readErr || !data) throw new Error(`appendProposal read failed: ${readErr?.message}`);
 
   const row = data;
-  let proposals: GlobalRunProposal[];
-  try {
-    proposals = typeof row.proposals === "string" ? JSON.parse(row.proposals) : (row.proposals as unknown as GlobalRunProposal[]);
-  } catch {
-    proposals = [];
-  }
+  const proposals: GlobalRunProposal[] = parseProposals(row.proposals);
 
   if (index < proposals.length) {
     proposals[index] = { ...proposals[index], ...proposal };
@@ -140,12 +178,7 @@ export async function markProposalSaved(runId: string, blockId: string): Promise
   if (readErr || !data) return;
 
   const row = data;
-  let proposals: GlobalRunProposal[];
-  try {
-    proposals = typeof row.proposals === "string" ? JSON.parse(row.proposals) : (row.proposals as unknown as GlobalRunProposal[]);
-  } catch {
-    return;
-  }
+  const proposals: GlobalRunProposal[] = parseProposals(row.proposals);
 
   const idx = proposals.findIndex((p) => p.block_id === blockId);
   if (idx >= 0) {
@@ -237,14 +270,7 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
 
   if (error || !data) throw new Error(`rollbackSavedProposals: run non trovato`);
 
-  let proposals: GlobalRunProposal[];
-  try {
-    proposals = typeof data.proposals === "string"
-      ? JSON.parse(data.proposals)
-      : (data.proposals as unknown as GlobalRunProposal[]) ?? [];
-  } catch {
-    throw new Error("rollbackSavedProposals: proposals corrotte");
-  }
+  const proposals: GlobalRunProposal[] = parseProposals(data.proposals);
 
   const saved = proposals.filter((p) => p.status === "saved" && p.before);
   let restored = 0;
@@ -287,14 +313,7 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
 }
 
 function parseRun(row: Database["public"]["Tables"]["prompt_lab_global_runs"]["Row"]): GlobalRun {
-  let proposals: GlobalRunProposal[];
-  try {
-    proposals = typeof row.proposals === "string"
-      ? JSON.parse(row.proposals)
-      : (row.proposals as unknown as GlobalRunProposal[]) ?? [];
-  } catch {
-    proposals = [];
-  }
+  const proposals: GlobalRunProposal[] = parseProposals(row.proposals);
 
   return {
     id: row.id,

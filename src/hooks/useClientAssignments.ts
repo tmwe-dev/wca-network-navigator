@@ -22,7 +22,7 @@ export function useClientAssignments() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      return findAllClientAssignmentsForUser<ClientAssignment>(user.id);
+      return findAllClientAssignmentsForUser(user.id);
     },
     staleTime: 5 * 60_000,
   });
@@ -57,7 +57,7 @@ export function useAssignClient() {
       const existing = await findClientAssignment(params.sourceId, user.id);
       if (existing) return existing; // already assigned
 
-      return insertClientAssignmentReturning<{ id: string }>({
+      return insertClientAssignmentReturning({
         source_id: params.sourceId,
         source_type: params.sourceType,
         agent_id: params.agentId,
@@ -77,7 +77,7 @@ export function useAgentClients(agentId: string | undefined) {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      return findClientAssignmentsByAgent<ClientAssignment>(agentId!, user.id);
+      return findClientAssignmentsByAgent(agentId!, user.id);
     },
   });
 }

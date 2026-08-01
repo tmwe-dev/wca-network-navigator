@@ -11,6 +11,8 @@ export interface EmailSenderGroup {
   user_id: string;
   created_at: string;
   updated_at: string;
+  /** Conteggio mittenti assegnati, calcolato lato UI (non colonna DB). */
+  assigned_count?: number;
 }
 
 export interface SenderAnalysis {

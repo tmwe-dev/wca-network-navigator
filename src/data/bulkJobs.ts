@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toJsonValue } from "@/lib/jsonGuards";
+import { toRecord } from "@/lib/records";
 
 export type BulkJobStatus =
   | "pending"
@@ -31,6 +32,28 @@ export interface BulkJobRow {
   completed_at: string | null;
 }
 
+type BulkJobDbRow = Database["public"]["Tables"]["bulk_jobs"]["Row"];
+
+/** Normalizza la riga DB (payload Json) nel tipo di dominio. */
+function mapBulkJobRow(row: BulkJobDbRow): BulkJobRow {
+  return {
+    id: row.id,
+    scope: row.scope,
+    source_view: row.source_view,
+    total: row.total ?? 0,
+    processed: row.processed ?? 0,
+    success_count: row.success_count ?? 0,
+    error_count: row.error_count ?? 0,
+    status: row.status as BulkJobStatus,
+    payload: toRecord(row.payload),
+    error_message: row.error_message,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    completed_at: row.completed_at,
+  };
+}
+
 export async function createBulkJob(input: {
   scope: string;
   source_view?: string;
@@ -51,7 +74,7 @@ export async function createBulkJob(input: {
     .select("*")
     .maybeSingle();
   if (error || !data) throw new Error(error?.message ?? "createBulkJob failed");
-  return data as unknown as BulkJobRow; // drift: payload is Json in DB vs Record<string, unknown> in domain type
+  return mapBulkJobRow(data);
 }
 
 export async function updateBulkJob(
@@ -76,5 +99,5 @@ export async function appendBulkJobEvent(
 export async function getBulkJob(id: string): Promise<BulkJobRow | null> {
   const { data, error } = await supabase.from("bulk_jobs").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as unknown as BulkJobRow) ?? null; // drift: payload is Json in DB vs Record<string, unknown> in domain type
+  return data ? mapBulkJobRow(data) : null;
 }
