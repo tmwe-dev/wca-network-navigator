@@ -85,8 +85,8 @@ describe("unavailableSchema — primitive", () => {
 describe("Report Aziende — relazioni ra_* assenti", () => {
   it("findRAProspects ritorna pagina vuota senza query", async () => {
     const page = await findRAProspects({});
-    expect(page.rows).toEqual([]);
-    expect(page.total).toBe(0);
+    expect(page.items).toEqual([]);
+    expect(page.totalCount).toBe(0);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
