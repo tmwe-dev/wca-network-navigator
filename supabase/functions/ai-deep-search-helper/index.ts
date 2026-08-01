@@ -39,7 +39,7 @@ serve(async (req) => {
       .from("app_settings")
       .select("value")
       .eq("key", "ai_automations_paused")
-      .eq("user_id", user.id)
+      .eq("user_id", auth.userId)
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
@@ -75,7 +75,7 @@ serve(async (req) => {
       max_tokens: 256,
       timeoutMs: 20000,
       maxRetries: 1,
-      context: `deep-search-helper:${user.id.substring(0, 8)}`,
+      context: `deep-search-helper:${auth.userId.substring(0, 8)}`,
     });
 
     return new Response(JSON.stringify({
