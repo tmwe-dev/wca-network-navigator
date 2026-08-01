@@ -10,6 +10,7 @@
  * NON tocca i protocolli `from-webapp-li` / `from-webapp-wa` né le edge
  * `send-linkedin` / `send-whatsapp` (coda morta v3.9.56).
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -145,7 +146,7 @@ export function useApproveAndDispatch() {
           target_id: pendingActionId,
           target_type: "pending_action",
           decision_origin: "user_approved",
-          metadata: { pending_action_id: pendingActionId, action_type: actionType, result },
+          metadata: toJsonValue({ pending_action_id: pendingActionId, action_type: actionType, result }),
         });
       } catch (auditErr) {
         log.warn("audit.failed", { error: auditErr instanceof Error ? auditErr.message : String(auditErr) });

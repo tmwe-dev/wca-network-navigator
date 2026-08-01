@@ -25,10 +25,10 @@ describe("DAL — emailDrafts", () => {
     await expect(countEmailDrafts()).rejects.toEqual({ message: "fail" });
   });
   it("inserts a draft", async () => {
-    await expect(insertEmailDraft({ subject: "test" })).resolves.not.toThrow();
+    await expect(insertEmailDraft({ user_id: "u1", subject: "test" })).resolves.not.toThrow();
   });
   it("throws on insert error", async () => {
     mockInsert.mockResolvedValue({ error: { message: "dup" } });
-    await expect(insertEmailDraft({})).rejects.toEqual({ message: "dup" });
+    await expect(insertEmailDraft({ user_id: "u1" })).rejects.toEqual({ message: "dup" });
   });
 });

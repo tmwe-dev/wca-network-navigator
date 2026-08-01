@@ -2,6 +2,7 @@
  * useEmailComposerState — All state + async logic for EmailComposer.
  * Types, reducer, and utils extracted to sibling files.
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { useReducer, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
@@ -337,7 +338,7 @@ export function useEmailComposerState() {
     const finalCategory = template.templateCategory === "__new__" ? template.customCategory.trim() : template.templateCategory;
     if (!template.templateName.trim() || !finalCategory) { toast.error("Inserisci nome e categoria"); return; }
     try {
-      await insertEmailDraft({ subject: email.subject, html_body: email.htmlBody, category: finalCategory, recipient_type: "template", status: "template", total_count: 0 });
+      await insertEmailDraft({ user_id: userId, subject: email.subject, html_body: email.htmlBody, category: finalCategory, recipient_type: "template", status: "template", total_count: 0 });
       dispatch({ type: "RESET_TEMPLATE_FORM" });
       toast.success(`Template "${template.templateName}" salvato`);
     } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio template"); }
@@ -353,8 +354,8 @@ export function useEmailComposerState() {
     try {
       await saveDraft.mutateAsync({
         subject: email.subject, html_body: email.htmlBody, category: "altro",
-        recipient_type: "partner", recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
-        attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
+        recipient_type: "partner", recipient_filter: toJsonValue({ partner_ids: recipients.map((r) => r.partnerId) }),
+        attachment_ids: toJsonValue(email.selectedAttachments), link_urls: toJsonValue(email.emailLinks),
         status: "draft", total_count: recipientsWithEmail.length,
       });
       toast.success("Bozza salvata");
@@ -366,9 +367,10 @@ export function useEmailComposerState() {
     dispatch({ type: "SET_SENDING", payload: true });
     try {
       const savedDraft = await insertEmailDraftReturning({
+        user_id: userId,
         subject: email.subject, html_body: email.htmlBody, category: "altro",
-        recipient_type: "partner", recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
-        attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
+        recipient_type: "partner", recipient_filter: toJsonValue({ partner_ids: recipients.map((r) => r.partnerId) }),
+        attachment_ids: toJsonValue(email.selectedAttachments), link_urls: toJsonValue(email.emailLinks),
         status: "queued", total_count: recipientsWithEmail.length,
       });
       const draftId = (savedDraft as unknown as { id: string }).id;

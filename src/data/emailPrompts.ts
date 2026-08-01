@@ -32,7 +32,9 @@ export async function findEmailPromptsByScope(userId: string, scope: string): Pr
   return (data ?? []) as EmailPromptFull[];
 }
 
-export async function updateEmailPrompt(id: string, patch: Partial<EmailPromptFull>): Promise<void> {
+export type EmailPromptUpdate = Database["public"]["Tables"]["email_prompts"]["Update"];
+
+export async function updateEmailPrompt(id: string, patch: EmailPromptUpdate): Promise<void> {
   const { error } = await supabase.from("email_prompts").update(patch).eq("id", id);
   if (error) throw error;
 }
