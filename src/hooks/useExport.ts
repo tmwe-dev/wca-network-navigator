@@ -162,15 +162,15 @@ export function useExportCSV() {
       switch (options.entity) {
         case "contacts":
           data = await fetchContactsData(options.filters);
-          defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "title", "country", "created_at"];
+          defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "position", "country", "created_at"];
           break;
         case "partners":
           data = await fetchPartnersData(options.filters);
-          defaultColumns = ["id", "name", "country", "website", "email", "phone", "status", "created_at"];
+          defaultColumns = ["id", "company_name", "country_name", "website", "email", "phone", "lead_status", "created_at"];
           break;
         case "deals":
           data = await fetchDealsData(options.filters);
-          defaultColumns = ["id", "title", "stage", "amount", "probability", "close_date", "created_at"];
+          defaultColumns = ["id", "title", "stage", "amount", "probability", "expected_close_date", "created_at"];
           break;
         // TODO: Email export is disabled (dead code - see fetchEmailsData comment)
         // case "emails":
@@ -205,15 +205,15 @@ export function useExportExcel() {
       switch (options.entity) {
         case "contacts":
           data = await fetchContactsData(options.filters);
-          defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "title", "country", "created_at"];
+          defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "position", "country", "created_at"];
           break;
         case "partners":
           data = await fetchPartnersData(options.filters);
-          defaultColumns = ["id", "name", "country", "website", "email", "phone", "status", "created_at"];
+          defaultColumns = ["id", "company_name", "country_name", "website", "email", "phone", "lead_status", "created_at"];
           break;
         case "deals":
           data = await fetchDealsData(options.filters);
-          defaultColumns = ["id", "title", "stage", "amount", "probability", "close_date", "created_at"];
+          defaultColumns = ["id", "title", "stage", "amount", "probability", "expected_close_date", "created_at"];
           break;
         // TODO: Email export is disabled (dead code - see fetchEmailsData comment)
         // case "emails":
