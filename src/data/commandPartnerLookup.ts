@@ -3,7 +3,7 @@
  * Estratto 1:1 da `partnerQueries.ts` (stessi filtri, order, limit, select).
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { applyValidatedFilters, selectFromValidatedTable } from "@/data/dynamicQuery";
 
 export interface CommandPartnerRow {
   id: string;
@@ -28,6 +28,21 @@ export interface CommandContactRow {
 }
 
 const PARTNER_COLS = "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";
+
+/** Colonne di `partners` filtrabili da un contesto salvato dal planner. */
+const PARTNER_FILTERABLE_COLUMNS: ReadonlySet<string> = new Set([
+  "company_name",
+  "company_alias",
+  "country_code",
+  "country_name",
+  "city",
+  "email",
+  "website",
+  "lead_status",
+  "status_reason",
+  "partner_type",
+  "is_active",
+]);
 
 export async function searchPartnersByCountry(countryCode: string): Promise<CommandPartnerRow[]> {
   const { data, error } = await supabase
@@ -109,26 +124,14 @@ export async function fetchPartnersByFilters(
   filters: ReadonlyArray<{ column: string; op: string; value: unknown }>,
 ): Promise<CommandPartnerRow[]> {
   if (!filters.length) return [];
-  // DRIFT: filtri dinamici (column: string a runtime) — il query builder
-  // tipizzato richiede letterali per i nomi colonna, qui arrivano da un
-  // contesto salvato arbitrario, quindi resta su untypedFrom("partners").
-  let q = untypedFrom("partners")
-    .select(PARTNER_COLS)
+  // I nomi colonna arrivano da un contesto salvato dal planner (stringhe a
+  // runtime): la query passa dall'unico confine sanzionato per le query
+  // dinamiche, con whitelist delle colonne filtrabili (fail closed).
+  const base = selectFromValidatedTable("partners", PARTNER_COLS)
     .eq("is_active", true)
     .neq("lead_status", "blacklisted")
     .limit(50);
-  for (const f of filters) {
-    switch (f.op) {
-      case "eq": q = q.eq(f.column, f.value); break;
-      case "neq": q = q.neq(f.column, f.value); break;
-      case "ilike": q = q.ilike(f.column, `%${String(f.value).replace(/%/g, "")}%`); break;
-      case "in":
-        if (Array.isArray(f.value)) q = q.in(f.column, f.value as (string | number)[]);
-        break;
-      case "is": q = q.is(f.column, f.value as null | boolean); break;
-    }
-  }
-  const { data, error } = await q;
+  const { data, error } = await applyValidatedFilters(base, filters, PARTNER_FILTERABLE_COLUMNS);
   if (error) return [];
   return (data ?? []) as CommandPartnerRow[];
 }

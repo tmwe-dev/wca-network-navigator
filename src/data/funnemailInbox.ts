@@ -10,19 +10,14 @@
  *
  * NESSUNA logica: solo SELECT.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { selectFromValidatedTable } from "@/data/dynamicQuery";
 import { supabase } from "@/integrations/supabase/client";
 /**
- * P001-013 (batch F20-P0.6): le letture/scritture su tabella LETTERALE usano il
- * client tipizzato (`supabase.from`). Restano volutamente su `untypedFrom`:
- *  - `untypedFrom(source)` — la sorgente è dinamica (`message_intelligence_v` |
- *    `channel_messages`) e il client tipizzato non accetta un'unione di tabelle;
- * P0.6b: migrati anche i due call site `funnemail_sender_intel` / `partners`
- * (Row generato compatibile con SenderIntelRow / FunnemailPartnerSnapshot).
- * Restano untyped solo le query passate a `fetchAllPages<T>()`,
- *    dove il Row generato è più largo/stretto del tipo applicativo
- *    (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape):
- *    tiparle richiederebbe cambiare i tipi applicativi = fuori scope P0.
+ * Tutte le letture/scritture su tabella LETTERALE usano il client tipizzato
+ * (`supabase.from`). L'unica eccezione è la sorgente dinamica dell'inbox
+ * (`message_intelligence_v` | `channel_messages`), che passa da
+ * `selectFromValidatedTable`, il confine sanzionato per le query con nome
+ * tabella noto solo a runtime.
  */
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { createLogger } from "@/lib/log";
@@ -121,6 +116,38 @@ export interface FunnemailDecisionRow {
   partner_id: string | null;
   override_folder_slug: string | null;
   created_at: string;
+}
+
+/**
+ * Shape realmente restituita dal database: `suggested_action` e `urgency`
+ * sono colonne `text` libere, non enum. I validatori qui sotto le riducono
+ * alle union applicative con fallback sicuro (nessun cast cieco).
+ */
+type RawFunnemailDecisionRow = Omit<FunnemailDecisionRow, "suggested_action" | "urgency"> & {
+  suggested_action: string;
+  urgency: string;
+};
+
+const SUGGESTED_ACTIONS: ReadonlySet<string> = new Set([
+  "none",
+  "draft_reply",
+  "forward",
+  "escalate",
+  "archive",
+  "notify_human",
+]);
+const URGENCIES: ReadonlySet<string> = new Set(["critical", "high", "normal", "low"]);
+
+function parseFunnemailDecisionRow(raw: RawFunnemailDecisionRow): FunnemailDecisionRow {
+  return {
+    ...raw,
+    suggested_action: SUGGESTED_ACTIONS.has(raw.suggested_action)
+      ? (raw.suggested_action as FunnemailDecisionRow["suggested_action"])
+      : "none",
+    urgency: URGENCIES.has(raw.urgency)
+      ? (raw.urgency as FunnemailDecisionRow["urgency"])
+      : "normal",
+  };
 }
 
 export interface FunnemailMailRow {
@@ -270,6 +297,24 @@ interface EmailSenderGroupRow {
   funnemail_policy?: { auto_mark_read?: boolean } | null;
 }
 
+/** `funnemail_policy` è una colonna `jsonb` libera: va validata, non castata. */
+type RawEmailSenderGroupRow = Omit<EmailSenderGroupRow, "funnemail_policy"> & {
+  funnemail_policy: unknown;
+};
+
+function parseEmailSenderGroupRow(raw: RawEmailSenderGroupRow): EmailSenderGroupRow {
+  const policy = raw.funnemail_policy;
+  const autoMarkRead =
+    typeof policy === "object" && policy !== null && "auto_mark_read" in policy
+      ? (policy as { auto_mark_read?: unknown }).auto_mark_read
+      : undefined;
+  return {
+    ...raw,
+    funnemail_policy:
+      typeof autoMarkRead === "boolean" ? { auto_mark_read: autoMarkRead } : null,
+  };
+}
+
 interface EmailAddressRuleRow {
   email_address: string;
   group_name: string | null;
@@ -408,8 +453,10 @@ export async function listMailsByFolder(
   const msgs = await readInboxOnce<{ message_id_external: string } & Record<string, unknown>>(
     "listMailsByFolder",
     (source) =>
-      untypedFrom(source)
-        .select("message_id_external,subject,from_address,body_text,body_html,email_date,partner_id")
+      selectFromValidatedTable(
+        source,
+        "message_id_external,subject,from_address,body_text,body_html,email_date,partner_id",
+      )
         .eq("channel", "email")
         .eq("direction", "inbound")
         .in("message_id_external", ids),
@@ -458,7 +505,7 @@ export async function getFunnemailDecision(
     .eq("message_id", messageId)
     .maybeSingle();
   if (error) throw error;
-  return (data as FunnemailDecisionRow | null) ?? null;
+  return data ? parseFunnemailDecisionRow(data) : null;
 }
 
 /** Override manuale della cartella scelta dall'AI. */
@@ -511,8 +558,7 @@ export async function listFunnemailGroupedInbox(
       (source, from, to) => {
         const cols = source === "message_intelligence_v" ? MESSAGE_LIST_SELECT_VIEW : MESSAGE_LIST_SELECT;
         const createdAtCol = source === "message_intelligence_v" ? "message_created_at" : "created_at";
-        let q = untypedFrom(source)
-          .select(cols)
+        let q = selectFromValidatedTable(source, cols)
           .eq("channel", "email")
           .eq("direction", "inbound");
         if (targetUserId) q = q.eq("user_id", targetUserId);
@@ -528,22 +574,23 @@ export async function listFunnemailGroupedInbox(
       MAX_MESSAGES,
     ),
     listFunnemailFolders(),
-    // DRIFT documentato (vedi header): suggested_action nel Row generato è
-    // `string` (non la union applicativa) — restano su untypedFrom.
-    fetchAllPages<FunnemailDecisionRow>(
-      (from, to) => untypedFrom("funnemail_decisions")
+    // `suggested_action` / `urgency` sono `text` nel database: si legge la
+    // shape reale e si valida verso la union applicativa.
+    fetchAllPages<RawFunnemailDecisionRow>(
+      (from, to) => supabase
+        .from("funnemail_decisions")
         .select("id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at")
         .order("created_at", { ascending: false })
         .range(from, to),
       MAX_MESSAGES,
-    ),
-    // DRIFT documentato (vedi header): funnemail_policy nel Row generato è
-    // `Json` generico (non la shape applicativa {auto_mark_read?}) — resta untyped.
-    fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
+    ).then((rows) => rows.map(parseFunnemailDecisionRow)),
+    // `funnemail_policy` è `jsonb`: validata verso la shape applicativa.
+    fetchAllPages<RawEmailSenderGroupRow>((from, to) => supabase
+      .from("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
-      .range(from, to), MAX_RULES_OR_GROUPS),
+      .range(from, to), MAX_RULES_OR_GROUPS).then((rows) => rows.map(parseEmailSenderGroupRow)),
     fetchAllPages<EmailAddressRuleRow>((from, to) => supabase.from("email_address_rules")
       .select("email_address,group_name,category")
       .eq("user_id", userId)

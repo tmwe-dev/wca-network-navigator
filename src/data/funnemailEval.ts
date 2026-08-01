@@ -1,17 +1,17 @@
 /**
  * DAL — Funnemail Eval cases & runs (Sprint 5)
- * Extended in Sprint D with eval dataset + accuracy runs.
  *
- * DRIFT: `funnemail_eval_dataset` e `funnemail_eval_batch_runs` non esistono
- * nei tipi generati (src/integrations/supabase/types.ts) — restano su
- * `untypedFrom` con cast espliciti finché i tipi non vengono rigenerati.
+ * SCHEMA LIVE: esistono `funnemail_eval_cases` e `funnemail_eval_runs`
+ * (case_id / actual_decision / passed / diff / latency_ms / cost_usd / error /
+ * run_at). NON esistono `funnemail_eval_batch_runs` né
+ * `funnemail_eval_dataset`: le funzioni "dataset + accuracy runs" scritte
+ * contro quello schema immaginario sono state rimosse (nessun chiamante di
+ * produzione). L'unica superficie ancora referenziata dalla UI —
+ * `fetchEvalBatchRuns` — espone il contratto di schema non disponibile.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
-import { createLogger } from "@/lib/log";
+import { unavailableRead } from "@/data/_shared/unavailableSchema";
 import type { Json } from "@/integrations/supabase/types";
-
-const log = createLogger("funnemailEval");
 
 /** Narrowing runtime esplicito: converte un Json in Record<string, unknown>. */
 function toRecord(json: Json | null | undefined): Record<string, unknown> {
@@ -138,14 +138,12 @@ export interface EvalBatchRun {
   created_at: string;
 }
 
-/** DRIFT: `funnemail_eval_batch_runs` non è presente nei tipi generati. */
+/**
+ * `funnemail_eval_batch_runs` non esiste nello schema live: nessuna query,
+ * la tab Eval mostra lo stato vuoto invece di un errore PostgREST 42P01.
+ */
 export async function fetchEvalBatchRuns(): Promise<EvalBatchRun[]> {
-  const { data, error } = await untypedFrom("funnemail_eval_batch_runs")
-    .select("id, run_at, dataset_size, passed_count, failed_count, accuracy, prompt_version_id, created_at")
-    .order("run_at", { ascending: false })
-    .limit(50);
-  if (error) throw error;
-  return (data ?? []) as unknown as EvalBatchRun[];
+  return unavailableRead<EvalBatchRun[]>("funnemail_eval_batch_runs", []);
 }
 
 export async function runFunnemailEval(input: {
@@ -156,113 +154,4 @@ export async function runFunnemailEval(input: {
   const { data, error } = await supabase.functions.invoke("run-funnemail-eval", { body: input });
   if (error) throw error;
   return data as { ok: boolean; total?: number; pass_rate?: number };
-}
-
-/* ─── Sprint D: Funnemail Eval Dataset & Accuracy Runs ─── */
-
-export interface FunnemailEvalDatasetRow {
-  id: string;
-  email_subject: string;
-  email_body: string;
-  expected_category: string;
-  expected_intent: string;
-  expected_priority: string;
-  notes: string | null;
-  created_at: string;
-  is_active: boolean;
-  deleted_at: string | null;
-}
-
-export interface FunnemailEvalRunRow {
-  id: string;
-  run_at: string;
-  dataset_size: number;
-  category_accuracy: number | null;
-  intent_accuracy: number | null;
-  priority_accuracy: number | null;
-  failures: unknown[];
-}
-
-/**
- * DRIFT: `funnemail_eval_dataset` non è presente nei tipi generati — resta
- * su `untypedFrom` con cast espliciti.
- */
-export async function listEvalDataset(): Promise<FunnemailEvalDatasetRow[]> {
-  const { data, error } = await untypedFrom("funnemail_eval_dataset")
-    .select("*")
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-  if (error) {
-    log.error("listEvalDataset failed", error);
-    return [];
-  }
-  return (data ?? []) as unknown as FunnemailEvalDatasetRow[];
-}
-
-/** DRIFT: `funnemail_eval_dataset` non è presente nei tipi generati. */
-export async function insertEvalDatasetRow(input: {
-  email_subject: string;
-  email_body: string;
-  expected_category: string;
-  expected_intent: string;
-  expected_priority: string;
-  notes?: string | null;
-}): Promise<FunnemailEvalDatasetRow | null> {
-  const { data, error } = await untypedFrom("funnemail_eval_dataset").insert(input).select("*").single();
-  if (error) {
-    log.error("insertEvalDatasetRow failed", error);
-    return null;
-  }
-  return data as unknown as FunnemailEvalDatasetRow;
-}
-
-/**
- * NOTA: questa insert scrive colonne (`dataset_size`, `category_accuracy`,
- * `intent_accuracy`, `priority_accuracy`, `failures`) che appartengono allo
- * schema logico "eval dataset runs" ma la tabella fisica tipizzata
- * `funnemail_eval_runs` (vedi sopra, Sprint 5) ha uno schema diverso
- * (`case_id`, `actual_decision`, `passed`, `diff`, ...). Le due funzioni
- * condividono il nome tabella ma non lo schema: mantenuto untyped per non
- * introdurre falsi positivi di compatibilità.
- */
-export async function insertEvalRun(input: {
-  dataset_size: number;
-  category_accuracy: number | null;
-  intent_accuracy: number | null;
-  priority_accuracy: number | null;
-  failures?: unknown[];
-}): Promise<FunnemailEvalRunRow | null> {
-  const { data, error } = await untypedFrom("funnemail_eval_runs")
-    .insert({ ...input, failures: input.failures ?? [] })
-    .select("*")
-    .single();
-  if (error) {
-    log.error("insertEvalRun failed", error);
-    return null;
-  }
-  return data as unknown as FunnemailEvalRunRow;
-}
-
-/** List eval runs desc by run_at (NOTA: vedi drift sopra su insertEvalRun). */
-export async function listFunnemailEvalDatasetRuns(limit = 50): Promise<FunnemailEvalRunRow[]> {
-  const { data, error } = await untypedFrom("funnemail_eval_runs")
-    .select("*")
-    .order("run_at", { ascending: false })
-    .limit(limit);
-  if (error) {
-    log.error("listFunnemailEvalDatasetRuns failed", error);
-    return [];
-  }
-  return (data ?? []) as unknown as FunnemailEvalRunRow[];
-}
-
-/** Get single run by id (NOTA: vedi drift sopra su insertEvalRun). */
-export async function fetchEvalRunById(runId: string): Promise<FunnemailEvalRunRow | null> {
-  const { data, error } = await untypedFrom("funnemail_eval_runs").select("*").eq("id", runId).single();
-  if (error) {
-    log.error("fetchEvalRunById failed", error);
-    return null;
-  }
-  return data as unknown as FunnemailEvalRunRow;
 }
