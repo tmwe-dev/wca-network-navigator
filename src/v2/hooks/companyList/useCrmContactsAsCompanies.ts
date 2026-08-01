@@ -18,6 +18,7 @@ import type {
   CompanyEntity,
   ContactEntity,
 } from "@/v2/ui/molecules/CompanyCardList";
+import { toRecord } from "@/lib/records";
 
 interface RawContact {
   id: string;
@@ -82,7 +83,6 @@ export interface UseCrmContactsAsCompaniesResult {
 }
 
 export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
-import { toRecord } from "@/lib/records";
   const { filters } = useGlobalFilters();
 
   const queryFilters = useMemo(

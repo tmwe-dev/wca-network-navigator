@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toRecord } from "@/lib/records";
 
 interface LogEntry {
   ts: string;
@@ -178,4 +179,3 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
 
 // Keep backward-compatible named export
 export const DownloadTerminal = DownloadTerminalDialog;
-import { toRecord } from "@/lib/records";

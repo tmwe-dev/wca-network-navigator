@@ -13,6 +13,7 @@ import {
   invalidateDownloadJobs, updateJobItemsByJobIdAndStatus,
   type DownloadJob,
 } from "@/data/downloadJobs";
+import { toRecord } from "@/lib/records";
 
 export type { DownloadJob };
 
@@ -151,7 +152,6 @@ export function useDeleteQueuedJobs() {
 }
 
 export function usePurgeOldJobs() {
-import { toRecord } from "@/lib/records";
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => deleteJobsByStatus(["cancelled", "completed"]),
