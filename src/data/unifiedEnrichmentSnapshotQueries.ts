@@ -8,7 +8,7 @@ export async function getPartnerEnrichmentData(partnerId: string): Promise<Recor
 
 export interface SherlockLatestRow {
   created_at: string;
-  level: string | number | null;
+  level: number;
 }
 
 export async function getLatestCompletedSherlockInvestigation(partnerId: string): Promise<SherlockLatestRow | null> {
@@ -20,5 +20,5 @@ export async function getLatestCompletedSherlockInvestigation(partnerId: string)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as unknown as SherlockLatestRow | null) ?? null;
+  return data ?? null;
 }
