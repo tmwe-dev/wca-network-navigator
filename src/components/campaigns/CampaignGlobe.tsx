@@ -6,7 +6,7 @@ import { TexturedEarth, SimpleEarth } from "./TexturedEarth";
 import { AuroraBorealis } from "./AuroraBorealis";
 import { Loader2 } from "lucide-react";
 import { usePartnersForGlobe, usePartnersByCountryForGlobe, type GlobePartner, type CountryWithPartners } from "@/hooks/usePartnersForGlobe";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 
 // Optimized components
 import { InstancedCountryMarkers } from "./globe/InstancedCountryMarkers";

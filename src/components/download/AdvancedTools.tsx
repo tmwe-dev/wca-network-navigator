@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { findPartnersForEnrichment, getPartnerWebsite } from "@/data/partners";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs";
 import { scrapeWcaPartnerById } from "@/lib/api/wcaScraper";
 import { WcaBrowser } from "./WcaBrowser";

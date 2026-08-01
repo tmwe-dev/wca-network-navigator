@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ATECO_TREE } from "@/data/atecoCategories";
-import { PROVINCE_ITALIANE } from "@/data/italianProvinces";
+import { ATECO_TREE } from "@/catalogs/atecoCategories";
+import { PROVINCE_ITALIANE } from "@/catalogs/italianProvinces";
 import type { ProspectFilters } from "../ProspectAdvancedFilters";
 import { EMPTY_FILTERS } from "../ProspectAdvancedFilters";
 

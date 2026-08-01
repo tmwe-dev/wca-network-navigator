@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import * as m from "@/data/italianProvinces";
+import * as m from "@/catalogs/italianProvinces";
 describe("DAL — italianProvinces", () => {
   it("module loads", () => expect(m).toBeDefined());
   it("has at least one export array", () => {

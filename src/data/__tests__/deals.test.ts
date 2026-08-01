@@ -22,7 +22,7 @@ describe("DAL — deals (types only)", () => {
   });
 
   it("deals module exports types for DealStage", async () => {
-    const mod = await import("@/data/deals");
+    const mod = await import("@/types/deals");
     expect(mod).toBeDefined();
   });
 });

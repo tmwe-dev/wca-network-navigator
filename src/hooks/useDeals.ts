@@ -3,7 +3,7 @@
  * The Deals feature was removed from the UI. Calendar still imports this
  * hook for optional deal linking; we return an empty list with no DB calls.
  */
-import type { Deal } from "@/data/deals";
+import type { Deal } from "@/types/deals";
 export type {
   Deal,
   DealActivity,
@@ -11,7 +11,7 @@ export type {
   DealStats,
   DealStage,
   DealWithRelations,
-} from "@/data/deals";
+} from "@/types/deals";
 
 export function useDeals() {
   return {

@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getServiceIcon } from "@/components/partners/shared/ServiceIcons";
 import { formatServiceCategory } from "@/lib/countries";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import type { SortField, SortEntry, PartnerRowData } from "./CountryWorkbenchTypes";
 import { DEFAULT_DIRS } from "./CountryWorkbenchTypes";
 

@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { usePartnersByCountryForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
 import { useCountryPartnerCounts } from "@/hooks/useCountryPartnerCounts";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import { type GlobePartner } from "@/hooks/usePartnersForGlobe";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

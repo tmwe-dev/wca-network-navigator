@@ -14,7 +14,7 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { FilterSection } from "./shared";
 import { NETWORK_QUALITY_TOGGLES } from "./constants";
 import { createLogger } from "@/lib/log";

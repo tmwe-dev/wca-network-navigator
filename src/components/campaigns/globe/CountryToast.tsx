@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 
 interface Props {

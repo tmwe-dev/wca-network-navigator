@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Search, Globe, Users, CreditCard, X, Loader2 } from "lucide-react";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 
 export type ForgeRecipientSource = "partner" | "contact" | "bca" | "manual";

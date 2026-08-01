@@ -86,8 +86,8 @@ export * from "./clientAssignments";
 
 // ── External Integrations ──
 export * from "./linkedinFlow";
-export * from "./wcaCountries";
-export * from "./wcaFilters";
+export * from "@/catalogs/wcaCountries";
+export * from "@/catalogs/wcaFilters";
 
 // ── Settings & Config ──
 export * from "./appSettings";
@@ -95,8 +95,8 @@ export * from "./credits";
 export * from "./telemetry";
 
 // ── Reference Data ──
-export * from "./atecoCategories";
+export * from "@/catalogs/atecoCategories";
 export * from "./atecoRanking";
-export * from "./italianProvinces";
+export * from "@/catalogs/italianProvinces";
 export * from "./workspaceDocs";
 export * from "./rpc";

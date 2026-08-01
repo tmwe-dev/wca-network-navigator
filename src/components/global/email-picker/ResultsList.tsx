@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCountryFlag } from "@/lib/countries";
-import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import type { UseEmailContactPickerReturn } from "@/hooks/useEmailContactPicker";
 
 interface ResultsListProps {

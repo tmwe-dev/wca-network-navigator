@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Timer, Zap, ChevronDown, RefreshCw, Square, FolderDown } from "lucide-react";
-import { WCA_NETWORKS } from "@/data/wcaFilters";
+import { WCA_NETWORKS } from "@/catalogs/wcaFilters";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
 import { useActionPanelLogic } from "@/hooks/useActionPanelLogic";

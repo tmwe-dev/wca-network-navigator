@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCountryStats } from "@/hooks/useCountryStats";
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
 

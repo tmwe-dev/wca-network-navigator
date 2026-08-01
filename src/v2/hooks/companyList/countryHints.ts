@@ -11,7 +11,7 @@
  *     il mondo: copre i casi noti per evitare il fallback 🌐.
  *  4. Altrimenti → null (la card mostrerà uno stato neutro, niente mondino).
  */
-import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 
 const NAME_TO_ISO: Record<string, string> = (() => {
   const m: Record<string, string> = {};
