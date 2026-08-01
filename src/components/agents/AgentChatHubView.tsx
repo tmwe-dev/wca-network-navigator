@@ -104,7 +104,11 @@ export default function AgentChatHub() {
     forceRender((n) => n + 1);
 
     try {
-      const data = await invokeEdge<Record<string, unknown>>("agent-execute", { body: { agent_id: activeId, chat_messages: newMsgs }, context: "AgentChatHub.agent_execute" });
+      const data = await invokeAi<Record<string, unknown>>("agent-execute", {
+        scope: "agent",
+        context: { source: "AgentChatHub.agent_execute", mode: "chat" },
+        body: { agent_id: activeId, chat_messages: newMsgs },
+      });
       const reply: Message = { role: "assistant", content: String(data?.response || "Nessuna risposta") };
       chatMapRef.current.set(activeId, [...newMsgs, reply]);
     } catch (e) {
