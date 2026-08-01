@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { toJsonValue } from "@/lib/typedJson";
 import type { Json } from "@/integrations/supabase/types";
 
 import { createLogger } from "@/lib/log";
@@ -65,10 +66,10 @@ export async function insertTestResults(runId: string, results: TestResultInsert
     status: r.status,
     score: r.score,
     duration_ms: r.durationMs,
-    issues: r.issues as unknown as Json,
+    issues: toJsonValue(r.issues) as Json,
     output_subject: r.outputSubject,
     output_body: r.outputBody,
-    debug_info: r.debugInfo as unknown as Json,
+    debug_info: toJsonValue(r.debugInfo) as Json,
   }));
 
   const { error } = await supabase.from("ai_lab_test_results").insert(rows);
