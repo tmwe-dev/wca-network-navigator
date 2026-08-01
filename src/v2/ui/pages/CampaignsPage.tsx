@@ -72,9 +72,9 @@ export function Campaigns() {
                 onDeselectAll={c.handleDeselectAll}
                 onAddToCampaign={c.handleAddToCampaign}
                 countryName={c.countryName}
-                bcaPartnerIds={c.bcaPartnerIds as unknown as Set<string> | undefined}
+                bcaPartnerIds={c.bcaPartnerIds}
                 source={c.source}
-                selectedContacts={c.selectedContactIds as unknown as Set<string> | undefined}
+                selectedContacts={c.selectedContactIds}
                 onToggleContact={c.handleToggleContact}
               />
             </div>
