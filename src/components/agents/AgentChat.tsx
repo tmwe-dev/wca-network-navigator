@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Mic, MicOff, Volume2 } from "lucide-react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Agent } from "@/hooks/useAgents";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,11 @@ export function AgentChat({ agent }: Props) {
     setLoading(true);
 
     try {
-      const data = await invokeEdge<Record<string, unknown>>("agent-execute", { body: { agent_id: agent.id, chat_messages: newMsgs }, context: "AgentChat.agent_execute" });
+      const data = await invokeAi<Record<string, unknown>>("agent-execute", {
+        scope: "agent",
+        context: { source: "AgentChat.agent_execute", mode: "chat" },
+        body: { agent_id: agent.id, chat_messages: newMsgs },
+      });
       setMessages([...newMsgs, { role: "assistant", content: String(data?.response ?? "Nessuna risposta") }]);
     } catch (_e) {
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione con l'agente." }]);
