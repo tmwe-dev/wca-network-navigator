@@ -127,9 +127,45 @@ if (!hasGuardsTest) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Metriche di copertura (reporting-only, non bloccanti).
+// Il controllo sopra guarda SOLO i `verify_jwt = false` dichiarati: senza
+// queste metriche il report risultava "Findings: 0" pur avendo decine di
+// funzioni con auth inline e centinaia non dichiarate in config.toml.
+// ---------------------------------------------------------------------------
+const allFunctions = fs.existsSync(FUNCTIONS_DIR)
+  ? fs
+      .readdirSync(FUNCTIONS_DIR, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith("_"))
+      .map((d) => d.name)
+  : [];
+
+const declared = new Set([...raw.matchAll(/^\[functions\.([a-z0-9-]+)\]/gm)].map((m) => m[1]));
+
+const inlineAuth = [];
+const usesGuard = [];
+for (const fn of allFunctions) {
+  const entry = path.join(FUNCTIONS_DIR, fn, "index.ts");
+  if (!fs.existsSync(entry)) continue;
+  const src = fs.readFileSync(entry, "utf8");
+  if (/_shared\/authGuard/.test(src)) usesGuard.push(fn);
+  else if (/auth\.getUser\s*\(/.test(src)) inlineAuth.push(fn);
+}
+const undeclared = allFunctions.filter((f) => !declared.has(f));
+
 console.log(`\nAudit Edge Function Auth\n`);
 console.log(`Allowlist size: ${ALLOWLIST.size}`);
-console.log(`Findings: ${findings.length}\n`);
+console.log(`Findings (verify_jwt=false): ${findings.length}`);
+console.log(`\nCopertura contratto auth:`);
+console.log(`  funzioni totali:                  ${allFunctions.length}`);
+console.log(`  usano _shared/authGuard:          ${usesGuard.length}`);
+console.log(`  auth.getUser() inline (da migrare): ${inlineAuth.length}`);
+console.log(`  non dichiarate in config.toml:    ${undeclared.length}`);
+if (process.argv.includes("--verbose")) {
+  console.log(`\n  inline: ${inlineAuth.join(", ")}`);
+  console.log(`\n  undeclared: ${undeclared.join(", ")}`);
+}
+console.log("");
 
 if (findings.length === 0) {
   console.log("OK — ogni verify_jwt=false è giustificato, allowlisted e documentato.");
