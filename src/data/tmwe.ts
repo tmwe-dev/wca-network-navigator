@@ -212,15 +212,22 @@ export async function getRevenueLast12Months(clientId: string): Promise<TmweReve
 
 export async function listTmweCustomers(): Promise<Array<TmweCustomerSnapshot & { partner_id: string | null }>> {
   const { data, error } = await supabase.from("tmwe_customer_snapshot")
-    .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at, tmwe_partner_links(partner_id)")
+    .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at")
     .order("last_synced_at", { ascending: false })
     .limit(500);
   if (error) throw error;
-  return (data as Array<TmweCustomerSnapshot & { tmwe_partner_links: Array<{ partner_id: string }> }> | null ?? [])
-    .map((row) => ({
-      ...row,
-      partner_id: row.tmwe_partner_links?.[0]?.partner_id ?? null,
-    })) as Array<TmweCustomerSnapshot & { partner_id: string | null }>;
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  // La FK tmwe_customer_snapshot -> tmwe_partner_links non è dichiarata nei
+  // tipi generati: risoluzione esplicita con una seconda query tipizzata.
+  const { data: links, error: linksError } = await supabase.from("tmwe_partner_links")
+    .select("tmwe_client_id, partner_id")
+    .in("tmwe_client_id", rows.map((r) => r.tmwe_client_id));
+  if (linksError) throw linksError;
+  const byClient = new Map((links ?? []).map((l) => [l.tmwe_client_id, l.partner_id]));
+
+  return rows.map((row) => ({ ...row, partner_id: byClient.get(row.tmwe_client_id) ?? null }));
 }
 
 export async function triggerCustomerResync(tmweClientId: string): Promise<void> {

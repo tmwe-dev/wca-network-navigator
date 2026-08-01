@@ -20,8 +20,9 @@ export async function updateImportedContact(id: string, patch: ImportedContactsU
 }
 
 /**
- * `activities` è tipizzata: accesso diretto al client tipizzato.
- * `emails` NON esiste nello schema live (verificato su information_schema):
+ * `activities.contact_id` non esiste nello schema live (le attività sono
+ * collegate a partner, non a contatti importati) e la relazione
+ * `emails` NON esiste affatto (verificato su information_schema):
  * niente query, ritorna un errore esplicito che il chiamante logga come warning.
  */
 export async function reassignActivitiesContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {

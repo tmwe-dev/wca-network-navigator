@@ -28,6 +28,8 @@ export const ABSENT_RELATIONS = [
   // Funnemail eval — batch runs storici
   "funnemail_eval_batch_runs",
   "funnemail_eval_dataset",
+  // Contatti: relazione mai provisionata (merge contatti)
+  "emails",
 ] as const;
 
 export type AbsentRelation = (typeof ABSENT_RELATIONS)[number];
