@@ -1,7 +1,7 @@
 /**
  * Tool: daily-briefing — Read-only morning brief from edge `daily-briefing`.
  */
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Tool, ToolResult } from "./types";
 
 interface BriefingResp {
@@ -21,9 +21,10 @@ export const dailyBriefingTool: Tool = {
   match: (p) => /\b(briefing|brief|riepilogo\s+giornaliero|sintesi\s+giornaliera|cosa\s+devo\s+fare\s+oggi|agenda\s+oggi|stato\s+oggi)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const res = await invokeEdge<BriefingResp>("daily-briefing", {
+    const res = await invokeAi<BriefingResp>("daily-briefing", {
+      scope: "command",
+      context: { source: "daily-briefing", mode: "tool" },
       body: {},
-      context: "command:daily-briefing",
     });
 
     if (!res || res.error) {

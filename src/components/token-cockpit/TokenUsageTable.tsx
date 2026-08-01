@@ -2,9 +2,7 @@
  * TokenUsageTable — Detailed table of recent token usage entries
  */
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { findRecentTokenUsageRows } from "@/data/tokenCockpit";
+import { useTokenCockpitUser, useRecentTokenUsage, type UsageRow } from "@/hooks/useTokenCockpitData";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,56 +17,11 @@ import {
 } from "@/components/ui/table";
 
 
-import { createLogger } from "@/lib/log";
-const log = createLogger("TokenUsageTable");
-interface UsageRow {
-  id: string;
-  function_name: string;
-  model: string | null;
-  input_tokens: number;
-  output_tokens: number;
-  total_tokens: number;
-  cost_estimate: number;
-  created_at: string;
-}
-
 export function TokenUsageTable() {
-  const { data: userData } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
-      return data.user;
-    },
-  });
+  const { data: userData } = useTokenCockpitUser();
+  const { data: tableData = [], isLoading } = useRecentTokenUsage(userData?.id);
 
-  const { data: tableData = [], isLoading } = useQuery({
-    queryKey: ["tokenUsage", "table", userData?.id],
-    queryFn: async () => {
-      if (!userData?.id) return [];
-
-      const { data, error } = await findRecentTokenUsageRows(20);
-
-      if (error) {
-        log.error("Error fetching table data:", { error: error });
-        return [];
-      }
-
-      // Map ai_prompt_log columns to legacy UsageRow shape
-      return (data || []).map((r) => ({
-        id: r.id,
-        function_name: r.function_name,
-        model: r.model,
-        input_tokens: r.tokens_in ?? 0,
-        output_tokens: r.tokens_out ?? 0,
-        total_tokens: r.tokens_total ?? 0,
-        cost_estimate: Number(r.cost_usd ?? 0),
-        created_at: r.created_at,
-      })) as UsageRow[];
-    },
-    enabled: !!userData?.id,
-  });
-
-  const tableDataMemoized = useMemo(() => tableData, [tableData]);
+  const tableDataMemoized = useMemo<UsageRow[]>(() => tableData, [tableData]);
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);

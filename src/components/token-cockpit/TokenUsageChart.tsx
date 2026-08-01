@@ -4,61 +4,13 @@
 import { useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { findTokenSeriesSince } from "@/data/tokenCockpit";
+import { useTokenCockpitUser, useTokenSeries } from "@/hooks/useTokenCockpitData";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
-import { createLogger } from "@/lib/log";
-const log = createLogger("TokenUsageChart");
-interface ChartData {
-  date: string;
-  tokens: number;
-  displayDate: string;
-}
-
 export function TokenUsageChart() {
-  const { data: userData } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
-      return data.user;
-    },
-  });
-
-  const { data: chartData = [], isLoading } = useQuery({
-    queryKey: ["tokenUsage", "chart", userData?.id],
-    queryFn: async () => {
-      if (!userData?.id) return [];
-
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data, error } = await findTokenSeriesSince(thirtyDaysAgo.toISOString());
-
-      if (error) {
-        log.error("Error fetching chart data:", { error: error });
-        return [];
-      }
-
-      // Aggregate by day
-      const dailyData: Record<string, number> = {};
-      for (const row of data || []) {
-        const date = new Date(row.created_at ?? "").toLocaleDateString("it-IT");
-        dailyData[date] = (dailyData[date] || 0) + (row.tokens_total || 0);
-      }
-
-      return Object.entries(dailyData)
-        .map(([date, tokens]) => ({
-          date,
-          tokens,
-          displayDate: date,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    },
-    enabled: !!userData?.id,
-  });
+  const { data: userData } = useTokenCockpitUser();
+  const { data: chartData = [], isLoading } = useTokenSeries(userData?.id);
 
   const chartDataMemoized = useMemo(() => chartData, [chartData]);
 

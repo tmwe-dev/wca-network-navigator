@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface BriefingAction {
@@ -46,7 +46,11 @@ export function useDailyBriefing(enabled: boolean = true) {
     staleTime: 15 * 60 * 1000,
     enabled,
     queryFn: async () => {
-      return invokeEdge<DailyBriefing>("daily-briefing", { context: "useDailyBriefing" });
+      return invokeAi<DailyBriefing>("daily-briefing", {
+        scope: "briefing",
+        context: { source: "useDailyBriefing" },
+        body: {},
+      });
     },
   });
 }

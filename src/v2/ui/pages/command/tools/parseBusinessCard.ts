@@ -2,7 +2,7 @@
  * Tool: parse-business-card — Run OCR/AI extraction on a business-card image URL.
  * Write tool → requires approval (consuma crediti AI).
  */
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 function extractImageUrl(prompt: string): string | null {
@@ -51,9 +51,10 @@ export const parseBusinessCardTool: Tool = {
       };
     }
 
-    const res = await invokeEdge<ParseResp>("parse-business-card", {
+    const res = await invokeAi<ParseResp>("parse-business-card", {
+      scope: "command",
+      context: { source: "parse-business-card", mode: "tool" },
       body: { imageUrl: String(p.imageUrl) },
-      context: "command:parse-business-card",
     });
 
     if (!res || res.error) {

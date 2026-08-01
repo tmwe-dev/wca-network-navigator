@@ -4,20 +4,9 @@
 import { useMemo } from "react";
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import { Card } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { findTokensByFunctionSince } from "@/data/tokenCockpit";
+import { useTokenCockpitUser, useTokenByFunction } from "@/hooks/useTokenCockpitData";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getFunctionDisplayName } from "@/lib/tokenFormat";
 
-
-import { createLogger } from "@/lib/log";
-const log = createLogger("TokenByFunctionPie");
-interface PieData {
-  name: string;
-  value: number;
-  displayValue: string;
-}
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -29,48 +18,8 @@ const COLORS = [
 ];
 
 export function TokenByFunctionPie() {
-  const { data: userData } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
-      return data.user;
-    },
-  });
-
-  const { data: pieData = [], isLoading } = useQuery({
-    queryKey: ["tokenUsage", "byFunction", userData?.id],
-    queryFn: async () => {
-      if (!userData?.id) return [];
-
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const { data, error } = await findTokensByFunctionSince(sevenDaysAgo.toISOString());
-
-      if (error) {
-        log.error("Error fetching function breakdown:", { error: error });
-        return [];
-      }
-
-      // Aggregate by function
-      const functionData: Record<string, number> = {};
-      for (const row of data || []) {
-        // Normalize function names: strip ":hash" suffix from variants like "generate-email:ae35ad39"
-        const rawFn = row.function_name || "Altro";
-        const fn = rawFn.split(":")[0];
-        functionData[fn] = (functionData[fn] || 0) + (row.tokens_total || 0);
-      }
-
-      return Object.entries(functionData)
-        .map(([fn, tokens]) => ({
-          name: getFunctionDisplayName(fn),
-          value: tokens,
-          displayValue: tokens >= 1000000 ? (tokens / 1000000).toFixed(1) + "M" : (tokens / 1000).toFixed(1) + "K",
-        }))
-        .sort((a, b) => b.value - a.value);
-    },
-    enabled: !!userData?.id,
-  });
+  const { data: userData } = useTokenCockpitUser();
+  const { data: pieData = [], isLoading } = useTokenByFunction(userData?.id);
 
   const pieDataMemoized = useMemo(() => pieData, [pieData]);
 
