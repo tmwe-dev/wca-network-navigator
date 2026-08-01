@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
-import { findOperativePrompts } from "@/data/operativePrompts";
+import { findOperativePromptOptions } from "@/data/operativePrompts";
 import {
   listTestCasesForPrompt,
   listRunsForPrompt,
@@ -41,7 +41,6 @@ import {
   SEVERITY_COLORS,
   STATUS_ICON,
   emptyDraft,
-  type PromptOption,
 } from "./promptTestsTab.constants";
 
 export function PromptTestsTab() {
@@ -61,8 +60,7 @@ export function PromptTestsTab() {
     queryKey: [...QK_PROMPTS, userId],
     enabled: !!userId,
     queryFn: async () => {
-      const rows = await findOperativePrompts(userId, "id, name");
-      return rows as unknown as PromptOption[];
+      return findOperativePromptOptions(userId);
     },
   });
 

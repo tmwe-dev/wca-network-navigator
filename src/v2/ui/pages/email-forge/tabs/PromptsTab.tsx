@@ -5,7 +5,7 @@
  */
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { findOperativePromptsFull, updateOperativePrompt } from "@/data/operativePrompts";
+import { findOperativePromptsFull, type OperativePromptFull, updateOperativePrompt } from "@/data/operativePrompts";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,16 +16,7 @@ import { Loader2, Save, Scroll } from "lucide-react";
 import { toast } from "sonner";
 import { RegenerateBanner } from "../RegenerateBanner";
 
-interface PromptRow {
-  id: string;
-  name: string;
-  objective: string | null;
-  procedure: string | null;
-  criteria: string | null;
-  tags: string[] | null;
-  is_active: boolean;
-  priority: number;
-}
+type PromptRow = OperativePromptFull;
 
 const EMAIL_TAG_RE = /email|mail|outreach|sales|negoz|vend/i;
 
@@ -39,8 +30,7 @@ export function PromptsTab() {
     queryKey: ["forge-operative-prompts", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const data = await findOperativePromptsFull(userId!);
-      return data as unknown as PromptRow[];
+      return findOperativePromptsFull(userId!);
     },
   });
 
@@ -94,8 +84,8 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
   const [objective, setObjective] = React.useState(prompt.objective ?? "");
   const [procedure, setProcedure] = React.useState(prompt.procedure ?? "");
   const [criteria, setCriteria] = React.useState(prompt.criteria ?? "");
-  const [priority, setPriority] = React.useState(prompt.priority);
-  const [active, setActive] = React.useState(prompt.is_active);
+  const [priority, setPriority] = React.useState(prompt.priority ?? 0);
+  const [active, setActive] = React.useState(prompt.is_active ?? false);
   const [saving, setSaving] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 

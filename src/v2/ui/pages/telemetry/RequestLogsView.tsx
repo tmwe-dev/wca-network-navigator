@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { findRequestLogsSince } from "@/data/telemetry";
-import type { RequestLogRow } from "./types";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, StatusPill, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
 import { queryKeys } from "@/lib/queryKeys";
@@ -8,10 +7,7 @@ import { queryKeys } from "@/lib/queryKeys";
 export function RequestLogsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.telemetry.requestLogs(sinceIso),
-    queryFn: async () => {
-      const data = await findRequestLogsSince(sinceIso, 500);
-      return data as unknown as RequestLogRow[];
-    },
+    queryFn: () => findRequestLogsSince(sinceIso, 500),
     refetchInterval: 30_000,
   });
 

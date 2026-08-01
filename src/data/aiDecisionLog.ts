@@ -71,7 +71,12 @@ export async function findDecisionLogCriticalRows(sinceIso: string): Promise<Dec
     .not("email_address", "is", null)
     .gte("created_at", sinceIso);
   if (error) throw error;
-  return (data ?? []) as unknown as DecisionCriticalRow[];
+  return (data ?? []).map((r) => ({
+    email_address: r.email_address,
+    user_review: r.user_review,
+    partner_id: r.partner_id,
+    partners: r.partners ? { company_name: r.partners.company_name } : null,
+  }));
 }
 
 export interface LearningDecisionRow {

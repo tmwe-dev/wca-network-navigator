@@ -3,6 +3,7 @@
  */
 import { useMemo } from "react";
 import * as Icons from "lucide-react";
+import { resolveLucideIcon } from "@/lib/lucideIcon";
 import type { AgentRegistryEntry, AgentCategory } from "@/constants/agentPrompts";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,7 @@ export function AgentSidebar({ agents, selectedId, onSelect }: AgentSidebarProps
             </div>
             <ul className="space-y-0.5">
               {grouped.get(category)!.map((a) => {
-                const Ico = (Icons as unknown as Record<string, Icons.LucideIcon>)[a.avatarIcon] ?? Icons.Bot;
+                const Ico = resolveLucideIcon(a.avatarIcon);
                 const isActive = a.id === selectedId;
                 return (
                   <li key={a.id}>

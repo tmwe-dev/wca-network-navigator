@@ -177,6 +177,30 @@ export async function getContactById(id: string) {
   return data;
 }
 
+/** Lookup minimale contatto (id, nome, azienda, email). */
+export interface ContactLookup {
+  id: string;
+  name: string | null;
+  company_name: string | null;
+  email: string | null;
+}
+
+/** Righe di lookup validate a runtime: senza id stringa vengono scartate. */
+export async function getContactLookupsByIds(ids: string[]): Promise<ContactLookup[]> {
+  const rows = await getContactsByIds(ids, "id, name, company_name, email");
+  const out: ContactLookup[] = [];
+  for (const r of rows) {
+    if (typeof r.id !== "string") continue;
+    out.push({
+      id: r.id,
+      name: typeof r.name === "string" ? r.name : null,
+      company_name: typeof r.company_name === "string" ? r.company_name : null,
+      email: typeof r.email === "string" ? r.email : null,
+    });
+  }
+  return out;
+}
+
 export async function getContactsByIds(ids: string[], select = "id, name, company_name, email") {
   const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {

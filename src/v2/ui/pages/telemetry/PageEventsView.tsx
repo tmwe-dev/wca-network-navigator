@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { findPageEventsSince } from "@/data/telemetry";
-import type { PageEventRow } from "./types";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
 import { queryKeys } from "@/lib/queryKeys";
@@ -8,10 +7,7 @@ import { queryKeys } from "@/lib/queryKeys";
 export function PageEventsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.telemetry.pageEvents(sinceIso),
-    queryFn: async () => {
-      const data = await findPageEventsSince(sinceIso, 500);
-      return data as unknown as PageEventRow[];
-    },
+    queryFn: () => findPageEventsSince(sinceIso, 500),
     refetchInterval: 30_000,
   });
 

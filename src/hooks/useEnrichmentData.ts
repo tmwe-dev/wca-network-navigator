@@ -60,19 +60,6 @@ export function getEnrichStatus(r: EnrichedRow): EnrichStatus {
   return "complete";
 }
 
-interface PartnerLookupRow {
-  id: string;
-  company_name: string;
-  email: string | null;
-  website: string | null;
-}
-
-interface ContactLookupRow {
-  id: string;
-  name: string | null;
-  company_name: string | null;
-  email: string | null;
-}
 
 export function useEnrichmentData() {
   const linkedInLookup = useLinkedInLookup();
@@ -203,12 +190,12 @@ export function useEnrichmentData() {
       const partnerIds = [...new Set(queue.filter(q => q.partner_id).map(q => q.partner_id!))];
       const contactIds = [...new Set(queue.filter(q => q.source_type === "contact").map(q => q.source_id))];
       const fetchPartnerBatch = async (ids: string[]) => {
-        const { getPartnersByIds } = await import("@/data/partners");
-        return await getPartnersByIds(ids, "id, company_name, email, website") as unknown as PartnerLookupRow[];
+        const { getPartnerLookupsByIds } = await import("@/data/partners");
+        return getPartnerLookupsByIds(ids);
       };
       const fetchContactBatch = async (ids: string[]) => {
-        const { getContactsByIds } = await import("@/data/contacts");
-        return await getContactsByIds(ids, "id, name, company_name, email") as unknown as ContactLookupRow[];
+        const { getContactLookupsByIds } = await import("@/data/contacts");
+        return getContactLookupsByIds(ids);
       };
       const [pData, cData] = await Promise.all([
         partnerIds.length ? fetchPartnerBatch(partnerIds) : [],

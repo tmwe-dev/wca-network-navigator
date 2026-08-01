@@ -3,6 +3,7 @@
  */
 import { useMemo } from "react";
 import * as Icons from "lucide-react";
+import { resolveLucideIcon } from "@/lib/lucideIcon";
 import type { AgentRegistryEntry, AgentCategory } from "@/constants/agentPrompts";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -59,7 +60,7 @@ export function AtlasSidebar({ agents, selectedId, onSelect }: AtlasSidebarProps
   }, [agents]);
 
   const SelectedIcon = selected
-    ? ((Icons as unknown as Record<string, Icons.LucideIcon>)[selected.avatarIcon] ?? Icons.Bot)
+    ? (resolveLucideIcon(selected.avatarIcon))
     : Icons.Bot;
 
   return (
@@ -109,7 +110,7 @@ export function AtlasSidebar({ agents, selectedId, onSelect }: AtlasSidebarProps
             </div>
             <ul className="space-y-0.5">
               {grouped.get(category)!.map((a) => {
-                const Ico = (Icons as unknown as Record<string, Icons.LucideIcon>)[a.avatarIcon] ?? Icons.Bot;
+                const Ico = resolveLucideIcon(a.avatarIcon);
                 const isActive = a.id === selectedId;
                 return (
                   <li key={a.id}>

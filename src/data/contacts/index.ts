@@ -17,6 +17,8 @@ export {
   findContacts,
   getContactById,
   getContactsByIds,
+  getContactLookupsByIds,
+  type ContactLookup,
   updateContact,
   deleteContacts,
   insertContacts,

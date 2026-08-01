@@ -4,47 +4,14 @@
 
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findChannelMessagesPage } from "@/data/channelMessages";
+import { findChannelMessagesPage, type ChannelMessageRow } from "@/data/channelMessages";
 import { useEffect } from "react";
 import { createLogger } from "@/lib/log";
 import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useChannelMessages");
 
-export type ChannelMessage = {
-  id: string;
-  user_id: string;
-  channel: string;
-  direction: string;
-  source_type: string | null;
-  source_id: string | null;
-  partner_id: string | null;
-  mailbox_id: string | null;
-  from_address: string | null;
-  to_address: string | null;
-  cc_addresses: string | null;
-  bcc_addresses: string | null;
-  subject: string | null;
-  body_text?: string | null;
-  body_html?: string | null;
-  raw_payload?: unknown;
-  message_id_external: string | null;
-  in_reply_to: string | null;
-  read_at: string | null;
-  created_at: string;
-  email_date: string | null;
-  raw_storage_path: string | null;
-  raw_sha256: string | null;
-  raw_size_bytes: number | null;
-  imap_uid: number | null;
-  uidvalidity: number | null;
-  imap_flags: string | null;
-  internal_date: string | null;
-  parse_status: string | null;
-  parse_warnings: string[] | null;
-  thread_id: string | null;
-  references_header: string | null;
-};
+export type ChannelMessage = ChannelMessageRow;
 
 const PAGE_SIZE = 50;
 
@@ -106,7 +73,7 @@ export function useChannelMessages(
   const query = useQuery({
     queryKey: queryKeys.channelMessages.list(channel, searchQuery, page, operatorUserId, mailboxKey),
     queryFn: async () => {
-      const data = await findChannelMessagesPage({
+      return findChannelMessagesPage({
         channel,
         searchQuery,
         page,
@@ -114,7 +81,6 @@ export function useChannelMessages(
         operatorUserId,
         mailboxFilter,
       });
-      return data as unknown as ChannelMessage[];
     },
     staleTime: 30_000,
   });
