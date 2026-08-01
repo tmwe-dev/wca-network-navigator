@@ -36,22 +36,31 @@ export async function findBusinessCardByEmail(email: string) {
   return data;
 }
 
-export async function findMatchedPartnerIds() {
+export async function findMatchedPartnerIds(): Promise<Set<string>> {
   const { data, error } = await supabase
     .from("business_cards")
     .select("matched_partner_id")
     .not("matched_partner_id", "is", null);
   if (error) throw error;
-  return new Set((data ?? []).map((r) => r.matched_partner_id));
+  // Il filtro `.not(... is null)` è lato server: qui si stringe il tipo senza cast.
+  return new Set(
+    (data ?? [])
+      .map((r) => r.matched_partner_id)
+      .filter((id): id is string => typeof id === "string"),
+  );
 }
 
-export async function findMatchedContactIds() {
+export async function findMatchedContactIds(): Promise<Set<string>> {
   const { data, error } = await supabase
     .from("business_cards")
     .select("matched_contact_id")
     .not("matched_contact_id", "is", null);
   if (error) throw error;
-  return new Set((data ?? []).map((r) => r.matched_contact_id));
+  return new Set(
+    (data ?? [])
+      .map((r) => r.matched_contact_id)
+      .filter((id): id is string => typeof id === "string"),
+  );
 }
 
 

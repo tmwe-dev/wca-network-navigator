@@ -18,6 +18,7 @@ import { getServiceIcon } from "@/components/partners/shared/ServiceIcons";
 import { getNetworkLogo } from "@/components/partners/shared/NetworkLogos";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
+import { toRecordOrNull, toRecords } from "@/lib/records";
 
 const PartnerMiniGlobe = lazy(() =>
   import("@/components/partners/PartnerMiniGlobe").then((m) => ({ default: m.PartnerMiniGlobe }))
@@ -86,7 +87,14 @@ export function PartnerDetailInfo({
 
   return (
     <>
-      <EnrichmentCard partner={partner as never} />
+      <EnrichmentCard
+        partner={{
+          id: String(partner.id),
+          enriched_at: partner.enriched_at ?? null,
+          enrichment_data: toRecordOrNull(partner.enrichment_data) ?? undefined,
+          ai_parsed_at: partner.ai_parsed_at ?? null,
+        }}
+      />
 
       {partner.profile_description && (
         <Section>
@@ -327,7 +335,7 @@ export function PartnerDetailInfo({
                     <PartnerMiniGlobe
                       partnerCountryCode={String(partner.country_code)}
                       partnerCity={String(partner.city)}
-                      branchCities={partner.branch_cities as never}
+                      branchCities={toRecords(partner.branch_cities)}
                     />
                   </Suspense>
                 </Section>
