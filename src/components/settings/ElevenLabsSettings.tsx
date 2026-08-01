@@ -104,7 +104,7 @@ interface ElevenLabsSettingsProps {
 export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettingsProps) {
   const [voices, setVoices] = useState<Voice[]>(FALLBACK_VOICES);
   const [loadingVoices, setLoadingVoices] = useState(false);
-  const [apiStatus, setApiStatus] = useState<"checking" | "ok" | "invalid_key" | "missing_key" | "error">("checking");
+  const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [customVoiceId, setCustomVoiceId] = useState(settings?.elevenlabs_custom_voice_id || "");
@@ -138,8 +138,9 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
     setLoadingVoices(true);
     try {
       const data = await invokeEdge<Record<string, unknown>>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
-      setApiStatus(String(data.status || "error") as never);
-      if (Array.isArray(data.voices) && data.voices.length > 0) setVoices(data.voices as never);
+      setApiStatus(parseApiStatus(data.status));
+      const parsed = parseVoices(data.voices);
+      if (parsed.length > 0) setVoices(parsed);
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
       setApiStatus("error");
