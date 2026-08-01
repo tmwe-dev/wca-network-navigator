@@ -14,7 +14,7 @@ import {
   findTokenSeriesSince,
   findRecentTokenUsageRows,
 } from "@/data/tokenCockpit";
-import { findPromptLogTokens } from "@/data/tokenUsage";
+import { findPromptLogTokens, getTokenSettings } from "@/data/tokenUsage";
 import { getFunctionDisplayName } from "@/lib/tokenFormat";
 import { createLogger } from "@/lib/log";
 
@@ -53,6 +53,43 @@ export interface UsageRow {
   total_tokens: number;
   cost_estimate: number;
   created_at: string;
+}
+
+export interface TokenStats {
+  today: number;
+  month: number;
+  dailyLimit: number;
+  monthlyLimit: number;
+}
+
+export function useTokenStats(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["tokenUsage", "stats", userId],
+    queryFn: async (): Promise<TokenStats> => {
+      if (!userId) {
+        return { today: 0, month: 0, dailyLimit: 500000, monthlyLimit: 10000000 };
+      }
+
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const [dailyData, monthlyData, settings] = await Promise.all([
+        findPromptLogTokens({ since: startOfDay.toISOString() }),
+        findPromptLogTokens({ since: startOfMonth.toISOString() }),
+        getTokenSettings(userId),
+      ]);
+
+      const today = (dailyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+      const month = (monthlyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
+
+      const dailyLimit = parseInt(settings["ai_daily_token_limit"] || "500000", 10);
+      const monthlyLimit = parseInt(settings["ai_monthly_token_limit"] || "10000000", 10);
+
+      return { today, month, dailyLimit, monthlyLimit };
+    },
+    enabled: !!userId,
+  });
 }
 
 /** Utente corrente — stessa queryKey ["user"] usata dai componenti originali. */
