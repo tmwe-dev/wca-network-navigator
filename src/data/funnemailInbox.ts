@@ -118,6 +118,38 @@ export interface FunnemailDecisionRow {
   created_at: string;
 }
 
+/**
+ * Shape realmente restituita dal database: `suggested_action` e `urgency`
+ * sono colonne `text` libere, non enum. I validatori qui sotto le riducono
+ * alle union applicative con fallback sicuro (nessun cast cieco).
+ */
+type RawFunnemailDecisionRow = Omit<FunnemailDecisionRow, "suggested_action" | "urgency"> & {
+  suggested_action: string;
+  urgency: string;
+};
+
+const SUGGESTED_ACTIONS: ReadonlySet<string> = new Set([
+  "none",
+  "draft_reply",
+  "forward",
+  "escalate",
+  "archive",
+  "notify_human",
+]);
+const URGENCIES: ReadonlySet<string> = new Set(["critical", "high", "normal", "low"]);
+
+function parseFunnemailDecisionRow(raw: RawFunnemailDecisionRow): FunnemailDecisionRow {
+  return {
+    ...raw,
+    suggested_action: SUGGESTED_ACTIONS.has(raw.suggested_action)
+      ? (raw.suggested_action as FunnemailDecisionRow["suggested_action"])
+      : "none",
+    urgency: URGENCIES.has(raw.urgency)
+      ? (raw.urgency as FunnemailDecisionRow["urgency"])
+      : "normal",
+  };
+}
+
 export interface FunnemailMailRow {
   message_id: string;
   subject: string | null;
