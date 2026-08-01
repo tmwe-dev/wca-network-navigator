@@ -74,3 +74,21 @@ export function applyValidatedFilters<TBuilder>(
   }
   return q;
 }
+
+/**
+ * UPDATE di una singola colonna il cui nome è noto solo a runtime.
+ *
+ * Tabella e colonna devono essere già validate dal chiamante contro una
+ * whitelist; qui si esegue soltanto, sullo stesso boundary untyped.
+ */
+export async function updateValidatedColumn(
+  validatedTable: string,
+  validatedColumn: string,
+  value: unknown,
+  match: { readonly column: string; readonly value: unknown },
+): Promise<void> {
+  const { error } = await untypedFrom(validatedTable)
+    .update({ [validatedColumn]: value })
+    .eq(match.column, match.value);
+  if (error) throw error;
+}
