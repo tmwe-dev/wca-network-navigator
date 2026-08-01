@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("ContactMergeDialog");
 export interface ContactMergeDialogProps {
@@ -27,14 +26,6 @@ export interface ContactMergeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onMergeComplete?: (mergedId: string) => void;
-}
-
-interface FieldMergeChoice {
-  name: string;
-  field: keyof ContactForMerge;
-  value1: unknown;
-  value2: unknown;
-  selected: ContactForMerge | null; // which contact's value is selected
 }
 
 const MERGE_FIELDS: Array<{
@@ -108,9 +99,7 @@ export function ContactMergeDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Unisci Contatti</DialogTitle>
-          <DialogDescription>
-            Seleziona il contatto da mantenere e i valori di ogni campo.
-          </DialogDescription>
+          <DialogDescription>Seleziona il contatto da mantenere e i valori di ogni campo.</DialogDescription>
         </DialogHeader>
 
         {step === "confirm" && (
@@ -123,7 +112,9 @@ export function ContactMergeDialog({
                   <Card
                     key={contact.id}
                     className={`p-4 cursor-pointer border-2 transition ${
-                      keepContact.id === contact.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-gray-700"
+                      keepContact.id === contact.id
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                        : "border-gray-200 dark:border-gray-700"
                     }`}
                     onClick={() => setKeepContact(contact)}
                   >
@@ -183,9 +174,7 @@ export function ContactMergeDialog({
                                 className="mr-2"
                               />
                               <span className="text-xs text-gray-600 dark:text-gray-400">{contact.name}</span>
-                              <div className="font-mono text-xs mt-1 break-words">
-                                {value || "—"}
-                              </div>
+                              <div className="font-mono text-xs mt-1 break-words">{value || "—"}</div>
                             </button>
                           );
                         })}
@@ -217,8 +206,12 @@ export function ContactMergeDialog({
                 <div className="space-y-2">
                   <div className="font-semibold text-sm">Riepilogo unione</div>
                   <ul className="text-xs space-y-1 text-yellow-700 dark:text-yellow-300">
-                    <li>• Mantieni: <strong>{keepContact.name || keepContact.email}</strong></li>
-                    <li>• Elimina: <strong>{deleteContact.name || deleteContact.email}</strong></li>
+                    <li>
+                      • Mantieni: <strong>{keepContact.name || keepContact.email}</strong>
+                    </li>
+                    <li>
+                      • Elimina: <strong>{deleteContact.name || deleteContact.email}</strong>
+                    </li>
                     <li>• Attività e email del contatto eliminato saranno riassegnate</li>
                     <li>• Questo non può essere annullato</li>
                   </ul>
@@ -240,13 +233,8 @@ export function ContactMergeDialog({
                   return (
                     <div key={field} className="text-xs">
                       <span className="font-medium">{label}:</span>{" "}
-                      <span className="text-gray-600 dark:text-gray-400 line-through">
-                        {currentValue || "—"}
-                      </span>{" "}
-                      →{" "}
-                      <span className="text-green-600 dark:text-green-400">
-                        {newValue || "—"}
-                      </span>
+                      <span className="text-gray-600 dark:text-gray-400 line-through">{currentValue || "—"}</span> →{" "}
+                      <span className="text-green-600 dark:text-green-400">{newValue || "—"}</span>
                     </div>
                   );
                 })}
@@ -257,11 +245,7 @@ export function ContactMergeDialog({
               <Button variant="outline" onClick={() => setStep("confirm")}>
                 Indietro
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleMerge}
-                disabled={mergeContactsMutation.isPending}
-              >
+              <Button variant="destructive" onClick={handleMerge} disabled={mergeContactsMutation.isPending}>
                 {mergeContactsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Unisci contatti
               </Button>

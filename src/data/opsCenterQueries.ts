@@ -6,11 +6,17 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AgentTasksRow = Database["public"]["Tables"]["agent_tasks"]["Row"];
 type EmailQueueRow = Database["public"]["Tables"]["email_campaign_queue"]["Row"];
-type ActivitiesRow = Database["public"]["Tables"]["activities"]["Row"];
-
 export type OpsAgentTaskRow = Pick<
   AgentTasksRow,
-  "id" | "agent_id" | "description" | "status" | "task_type" | "created_at" | "started_at" | "completed_at" | "result_summary"
+  | "id"
+  | "agent_id"
+  | "description"
+  | "status"
+  | "task_type"
+  | "created_at"
+  | "started_at"
+  | "completed_at"
+  | "result_summary"
 >;
 
 export async function getOpsCenterAgentTasks(): Promise<OpsAgentTaskRow[]> {
@@ -36,13 +42,25 @@ export async function getAgentNamesByIds(agentIds: string[]): Promise<Record<str
 
 export type OpsEmailQueueRow = Pick<
   EmailQueueRow,
-  "id" | "recipient_email" | "recipient_name" | "subject" | "status" | "scheduled_at" | "sent_at" | "error_message" | "created_at" | "opened_at" | "open_count"
+  | "id"
+  | "recipient_email"
+  | "recipient_name"
+  | "subject"
+  | "status"
+  | "scheduled_at"
+  | "sent_at"
+  | "error_message"
+  | "created_at"
+  | "opened_at"
+  | "open_count"
 >;
 
 export async function getOpsCenterEmailQueue(): Promise<OpsEmailQueueRow[]> {
   const { data, error } = await supabase
     .from("email_campaign_queue")
-    .select("id, recipient_email, recipient_name, subject, status, scheduled_at, sent_at, error_message, created_at, opened_at, open_count")
+    .select(
+      "id, recipient_email, recipient_name, subject, status, scheduled_at, sent_at, error_message, created_at, opened_at, open_count",
+    )
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw error;
@@ -65,7 +83,9 @@ export interface OpsActivityRow {
 export async function getOpsCenterActivities(): Promise<OpsActivityRow[]> {
   const { data, error } = await supabase
     .from("activities")
-    .select("id, title, activity_type, status, scheduled_at, due_date, email_subject, sent_at, created_at, partners(company_name)")
+    .select(
+      "id, title, activity_type, status, scheduled_at, due_date, email_subject, sent_at, created_at, partners(company_name)",
+    )
     .is("deleted_at", null)
     .neq("status", "cancelled")
     .order("created_at", { ascending: false })

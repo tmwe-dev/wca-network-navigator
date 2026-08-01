@@ -7,7 +7,13 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { findAllAgentMissions, findAgentMissionEvents, updateAgentMissionFields, insertAgentMission, type AgentMissionRow, type AgentMissionEventRow } from "@/data/agentMissions";
+import {
+  findAllAgentMissions,
+  findAgentMissionEvents,
+  updateAgentMissionFields,
+  insertAgentMission,
+  type AgentMissionRow,
+} from "@/data/agentMissions";
 import { findAgentOptions } from "@/data/agents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,8 +31,6 @@ import { Plus, Play, Pause, Square, Rocket, Clock, Target, Zap, AlertTriangle } 
 import { PageShell } from "@/v2/ui/templates/PageShell";
 
 type AgentMission = AgentMissionRow;
-type MissionEvent = AgentMissionEventRow;
-
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   active: "bg-primary/20 text-primary",
@@ -84,7 +88,9 @@ export function MissionsPage() {
   // Create mission
   const createMut = useMutation({
     mutationFn: async (mission: Partial<AgentMission>) => {
-      const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+      const { data: userData } = await supabase.auth
+        .getSession()
+        .then((r) => ({ data: { user: r.data.session?.user ?? null } }));
       const ownerUserId = userData.user?.id;
       if (!ownerUserId) throw new Error("Sessione non valida: impossibile creare la missione");
       if (!mission.agent_id) throw new Error("Seleziona un agente per la missione");
@@ -122,7 +128,9 @@ export function MissionsPage() {
       actions={
         <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Nuova Missione</Button>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Nuova Missione
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -136,10 +144,12 @@ export function MissionsPage() {
       {isLoading ? (
         <div className="text-muted-foreground">Caricamento...</div>
       ) : missions.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">
-          <Rocket className="mx-auto mb-4 h-12 w-12 opacity-30" />
-          <p>Nessuna missione. Crea la prima missione autopilot.</p>
-        </CardContent></Card>
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Rocket className="mx-auto mb-4 h-12 w-12 opacity-30" />
+            <p>Nessuna missione. Crea la prima missione autopilot.</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {missions.map((m) => (
@@ -169,7 +179,9 @@ export function MissionsPage() {
                 <div className="space-y-2">
                   {events.map((e) => (
                     <div key={e.id} className="flex gap-3 text-sm border-l-2 border-muted pl-3 py-1">
-                      <Badge variant="outline" className="shrink-0">{e.event_type}</Badge>
+                      <Badge variant="outline" className="shrink-0">
+                        {e.event_type}
+                      </Badge>
                       <span className="text-muted-foreground truncate">
                         {JSON.stringify(e.payload).substring(0, 120)}
                       </span>
@@ -203,30 +215,29 @@ function MissionCard({
   const budgetProgress = computeBudgetProgress(m.budget, m.budget_consumed);
 
   return (
-    <Card
-      className={`cursor-pointer transition-colors ${isSelected ? "ring-2 ring-primary" : ""}`}
-      onClick={onSelect}
-    >
+    <Card className={`cursor-pointer transition-colors ${isSelected ? "ring-2 ring-primary" : ""}`} onClick={onSelect}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <CardTitle className="text-base">{m.title}</CardTitle>
           <Badge className={STATUS_COLORS[m.status] ?? ""}>{m.status}</Badge>
         </div>
-        {m.goal_description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{m.goal_description}</p>
-        )}
+        {m.goal_description && <p className="text-xs text-muted-foreground line-clamp-2">{m.goal_description}</p>}
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
           <div className="flex justify-between text-xs mb-1">
-            <span className="flex items-center gap-1"><Target className="h-3 w-3" /> KPI</span>
+            <span className="flex items-center gap-1">
+              <Target className="h-3 w-3" /> KPI
+            </span>
             <span>{kpiProgress}%</span>
           </div>
           <Progress value={kpiProgress} className="h-2" />
         </div>
         <div>
           <div className="flex justify-between text-xs mb-1">
-            <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> Budget</span>
+            <span className="flex items-center gap-1">
+              <Zap className="h-3 w-3" /> Budget
+            </span>
             <span>{budgetProgress}%</span>
           </div>
           <Progress value={budgetProgress} className="h-2" />
@@ -258,7 +269,9 @@ function MissionCard({
             </Button>
           )}
           {m.autopilot && (
-            <Badge variant="outline" className="ml-auto text-xs">⚡ Autopilot</Badge>
+            <Badge variant="outline" className="ml-auto text-xs">
+              ⚡ Autopilot
+            </Badge>
           )}
         </div>
       </CardContent>
@@ -266,13 +279,7 @@ function MissionCard({
   );
 }
 
-function MissionWizard({
-  onSubmit,
-  isLoading,
-}: {
-  onSubmit: (m: Partial<AgentMission>) => void;
-  isLoading: boolean;
-}) {
+function MissionWizard({ onSubmit, isLoading }: { onSubmit: (m: Partial<AgentMission>) => void; isLoading: boolean }) {
   const [title, setTitle] = useState("");
   const [goalType, setGoalType] = useState("get_replies");
   const [goalDesc, setGoalDesc] = useState("");
@@ -315,15 +322,23 @@ function MissionWizard({
     <div className="space-y-4">
       <div>
         <Label>Titolo</Label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Es. 10 risposte positive in 7 giorni" />
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Es. 10 risposte positive in 7 giorni"
+        />
       </div>
       <div>
         <Label>Tipo obiettivo</Label>
         <Select value={goalType} onValueChange={setGoalType}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {GOAL_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              <SelectItem key={t.value} value={t.value}>
+                {t.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -335,10 +350,14 @@ function MissionWizard({
       <div>
         <Label>Agente</Label>
         <Select value={agentId} onValueChange={setAgentId}>
-          <SelectTrigger><SelectValue placeholder="Seleziona agente" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="Seleziona agente" />
+          </SelectTrigger>
           <SelectContent>
             {agents.map((a) => (
-              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -378,10 +397,7 @@ function MissionWizard({
   );
 }
 
-function computeKpiProgress(
-  target: Record<string, number | string>,
-  current: Record<string, number>
-): number {
+function computeKpiProgress(target: Record<string, number | string>, current: Record<string, number>): number {
   const numericKeys = Object.keys(target).filter((k) => k !== "deadline" && typeof target[k] === "number");
   if (numericKeys.length === 0) return 0;
   const total = numericKeys.reduce((sum, key) => {
@@ -392,10 +408,7 @@ function computeKpiProgress(
   return Math.round((total / numericKeys.length) * 100);
 }
 
-function computeBudgetProgress(
-  budget: Record<string, number>,
-  consumed: Record<string, number>
-): number {
+function computeBudgetProgress(budget: Record<string, number>, consumed: Record<string, number>): number {
   const keys = Object.keys(budget);
   if (keys.length === 0) return 0;
   const maxRatio = keys.reduce((max, key) => {

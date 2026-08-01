@@ -3,19 +3,19 @@
 <!-- STATS:START -->
 <!-- Generato automaticamente da scripts/gen-readme-stats.mjs — non editare a mano -->
 
-| Metrica | Valore reale |
-|---------|--------------|
-| Edge Functions | **150** |
-| Migrazioni SQL | **411** |
-| File test (`*.test.{ts,tsx}`) | **366** |
-| Coverage threshold — statements | **11%** |
-| Coverage threshold — branches | **53%** |
-| Coverage threshold — functions | **30%** |
-| Coverage threshold — lines | **11%** |
+| Metrica                         | Valore reale |
+| ------------------------------- | ------------ |
+| Edge Functions                  | **149**      |
+| Migrazioni SQL                  | **416**      |
+| File test (`*.test.{ts,tsx}`)   | **395**      |
+| Coverage threshold — statements | **11%**      |
+| Coverage threshold — branches   | **53%**      |
+| Coverage threshold — functions  | **30%**      |
+| Coverage threshold — lines      | **11%**      |
 
-_Ultimo aggiornamento: 2026-07-19_
+_Ultimo aggiornamento: 2026-08-01_
+
 <!-- STATS:END -->
-
 
 CRM con intelligenza artificiale per il freight forwarding globale.
 

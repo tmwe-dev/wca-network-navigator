@@ -31,10 +31,24 @@ export function useWhatsAppExtensionBridge() {
       const data = event.data;
       if (!data || data.direction !== "from-extension-wa") return;
 
-      if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
-      if (data.action === "extensionDead") { configSentRef.current = false; setIsAvailable(false); return; }
-      if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
-      if (data.action === "ping" && data.response?.error) { configSentRef.current = false; setIsAvailable(false); return; }
+      if (data.action === "contentScriptReady") {
+        setIsAvailable(true);
+        return;
+      }
+      if (data.action === "extensionDead") {
+        configSentRef.current = false;
+        setIsAvailable(false);
+        return;
+      }
+      if (data.action === "ping" && data.response?.success) {
+        setIsAvailable(true);
+        return;
+      }
+      if (data.action === "ping" && data.response?.error) {
+        configSentRef.current = false;
+        setIsAvailable(false);
+        return;
+      }
 
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
@@ -71,7 +85,9 @@ export function useWhatsAppExtensionBridge() {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase.auth.getSession();
       authToken = data.session?.access_token || "";
-    } catch (_err) { /* Failed to get auth session */ }
+    } catch {
+      /* Failed to get auth session */
+    }
 
     const requestId = `wa_setConfig_${crypto.randomUUID()}`;
     const result = await new Promise<WaExtensionResponse>((resolve) => {
@@ -85,14 +101,17 @@ export function useWhatsAppExtensionBridge() {
         resolve(response);
       });
 
-      window.postMessage({
-        direction: "from-webapp-wa",
-        action: "setConfig",
-        requestId,
-        supabaseUrl,
-        anonKey,
-        authToken,
-      }, window.location.origin);
+      window.postMessage(
+        {
+          direction: "from-webapp-wa",
+          action: "setConfig",
+          requestId,
+          supabaseUrl,
+          anonKey,
+          authToken,
+        },
+        window.location.origin,
+      );
     });
 
     configSentRef.current = result.success === true;
@@ -100,16 +119,21 @@ export function useWhatsAppExtensionBridge() {
 
   useEffect(() => {
     const doPing = () => {
-      window.postMessage({
-        direction: "from-webapp-wa",
-        action: "ping",
-        requestId: `poll_wa_${Date.now()}`,
-      }, window.location.origin);
+      window.postMessage(
+        {
+          direction: "from-webapp-wa",
+          action: "ping",
+          requestId: `poll_wa_${Date.now()}`,
+        },
+        window.location.origin,
+      );
     };
 
     doPing();
     pollRef.current = setInterval(doPing, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
 
   // Send config when extension becomes available
@@ -139,7 +163,10 @@ export function useWhatsAppExtensionBridge() {
             clearTimeout(timer);
             resolve(response);
           });
-          window.postMessage({ direction: "from-webapp-wa", action: "verifySession", requestId }, window.location.origin);
+          window.postMessage(
+            { direction: "from-webapp-wa", action: "verifySession", requestId },
+            window.location.origin,
+          );
         });
         setIsAuthenticated(result.success === true && result.authenticated === true);
       } catch (e) {
@@ -151,7 +178,9 @@ export function useWhatsAppExtensionBridge() {
     // Check immediately, then every 30s
     checkAuth();
     authCheckRef.current = setInterval(checkAuth, 30000);
-    return () => { if (authCheckRef.current) clearInterval(authCheckRef.current); };
+    return () => {
+      if (authCheckRef.current) clearInterval(authCheckRef.current);
+    };
   }, [isAvailable]);
 
   const sendMsg = useCallback(
@@ -172,48 +201,35 @@ export function useWhatsAppExtensionBridge() {
         window.postMessage({ direction: "from-webapp-wa", action, requestId, ...payload }, window.location.origin);
       });
     },
-    []
+    [],
   );
 
-  const verifySession = useCallback(
-    () => sendMsg("verifySession", {}, 30000),
-    [sendMsg]
-  );
+  const verifySession = useCallback(() => sendMsg("verifySession", {}, 30000), [sendMsg]);
 
   const sendWhatsApp = useCallback(
     (phone: string, text: string) => sendMsg("sendWhatsApp", { phone, text }, 60000),
-    [sendMsg]
+    [sendMsg],
   );
 
-  const readUnread = useCallback(
-    () => sendMsg("readUnread", {}, 45000),
-    [sendMsg]
-  );
+  const readUnread = useCallback(() => sendMsg("readUnread", {}, 45000), [sendMsg]);
 
   const readThread = useCallback(
-    (contact: string, maxMessages = 50) =>
-      sendMsg("readThread", { contact, maxMessages }, 60000),
-    [sendMsg]
+    (contact: string, maxMessages = 50) => sendMsg("readThread", { contact, maxMessages }, 60000),
+    [sendMsg],
   );
 
   // DOM Learning: ask AI to map WhatsApp Web selectors, cache result
-  const learnDom = useCallback(
-    () => sendMsg("learnDom", {}, 90000),
-    [sendMsg]
-  );
+  const learnDom = useCallback(() => sendMsg("learnDom", {}, 90000), [sendMsg]);
 
   const backfillChat = useCallback(
     (contact: string, lastKnownText: string, maxScrolls = 30) =>
       sendMsg("backfillChat", { contact, lastKnownText, maxScrolls }, 120000),
-    [sendMsg]
+    [sendMsg],
   );
 
   // Read all sidebar chats (no unread filter). Reuses readUnread which now
   // returns the full visible list with confidence scores; consumers filter.
-  const listSidebarChats = useCallback(
-    () => sendMsg("readUnread", {}, 60000),
-    [sendMsg]
-  );
+  const listSidebarChats = useCallback(() => sendMsg("readUnread", {}, 60000), [sendMsg]);
 
   return {
     isAvailable,

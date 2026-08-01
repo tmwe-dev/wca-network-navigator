@@ -30,8 +30,12 @@ export function AgentChat({ agent }: Props) {
     setInput((prev) => (prev ? prev + " " + text : text));
   });
 
-  useEffect(() => { setMessages([]); }, [agent.id]);
-  useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
+  useEffect(() => {
+    setMessages([]);
+  }, [agent.id]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
+  }, [messages]);
 
   const send = useCallback(async () => {
     if (!input.trim() || loading) return;
@@ -42,9 +46,12 @@ export function AgentChat({ agent }: Props) {
     setLoading(true);
 
     try {
-      const data = await invokeEdge<Record<string, unknown>>("agent-execute", { body: { agent_id: agent.id, chat_messages: newMsgs }, context: "AgentChat.agent_execute" });
+      const data = await invokeEdge<Record<string, unknown>>("agent-execute", {
+        body: { agent_id: agent.id, chat_messages: newMsgs },
+        context: "AgentChat.agent_execute",
+      });
       setMessages([...newMsgs, { role: "assistant", content: String(data?.response ?? "Nessuna risposta") }]);
-    } catch (_e) {
+    } catch {
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione con l'agente." }]);
     } finally {
       setLoading(false);
@@ -54,42 +61,42 @@ export function AgentChat({ agent }: Props) {
   const playTTS = async (text: string) => {
     if (!agent.elevenlabs_voice_id) return;
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: text.slice(0, 3000), voiceId: agent.elevenlabs_voice_id }),
-        }
-      );
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: text.slice(0, 3000), voiceId: agent.elevenlabs_voice_id }),
+      });
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
   };
 
   return (
     <div className="flex flex-col h-[500px]">
       <h3 className="text-sm font-semibold mb-2">Chat con {agent.name}</h3>
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 p-3 rounded-lg bg-background/30 border border-border/30">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto space-y-3 p-3 rounded-lg bg-background/30 border border-border/30"
+      >
         {messages.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-8">
-            Inizia una conversazione con {agent.name}
-          </p>
+          <p className="text-xs text-muted-foreground text-center py-8">Inizia una conversazione con {agent.name}</p>
         )}
         {messages.map((msg, i) => (
           <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
             <div
               className={cn(
                 "max-w-[85%] rounded-lg px-3 py-2 text-sm",
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50"
+                msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/50",
               )}
             >
               {msg.role === "assistant" ? (
@@ -98,7 +105,10 @@ export function AgentChat({ agent }: Props) {
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                   {agent.elevenlabs_voice_id && (
-                    <button onClick={() => playTTS(msg.content)} className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground">
+                    <button
+                      onClick={() => playTTS(msg.content)}
+                      className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                    >
                       <Volume2 className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -120,7 +130,7 @@ export function AgentChat({ agent }: Props) {
       {/* Input */}
       <div className="flex gap-2 mt-2">
         <Input
-          value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
+          value={speech.listening ? input + (speech.interimText ? ` ${speech.interimText}` : "") : input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           placeholder={speech.listening ? "🎙 Sto ascoltando…" : `Parla con ${agent.name}...`}

@@ -3,9 +3,6 @@ import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import type { ContactPaginatedFilters } from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ContactQuery = any;
-
 export async function findContactsPaginated(
   filters: ContactPaginatedFilters,
   pageParam: number,
@@ -14,9 +11,7 @@ export async function findContactsPaginated(
   const from = pageParam * pageSize;
   const to = from + pageSize - 1;
 
-  let query = supabase
-    .from("imported_contacts")
-    .select("*", { count: "exact" });
+  let query = supabase.from("imported_contacts").select("*", { count: "exact" });
 
   query = query.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 
@@ -24,7 +19,7 @@ export async function findContactsPaginated(
     const s = sanitizeSearchTerm(filters.search);
     if (s) {
       query = query.or(
-        `company_name.ilike.%${s}%,company_alias.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%,city.ilike.%${s}%,country.ilike.%${s}%,position.ilike.%${s}%,origin.ilike.%${s}%,phone.ilike.%${s}%,mobile.ilike.%${s}%`
+        `company_name.ilike.%${s}%,company_alias.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%,city.ilike.%${s}%,country.ilike.%${s}%,position.ilike.%${s}%,origin.ilike.%${s}%,phone.ilike.%${s}%,mobile.ilike.%${s}%`,
       );
     }
   }
@@ -78,16 +73,46 @@ export async function findContactsPaginated(
 
   const sort = filters.sort || "company_asc";
   const sortMap: Record<string, Array<{ col: string; asc: boolean; nullsFirst?: boolean }>> = {
-    company_asc: [{ col: "company_name", asc: true, nullsFirst: false }, { col: "name", asc: true }],
-    company_desc: [{ col: "company_name", asc: false, nullsFirst: true }, { col: "name", asc: true }],
-    name_asc: [{ col: "name", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
-    name_desc: [{ col: "name", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
-    city_asc: [{ col: "city", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
-    city_desc: [{ col: "city", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
-    country_asc: [{ col: "country", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
-    country_desc: [{ col: "country", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
-    origin_asc: [{ col: "origin", asc: true, nullsFirst: false }, { col: "company_name", asc: true }],
-    origin_desc: [{ col: "origin", asc: false, nullsFirst: true }, { col: "company_name", asc: true }],
+    company_asc: [
+      { col: "company_name", asc: true, nullsFirst: false },
+      { col: "name", asc: true },
+    ],
+    company_desc: [
+      { col: "company_name", asc: false, nullsFirst: true },
+      { col: "name", asc: true },
+    ],
+    name_asc: [
+      { col: "name", asc: true, nullsFirst: false },
+      { col: "company_name", asc: true },
+    ],
+    name_desc: [
+      { col: "name", asc: false, nullsFirst: true },
+      { col: "company_name", asc: true },
+    ],
+    city_asc: [
+      { col: "city", asc: true, nullsFirst: false },
+      { col: "company_name", asc: true },
+    ],
+    city_desc: [
+      { col: "city", asc: false, nullsFirst: true },
+      { col: "company_name", asc: true },
+    ],
+    country_asc: [
+      { col: "country", asc: true, nullsFirst: false },
+      { col: "company_name", asc: true },
+    ],
+    country_desc: [
+      { col: "country", asc: false, nullsFirst: true },
+      { col: "company_name", asc: true },
+    ],
+    origin_asc: [
+      { col: "origin", asc: true, nullsFirst: false },
+      { col: "company_name", asc: true },
+    ],
+    origin_desc: [
+      { col: "origin", asc: false, nullsFirst: true },
+      { col: "company_name", asc: true },
+    ],
     recent: [{ col: "created_at", asc: false }],
   };
 

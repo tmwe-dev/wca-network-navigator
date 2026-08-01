@@ -7,3 +7,4 @@ if git diff --cached --name-only | grep -qE '^(supabase/(functions|migrations)/|
 fi
 
 npx lint-staged
+npm run lint:ratchet

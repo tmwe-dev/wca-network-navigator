@@ -13,7 +13,6 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 
-
 interface AgentTask {
   id: string;
   agent_id: string;
@@ -24,13 +23,6 @@ interface AgentTask {
   created_at: string;
   scheduled_at: string | null;
   result_summary: string | null;
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  avatar_emoji: string;
-  role: string;
 }
 
 function useAgentTasks() {
@@ -53,7 +45,12 @@ function useAgentTasks() {
   });
 }
 
-function TaskCard({ task, onApprove, onReject, isUpdating }: {
+function TaskCard({
+  task,
+  onApprove,
+  onReject,
+  isUpdating,
+}: {
   task: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } };
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
@@ -104,11 +101,7 @@ function TaskCard({ task, onApprove, onReject, isUpdating }: {
             >
               <X className="h-4 w-4" />
             </Button>
-            <Button
-              size="sm"
-              onClick={() => onApprove(task.id)}
-              disabled={isUpdating}
-            >
+            <Button size="sm" onClick={() => onApprove(task.id)} disabled={isUpdating}>
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
               Approva
             </Button>
@@ -171,7 +164,11 @@ export function AgentTasksPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => pending.forEach((t: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } }) => handleReject(t.id))}
+              onClick={() =>
+                pending.forEach((t: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } }) =>
+                  handleReject(t.id),
+                )
+              }
               disabled={updateMutation.isPending}
             >
               <X className="h-4 w-4 mr-1" />
@@ -179,7 +176,11 @@ export function AgentTasksPage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => pending.forEach((t: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } }) => handleApprove(t.id))}
+              onClick={() =>
+                pending.forEach((t: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } }) =>
+                  handleApprove(t.id),
+                )
+              }
               disabled={updateMutation.isPending}
             >
               <Check className="h-4 w-4 mr-1" />
@@ -194,9 +195,7 @@ export function AgentTasksPage() {
           <CardContent className="p-12 text-center">
             <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-muted-foreground">Nessun task in attesa</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Gli agenti non hanno proposto task da confermare
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">Gli agenti non hanno proposto task da confermare</p>
           </CardContent>
         </Card>
       ) : (

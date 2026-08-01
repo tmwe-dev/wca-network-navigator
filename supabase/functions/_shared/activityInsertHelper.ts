@@ -76,12 +76,12 @@ export async function insertFollowUpActivity(
       if (Array.isArray(existing) && existing.length > 0) {
         return { inserted: false, duplicate: true, id: (existing[0] as { id: string }).id };
       }
-    } catch (_e) { /* fail-open: in caso di errore, proseguiamo con l'INSERT */ }
+    } catch {
+      /* fail-open: in caso di errore, proseguiamo con l'INSERT */
+    }
   }
 
-  const description = isHumanDescription(input.aiSummary)
-    ? input.aiSummary!
-    : fallbackDescription(input);
+  const description = isHumanDescription(input.aiSummary) ? input.aiSummary! : fallbackDescription(input);
 
   const dueAt = new Date(Date.now() + input.dueInDays * 86400000).toISOString();
 
@@ -109,11 +109,7 @@ export async function insertFollowUpActivity(
   if (input.scheduled) row.scheduled_at = dueAt;
 
   try {
-    const { data, error } = await supabase
-      .from("activities")
-      .insert(row)
-      .select("id")
-      .single();
+    const { data, error } = await supabase.from("activities").insert(row).select("id").single();
     if (error) throw error;
     return { inserted: true, duplicate: false, id: (data as { id: string } | null)?.id ?? null };
   } catch (e) {

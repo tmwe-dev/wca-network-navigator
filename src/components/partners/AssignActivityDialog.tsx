@@ -12,8 +12,17 @@ import { Progress } from "@/components/ui/progress";
 import { useCreateActivities } from "@/hooks/useActivities";
 import { toast } from "sonner";
 import {
-  Mail, Phone, CalendarClock, Users, Loader2, CheckCircle2,
-  ClipboardList, Calendar, MessageSquare, AlertTriangle, XCircle,
+  Mail,
+  Phone,
+  CalendarClock,
+  Users,
+  Loader2,
+  CheckCircle2,
+  ClipboardList,
+  Calendar,
+  MessageSquare,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 
 export interface PartnerContactInfo {
@@ -46,8 +55,14 @@ const activityTypes = [
 ];
 
 export function AssignActivityDialog({
-  open, onOpenChange, partnerIds, partnerNames, partnerContactInfo,
-  onSuccess, sourceType = "partner", extraSourceMeta,
+  open,
+  onOpenChange,
+  partnerIds,
+  partnerNames,
+  partnerContactInfo,
+  onSuccess,
+  sourceType = "partner",
+  extraSourceMeta,
 }: AssignActivityDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -62,18 +77,16 @@ export function AssignActivityDialog({
   const createActivities = useCreateActivities();
 
   const autoTitle = useMemo(() => {
-    const typeLabel = activityTypes.find(t => t.value === activityType)?.label || "";
+    const typeLabel = activityTypes.find((t) => t.value === activityType)?.label || "";
     return `${typeLabel} — ${new Date().toLocaleDateString("it-IT")}`;
   }, [activityType]);
 
   const effectiveTitle = title.trim() || autoTitle;
-  const batchId = useCampaignBatch
-    ? (campaignBatchId.trim() || `batch_${Date.now()}`)
-    : null;
+  const batchId = useCampaignBatch ? campaignBatchId.trim() || `batch_${Date.now()}` : null;
 
   // Compute valid/rejected based on activity type requirements
   const { validIds, rejectedPartners } = useMemo(() => {
-    const typeDef = activityTypes.find(t => t.value === activityType);
+    const typeDef = activityTypes.find((t) => t.value === activityType);
     const requirement = typeDef?.requires;
 
     if (!requirement || !partnerContactInfo?.length) {
@@ -84,7 +97,7 @@ export function AssignActivityDialog({
     const rejected: PartnerContactInfo[] = [];
 
     for (const id of partnerIds) {
-      const info = partnerContactInfo.find(p => p.id === id);
+      const info = partnerContactInfo.find((p) => p.id === id);
       if (!info) {
         // No info available, assume valid
         valid.push(id);
@@ -141,14 +154,13 @@ export function AssignActivityDialog({
         setProgress({ done, total: validIds.length });
       }
 
-      const rejectedMsg = rejectedPartners.length > 0
-        ? ` (${rejectedPartners.length} esclusi per mancanza ${requirementLabel})`
-        : "";
+      const rejectedMsg =
+        rejectedPartners.length > 0 ? ` (${rejectedPartners.length} esclusi per mancanza ${requirementLabel})` : "";
       toast.success(`${validIds.length} attività create${rejectedMsg}`);
       resetForm();
       onOpenChange(false);
       onSuccess();
-    } catch (_err) {
+    } catch {
       toast.error("Errore nella creazione");
     } finally {
       setCreating(false);
@@ -201,7 +213,7 @@ export function AssignActivityDialog({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Questi partner verranno esclusi dalla creazione. 
+                Questi partner verranno esclusi dalla creazione.
                 {validIds.length > 0
                   ? ` Verranno create attività solo per i ${validIds.length} partner validi.`
                   : " Nessun partner valido per questo tipo di attività."}
@@ -209,7 +221,11 @@ export function AssignActivityDialog({
               <ScrollArea className="max-h-[100px]">
                 <div className="flex flex-wrap gap-1">
                   {rejectedPartners.map((p) => (
-                    <Badge key={p.id} variant="outline" className="text-[10px] gap-1 border-destructive/30 text-destructive">
+                    <Badge
+                      key={p.id}
+                      variant="outline"
+                      className="text-[10px] gap-1 border-destructive/30 text-destructive"
+                    >
                       <XCircle className="w-2.5 h-2.5" />
                       {p.name}
                     </Badge>
@@ -222,11 +238,7 @@ export function AssignActivityDialog({
           {/* Title */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Titolo</Label>
-            <Input
-              placeholder={autoTitle}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <Input placeholder={autoTitle} value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           {/* Description */}
@@ -248,12 +260,7 @@ export function AssignActivityDialog({
               <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Calendar className="w-3 h-3" /> Scadenza
               </Label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="h-9"
-              />
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-9" />
             </div>
 
             <div className="space-y-1.5">
@@ -273,7 +280,9 @@ export function AssignActivityDialog({
           <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
             <div>
               <p className="text-sm font-medium">Raggruppa come campagna</p>
-              <p className="text-[10px] text-muted-foreground">Le attività saranno collegate da un batch ID per il monitoraggio</p>
+              <p className="text-[10px] text-muted-foreground">
+                Le attività saranno collegate da un batch ID per il monitoraggio
+              </p>
             </div>
             <Switch checked={useCampaignBatch} onCheckedChange={setUseCampaignBatch} />
           </div>
@@ -333,9 +342,7 @@ export function AssignActivityDialog({
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Crea {validIds.length} Attività
                 {rejectedPartners.length > 0 && (
-                  <span className="ml-1 text-destructive-foreground">
-                    ({rejectedPartners.length} esclusi)
-                  </span>
+                  <span className="ml-1 text-destructive-foreground">({rejectedPartners.length} esclusi)</span>
                 )}
               </>
             )}
