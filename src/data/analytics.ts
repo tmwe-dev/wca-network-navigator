@@ -254,7 +254,7 @@ export async function getAIUsageMetrics(
 ): Promise<AIUsageMetricsData> {
   try {
     const { data: logs } = await supabase.from("supervisor_audit_log")
-      .select("created_at, action")
+      .select("created_at, action_category")
       .eq("user_id", userId)
       .gte("created_at", dateRange.from.toISOString())
       .lte("created_at", dateRange.to.toISOString());
@@ -265,7 +265,7 @@ export async function getAIUsageMetrics(
     if (logs) {
       for (const log of logs) {
         // Count by type
-        const type = log.action || "other";
+        const type = log.action_category || "other";
         byType[type] = (byType[type] || 0) + 1;
 
         // Count daily
@@ -301,7 +301,7 @@ export async function getAIUsageMetrics(
 export async function getPipelineMetrics(userId: string): Promise<PipelineMetricsData> {
   try {
     const { data: deals } = await supabase.from("deals")
-      .select("stage, value")
+      .select("stage, amount")
       .eq("user_id", userId);
 
     if (!deals || deals.length === 0) {
