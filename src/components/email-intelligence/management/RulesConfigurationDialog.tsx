@@ -15,7 +15,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { bulkUpdateAutoAction, findAutoActionRulesForEmails } from "@/data/emailAddressRules";
+import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
 import {
   RulesConfiguration,
   type RulesConfigValue,
@@ -42,6 +42,7 @@ export function RulesConfigurationDialog({
   contextLabel,
   onSaved,
 }: RulesConfigurationDialogProps) {
+  const { bulkUpdateAutoAction, findAutoActionRulesForEmails } = useAddressRulesRepo();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [value, setValue] = useState<RulesConfigValue>(EMPTY_VALUE);
