@@ -41,7 +41,6 @@ import {
   SEVERITY_COLORS,
   STATUS_ICON,
   emptyDraft,
-  type PromptOption,
 } from "./promptTestsTab.constants";
 
 export function PromptTestsTab() {

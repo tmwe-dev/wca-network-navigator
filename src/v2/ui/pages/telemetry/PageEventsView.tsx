@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { findPageEventsSince } from "@/data/telemetry";
-import type { PageEventRow } from "./types";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
 import { queryKeys } from "@/lib/queryKeys";
