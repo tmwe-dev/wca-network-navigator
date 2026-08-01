@@ -312,40 +312,74 @@ export async function removePermission(roleId: string, permissionId: string): Pr
 // ─── User Roles ─────────────────────────────────────────
 
 /**
- * Fetch roles for a user
+ * Ruoli assegnati a un utente.
+ *
+ * `user_roles` memorizza il ruolo PER NOME (enum `app_role`), non per FK:
+ * i nomi vengono risolti sul catalogo `roles`. Un ruolo presente in
+ * `user_roles` ma assente dal catalogo non produce una riga `Role`.
  */
 export async function fetchUserRoles(userId?: string): Promise<Role[]> {
   const targetUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id;
   if (!targetUserId) return [];
 
-  const { data, error } = await untypedFrom("user_roles")
-    .select("role_id, roles(id, name, description, is_system)")
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
     .eq("user_id", targetUserId);
   if (error) throw error;
 
-  return toRows(data)
-    .map((row) => parseRole(row.roles))
-    .filter((r): r is Role => r != null);
+  const roleNames = (data ?? []).map((row) => row.role).filter((r): r is AppRole => r != null);
+  if (!roleNames.length) return [];
+
+  const { data: catalog, error: catalogError } = await supabase
+    .from("roles")
+    .select("*")
+    .in("name", roleNames);
+  if (catalogError) throw catalogError;
+
+  return (catalog ?? []).map(mapRole);
+}
+
+/** Risolve un id del catalogo `roles` nel nome usato da `user_roles.role`. */
+async function resolveAssignableRoleName(roleId: string): Promise<AppRole> {
+  const { data, error } = await supabase
+    .from("roles")
+    .select("name")
+    .eq("id", roleId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error(`Ruolo "${roleId}" inesistente nel catalogo dei ruoli.`);
+
+  const appRole = toAppRole(data.name);
+  if (!appRole) {
+    // Fail closed: il database accetta solo i valori dell'enum `app_role`.
+    throw new Error(
+      `Il ruolo "${data.name}" non è assegnabile: i valori ammessi sono ${ASSIGNABLE_APP_ROLES.join(", ")}.`,
+    );
+  }
+  return appRole;
 }
 
 /**
- * Assign a role to a user
+ * Assegna un ruolo a un utente.
+ * `assigned_by` non esiste nello schema live e non viene scritto.
  */
 export async function assignUserRole(userId: string, roleId: string): Promise<void> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-  const { error } = await untypedFrom("user_roles")
-    .insert({ user_id: userId, role_id: roleId, assigned_by: user?.id });
+  const role = await resolveAssignableRoleName(roleId);
+  const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
   if (error && error.code !== "23505") throw error; // Ignore unique constraint
 }
 
 /**
- * Remove a role from a user
+ * Rimuove un ruolo da un utente.
  */
 export async function removeUserRole(userId: string, roleId: string): Promise<void> {
-  const { error } = await untypedFrom("user_roles")
+  const role = await resolveAssignableRoleName(roleId);
+  const { error } = await supabase
+    .from("user_roles")
     .delete()
     .eq("user_id", userId)
-    .eq("role_id", roleId);
+    .eq("role", role);
   if (error) throw error;
 }
 
@@ -358,30 +392,29 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return false;
 
-  // Admin shortcut: app_role 'admin' bypasses granular RBAC.
-  // The granular system (roles/permissions/role_permissions) is optional;
-  // admins must always have full access regardless of its state.
-  try {
-    const { data: adminRow } = await untypedFrom("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-    if (adminRow) return true;
-  } catch {
-    // ignore and fall through to granular check
-  }
-
-  // Fetch user's roles
-  const { data: userRoles, error: roleError } = await untypedFrom("user_roles")
-    .select("role_id")
+  // Fetch user's roles (per nome: vedi nota schema in testa al file).
+  const { data: userRoles, error: roleError } = await supabase
+    .from("user_roles")
+    .select("role")
     .eq("user_id", user.id);
-  // Granular RBAC may not be configured (column role_id missing): treat as no extra perms.
+  // Fail closed: senza ruoli leggibili non si concede alcun permesso.
   if (roleError) return false;
 
-  const roleIds = toRows(userRoles)
-    .map((row) => row.role_id)
-    .filter((id): id is string => typeof id === "string");
+  const roleNames = (userRoles ?? []).map((row) => row.role).filter((r): r is AppRole => r != null);
+  if (!roleNames.length) return false;
+
+  // Admin shortcut: `app_role = 'admin'` bypassa l'RBAC granulare, che è
+  // opzionale; un admin deve avere accesso pieno a prescindere dal catalogo.
+  if (roleNames.includes("admin")) return true;
+
+  // Risoluzione nome → id del catalogo per interrogare `role_permissions`.
+  const { data: catalog, error: catalogError } = await supabase
+    .from("roles")
+    .select("id")
+    .in("name", roleNames);
+  if (catalogError) return false;
+
+  const roleIds = (catalog ?? []).map((row) => row.id);
   if (!roleIds.length) return false;
 
   // Fetch permission ID
@@ -408,87 +441,59 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
 // ─── Teams ──────────────────────────────────────────────
 
 /**
- * Fetch all teams for current user
- * @deprecated Table 'teams' not in schema. This function will not execute.
+ * Elenco team dell'utente corrente.
+ * `teams` non esiste nello schema live: nessun team può esistere.
  */
 export async function fetchTeams(): Promise<Team[]> {
-  log.warn(TEAMS_TABLE_WARNING);
   return [];
 }
 
-/**
- * Create a new team
- * @deprecated Table 'teams' not in schema. This function will not execute.
- */
+/** Creazione team: non disponibile (tabella `teams` assente). */
 export async function createTeam(_name: string, _description?: string): Promise<Team> {
-  log.warn(TEAMS_TABLE_WARNING);
-  throw new Error('createTeam: Table "teams" not available in schema');
+  throw new Error(TEAMS_UNAVAILABLE);
 }
 
-/**
- * Update a team
- * @deprecated Table 'teams' not in schema. This function will not execute.
- */
+/** Aggiornamento team: non disponibile (tabella `teams` assente). */
 export async function updateTeam(
   _teamId: string,
-  _updates: { name?: string; description?: string }
+  _updates: { name?: string; description?: string },
 ): Promise<Team> {
-  log.warn(TEAMS_TABLE_WARNING);
-  throw new Error('updateTeam: Table "teams" not available in schema');
+  throw new Error(TEAMS_UNAVAILABLE);
 }
 
-/**
- * Delete a team
- * @deprecated Table 'teams' not in schema. This function will not execute.
- */
+/** Cancellazione team: non disponibile (tabella `teams` assente). */
 export async function deleteTeam(_teamId: string): Promise<void> {
-  log.warn(TEAMS_TABLE_WARNING);
-  throw new Error('deleteTeam: Table "teams" not available in schema');
+  throw new Error(TEAMS_UNAVAILABLE);
 }
 
 // ─── Team Members ───────────────────────────────────────
+//
+// `team_members` esiste ma senza `team_id`/`user_id`/`joined_at`: non modella
+// l'appartenenza a un team e, senza la tabella `teams`, non esiste un team a
+// cui riferirsi. Coerentemente con le funzioni Team sopra, le letture sono
+// vuote e le mutazioni falliscono in modo chiuso, invece di emettere query
+// che il database rifiuterebbe con 42703.
 
-/**
- * Fetch members of a team
- */
-export async function fetchTeamMembers(teamId: string): Promise<TeamMember[]> {
-  const { data, error } = await untypedFrom("team_members")
-    .select("*")
-    .eq("team_id", teamId)
-    .order("joined_at", { ascending: false });
-  if (error) throw error;
-  return toRows(data)
-    .map(parseTeamMember)
-    .filter((m): m is TeamMember => m != null);
+/** Membri di un team: sempre vuoto finché la feature Team non esiste a DB. */
+export async function fetchTeamMembers(_teamId: string): Promise<TeamMember[]> {
+  return [];
 }
 
-/**
- * Add a user to a team
- */
-export async function addTeamMember(teamId: string, userId: string, role: string = "member"): Promise<void> {
-  const { error } = await untypedFrom("team_members")
-    .insert({ team_id: teamId, user_id: userId, role });
-  if (error && error.code !== "23505") throw error; // Ignore unique constraint
+/** Aggiunta membro: non disponibile (feature Team assente dallo schema). */
+export async function addTeamMember(
+  _teamId: string,
+  _userId: string,
+  _role: string = "member",
+): Promise<void> {
+  throw new Error(TEAMS_UNAVAILABLE);
 }
 
-/**
- * Remove a user from a team
- */
-export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
-  const { error } = await untypedFrom("team_members")
-    .delete()
-    .eq("team_id", teamId)
-    .eq("user_id", userId);
-  if (error) throw error;
+/** Rimozione membro: non disponibile (feature Team assente dallo schema). */
+export async function removeTeamMember(_teamId: string, _userId: string): Promise<void> {
+  throw new Error(TEAMS_UNAVAILABLE);
 }
 
-/**
- * Update team member role
- */
-export async function updateMemberRole(teamId: string, userId: string, role: string): Promise<void> {
-  const { error } = await untypedFrom("team_members")
-    .update({ role })
-    .eq("team_id", teamId)
-    .eq("user_id", userId);
-  if (error) throw error;
+/** Cambio ruolo membro: non disponibile (feature Team assente dallo schema). */
+export async function updateMemberRole(_teamId: string, _userId: string, _role: string): Promise<void> {
+  throw new Error(TEAMS_UNAVAILABLE);
 }
