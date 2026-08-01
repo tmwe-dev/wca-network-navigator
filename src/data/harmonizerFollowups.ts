@@ -32,7 +32,7 @@ export async function createHarmonizerFollowup(input: HarmonizerFollowupInsert):
     title: input.title.slice(0, 500),
     description: input.description,
     block_name: input.block_name ?? null,
-    missing_contracts: toJsonValue(input.missing_contracts ?? [],
+    missing_contracts: toJsonValue(input.missing_contracts ?? []),
     code_policy_needed: input.code_policy_needed ?? null,
     severity: input.severity ?? "medium",
     impact_score: input.impact_score ?? 5,
