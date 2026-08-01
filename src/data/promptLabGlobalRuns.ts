@@ -4,7 +4,7 @@
  * Ogni "Avvia analisi globale" crea un run. Le proposte vengono aggiornate
  * incrementalmente così il run sopravvive a refresh, crash, errori di rete.
  */
-import { toJsonValue, asJsonArray } from "@/lib/typedJson";
+import { asJsonArray } from "@/lib/typedJson";
 import { toRecord, toRecordOrNull } from "@/lib/records";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";

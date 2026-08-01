@@ -1,0 +1,835 @@
+{
+  "generatedAt": "2026-08-01T10:07:04.062Z",
+  "totalLazy": 91,
+  "unusedInRoutesTsx": 32,
+  "rows": [
+    {
+      "name": "LoginPage",
+      "module": "./ui/pages/LoginPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/test/login-reason-messages.test.ts",
+        "src/v2/ui/pages/LoginPage.tsx"
+      ]
+    },
+    {
+      "name": "AuthCallbackPage",
+      "module": "./ui/pages/AuthCallbackPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AuthCallbackPage.tsx",
+        "src/test/authRoutingLegacyLeak.test.ts"
+      ]
+    },
+    {
+      "name": "TmweLoginPopupPage",
+      "module": "./ui/pages/TmweLoginPopupPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/TmweLoginPopupPage.tsx"
+      ]
+    },
+    {
+      "name": "DashboardPage",
+      "module": "./ui/pages/DashboardPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/DashboardPage.tsx",
+        "src/v2/ui/pages/RADashboardPage.tsx",
+        "src/lib/prefetchRoutes.ts",
+        "src/lib/lazify.ts"
+      ]
+    },
+    {
+      "name": "KpiPage",
+      "module": "./ui/pages/KpiPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/KpiPage.tsx"
+      ]
+    },
+    {
+      "name": "NetworkPage",
+      "module": "./ui/pages/NetworkPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/lib/prefetchRoutes.ts",
+        "src/v2/ui/pages/sections/ExploreSection.tsx",
+        "src/test/bulkOps/guardrail.lint.test.ts",
+        "src/v2/ui/pages/NetworkPage.tsx",
+        "src/v2/ui/organisms/PartnerFiltersPanel.tsx",
+        "src/components/global/GlobalSherlockLauncher.tsx"
+      ]
+    },
+    {
+      "name": "CRMPage",
+      "module": "./ui/pages/CRMPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/lib/prefetchRoutes.ts",
+        "src/v2/ui/pages/CRMPage.tsx"
+      ]
+    },
+    {
+      "name": "OutreachPage",
+      "module": "./ui/pages/OutreachPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/CommunicateSection.tsx",
+        "src/lib/prefetchRoutes.ts",
+        "src/v2/ui/pages/OutreachPage.tsx",
+        "src/components/outreach/HoldingPatternTab.tsx"
+      ]
+    },
+    {
+      "name": "AgentsPage",
+      "module": "./ui/pages/AgentsPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/lib/prefetchRoutes.ts",
+        "src/v2/ui/pages/sections/IntelligenceSection.tsx",
+        "src/v2/ui/pages/AgentsPage.tsx"
+      ]
+    },
+    {
+      "name": "CampaignsPage",
+      "module": "./ui/pages/CampaignsPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/ExploreSection.tsx",
+        "src/v2/ui/pages/CampaignsPage.tsx"
+      ]
+    },
+    {
+      "name": "SettingsPage",
+      "module": "./ui/pages/SettingsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/navigation/registry.ts",
+        "src/lib/prefetchRoutes.ts",
+        "src/v2/ui/pages/SettingsPage.tsx"
+      ]
+    },
+    {
+      "name": "DiagnosticsPage",
+      "module": "./ui/pages/DiagnosticsPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/DiagnosticsPage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "ImportPage",
+      "module": "./ui/pages/ImportPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/ImportPage.tsx"
+      ]
+    },
+    {
+      "name": "StaffPage",
+      "module": "./ui/pages/StaffPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/StaffPage.tsx"
+      ]
+    },
+    {
+      "name": "AiTestHubPage",
+      "module": "./ui/pages/AiTestHubPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/data/aiTestScenarios.ts",
+        "src/v2/ui/pages/AiTestHubPage.tsx",
+        "src/v2/ui/pages/PromptTestsPage.tsx"
+      ]
+    },
+    {
+      "name": "LabPage",
+      "module": "./ui/pages/LabPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AiTestHubPage.tsx",
+        "src/v2/ui/pages/AILabPage.tsx",
+        "src/v2/ui/organisms/lab/LabGuideDialog.tsx",
+        "src/test/edgeFunctionDecomposition.test.ts",
+        "src/v2/ui/pages/prompt-lab/SignalsBanner.tsx",
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/EmailLabPage.tsx",
+        "src/v2/ui/pages/LabPage.tsx",
+        "src/v2/ui/pages/PromptLabPage.tsx",
+        "src/v2/ui/pages/SettingsPage.tsx"
+      ]
+    },
+    {
+      "name": "KnowledgeBasePage",
+      "module": "./ui/pages/KnowledgeBasePage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/KnowledgeBasePage.tsx"
+      ]
+    },
+    {
+      "name": "KBSupervisorPage",
+      "module": "./ui/pages/KBSupervisorPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/KBSupervisorPage.tsx"
+      ]
+    },
+    {
+      "name": "InreachPage",
+      "module": "./ui/pages/InreachPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/CommunicateSection.tsx",
+        "src/v2/ui/pages/InreachPage.tsx",
+        "src/v2/ui/pages/CommsPage.tsx"
+      ]
+    },
+    {
+      "name": "AgendaPage",
+      "module": "./ui/pages/AgendaPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/AgendaSection.tsx",
+        "src/v2/ui/pages/AgendaPage.tsx"
+      ]
+    },
+    {
+      "name": "ProspectPage",
+      "module": "./ui/pages/ProspectPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/data/reportAziende.ts",
+        "src/v2/ui/pages/ProspectPage.tsx"
+      ]
+    },
+    {
+      "name": "EmailComposerPage",
+      "module": "./ui/pages/EmailComposerPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/CommunicateSection.tsx",
+        "src/v2/ui/pages/EmailComposerPage.tsx",
+        "src/v2/ui/pages/CommsPage.tsx",
+        "src/contexts/ComposeAiConfigContext.tsx"
+      ]
+    },
+    {
+      "name": "CockpitPage",
+      "module": "./ui/pages/CockpitPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/CockpitPage.tsx",
+        "src/v2/ui/pages/OutreachPage.tsx",
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/TokenCockpitPage.tsx"
+      ]
+    },
+    {
+      "name": "MissionBuilderPage",
+      "module": "./ui/pages/MissionBuilderPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/MissionBuilderPage.tsx"
+      ]
+    },
+    {
+      "name": "RADashboardPage",
+      "module": "./ui/pages/RADashboardPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/RADashboardPage.tsx"
+      ]
+    },
+    {
+      "name": "GlobePage",
+      "module": "./ui/pages/GlobePage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/ExploreSection.tsx",
+        "src/v2/ui/pages/GlobePage.tsx"
+      ]
+    },
+    {
+      "name": "DeepSearchPage",
+      "module": "./ui/pages/DeepSearchPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/ExploreSection.tsx",
+        "src/v2/ui/pages/DeepSearchPage.tsx",
+        "src/v2/ui/pages/email-forge/components/DeepSearchPageList.tsx"
+      ]
+    },
+    {
+      "name": "SortingPage",
+      "module": "./ui/pages/SortingPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/SortingPage.tsx"
+      ]
+    },
+    {
+      "name": "TelemetryPage",
+      "module": "./ui/pages/TelemetryPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/TelemetryPage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "OperationsPage",
+      "module": "./ui/pages/OperationsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/EmailIntelligenceOperationsPage.tsx",
+        "src/v2/ui/pages/OperationsPage.tsx"
+      ]
+    },
+    {
+      "name": "AcquisizionePartnerPage",
+      "module": "./ui/pages/AcquisizionePartnerPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AcquisizionePartnerPage.tsx"
+      ]
+    },
+    {
+      "name": "AgentChatHubPage",
+      "module": "./ui/pages/AgentChatHubPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/AgentChatHubPage.tsx"
+      ]
+    },
+    {
+      "name": "CommandHelpPage",
+      "module": "./ui/pages/command/CommandHelpPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/command/CommandHelpPage.tsx"
+      ]
+    },
+    {
+      "name": "ContactsPage",
+      "module": "./ui/pages/ContactsPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/templates/GoldenLayout.tsx",
+        "src/v2/ui/pages/sections/ExploreSection.tsx",
+        "src/v2/ui/pages/ContactsPage.tsx",
+        "src/v2/ui/pages/CRMPage.tsx",
+        "src/lib/prefetchRoutes.ts"
+      ]
+    },
+    {
+      "name": "EmailDownloadPage",
+      "module": "./ui/pages/EmailDownloadPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/EmailDownloadPage.tsx",
+        "src/v2/ui/pages/SettingsPage.tsx",
+        "src/components/settings/EmailDownloadPanel.tsx"
+      ]
+    },
+    {
+      "name": "RAExplorerPage",
+      "module": "./ui/pages/RAExplorerPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/RAExplorerPage.tsx"
+      ]
+    },
+    {
+      "name": "RAScrapingEnginePage",
+      "module": "./ui/pages/RAScrapingEnginePage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/RAScrapingEnginePage.tsx"
+      ]
+    },
+    {
+      "name": "RACompanyDetailPage",
+      "module": "./ui/pages/RACompanyDetailPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/RACompanyDetailPage.tsx"
+      ]
+    },
+    {
+      "name": "CampaignJobsPage",
+      "module": "./ui/pages/CampaignJobsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/CampaignJobsPage.tsx"
+      ]
+    },
+    {
+      "name": "AdminUsersPage",
+      "module": "./ui/pages/AdminUsersPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AdminUsersPage.tsx",
+        "src/data/authorizedUsers.ts"
+      ]
+    },
+    {
+      "name": "AiRoutingConfigPage",
+      "module": "./ui/pages/AiRoutingConfigPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AiRoutingConfigPage.tsx"
+      ]
+    },
+    {
+      "name": "OnboardingPage",
+      "module": "./ui/pages/OnboardingPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/GuidedOnboardingPage.tsx",
+        "src/v2/ui/pages/OnboardingPage.tsx"
+      ]
+    },
+    {
+      "name": "GuidaPage",
+      "module": "./ui/pages/GuidaPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/components/guida/parts/TutorialChapters.tsx",
+        "src/components/guida/parts/ManualChapters.tsx",
+        "src/v2/ui/pages/GuidaPage.tsx"
+      ]
+    },
+    {
+      "name": "AIControlCenterPage",
+      "module": "./ui/pages/AIControlCenterPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/AIControlCenterPage.tsx"
+      ]
+    },
+    {
+      "name": "EmailIntelligencePage",
+      "module": "./ui/pages/EmailIntelligencePage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/lib/prefetchRoutes.ts",
+        "src/v2/ui/pages/EmailIntelligencePage.tsx",
+        "src/data/emailIntelCounts.ts"
+      ]
+    },
+    {
+      "name": "EmailIntelligenceOperationsPage",
+      "module": "./ui/pages/EmailIntelligenceOperationsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/EmailIntelligenceOperationsPage.tsx"
+      ]
+    },
+    {
+      "name": "AlertRoutingPage",
+      "module": "./ui/pages/AlertRoutingPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/AlertRoutingPage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "FunnemailInboxPage",
+      "module": "./ui/pages/FunnemailInboxPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/CommsPage.tsx",
+        "src/v2/ui/pages/FunnemailInboxPage.tsx"
+      ]
+    },
+    {
+      "name": "FunnemailSortingQueuePage",
+      "module": "./ui/pages/funnemail-inbox/SortingQueuePage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/funnemail-inbox/SortingQueuePage.tsx"
+      ]
+    },
+    {
+      "name": "AIArenaPage",
+      "module": "./ui/pages/AIArenaPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AIArenaPage.tsx"
+      ]
+    },
+    {
+      "name": "SystemHealthPage",
+      "module": "@/components/admin/SystemHealthDashboard",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/config/labGuide.ts",
+        "src/components/admin/SystemHealthDashboard.tsx"
+      ]
+    },
+    {
+      "name": "AnalyticsPage",
+      "module": "./ui/pages/AnalyticsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AnalyticsPage.tsx"
+      ]
+    },
+    {
+      "name": "DesignSystemPreviewPage",
+      "module": "./ui/pages/DesignSystemPreviewPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/DesignSystemPreviewPage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "CommandPage",
+      "module": "./ui/pages/CommandPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/templates/NavMenuPopover.tsx",
+        "src/v2/ai/superMarioFlag.ts",
+        "src/v2/io/edge/aiAssistant.ts",
+        "src/v2/ui/pages/CommandPage.tsx",
+        "src/v2/ui/pages/FinderApiPage.tsx",
+        "src/v2/ui/pages/finder-api/FinderApiSchemaMapPage.tsx",
+        "src/v2/ui/pages/command/components/CommandPageHeader.tsx",
+        "src/v2/ui/pages/command/components/CommandPageBackground.tsx",
+        "src/v2/ui/pages/command/components/CommandPageBackButton.tsx",
+        "src/v2/ui/pages/command/hooks/useCommandState.ts"
+      ]
+    },
+    {
+      "name": "FinderApiPage",
+      "module": "./ui/pages/FinderApiPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/FinderApiPage.tsx",
+        "src/v2/ui/pages/finder-api/useFinderApi.ts"
+      ]
+    },
+    {
+      "name": "FinderApiSchemaMapPage",
+      "module": "./ui/pages/finder-api/FinderApiSchemaMapPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/finder-api/FinderApiSchemaMapPage.tsx"
+      ]
+    },
+    {
+      "name": "EmailForgePage",
+      "module": "./ui/pages/EmailForgePage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/EmailForgePage.tsx"
+      ]
+    },
+    {
+      "name": "EmailLabPage",
+      "module": "./ui/pages/EmailLabPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/EmailLabPage.tsx"
+      ]
+    },
+    {
+      "name": "ObservabilityPage",
+      "module": "./ui/pages/ObservabilityPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/ObservabilityPage.tsx"
+      ]
+    },
+    {
+      "name": "E2EStatusPage",
+      "module": "./ui/pages/E2EStatusPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/E2EStatusPage.tsx"
+      ]
+    },
+    {
+      "name": "BrandVoicePage",
+      "module": "./ui/pages/BrandVoicePage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/BrandVoicePage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "MissionsAutopilotPage",
+      "module": "./ui/pages/MissionsAutopilotPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/data/agents.ts",
+        "src/data/agentMissions.ts"
+      ]
+    },
+    {
+      "name": "LandingPage",
+      "module": "./ui/pages/LandingPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/LandingPage.tsx"
+      ]
+    },
+    {
+      "name": "DocsPage",
+      "module": "./ui/pages/DocsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/DocsPage.tsx"
+      ]
+    },
+    {
+      "name": "PromptLabPage",
+      "module": "./ui/pages/PromptLabPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/prompt-lab/SignalsBanner.tsx",
+        "src/v2/ui/pages/PromptLabPage.tsx"
+      ]
+    },
+    {
+      "name": "BrainPage",
+      "module": "./ui/pages/BrainPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/BrainPage.tsx"
+      ]
+    },
+    {
+      "name": "AgentAtlasPage",
+      "module": "./ui/pages/prompt-lab/atlas/AgentAtlasPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/prompt-lab/atlas/AgentAtlasPage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "SuggestionsReviewPage",
+      "module": "./ui/pages/prompt-lab/SuggestionsReviewPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/prompt-lab/suggestionsReview.helpers.tsx",
+        "src/v2/ui/pages/prompt-lab/SuggestionsReviewPage.tsx"
+      ]
+    },
+    {
+      "name": "ProposalsReviewPage",
+      "module": "./ui/pages/prompt-lab/ProposalsReviewPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/prompt-lab/ProposalsReviewPage.tsx"
+      ]
+    },
+    {
+      "name": "PromptCatalogPage",
+      "module": "./ui/pages/PromptCatalogPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/PromptCatalogPage.tsx"
+      ]
+    },
+    {
+      "name": "PromptTestsPage",
+      "module": "./ui/pages/PromptTestsPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/PromptTestsPage.tsx"
+      ]
+    },
+    {
+      "name": "PromptReaderPage",
+      "module": "./ui/pages/prompt-lab/PromptReaderPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/prompt-lab/PromptReaderPage.tsx"
+      ]
+    },
+    {
+      "name": "AiInteractionLogPage",
+      "module": "./ui/pages/AiInteractionLogPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/AiInteractionLogPage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "PipelineTracesPage",
+      "module": "./ui/pages/PipelineTracesPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/config/labTabs.ts",
+        "src/v2/ui/pages/PipelineTracesPage.tsx"
+      ]
+    },
+    {
+      "name": "RubricaWhatsAppPage",
+      "module": "./ui/pages/RubricaWhatsAppPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/CommsPage.tsx",
+        "src/v2/ui/pages/RubricaWhatsAppPage.tsx"
+      ]
+    },
+    {
+      "name": "RubricaLinkedInPage",
+      "module": "./ui/pages/RubricaLinkedInPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/CommsPage.tsx",
+        "src/v2/ui/pages/RubricaLinkedInPage.tsx"
+      ]
+    },
+    {
+      "name": "DPAPage",
+      "module": "./ui/pages/DPAPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/DPAPage.tsx"
+      ]
+    },
+    {
+      "name": "GuidedOnboardingPage",
+      "module": "./ui/pages/GuidedOnboardingPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/GuidedOnboardingPage.tsx"
+      ]
+    },
+    {
+      "name": "AgentPersonaEditorPage",
+      "module": "./ui/pages/AgentPersonaEditorPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AgentPersonaEditorPage.tsx"
+      ]
+    },
+    {
+      "name": "AgentCapabilitiesPage",
+      "module": "./ui/pages/AgentCapabilitiesPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AgentCapabilitiesPage.tsx"
+      ]
+    },
+    {
+      "name": "AgentTasksPage",
+      "module": "./ui/pages/AgentTasksPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AgentTasksPage.tsx",
+        "src/data/agentTasks.ts"
+      ]
+    },
+    {
+      "name": "AgentRolesOverviewPage",
+      "module": "./ui/pages/AgentRolesOverviewPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AgentRolesOverviewPage.tsx",
+        "src/data/agentRolesOverview.ts",
+        "src/data/__tests__/agentRolesOverview.test.ts"
+      ]
+    },
+    {
+      "name": "EmailStrategiesPage",
+      "module": "./ui/pages/EmailStrategiesPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/io/supabase/queries/email-strategies.ts",
+        "src/v2/ui/pages/EmailStrategiesPage.tsx"
+      ]
+    },
+    {
+      "name": "CalendarPage",
+      "module": "./ui/pages/CalendarPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/AgendaPage.tsx",
+        "src/v2/ui/pages/CalendarPage.tsx",
+        "src/components/agenda/AgendaDayDetail.tsx",
+        "src/components/agenda/AgendaCalendarPage.tsx"
+      ]
+    },
+    {
+      "name": "NotificationsPage",
+      "module": "./ui/pages/NotificationsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/NotificationsPage.tsx"
+      ]
+    },
+    {
+      "name": "TokenCockpitPage",
+      "module": "./ui/pages/TokenCockpitPage",
+      "usedInRoutesTsx": false,
+      "otherReferences": [
+        "src/v2/ui/pages/TokenCockpitPage.tsx",
+        "src/v2/config/labTabs.ts"
+      ]
+    },
+    {
+      "name": "TmweClientsPage",
+      "module": "./ui/pages/TmweClientsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/TmweClientsPage.tsx"
+      ]
+    },
+    {
+      "name": "NotFoundPage",
+      "module": "@/components/shared/NotFound",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/components/shared/NotFound.tsx"
+      ]
+    },
+    {
+      "name": "IntelligenceSection",
+      "module": "./ui/pages/sections/IntelligenceSection",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/sections/IntelligenceSection.tsx"
+      ]
+    },
+    {
+      "name": "CestinonePage",
+      "module": "./ui/pages/CestinonePage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/CestinonePage.tsx",
+        "src/v2/ui/pages/cestinone/useCestinonePageState.ts"
+      ]
+    },
+    {
+      "name": "CommsPage",
+      "module": "./ui/pages/CommsPage",
+      "usedInRoutesTsx": true,
+      "otherReferences": [
+        "src/v2/ui/pages/CommsPage.tsx"
+      ]
+    }
+  ]
+}

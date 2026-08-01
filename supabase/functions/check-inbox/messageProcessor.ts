@@ -3,17 +3,14 @@
  * Handles phases 1-6: raw fetch, envelope, body parsing, sender matching, and DB save.
  */
 
-import { ImapClient, decodeAttachment } from "jsr:@workingdevshero/deno-imap";
-import {
-  decodeMimePart, sha256hex, collectMimeLeafParts, sanitizeFilename,
-  sanitizeMessageId, parseMultipartFallback, decodeRfc2047, decodeBase64Bytes,
-  type MimeLeafPart,
+import { ImapClient } from "jsr:@workingdevshero/deno-imap";
+import { sha256hex,
+  sanitizeMessageId, decodeRfc2047,
 } from "./mimeDecoder.ts";
 import {
   envelopeAddr, envelopeAddrName, envelopeAddrList,
   extractLiteralBytesFromResponse, extractLiteralTextFromResponse,
-  parseRawHeaders, parseEmailFromHeader, computeThreadId, getNextUidBatch,
-  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD, MAX_RAW_FETCH_BYTES,
+  parseRawHeaders, parseEmailFromHeader, computeThreadId, MAX_RAW_FETCH_BYTES,
 } from "./imapParser.ts";
 import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperations.ts";
 import { detectBounce, handleBounce } from "./bounceDetector.ts";

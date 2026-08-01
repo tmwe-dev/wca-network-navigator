@@ -53,8 +53,13 @@ const NOISE_PATTERNS: RegExp[] = [
   /^\s*!\[\]\([^)]*\)\s*$/gim,
 ];
 
+// NB: il separatore di tabella usa l'alternanza `(?:-|:|\|)+` invece di una
+// classe di caratteri fra parentesi quadre. Quella forma veniva raccolta dallo
+// scanner Tailwind come arbitrary property e produceva una regola CSS
+// malformata (warning esbuild "Expected identifier but found -").
+// Il pattern è semanticamente identico.
 const HOURS_TABLE_RE =
-  /\|\s*(luned[ìi]|marted[ìi]|mercoled[ìi]|gioved[ìi]|venerd[ìi]|sabato|domenica|monday|tuesday|wednesday|thursday|friday|saturday|sunday)[\s\S]{0,800}?\|\s*\n(?:\|\s*[-:|]+\s*\|.*\n)?(?:\|.*\n){0,7}/gi;
+  /\|\s*(luned[ìi]|marted[ìi]|mercoled[ìi]|gioved[ìi]|venerd[ìi]|sabato|domenica|monday|tuesday|wednesday|thursday|friday|saturday|sunday)[\s\S]{0,800}?\|\s*\n(?:\|\s*(?:-|:|\|)+\s*\|.*\n)?(?:\|.*\n){0,7}/gi;
 
 function compactHoursTable(md: string): string {
   return md.replace(HOURS_TABLE_RE, (match) => {

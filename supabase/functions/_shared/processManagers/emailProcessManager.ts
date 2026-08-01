@@ -43,7 +43,6 @@ import {
   type ClassificationDomain,
   type PostClassificationResult,
 } from "../postClassificationPipeline.ts";
-import { loadEmailAddressRules } from "../classificationRules.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;

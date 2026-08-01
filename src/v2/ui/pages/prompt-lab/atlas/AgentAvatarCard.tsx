@@ -1,7 +1,6 @@
 /**
  * AgentAvatarCard — Header card a sinistra: avatar grande + identità + runtime meta.
  */
-import * as Icons from "lucide-react";
 import { resolveLucideIcon } from "@/lib/lucideIcon";
 import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { cn } from "@/lib/utils";

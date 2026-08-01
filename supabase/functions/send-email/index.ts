@@ -2,7 +2,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
-import { loadSendingConfig, validateSendingWindow, validateSmtpConfig } from "../_shared/emailSendingConfig.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";

@@ -1,7 +1,7 @@
 /**
  * pipelineUtils.ts — Utility functions for post-send pipeline.
  */
-import type { SendChannel, SourceType } from "./postSendPipeline.ts";
+import type { SendChannel } from "./postSendPipeline.ts";
 
 export function channelToActivityType(channel: SendChannel): string {
   switch (channel) {

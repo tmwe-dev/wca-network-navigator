@@ -1,7 +1,7 @@
 /**
  * activityReminderTools.ts — Activity and reminder handlers.
  */
-import { supabase, resolvePartnerId, type ActivityRow } from "../platformToolHelpers.ts";
+import { supabase, resolvePartnerId } from "../platformToolHelpers.ts";
 
 export async function executeActivityReminderToolHandler(
   name: string,

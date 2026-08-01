@@ -39,7 +39,6 @@ import { queryKeys } from "@/lib/queryKeys";
 import { UnifiedSmartActions } from "@/components/shared/entity-panel/UnifiedSmartActions";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
-import { toRecord } from "@/lib/records";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires?: string | null }

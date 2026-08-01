@@ -26,7 +26,6 @@ import {
   eventBus,
   createEvent,
   publishAndPersist,
-  type WCADomainEvent,
   type LeadStatus,
   type EventActor,
 } from "../domainEvents.ts";

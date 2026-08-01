@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug } from "lucide-react";
 import { useRAExtensionBridge, type RAScrapingStatus } from "@/hooks/useRAExtensionBridge";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
-import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { t } from "@/components/download/theme";

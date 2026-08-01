@@ -4,7 +4,6 @@
  * Manages tool definitions, message formatting, and response parsing.
  */
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getScopeConfig } from "../_shared/scopeConfigs.ts";
 
 export interface AiProvider {

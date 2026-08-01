@@ -21,26 +21,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
-import { generateAliasesInline } from "./aliasGenerator.ts";
 import {
-  loadEntityFromActivity,
-  loadStandalonePartner,
   loadMetInPerson,
-  type LoadedEntity,
 } from "./entityLoader.ts";
 import {
   loadConversationContext,
   buildConversationBlock,
-  buildPriorityAddressPromptBlock,
-  type ConversationIntelligence,
 } from "./conversationIntel.ts";
 import { ensureAliasesExist } from "./aliasPreparation.ts";
-import { loadPartnerMetadata, type LoadedMetadata } from "./dataLoader.ts";
-import { assembleStyleContext, type StyleContext } from "./styleContextAssembler.ts";
-import { checkDuplicateContact, assembleCommercialIntelligence, type CommercialIntelligence } from "./commercialIntelligenceAssembler.ts";
-import { assembleEnrichmentContext, type EnrichmentContext } from "./enrichmentContextAssembler.ts";
-import { assembleDocumentsAndSignature, type DocumentsAndSignature } from "./documentAndSignatureAssembler.ts";
-import { assembleKbAndPlaybook, type KbAndPlaybook } from "./kbAndPlaybookAssembler.ts";
+import { loadPartnerMetadata } from "./dataLoader.ts";
+import { assembleStyleContext } from "./styleContextAssembler.ts";
+import { checkDuplicateContact, assembleCommercialIntelligence } from "./commercialIntelligenceAssembler.ts";
+import { assembleEnrichmentContext } from "./enrichmentContextAssembler.ts";
+import { assembleDocumentsAndSignature } from "./documentAndSignatureAssembler.ts";
+import { assembleKbAndPlaybook } from "./kbAndPlaybookAssembler.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
