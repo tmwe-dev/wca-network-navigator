@@ -18,7 +18,7 @@ export const BUDGET = {
   "unused-imports/no-unused-vars": 0,
   "@typescript-eslint/no-explicit-any": 240,
   "unused-imports/no-unused-imports": 0,
-  "@typescript-eslint/no-unsafe-function-type": 49,
+  "@typescript-eslint/no-unsafe-function-type": 0,
   "tmwe/no-direct-ai-invoke": 0,
   "no-empty": 0,
   "no-useless-escape": 0,
