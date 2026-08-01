@@ -3,6 +3,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   findEmailDrafts,
+  type EmailDraftRow,
   updateEmailDraft,
   insertEmailDraftReturningRow,
 } from "@/data/emailDrafts";
@@ -10,28 +11,13 @@ import {
 type DraftInsert = Database["public"]["Tables"]["email_drafts"]["Insert"];
 type DraftUpdate = Database["public"]["Tables"]["email_drafts"]["Update"];
 
-export interface EmailDraft {
-  id: string;
-  subject: string | null;
-  html_body: string | null;
-  category: string | null;
-  recipient_type: string;
-  recipient_filter: unknown;
-  attachment_ids: string[];
-  link_urls: { label: string; url: string }[];
-  status: string;
-  sent_count: number;
-  total_count: number;
-  created_at: string;
-  sent_at: string | null;
-}
+export type EmailDraft = EmailDraftRow;
 
 export function useEmailDrafts() {
   return useQuery({
     queryKey: queryKeys.email.drafts(),
     queryFn: async () => {
-      const data = await findEmailDrafts();
-      return data as unknown as EmailDraft[];
+      return findEmailDrafts();
     },
   });
 }
