@@ -10,7 +10,7 @@
  *
  * NESSUNA logica: solo SELECT.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { selectFromValidatedTable } from "@/data/dynamicQuery";
 import { supabase } from "@/integrations/supabase/client";
 /**
  * P001-013 (batch F20-P0.6): le letture/scritture su tabella LETTERALE usano il
@@ -408,8 +408,10 @@ export async function listMailsByFolder(
   const msgs = await readInboxOnce<{ message_id_external: string } & Record<string, unknown>>(
     "listMailsByFolder",
     (source) =>
-      untypedFrom(source)
-        .select("message_id_external,subject,from_address,body_text,body_html,email_date,partner_id")
+      selectFromValidatedTable(
+        source,
+        "message_id_external,subject,from_address,body_text,body_html,email_date,partner_id",
+      )
         .eq("channel", "email")
         .eq("direction", "inbound")
         .in("message_id_external", ids),
@@ -511,8 +513,7 @@ export async function listFunnemailGroupedInbox(
       (source, from, to) => {
         const cols = source === "message_intelligence_v" ? MESSAGE_LIST_SELECT_VIEW : MESSAGE_LIST_SELECT;
         const createdAtCol = source === "message_intelligence_v" ? "message_created_at" : "created_at";
-        let q = untypedFrom(source)
-          .select(cols)
+        let q = selectFromValidatedTable(source, cols)
           .eq("channel", "email")
           .eq("direction", "inbound");
         if (targetUserId) q = q.eq("user_id", targetUserId);
@@ -531,7 +532,8 @@ export async function listFunnemailGroupedInbox(
     // DRIFT documentato (vedi header): suggested_action nel Row generato è
     // `string` (non la union applicativa) — restano su untypedFrom.
     fetchAllPages<FunnemailDecisionRow>(
-      (from, to) => untypedFrom("funnemail_decisions")
+      (from, to) => supabase
+        .from("funnemail_decisions")
         .select("id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at")
         .order("created_at", { ascending: false })
         .range(from, to),
@@ -539,7 +541,8 @@ export async function listFunnemailGroupedInbox(
     ),
     // DRIFT documentato (vedi header): funnemail_policy nel Row generato è
     // `Json` generico (non la shape applicativa {auto_mark_read?}) — resta untyped.
-    fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
+    fetchAllPages<EmailSenderGroupRow>((from, to) => supabase
+      .from("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
