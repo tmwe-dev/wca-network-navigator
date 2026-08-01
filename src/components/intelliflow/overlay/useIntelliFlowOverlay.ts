@@ -5,7 +5,7 @@ import { countActivePartners } from "@/data/partners";
 import { countPartnerContacts } from "@/data/partnerRelations";
 import { countEmailDrafts } from "@/data/emailDrafts";
 import { countBusinessCards } from "@/data/businessCards";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 import type { AiOperation } from "@/components/ai/AiOperationCard";
@@ -103,7 +103,11 @@ export function useIntelliFlowOverlay({ open, onClose, cockpitContacts, onCockpi
     const history = prevMessages.map(m => ({ role: m.role, content: m.content }));
     try {
       if (isCockpit && mode === "operational" && cockpitContacts) {
-        const data = await invokeEdge<Record<string, unknown>>("unified-assistant", { body: { scope: "cockpit", command: content, contacts: cockpitContacts }, context: "IntelliFlowOverlay.cockpit_assistant" });
+        const data = await invokeAi<Record<string, unknown>>("unified-assistant", {
+          scope: "cockpit",
+          context: { source: "IntelliFlowOverlay.cockpit_assistant" },
+          body: { scope: "cockpit", command: content, contacts: cockpitContacts },
+        });
         if (data?.error) throw new Error(String(data.error));
         const actions = (data?.actions as unknown[]) || [];
         const message = String(data?.message || "Comando eseguito.");
@@ -114,7 +118,11 @@ export function useIntelliFlowOverlay({ open, onClose, cockpitContacts, onCockpi
         const body = mode === "conversational"
           ? { scope, messages: history, pageContext: currentPage, systemStats: stats }
           : { scope, messages: history, context: { currentPage } };
-        const data = await invokeEdge<Record<string, unknown>>("unified-assistant", { body, context: `IntelliFlowOverlay.unified_${scope}` });
+        const data = await invokeAi<Record<string, unknown>>("unified-assistant", {
+          scope,
+          context: { source: `IntelliFlowOverlay.unified_${scope}` },
+          body,
+        });
         const raw = String(data?.content || data?.message || "");
         dispatchAiAgentEffects(parseAiAgentResponse(raw));
         await addMessages([{ role: "assistant", content: raw, timestamp: ts() }]);

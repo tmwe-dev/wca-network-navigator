@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
 import { findActiveWorkPlans } from "@/data/workPlans";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 const log = createLogger("useAiAssistantChat");
 
@@ -113,9 +113,10 @@ export function useAiAssistantChat({ open, onClose, context }: UseAiChatProps) {
     try {
       const allMsgs = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
       const enrichedContext = { ...context, currentPage: location.pathname };
-      const data = await invokeEdge<{ content?: string; error?: string }>("ai-assistant", {
+      const data = await invokeAi<{ content?: string; error?: string }>("ai-assistant", {
+        scope: "chat",
+        context: { source: "useAiAssistantChat", route: location.pathname },
         body: { messages: allMsgs, context: enrichedContext },
-        context: "aiAssistantChat",
       });
       const content = data.content || data.error || "Nessuna risposta";
       upsertAssistant(content);

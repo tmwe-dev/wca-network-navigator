@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { PROMPT_LAB_BRIEFING } from "./briefings";
 import type { UnifiedAssistantResponse } from "./types";
 
@@ -16,7 +16,9 @@ export function useCallAgent() {
       let lastErr: unknown;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
-          const result = await invokeEdge<UnifiedAssistantResponse>("unified-assistant", {
+          const result = await invokeAi<UnifiedAssistantResponse>("unified-assistant", {
+            scope: "kb-supervisor",
+            context: { source: "useLabAgent.callAgent", mode: "conversational" },
             body: {
               scope: "kb-supervisor",
               mode: "conversational",
@@ -28,7 +30,6 @@ export function useCallAgent() {
                 extra_context: extraContext,
               },
             },
-            context: "promptLabAgent",
           });
           return (result.content ?? "").trim();
         } catch (e: unknown) {

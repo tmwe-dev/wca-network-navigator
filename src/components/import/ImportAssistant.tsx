@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Bot, Send, Loader2, X, Sparkles } from "lucide-react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
@@ -48,14 +48,18 @@ export function ImportAssistant({ activeLogId, activeFileName }: ImportAssistant
     setLoading(true);
 
     try {
-      const data = await invokeEdge<Record<string, unknown>>("unified-assistant", { body: {
+      const data = await invokeAi<Record<string, unknown>>("unified-assistant", {
+        scope: "import",
+        context: { source: "ImportAssistant.import_assistant" },
+        body: {
           scope: "import",
           messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
           context: {
             activeLogId,
             activeFileName,
           },
-        }, context: "ImportAssistant.import_assistant" });
+        },
+      });
       if ((data as Record<string, unknown>)?.error) {
         toast({ title: "Errore AI", description: String((data as Record<string, unknown>).error), variant: "destructive" });
         setMessages([...allMessages, { role: "assistant", content: `⚠️ ${(data as Record<string, unknown>).error}` }]);

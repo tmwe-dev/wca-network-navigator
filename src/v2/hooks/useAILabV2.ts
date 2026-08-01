@@ -4,7 +4,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchOperativePromptsRaw } from "@/v2/io/supabase/queries/ai-lab";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 export function useAILabV2() {
   const [prompt, setPrompt] = useState("");
@@ -26,13 +26,14 @@ export function useAILabV2() {
     setRunning(true);
     setResponse("");
     try {
-      const data = await invokeEdge<{ response?: string; message?: string }>("ai-assistant", {
+      const data = await invokeAi<{ response?: string; message?: string }>("ai-assistant", {
+        scope: "lab",
+        context: { source: "useAILabV2", mode: "playground" },
         body: {
           messages: [{ role: "user", content: prompt }],
           context: "ai_lab_playground",
           model,
         },
-        context: "aiLabV2",
       });
       setResponse(data?.response ?? data?.message ?? JSON.stringify(data, null, 2));
     } catch (e) {

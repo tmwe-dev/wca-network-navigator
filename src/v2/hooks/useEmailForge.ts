@@ -3,7 +3,7 @@
  * { systemPrompt, userPrompt, blocks } for the Email Forge inspector page.
  */
 import { useState, useCallback } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { isApiError } from "@/lib/api/apiError";
 import { toast } from "sonner";
 import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
@@ -85,7 +85,9 @@ export function useEmailForge() {
     setResult(null);
     const t0 = Date.now();
     try {
-      const data = await invokeEdge<ForgeResult>("generate-email", {
+      const data = await invokeAi<ForgeResult>("generate-email", {
+        scope: "email",
+        context: { source: "useEmailForge.run", mode: "generate" },
         body: {
           standalone: true,
           partner_id: params.partner_id ?? null,
@@ -106,7 +108,6 @@ export function useEmailForge() {
           _system_prompt_override: params.system_prompt_override,
           _user_prompt_override: params.user_prompt_override,
         },
-        context: "useEmailForge.run",
       });
       setResult(data);
       setElapsedMs(Date.now() - t0);

@@ -23,6 +23,7 @@ import {
 import { ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { queryKeys } from "@/lib/queryKeys";
@@ -121,9 +122,10 @@ export default function AISuggestionsTab() {
 
   const analyzeMutation = useMutation({
     mutationFn: async (emails?: string[]) => {
-      const data = await invokeEdge<{ processed: number }>("suggest-email-groups", {
+      const data = await invokeAi<{ processed: number }>("suggest-email-groups", {
+        scope: "classify",
+        context: { source: "AISuggestionsTab" },
         body: { min_email_count: minEmailCount, batch_size: 20, emails: emails && emails.length > 0 ? emails : undefined },
-        context: "ai-suggestions-tab",
       });
       return data;
     },

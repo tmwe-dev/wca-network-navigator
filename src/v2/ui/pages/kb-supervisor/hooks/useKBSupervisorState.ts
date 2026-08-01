@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { findElevenLabsVoiceSettings } from "@/data/appSettings";
 import { useVoiceInput } from "@/v2/ui/pages/command/hooks/useVoiceInput";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 const log = createLogger("useKBSupervisorState");
@@ -199,7 +200,9 @@ export function useKBSupervisorState() {
     messageHistoryRef.current.push({ role: "user", content });
 
     try {
-      const result = await invokeEdge<SupervisorResponse>("unified-assistant", {
+      const result = await invokeAi<SupervisorResponse>("unified-assistant", {
+        scope: "kb-supervisor",
+        context: { source: "useKBSupervisorState.chat", mode: "conversational" },
         body: {
           scope: "kb-supervisor",
           mode: "conversational",
@@ -213,7 +216,6 @@ export function useKBSupervisorState() {
             available_categories: [...new Set(documentList.map(d => d.category))],
           },
         },
-        context: "kbSupervisorChat",
       });
 
       const assistantMsg: SupervisorMessage = {

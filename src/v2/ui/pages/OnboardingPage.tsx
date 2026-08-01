@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -95,10 +95,14 @@ export function Onboarding() {
 
     try {
       const stepContext = `L'utente è allo step "${steps[currentStep]?.title}". Rispondi brevemente e in italiano per aiutarlo a configurare la piattaforma.`;
-      const data = await invokeEdge<Record<string, unknown>>("ai-assistant", { body: {
+      const data = await invokeAi<Record<string, unknown>>("ai-assistant", {
+        scope: "strategic",
+        context: { source: "Onboarding.ai_assistant" },
+        body: {
           messages: [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content })),
           systemPrompt: `Sei l'assistente di onboarding. ${stepContext} Sii conciso (max 3 frasi).`,
-        }, context: "Onboarding.ai_assistant" });
+        },
+      });
       const reply = String(data?.reply || data?.content || "Non riesco a rispondere ora.");
       setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {

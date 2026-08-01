@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "@/hooks/use-toast";
 import type { ContactFilters } from "@/hooks/useContacts";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
@@ -63,7 +63,10 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const data = await invokeEdge<{ error?: string; content?: string }>("unified-assistant", { body: {
+      const data = await invokeAi<{ error?: string; content?: string }>("unified-assistant", {
+        scope: "contacts",
+        context: { source: "ContactAIBar.contacts_assistant" },
+        body: {
           scope: "contacts",
           messages: newMessages,
           context: {
@@ -73,7 +76,8 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
             groupBy: filters.groupBy || "country",
             sortKey,
           },
-        }, context: "ContactAIBar.contacts_assistant" });
+        },
+      });
       if (data?.error) {
         toast({ title: "Errore AI", description: data.error, variant: "destructive" });
         setLoading(false);

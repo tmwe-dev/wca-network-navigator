@@ -110,10 +110,15 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
 
   // Inietta scope+context nel body inviato all'edge function.
   // Ogni edge AI deve leggerli via _shared/aiInvocationGuard.ts.
+  const bodyRecord = body as Record<string, unknown>;
+  const payloadContext = bodyRecord.context && typeof bodyRecord.context === "object" && !Array.isArray(bodyRecord.context)
+    ? bodyRecord.context as Record<string, unknown>
+    : {};
   const enrichedBody = {
-    ...(body as Record<string, unknown>),
+    ...bodyRecord,
     scope,
     context: {
+      ...payloadContext,
       source: context.source,
       route: context.route,
       mode: context.mode,

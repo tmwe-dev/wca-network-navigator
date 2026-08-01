@@ -1,5 +1,5 @@
 import type { ComposerDraft, ToolResult } from "../types";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toneLabel } from "../../lib/toneDetector";
 import { buildEmailPipeline } from "./pipeline";
 import { fetchPrimaryContact } from "./partnerQueries";
@@ -35,7 +35,7 @@ async function generateOneDraft(
     };
   }
   try {
-    const gen = await invokeEdge<{
+    const gen = await invokeAi<{
       subject?: string;
       body?: string;
       message?: string;
@@ -49,6 +49,8 @@ async function generateOneDraft(
     }>(
       "generate-email",
       {
+        scope: "command",
+        context: { source: "composeEmail.batchDrafts", mode: "generate" },
         body: {
           standalone: true,
           partner_id: partner.id,
@@ -62,7 +64,6 @@ async function generateOneDraft(
           use_kb: true,
           language: "it",
         },
-        context: "command:compose-email-batch-draft",
       },
     );
     const cs = gen?._context_summary;

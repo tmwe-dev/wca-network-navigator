@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Save, Loader2, Sparkles, Handshake, RefreshCw, Search, Briefcase, Globe, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("PromptManager");
@@ -183,7 +183,11 @@ export function PromptManager() {
     if (!editPrompt.trim()) return;
     setImproving(true);
     try {
-      const data = await invokeEdge<Record<string, unknown>>("improve-email", { body: { html: editPrompt, tone: editTone, improveType: "prompt" }, context: "PromptManager.improve_email" });
+      const data = await invokeAi<Record<string, unknown>>("improve-email", {
+        scope: "email",
+        context: { source: "PromptManager.improve_email" },
+        body: { html: editPrompt, tone: editTone, improveType: "prompt" },
+      });
       if (data?.html) setEditPrompt(String(data.html));
       toast.success("Prompt migliorato con AI");
     } catch (e: unknown) {

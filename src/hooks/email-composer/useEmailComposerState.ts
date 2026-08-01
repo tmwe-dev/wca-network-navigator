@@ -7,6 +7,7 @@ import { useReducer, useCallback, useEffect, useMemo, useRef, useState } from "r
 import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { createLogger } from "@/lib/log";
 import { toast } from "sonner";
 import { useMission } from "@/contexts/MissionContext";
@@ -286,7 +287,10 @@ export function useEmailComposerState() {
       const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
       // LOVABLE-110: inietta learned_patterns da suggerimenti approvati
       const learnedPatterns = await buildLearnedPatterns(userId).catch(() => "");
-      const data = await invokeEdge<ImproveEmailResponse>("improve-email", { body: {
+      const data = await invokeAi<ImproveEmailResponse>("improve-email", {
+        scope: "email",
+        context: { source: "useEmailComposerState.improve_email" },
+        body: {
         subject: email.subject, html_body: email.htmlBody,
         recipient_count: recipientsWithEmail.length,
         recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
@@ -304,7 +308,8 @@ export function useEmailComposerState() {
         partner_id: hasRealPartnerId ? singleRecipient!.partnerId : null,
         contact_id: singleRecipient?.contactId || null,
         learned_patterns: learnedPatterns || undefined,
-      }, context: "EmailComposer.improve_email" });
+        },
+      });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || email.htmlBody, subject: data?.subject || email.subject } });

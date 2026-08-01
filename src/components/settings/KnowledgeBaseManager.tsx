@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Pencil, Trash2, Search, Download, Sparkles, Star, BookOpen } from "lucide-react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -92,7 +92,11 @@ export function KnowledgeBaseManager() {
     if (!editEntry?.content?.trim()) return;
     setImproving(true);
     try {
-      const data = await invokeEdge<Record<string, unknown>>("improve-email", { body: { html_body: editEntry.content, oracle_tone: "professionale", use_kb: false }, context: "KnowledgeBaseManager.improve_email" });
+      const data = await invokeAi<Record<string, unknown>>("improve-email", {
+        scope: "email",
+        context: { source: "KnowledgeBaseManager.improve_email" },
+        body: { html_body: editEntry.content, oracle_tone: "professionale", use_kb: false },
+      });
       const improved = data?.body || data?.html;
       if (improved) {
         setEditEntry(prev => ({ ...prev, content: String(improved) }));
