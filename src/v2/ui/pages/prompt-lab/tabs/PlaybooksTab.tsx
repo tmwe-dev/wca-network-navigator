@@ -1,6 +1,7 @@
 /**
  * PlaybooksTab — commercial_playbooks split editor.
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { useAuth } from "@/providers/AuthProvider";
 import { GenericRecordTab } from "./GenericRecordTab";
 import { findCommercialPlaybooks, updateCommercialPlaybook } from "@/data/commercialPlaybooks";
@@ -49,7 +50,7 @@ export function PlaybooksTab() {
         toast.error("JSON non valido nei trigger_conditions");
         throw new Error("Invalid JSON");
       }
-      await updateCommercialPlaybook(block.source.id, { trigger_conditions: parsed });
+      await updateCommercialPlaybook(block.source.id, { trigger_conditions: toJsonValue(parsed) });
     } else {
       await updateCommercialPlaybook(block.source.id, {
         [block.source.field]: block.content,
