@@ -55,7 +55,7 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
     }
     for (const m of stripped.matchAll(/alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?([\w."]+)/gi)) {
       const t = norm(m[1]);
-      if (t.startsWith("public.") && !created.has(t)) {
+      if (t && !t.includes(".") && !created.has(t)) {
         referencedBeforeCreation.push({ file: f, object: t });
       }
     }
@@ -74,9 +74,9 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
       }
     }
     for (const m of stripped.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(public\.[\w"]+)/gi)) {
-      const t = norm(m[1]);
+      const table = norm(m[1]);
+      const t = `public.${table}`;
       const rest = stripped.slice(stripped.indexOf(m[0]));
-      const table = t.split(".")[1];
       if (!new RegExp(`grant[\\s\\S]{0,400}?${table}`, "i").test(rest)) {
         tablesWithoutGrant.push({ file: f, table: t });
       }
@@ -90,7 +90,7 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
     const tablesBlock = t.slice(t.indexOf("Tables: {"));
     typeTables = [...tablesBlock.matchAll(/^      (\w+): \{$/gm)].map((m) => m[1]);
   }
-  const createdTables = [...created].filter((c) => c.startsWith("public.")).map((c) => c.split(".")[1]);
+  const createdTables = [...created].filter((c) => !c.includes("."));
   const missingInTypes = createdTables.filter((t) => !typeTables.includes(t));
   const missingInMigrations = typeTables.filter((t) => !createdTables.includes(t));
 
@@ -109,7 +109,8 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
 }
 
 function norm(id) {
-  return id.replace(/"/g, "").toLowerCase();
+  // Schema-insensitive: le migrazioni storiche alternano `public.x` e `x`.
+  return id.replace(/"/g, "").toLowerCase().replace(/^public\./, "");
 }
 
 if (process.argv[1] && process.argv[1].endsWith("audit-migrations.mjs")) {
