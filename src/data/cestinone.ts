@@ -13,7 +13,6 @@
  * (editorial review intoccato).
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 export type CestinoChannel = "email" | "whatsapp" | "linkedin" | "voice" | "other";
@@ -144,7 +143,8 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
       .in("status", ["pending", "queued", "scheduled"])
       .order("created_at", { ascending: false })
       .limit(500),
-    untypedFrom("campaign_jobs")
+    supabase
+      .from("campaign_jobs")
       .select("id, partner_id, company_name, country_code, email, phone, job_type, status, batch_id, created_at, operator_id, notes, assigned_to")
       .in("status", ["pending", "queued", "scheduled"])
       .order("created_at", { ascending: false })
@@ -505,7 +505,8 @@ export async function cancelCestinoItem(item: CestinoItem): Promise<void> {
       break;
     }
     case "campaign_jobs": {
-      const { error } = await untypedFrom("campaign_jobs")
+      const { error } = await supabase
+        .from("campaign_jobs")
         .update({ status: "cancelled" })
         .eq("id", realId);
       if (error) throw error;
@@ -548,7 +549,8 @@ export async function snoozeCestinoItem(item: CestinoItem, minutes = 60): Promis
       .eq("id", realId);
     if (error) throw error;
   } else if (item.source === "campaign_jobs") {
-    const { error } = await untypedFrom("campaign_jobs")
+    const { error } = await supabase
+        .from("campaign_jobs")
       .update({ scheduled_at: newAt, status: "scheduled" })
       .eq("id", realId);
     if (error) throw error;
