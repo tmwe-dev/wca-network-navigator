@@ -3,8 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 /**
  * Response from FireScrape extension — normalized from native responses.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type FsResponse<T = any> = {
+export type FsResponse<T = unknown> = {
   success: boolean;
   error?: string;
   version?: string;
@@ -73,8 +72,7 @@ export function useFireScrapeExtensionBridge() {
 
   /** Send a message to FireScrape background via the webapp-bridge content script */
   const sendMessage = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <T = any>(action: string, payload?: Record<string, unknown>, timeoutMs = 30000): Promise<FsResponse<T>> =>
+        <T = unknown>(action: string, payload?: Record<string, unknown>, timeoutMs = 30000): Promise<FsResponse<T>> =>
       new Promise((resolve) => {
         const requestId = `fs_${action}_${crypto.randomUUID()}`;
         const timer = setTimeout(() => {

@@ -199,10 +199,18 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, director
   );
 }
 
+/** Statistiche partner per paese usate dalle card della griglia. */
+interface CountryPartnerStats {
+  total_partners?: number;
+  with_email?: number;
+  with_phone?: number;
+  with_profile?: number;
+  without_profile?: number;
+}
+
 function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelected, onToggle, isDark }: {
   country: { code: string; name: string };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  stats: Record<string, any>;
+  stats: Record<string, CountryPartnerStats | undefined>;
   fallbackCount: number;
   hasPartnerStats: boolean;
   isSelected: boolean;

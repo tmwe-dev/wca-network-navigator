@@ -17,8 +17,7 @@ const LEAD_STATUS_LABELS: Record<RALeadStatus, { label: string; color: string }>
 };
 
 interface RACompanyHeaderProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  prospect: Record<string, any>;
+  prospect: RAProspect;
 }
 
 export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {

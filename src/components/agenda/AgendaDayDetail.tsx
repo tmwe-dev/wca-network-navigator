@@ -415,8 +415,16 @@ function ActivityRow({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) {
+/** Reminder mostrato nel dettaglio giornata (join opzionale sul partner). */
+interface ReminderListItem {
+  id: string;
+  title: string | null;
+  partner_id: string | null;
+  due_date?: string | null;
+  partners?: { country_code?: string | null; company_name?: string | null } | null;
+}
+
+function ReminderList({ reminders }: { reminders: ReminderListItem[] }) {
   if (reminders.length === 0) return null;
   return (
     <section className="pt-2">

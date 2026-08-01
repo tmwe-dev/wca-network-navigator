@@ -20,8 +20,7 @@ function formatDate(dateString: string) {
 }
 
 interface RACompanySidebarProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  prospect: Record<string, any>;
+  prospect: RAProspect;
   contacts: RAContact[];
   interactions: RAInteraction[];
   onLeadStatusChange: (status: RALeadStatus) => void;

@@ -65,8 +65,7 @@ export function useImportWizard() {
   const [groupName, setGroupName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [pendingRows, setPendingRows] = useState<any[]>([]);
+  const [pendingRows, setPendingRows] = useState<Record<string, unknown>[]>([]);
   const [aiMapping, setAiMapping] = useState<AiMappingResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
