@@ -27,6 +27,25 @@ export interface CommandContactRow {
   title: string | null;
 }
 
+/** Validatore runtime per le righe partner lette dal confine dinamico. */
+function parseCommandPartnerRow(row: Record<string, unknown>): CommandPartnerRow | null {
+  const id = typeof row.id === "string" ? row.id : null;
+  if (!id) return null;
+  const s = (v: unknown): string | null => (typeof v === "string" ? v : null);
+  return {
+    id,
+    company_name: s(row.company_name),
+    company_alias: s(row.company_alias),
+    country_code: s(row.country_code),
+    city: s(row.city),
+    email: s(row.email),
+    website: s(row.website),
+    lead_status: s(row.lead_status),
+    status_reason: s(row.status_reason),
+    last_interaction_at: s(row.last_interaction_at),
+  };
+}
+
 const PARTNER_COLS = "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";
 
 /** Colonne di `partners` filtrabili da un contesto salvato dal planner. */
