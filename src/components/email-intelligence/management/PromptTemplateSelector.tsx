@@ -7,11 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  findPromptTemplatesForUser,
-  hasSystemPromptTemplates,
-  insertSystemPromptTemplates,
-} from '@/data/emailPrompts';
+import { useEmailPromptsRepo } from '@/hooks/emailIntelligence/useEmailPromptsRepo';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("PromptTemplateSelector");
@@ -48,6 +44,7 @@ export function PromptTemplateSelector({
   onPromptChange,
   isEditing = false
 }: PromptTemplateSelectorProps) {
+  const { findPromptTemplatesForUser, hasSystemPromptTemplates, insertSystemPromptTemplates } = useEmailPromptsRepo();
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
