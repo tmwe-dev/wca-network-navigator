@@ -21,3 +21,56 @@ export function selectFromValidatedTable(
 ) {
   return untypedFrom(validatedTable).select(columns, options);
 }
+
+/** Operatori ammessi nei filtri generati a runtime. */
+export type DynamicFilterOp = "eq" | "neq" | "ilike" | "in" | "is";
+
+export interface DynamicFilter {
+  readonly column: string;
+  readonly op: string;
+  readonly value: unknown;
+}
+
+const SUPPORTED_OPS: ReadonlySet<string> = new Set<DynamicFilterOp>([
+  "eq",
+  "neq",
+  "ilike",
+  "in",
+  "is",
+]);
+
+/**
+ * Applica filtri con nome colonna noto solo a runtime a una SELECT già avviata.
+ *
+ * `allowedColumns` è obbligatoria: le colonne non in whitelist vengono scartate
+ * (fail closed) invece di raggiungere il database. Gli operatori non supportati
+ * vengono ignorati allo stesso modo.
+ */
+export function applyValidatedFilters<TBuilder>(
+  builder: TBuilder,
+  filters: readonly DynamicFilter[],
+  allowedColumns: ReadonlySet<string>,
+): TBuilder {
+  let q = builder as TBuilder & Record<DynamicFilterOp, (c: string, v: unknown) => TBuilder>;
+  for (const f of filters) {
+    if (!allowedColumns.has(f.column) || !SUPPORTED_OPS.has(f.op)) continue;
+    switch (f.op) {
+      case "eq":
+        q = q.eq(f.column, f.value) as typeof q;
+        break;
+      case "neq":
+        q = q.neq(f.column, f.value) as typeof q;
+        break;
+      case "ilike":
+        q = q.ilike(f.column, `%${String(f.value).replace(/%/g, "")}%`) as typeof q;
+        break;
+      case "in":
+        if (Array.isArray(f.value)) q = q.in(f.column, f.value) as typeof q;
+        break;
+      case "is":
+        q = q.is(f.column, f.value) as typeof q;
+        break;
+    }
+  }
+  return q;
+}
