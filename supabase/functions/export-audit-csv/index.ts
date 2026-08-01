@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/authGuard.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -13,20 +14,10 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    // Auth
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace("Bearer ", "");
-    const sb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
-    );
-    const { data: { user }, error: authErr } = await sb.auth.getUser(token);
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Non autenticato" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
+    // Auth — guard condiviso (contratto terse: { error: AUTH_REQUIRED | AUTH_INVALID })
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (auth instanceof Response) return auth;
+    const userId = auth.userId;
 
     // Query params
     const url = new URL(req.url);
@@ -41,7 +32,7 @@ serve(async (req) => {
     const { data: logs, error: qErr } = await serviceSb
       .from("agent_action_log")
       .select("id, user_id, conversation_id, tool_name, args, result, created_at")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(5000);

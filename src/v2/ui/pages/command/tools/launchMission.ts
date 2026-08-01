@@ -4,7 +4,7 @@
  */
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { findAgentMissionByTitleLike, findAgentMissionTitleById } from "@/data/agentMissions";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 function extractMissionRef(prompt: string): string | null {
@@ -26,18 +26,16 @@ export const launchMissionTool: Tool = {
       let missionId: string | null = null;
       let missionName: string | null = null;
       if (ref) {
-        // DRIFT: agent_missions has no `name` column in the generated schema (only `title`).
-        // Left on untypedFrom until this query is corrected to use the real column.
+        // `agent_missions` espone `title` (non `name`): query tipizzata via DAL.
         if (/^[0-9a-f-]{36}$/i.test(ref)) {
           missionId = ref;
-          const { data } = await untypedFrom("agent_missions").select("name").eq("id", ref).maybeSingle();
-          missionName = (data as { name?: string } | null)?.name ?? null;
+          const row = await findAgentMissionTitleById(ref);
+          missionName = row?.title ?? null;
         } else {
-          const { data } = await untypedFrom("agent_missions").select("id, name").ilike("name", `%${ref}%`).limit(1).maybeSingle();
-          if (data) {
-            const row = data as { id: string; name: string };
+          const row = await findAgentMissionByTitleLike(ref);
+          if (row) {
             missionId = row.id;
-            missionName = row.name;
+            missionName = row.title;
           }
         }
       }

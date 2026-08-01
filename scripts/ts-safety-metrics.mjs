@@ -17,7 +17,10 @@ const pats = {
   untypedFrom: /\buntypedFrom\s*\(/g,
   asNever: /\bas never\b/g,
   asUnknownAs: /\bas unknown as\b/g,
-  explicitAny: /(:\s*any\b|<any>|\bas any\b|any\[\])/g,
+  // Copre anche `any` in posizione generica (`Record<string, any>`,
+  // `Promise<any>`, `Array<Record<string, any>>`): il pattern precedente
+  // (`:\s*any`) li mancava tutti e riportava 11 invece del valore reale.
+  explicitAny: /(:\s*any\b|<\s*any\s*>|\bas any\b|any\[\]|<[^>\n]*\bany\b[^>\n]*>)/g,
   tsIgnore: /@ts-(ignore|expect-error|nocheck)/g,
   eslintDisable: /eslint-disable/g,
 };

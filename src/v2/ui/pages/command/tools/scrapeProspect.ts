@@ -4,10 +4,9 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { toJsonValue } from "@/lib/jsonGuards";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 import { getCachedScrapePayload } from "@/data/commandScrapePartner";
 import { upsertScrapeCacheEntry } from "@/data/scrapeCache";
-import { findProspectBySearchTerm } from "@/data/prospects";
+import { applyProspectEnrichment, findProspectBySearchTerm } from "@/data/prospects";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:prospect\s+)?/i;
@@ -43,17 +42,27 @@ export const scrapeProspectTool: Tool = {
       for (const [k, v] of Object.entries(payload)) {
         if (k !== "prospectId") updateData[k] = v;
       }
-      // DRIFT: updateData is built dynamically from the approval payload and may include
-      // `profile_description`, which does not exist on the generated `prospects` schema
-      // (it exists on `partners`). Left on untypedFrom to avoid changing behavior.
-      const { error } = await untypedFrom("prospects")
-        .update(updateData)
-        .eq("id", prospectId);
-
-      if (error) {
+      // Il payload di approvazione è generato dinamicamente e può contenere
+      // campi non presenti su `prospects` (es. `profile_description`, che sta
+      // su `partners`): il DAL filtra sulle colonne reali invece di far
+      // fallire l'intero update.
+      try {
+        const { appliedFields, ignoredFields } = await applyProspectEnrichment(prospectId, updateData);
+        if (appliedFields.length === 0) {
+          return {
+            kind: "result",
+            title: "Nessun aggiornamento",
+            message: `Nessun campo applicabile al prospect${ignoredFields.length ? ` (ignorati: ${ignoredFields.join(", ")})` : ""}.`,
+          };
+        }
+        return {
+          kind: "result",
+          title: "Prospect Aggiornato",
+          message: `Aggiornati: ${appliedFields.join(", ")}${ignoredFields.length ? ` · ignorati: ${ignoredFields.join(", ")}` : ""}.`,
+        };
+      } catch (error) {
         return { kind: "result", title: "Errore", message: `Errore aggiornamento: ${(error as Error).message}` };
       }
-      return { kind: "result", title: "Prospect Aggiornato", message: "Dati del prospect aggiornati con successo." };
     }
 
     const nameMatch = prompt.match(/prospect\s+(.+?)(?:\s*$|[,.])/i);

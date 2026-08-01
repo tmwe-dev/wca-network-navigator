@@ -45,6 +45,57 @@ export async function updateProspect(id: string, updates: Record<string, unknown
   if (error) throw error;
 }
 
+/**
+ * Colonne di `prospects` scrivibili da flussi di arricchimento automatico
+ * (scraping, AI). Whitelist esplicita: evita che un payload generato
+ * dall'AI introduca colonne inesistenti (es. `profile_description`, che
+ * appartiene a `partners`) facendo fallire l'intero update.
+ */
+const ENRICHABLE_PROSPECT_COLUMNS = [
+  "email",
+  "pec",
+  "phone",
+  "website",
+  "address",
+  "city",
+  "province",
+  "region",
+  "cap",
+  "codice_ateco",
+  "descrizione_ateco",
+  "forma_giuridica",
+  "partita_iva",
+  "codice_fiscale",
+] as const;
+
+export type ProspectEnrichmentResult = {
+  readonly appliedFields: string[];
+  readonly ignoredFields: string[];
+};
+
+/** Applica un payload di arricchimento filtrando sulle sole colonne reali. */
+export async function applyProspectEnrichment(
+  id: string,
+  payload: Record<string, unknown>,
+): Promise<ProspectEnrichmentResult> {
+  const allowed = new Set<string>(ENRICHABLE_PROSPECT_COLUMNS);
+  const updates: Record<string, unknown> = {};
+  const ignoredFields: string[] = [];
+  for (const [key, value] of Object.entries(payload)) {
+    if (allowed.has(key)) updates[key] = value;
+    else ignoredFields.push(key);
+  }
+  const appliedFields = Object.keys(updates);
+  if (appliedFields.length > 0) {
+    const { error } = await supabase
+      .from("prospects")
+      .update(updates as ProspectUpdate)
+      .eq("id", id);
+    if (error) throw error;
+  }
+  return { appliedFields, ignoredFields };
+}
+
 /** Contatti management di un prospect. */
 export async function findProspectContacts(prospectId: string): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await supabase
