@@ -33,7 +33,7 @@ export async function findEmailPromptsByScope(userId: string, scope: string): Pr
 }
 
 export async function updateEmailPrompt(id: string, patch: Partial<EmailPromptFull>): Promise<void> {
-  const { error } = await supabase.from("email_prompts").update(patch as never).eq("id", id);
+  const { error } = await supabase.from("email_prompts").update(patch).eq("id", id);
   if (error) throw error;
 }
 
@@ -56,18 +56,21 @@ export async function findAllEmailPrompts(): Promise<EmailPromptRow[]> {
 /**
  * Update by id (Prompt Manager). Filtro obbligatorio: mai write globali.
  */
-export async function updateEmailPromptById(id: string, payload: Record<string, unknown>): Promise<void> {
+export async function updateEmailPromptById(
+  id: string,
+  payload: Database["public"]["Tables"]["email_prompts"]["Update"],
+): Promise<void> {
   if (!id) throw new Error("updateEmailPromptById: id obbligatorio");
-  const { error } = await supabase
-    .from("email_prompts")
-    .update(payload as Database["public"]["Tables"]["email_prompts"]["Update"])
-    .eq("id", id);
+  const { error } = await supabase.from("email_prompts").update(payload).eq("id", id);
   if (error) throw error;
 }
 
 /** Insert nuovo prompt con user_id esplicito (errore non propagato, come il legacy). */
-export async function insertEmailPrompt(payload: Record<string, unknown>, userId: string): Promise<void> {
-  await supabase.from("email_prompts").insert({ ...payload, user_id: userId } as never);
+export async function insertEmailPrompt(
+  payload: Omit<Database["public"]["Tables"]["email_prompts"]["Insert"], "user_id">,
+  userId: string,
+): Promise<void> {
+  await supabase.from("email_prompts").insert({ ...payload, user_id: userId });
 }
 
 /** Toggle is_active. */
