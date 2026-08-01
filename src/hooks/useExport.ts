@@ -72,11 +72,11 @@ async function convertToExcel(
 
 // ── Export functions ──
 
-// DRIFT: selects "title" which does not exist on imported_contacts in generated types — left untyped.
 async function fetchContactsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = untypedFrom("imported_contacts")
+  // Colonne verificate sullo schema live (`position`, non `title`).
+  let query = supabase.from("imported_contacts")
     .select(
-      "id, name, email, phone, mobile, company_name, title, country, lead_status, created_at, interaction_count"
+      "id, name, email, phone, mobile, company_name, position, country, lead_status, created_at, interaction_count"
     );
 
   if (filters?.dateRange) {
@@ -97,14 +97,14 @@ async function fetchContactsData(filters?: ExportFilters): Promise<Record<string
 
   const { data, error } = await query.limit(50000);
   if (error) throw error;
-  return data || [];
+  return data ?? [];
 }
 
-// DRIFT: selects "name", "registration_number", "contact_person", "status" which do not exist on partners in generated types — left untyped.
 async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = untypedFrom("partners")
+  // Colonne verificate sullo schema live: company_name / country_name / lead_status.
+  let query = supabase.from("partners")
     .select(
-      "id, name, country, website, email, phone, registration_number, contact_person, status, created_at"
+      "id, company_name, country_name, website, email, phone, partner_type, lead_status, created_at"
     );
 
   if (filters?.dateRange) {
@@ -115,24 +115,23 @@ async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string
 
   if (filters?.status) {
     const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-    query = query.in("status", statuses);
+    query = query.in("lead_status", statuses);
   }
 
   if (filters?.search) {
     const term = `%${filters.search}%`;
-    query = query.or(`name.ilike.${term},email.ilike.${term},contact_person.ilike.${term}`);
+    query = query.or(`company_name.ilike.${term},email.ilike.${term},website.ilike.${term}`);
   }
 
   const { data, error } = await query.limit(50000);
   if (error) throw error;
-  return data || [];
+  return data ?? [];
 }
 
-// DRIFT: selects "close_date" which does not exist on deals (only expected_close_date/actual_close_date) in generated types — left untyped.
 async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = untypedFrom("deals")
+  let query = supabase.from("deals")
     .select(
-      "id, title, partner_id, contact_id, stage, amount, probability, close_date, created_at, updated_at"
+      "id, title, partner_id, contact_id, stage, amount, probability, expected_close_date, actual_close_date, created_at, updated_at"
     );
 
   if (filters?.dateRange) {
@@ -148,7 +147,7 @@ async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, u
 
   const { data, error } = await query.limit(50000);
   if (error) throw error;
-  return data || [];
+  return data ?? [];
 }
 
 // ── Hooks ──
