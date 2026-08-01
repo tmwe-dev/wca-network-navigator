@@ -354,8 +354,8 @@ export function useEmailComposerState() {
     try {
       await saveDraft.mutateAsync({
         subject: email.subject, html_body: email.htmlBody, category: "altro",
-        recipient_type: "partner", recipient_filter: toJsonValue({ partner_ids: recipients.map((r) => r.partnerId) }),
-        attachment_ids: toJsonValue(email.selectedAttachments), link_urls: toJsonValue(email.emailLinks),
+        recipient_type: "partner", recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
+        attachment_ids: email.selectedAttachments, link_urls: email.emailLinks,
         status: "draft", total_count: recipientsWithEmail.length,
       });
       toast.success("Bozza salvata");

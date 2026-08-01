@@ -282,14 +282,15 @@ function PromptManagerSection() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (prompt: Record<string, unknown>) => {
+    mutationFn: async (prompt: Partial<EmailPromptRow>) => {
       const { id, ...payload } = prompt;
       if (id) {
         if (typeof id !== "string" || !id) throw new Error("ID prompt mancante: aggiornamento annullato");
         await updateEmailPromptById(id, payload);
       } else {
+        if (!payload.title) throw new Error("Titolo prompt obbligatorio");
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-        await insertEmailPrompt(payload, user!.id);
+        await insertEmailPrompt({ ...payload, title: payload.title }, user!.id);
       }
     },
     onSuccess: () => { toast.success("Prompt salvato"); qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }); setSheetOpen(false); },
