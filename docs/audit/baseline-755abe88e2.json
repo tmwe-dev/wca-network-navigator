@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-08-01T10:02:26.308Z",
+  "commit": "755abe88e2623bbaae54a85191e5df88f54455d6",
+  "toolchain": {
+    "node": "v22.22.0",
+    "npm": "10.9.4",
+    "enginesDeclared": {
+      "node": ">=20"
+    }
+  },
+  "repo": {
+    "trackedFiles": 4305,
+    "srcFiles": 2509,
+    "srcLoc": 329032,
+    "testFiles": 394,
+    "edgeFunctions": 149,
+    "edgeLoc": 87177,
+    "migrations": 416,
+    "sqlLoc": 25186
+  },
+  "dependencies": {
+    "lockfileVersion": 3,
+    "direct": 81,
+    "dev": 31,
+    "problems": []
+  },
+  "types": [
+    "{",
+    "  \"files\": 2109,",
+    "  \"totals\": {",
+    "    \"untypedFrom\": 0,",
+    "    \"asNever\": 22,",
+    "    \"asUnknownAs\": 88,",
+    "    \"explicitAny\": 6,",
+    "    \"tsIgnore\": 0,",
+    "    \"eslintDisable\": 29",
+    "  }",
+    "}"
+  ]
+}

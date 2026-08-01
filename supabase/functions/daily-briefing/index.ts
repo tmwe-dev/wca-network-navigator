@@ -4,7 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { assemblePrompt } from "../_shared/prompts/assembler.ts";
-import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,

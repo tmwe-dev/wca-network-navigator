@@ -2,7 +2,6 @@
  * promptBuilder.ts — System + User prompt composition orchestrator.
  * Delegates to focused modules; orchestrates final prompt assembly.
  */
-import type { Quality } from "../_shared/kbSlice.ts";
 import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 import { getProfileTruncation, getModel } from "./promptHelpers.ts";
 import { buildStrategicAdvisor } from "./strategicAdvisor.ts";

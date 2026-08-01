@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff, Trash2 } from "lucide-react";
+import { ChevronDown, AlertTriangle, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";

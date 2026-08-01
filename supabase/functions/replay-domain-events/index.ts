@@ -25,23 +25,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
-import { eventBus, createEvent } from "../_shared/domainEvents.ts";
+import { eventBus } from "../_shared/domainEvents.ts";
 import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
 import type {
   WCADomainEvent,
-  LeadStatusChanged,
-  FirstTouchSent,
-  LeadQualificationSignal,
-  ConversionSignalDetected,
-  EmailSent,
-  InboundEmailReceived,
-  EmailClassified,
-  EmailBounceDetected,
-  OutreachScheduled,
-  OutreachExecuted,
-  OutreachReplied,
-  CadenceViolation,
 } from "../_shared/domainEvents.ts";
 
 const supabase = createClient(

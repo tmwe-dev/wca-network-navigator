@@ -3,7 +3,6 @@
  * Uses scrape-website edge function with scrape_cache.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { toJsonValue } from "@/lib/jsonGuards";
 import { getCachedScrapePayload } from "@/data/commandScrapePartner";
 import { upsertScrapeCacheEntry } from "@/data/scrapeCache";
 import { applyProspectEnrichment, findProspectBySearchTerm } from "@/data/prospects";

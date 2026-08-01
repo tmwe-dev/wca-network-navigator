@@ -5,7 +5,6 @@
  * Loop logic remains here as it's tightly coupled to extension bridges.
  */
 import { useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { QueueItem, CanvasData, ContactSource } from "@/types/acquisition";

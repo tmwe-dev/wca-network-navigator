@@ -21,7 +21,6 @@ import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 import {
   SECONDARY_NAV,
   findSecondaryNavGroup,
-  type SecondaryNavGroup,
 } from "@/v2/navigation/registry";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 import { EXPANDABLE_MAIN_NAV, sectionRoot } from "./navMenuConfig";

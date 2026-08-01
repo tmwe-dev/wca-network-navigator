@@ -32,7 +32,7 @@ import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
 import { SiblingRiskBadge } from "@/components/ai-control/SiblingRiskBadge";
-import { ACTION_META, SOURCE_META, confidenceColor, ApproveGuardedButton } from "./pendingActionsPanel.constants";
+import { ACTION_META, SOURCE_META, ApproveGuardedButton } from "./pendingActionsPanel.constants";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("PendingActionsPanel");

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { findForgeKbEntries, updateForgeKbEntry, insertForgeKbEntry, type ForgeKbEntryRow } from "@/data/forgeKb";
+import { findForgeKbEntries, updateForgeKbEntry, insertForgeKbEntry } from "@/data/forgeKb";
 
 export interface ForgeKbEntry {
   id: string;

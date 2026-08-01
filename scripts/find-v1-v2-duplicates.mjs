@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Trova possibili duplicati tra src/v2 e src/ (v1) confrontando basename.
 import { readdirSync, statSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 
 function walk(dir, out = []) {
   for (const e of readdirSync(dir)) {

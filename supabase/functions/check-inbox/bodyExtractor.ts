@@ -10,7 +10,7 @@ import {
 } from "./mimeDecoder.ts";
 import {
   extractLiteralBytesFromResponse, extractLiteralTextFromResponse,
-  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD, MAX_RAW_FETCH_BYTES,
+  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD,
 } from "./imapParser.ts";
 import { type AttachmentRecord } from "./dbOperations.ts";
 

@@ -11,13 +11,11 @@
 
 import {
   AutonomyLevel,
-  DecisionContext,
   NextAction,
   PartnerState,
   SupabaseClient,
 } from "./types.ts";
 import { decideNextActions } from "./decider.ts";
-import { evaluateTransitions, applyTransition } from "../stateTransitions.ts";
 import { checkCadence, type CadenceCheckResult } from "../cadenceEngine.ts";
 import { LeadProcessManager } from "../processManagers/leadProcessManager.ts";
 

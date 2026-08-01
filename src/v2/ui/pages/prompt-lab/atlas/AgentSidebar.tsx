@@ -2,7 +2,6 @@
  * AgentSidebar — Lista agenti raggruppati per categoria.
  */
 import { useMemo } from "react";
-import * as Icons from "lucide-react";
 import { resolveLucideIcon } from "@/lib/lucideIcon";
 import type { AgentRegistryEntry, AgentCategory } from "@/constants/agentPrompts";
 import { cn } from "@/lib/utils";

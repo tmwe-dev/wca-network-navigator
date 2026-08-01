@@ -1,7 +1,7 @@
 /**
  * activityLogger.ts — Activity logging for post-send pipeline.
  */
-import type { SendChannel, SourceType, PostSendPipelineInput } from "./postSendPipeline.ts";
+import type { SourceType, PostSendPipelineInput } from "./postSendPipeline.ts";
 import { channelToActivityType, channelLabel, buildActivityTitle } from "./pipelineUtils.ts";
 
 type SupabaseClient = any;

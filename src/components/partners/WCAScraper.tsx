@@ -8,7 +8,6 @@ import { Globe, Download, CheckCircle, AlertCircle, Loader2, Square, Building2, 
 import { toast } from "@/hooks/use-toast";
 import { scrapeWcaPartnerById, type ScrapeSingleResult, type AIClassification } from "@/lib/api/wcaScraper";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PartnerDetailModal } from "./PartnerDetailModal";
 import { queryKeys } from "@/lib/queryKeys";
 import { getMaxPartnerWcaId } from "@/data/partners";

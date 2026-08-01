@@ -2,7 +2,6 @@
  * postProcessing.ts — Post-sync operations: email rules and classification.
  */
 
-import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
 interface MessageRecord {
   id?: string;

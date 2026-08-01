@@ -25,12 +25,8 @@ import {
   logLine,
   buildAnthropicBody,
   parseAnthropicResponse,
-  mapErrorToResponse,
   type AiChatOptions,
   type AiChatResult,
-  type AiMessage,
-  type AiTool,
-  type AiGatewayErrorKind,
 } from "./aiGatewayTypes.ts";
 
 // Re-export everything for backward compatibility
