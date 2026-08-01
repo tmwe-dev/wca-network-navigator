@@ -2,8 +2,8 @@
  * DAL — creazione rapida di blocchi dal Prompt Lab.
  *
  * Le tre tabelle coinvolte (`operative_prompts`, `email_prompts`,
- * `commercial_playbooks`) hanno drift rispetto ai tipi generati: l'accesso
- * passa dall'unico confine sanzionato (`tFrom`), confinato al DAL.
+ * `commercial_playbooks`) sono presenti nei tipi generati: l'insert usa il
+ * client tipizzato, nessun boundary untyped.
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -20,7 +20,7 @@ export async function insertOperativePromptBlock(input: { name: string; objectiv
     criteria: "",
     is_active: true,
   };
-  const { error } = await supabase.from(TABLE).insert(row);
+  const { error } = await supabase.from("operative_prompts").insert(row);
   if (error) throw error;
 }
 
@@ -30,7 +30,7 @@ export async function insertEmailPromptBlock(input: { title: string; instruction
     instructions: input.instructions,
     is_active: true,
   };
-  const { error } = await supabase.from(TABLE).insert(row);
+  const { error } = await supabase.from("email_prompts").insert(row);
   if (error) throw error;
 }
 
@@ -42,6 +42,6 @@ export async function insertPlaybookBlock(input: { name: string; description: st
     trigger_conditions: "{}",
     is_active: true,
   };
-  const { error } = await supabase.from(TABLE).insert(row);
+  const { error } = await supabase.from("commercial_playbooks").insert(row);
   if (error) throw error;
 }
