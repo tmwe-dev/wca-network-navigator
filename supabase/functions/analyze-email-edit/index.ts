@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { requireAuth } from "../_shared/authGuard.ts";
 
 function stripHtml(html: string): string {
   return html
@@ -25,26 +26,11 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
-
+    // Auth — guard condiviso (terse: AUTH_REQUIRED / AUTH_INVALID)
+    const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
+    if (auth instanceof Response) return auth;
+    const userId = auth.userId;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: authError } = await authClient.auth.getUser(token);
-    if (authError || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
-    const userId = userData.user.id;
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
