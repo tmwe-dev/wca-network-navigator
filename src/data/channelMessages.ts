@@ -3,7 +3,6 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { untypedFrom } from "@/lib/supabaseUntyped";
 
 type ChannelMessageInsert = Database["public"]["Tables"]["channel_messages"]["Insert"];
 
