@@ -159,9 +159,10 @@ describe("DAL — analytics", () => {
     it("calculates pipeline values and weighted forecast", async () => {
       mockDealsResult = {
         data: [
-          { stage: "qualified", value: 1000 },
-          { stage: "won", value: 500 },
-          { stage: "lost", value: 200 },
+          // Schema live: la colonna importo di `deals` è `amount`, non `value`.
+          { stage: "qualified", amount: 1000 },
+          { stage: "won", amount: 500 },
+          { stage: "lost", amount: 200 },
         ],
         error: null,
       };
