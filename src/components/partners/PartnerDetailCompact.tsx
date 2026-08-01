@@ -117,7 +117,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
   const handleUnifiedWhatsApp = useCallback(() => {
     if (!primaryContact) return;
-    handleSendWhatsApp(toRecord(primaryContact));
+    handleSendWhatsApp(primaryContact);
    
   }, [primaryContact]);
 
@@ -138,8 +138,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   }, [partner, navigate]);
 
   // ── WhatsApp: send via extension bridge ──
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSendWhatsApp = useCallback(async (contact: Record<string, any>) => {
+  const handleSendWhatsApp = useCallback(async (contact: ContactItem) => {
     const phone = contact.mobile || contact.direct_phone;
     if (!phone) return;
     setWaSending(contact.id);

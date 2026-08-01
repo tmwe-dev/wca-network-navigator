@@ -476,8 +476,22 @@ function VariablesTab({ draft, goal, baseProposal }: { draft: DraftState; goal: 
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ActionButtons({ draft, sending, waBridge, liBridge, _pcBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy, _onDraftChange }: Record<string, any>) {
+/** Props della barra azioni: solo ciò che serve a decidere il canale d'invio. */
+interface ActionButtonsProps {
+  draft: DraftState;
+  sending: boolean;
+  waBridge: { isAvailable: boolean };
+  liBridge: { isAvailable: boolean };
+  pcBridge?: { isAvailable: boolean };
+  onSendEmail: () => void;
+  onSendWhatsApp: () => void;
+  onSendLinkedIn: () => void;
+  onConnectLinkedIn: () => void;
+  onCopy: () => void;
+  onDraftChange: (draft: DraftState) => void;
+}
+
+function ActionButtons({ draft, sending, waBridge, liBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy }: ActionButtonsProps) {
   if (draft.channel === "email" && draft.contactEmail) {
     return (
       <button onClick={onSendEmail} disabled={sending} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
