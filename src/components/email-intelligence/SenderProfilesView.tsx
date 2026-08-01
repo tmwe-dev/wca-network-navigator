@@ -3,8 +3,8 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findConversationContextsOrdered } from "@/data/emailClassifications";
-import { findAddressRuleSummaries } from "@/data/emailAddressRules";
+import { useEmailClassificationsRepo } from "@/hooks/emailIntelligence/useEmailClassificationsRepo";
+import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,6 +28,8 @@ function initialsColor(email: string): string {
 }
 
 export function SenderProfilesView() {
+  const { findConversationContextsOrdered } = useEmailClassificationsRepo();
+  const { findAddressRuleSummaries } = useAddressRulesRepo();
   const [sortBy, setSortBy] = useState<string>("interaction_count");
 
   const { data: profiles = [], isLoading } = useQuery({

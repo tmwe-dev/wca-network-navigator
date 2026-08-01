@@ -37,14 +37,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useImapFolders, useCreateRuleFromSender } from "@/hooks/useEmailFolderActions";
-import { findActiveEmailPromptTemplates } from "@/data/emailPrompts";
-import {
-  findReusablePromptRules,
-  findAddressRuleIdForUserEmail,
-  updateAddressRulePrompt,
-  insertAddressRuleWithPrompt,
-} from "@/data/emailAddressRules";
-import { findChannelMessagesForExport } from "@/data/channelMessages";
+import { useEmailPromptsRepo } from "@/hooks/emailIntelligence/useEmailPromptsRepo";
+import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
+import { useChannelMessagesRepo } from "@/hooks/emailIntelligence/useChannelMessagesRepo";
 import type { SenderAnalysis } from "@/types/email-management";
 
 
@@ -70,6 +65,14 @@ interface SenderActionsDialogProps {
 export function SenderActionsDialog({
   sender, open, onOpenChange, onActionDone,
 }: SenderActionsDialogProps) {
+  const { findActiveEmailPromptTemplates } = useEmailPromptsRepo();
+  const {
+    findReusablePromptRules,
+    findAddressRuleIdForUserEmail,
+    updateAddressRulePrompt,
+    insertAddressRuleWithPrompt,
+  } = useAddressRulesRepo();
+  const { findChannelMessagesForExport } = useChannelMessagesRepo();
   const [busy, setBusy] = useState<string | null>(null);
   const [showFolders, setShowFolders] = useState(false);
   const [prompt, setPrompt] = useState("");

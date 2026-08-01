@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { Trash2, Archive, Check } from 'lucide-react';
-import {
-  countChannelMessagesFromSender,
-  fetchChannelMessageIdsFromSender,
-  softDeleteChannelMessageById,
-  archiveChannelMessageById,
-  markChannelMessageIsReadFlag,
-} from '@/data/channelMessages';
+import { useChannelMessagesRepo } from '@/hooks/emailIntelligence/useChannelMessagesRepo';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("BulkEmailActions");
@@ -25,6 +19,13 @@ interface BulkEmailActionsProps {
 type ActionType = 'delete' | 'archive' | 'mark-read' | null;
 
 export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailActionsProps) {
+  const {
+    countChannelMessagesFromSender,
+    fetchChannelMessageIdsFromSender,
+    softDeleteChannelMessageById,
+    archiveChannelMessageById,
+    markChannelMessageIsReadFlag,
+  } = useChannelMessagesRepo();
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [pendingAction, setPendingAction] = useState<ActionType>(null);

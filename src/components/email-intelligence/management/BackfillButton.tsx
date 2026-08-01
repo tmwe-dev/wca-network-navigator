@@ -15,9 +15,9 @@ import {
 import { Inbox, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { backfillForAddress, backfillForGroup } from "@/data/emailRulesBackfill";
-import type { BackfillReport } from "@/data/emailRulesBackfill";
-import { fetchOperatorIdForUser } from "@/data/emailGrouping";
+import { useEmailRulesBackfillRepo } from "@/hooks/emailIntelligence/useEmailRulesBackfillRepo";
+import type { BackfillReport } from "@/hooks/emailIntelligence/useEmailRulesBackfillRepo";
+import { useEmailGroupingRepo } from "@/hooks/emailIntelligence/useEmailGroupingRepo";
 
 interface BackfillButtonProps {
   scope: "address" | "group";
@@ -42,6 +42,8 @@ export function BackfillButton({
   className,
   onComplete,
 }: BackfillButtonProps) {
+  const { backfillForAddress, backfillForGroup } = useEmailRulesBackfillRepo();
+  const { fetchOperatorIdForUser } = useEmailGroupingRepo();
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
 

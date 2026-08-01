@@ -5,9 +5,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule, countAddressRulesByGroup, type AddressRuleUpsertInput } from "@/data/emailAddressRules";
-import { fetchSenderGroupsOrdered, updateSenderGroupAutoAction } from "@/data/emailGrouping";
-import { findAllEmailPrompts, updateEmailPromptById, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt, type EmailPromptRow } from "@/data/emailPrompts";
+import { useAddressRulesRepo, type AddressRuleUpsertInput } from "@/hooks/emailIntelligence/useAddressRulesRepo";
+import { useEmailGroupingRepo } from "@/hooks/emailIntelligence/useEmailGroupingRepo";
+import { useEmailPromptsRepo, type EmailPromptRow } from "@/hooks/emailIntelligence/useEmailPromptsRepo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,8 @@ interface EditablePrompt {
 
 /* ── Section A: Address Rules ── */
 function AddressRulesSection() {
+  const { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule } = useAddressRulesRepo();
+  const { fetchSenderGroupsOrdered } = useEmailGroupingRepo();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [editingRule, setEditingRule] = useState<EditableRule | null>(null);
@@ -222,6 +224,8 @@ function AddressRulesSection() {
 
 /* ── Section B: Group Rules ── */
 function GroupRulesSection() {
+  const { countAddressRulesByGroup } = useAddressRulesRepo();
+  const { fetchSenderGroupsOrdered, updateSenderGroupAutoAction } = useEmailGroupingRepo();
   const qc = useQueryClient();
   const { data: groups = [], isLoading } = useQuery({
     queryKey: queryKeys.email.senderGroupsRules,
@@ -269,6 +273,7 @@ function GroupRulesSection() {
 
 /* ── Section C: Prompt Manager ── */
 function PromptManagerSection() {
+  const { findAllEmailPrompts, updateEmailPromptById, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt } = useEmailPromptsRepo();
   const qc = useQueryClient();
   const [editingPrompt, setEditingPrompt] = useState<EditablePrompt | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
