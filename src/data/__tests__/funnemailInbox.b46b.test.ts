@@ -41,8 +41,8 @@ function makeBuilder(table: string) {
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (table: string) => makeBuilder(table) },
 }));
-vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (table: string) => makeBuilder(table),
+vi.mock("@/lib/typedSupabase", () => ({
+  tFrom: (table: string) => makeBuilder(table),
 }));
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),

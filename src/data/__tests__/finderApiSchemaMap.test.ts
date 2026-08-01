@@ -42,8 +42,8 @@ vi.mock("@/integrations/supabase/client", () => ({
     storage: { from: vi.fn().mockReturnValue({ upload: vi.fn().mockResolvedValue({ data: null, error: null }), download: vi.fn().mockResolvedValue({ data: null, error: null }), createSignedUrl: vi.fn().mockResolvedValue({ data: null, error: null }) }) },
   },
 }));
-vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (table: string) => mockFrom(table),
+vi.mock("@/lib/typedSupabase", () => ({
+  tFrom: (table: string) => mockFrom(table),
 }));
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) }));
 describe("DAL — finderApiSchemaMap", () => {

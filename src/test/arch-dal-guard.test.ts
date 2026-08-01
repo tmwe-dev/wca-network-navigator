@@ -96,14 +96,14 @@ describe("Guard DAL — ratchet bypass", () => {
   });
 
   /**
-   * Ratchet #2: `untypedFrom()` è accesso dati diretto a tutti gli effetti.
+   * Ratchet #2: `tFrom()` è accesso dati diretto a tutti gli effetti.
    * Il ratchet precedente non lo contava perché `src/lib/supabaseUntyped` è
    * allowlistato: il risultato era "0 bypass" pur avendone decine fuori dal
    * DAL. Perimetro: tutto `src/**` escluso il DAL, l'helper e i test.
    */
   const UNTYPED_BASELINE = 0;
 
-  it("nessuna chiamata untypedFrom fuori dal DAL", () => {
+  it("nessuna chiamata tFrom fuori dal DAL", () => {
     const files = walk(path.join(ROOT, "src")).filter((f) => {
       const rel = path.relative(ROOT, f).replace(/\\/g, "/");
       if (rel.startsWith("src/data/")) return false;
