@@ -10,7 +10,7 @@
  *
  * NESSUNA logica: solo SELECT.
  */
-import { selectFromValidatedTable } from "@/data/dynamicQuery";
+import { selectFromValidatedTable } from "@/data/validatedQuery";
 import { supabase } from "@/integrations/supabase/client";
 /**
  * Tutte le letture/scritture su tabella LETTERALE usano il client tipizzato

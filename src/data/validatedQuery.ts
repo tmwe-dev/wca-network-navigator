@@ -5,12 +5,12 @@
  * tabella non è noto staticamente (piani di query generati dal planner AI).
  * Il chiamante DEVE aver già validato tabella, colonne e operatori contro una
  * whitelist; qui si esegue soltanto, tramite il boundary untyped centralizzato.
- * Nessun altro modulo deve importare `untypedFrom` per lo stesso scopo.
+ * Nessun altro modulo deve importare `tFrom` per lo stesso scopo.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { tFrom } from "@/lib/typedSupabase";
 
-export type DynamicSelectBuilder = ReturnType<typeof untypedFrom> extends { select: infer _S }
-  ? ReturnType<ReturnType<typeof untypedFrom>["select"]>
+export type DynamicSelectBuilder = ReturnType<typeof tFrom> extends { select: infer _S }
+  ? ReturnType<ReturnType<typeof tFrom>["select"]>
   : never;
 
 /** Avvia una SELECT su una tabella già validata dal chiamante. */
@@ -19,7 +19,7 @@ export function selectFromValidatedTable(
   columns: string,
   options?: { readonly count?: "exact" },
 ) {
-  return untypedFrom(validatedTable).select(columns, options);
+  return tFrom(validatedTable).select(columns, options);
 }
 
 /** Operatori ammessi nei filtri generati a runtime. */
@@ -87,7 +87,7 @@ export async function updateValidatedColumn(
   value: unknown,
   match: { readonly column: string; readonly value: unknown },
 ): Promise<void> {
-  const { error } = await untypedFrom(validatedTable)
+  const { error } = await tFrom(validatedTable)
     .update({ [validatedColumn]: value })
     .eq(match.column, match.value);
   if (error) throw error;

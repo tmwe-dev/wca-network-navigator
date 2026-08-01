@@ -3,7 +3,7 @@
  * Estratto 1:1 da `partnerQueries.ts` (stessi filtri, order, limit, select).
  */
 import { supabase } from "@/integrations/supabase/client";
-import { applyValidatedFilters, selectFromValidatedTable } from "@/data/dynamicQuery";
+import { applyValidatedFilters, selectFromValidatedTable } from "@/data/validatedQuery";
 
 export interface CommandPartnerRow {
   id: string;

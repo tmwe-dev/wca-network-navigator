@@ -6,7 +6,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { updateValidatedColumn } from "@/data/dynamicQuery";
+import { updateValidatedColumn } from "@/data/validatedQuery";
 
 export interface GlobalRunProposal {
   block_id: string;
