@@ -46,7 +46,7 @@ async function convertToExcel(
   headers: string[],
   rows: Record<string, unknown>[],
   sheetName: string
-): Promise<Uint8Array> {
+): Promise<Uint8Array<ArrayBuffer>> {
   try {
     // Dynamic import to avoid bundling xlsx if not needed
     const XLSX = await import("xlsx");
