@@ -5,14 +5,14 @@
  * - Error rate by function
  * - Average latency (p50/p95)
  *
- * Read-only, DAL via untypedFrom.
+ * Read-only, via DAL tipizzato.
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, AlertTriangle, Clock, Zap } from "lucide-react";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { fetchRecentEdgeFunctionLogs } from "@/data/edgeFunctionLogs";
 
 interface EdgeMetricRow {
   function_name: string;
@@ -23,30 +23,18 @@ interface EdgeMetricRow {
 }
 
 async function fetchEdgeFunctionMetrics(): Promise<EdgeMetricRow[]> {
-  // Aggregate from edge_function_logs (last 24h)
-  // DRIFT: this query selects `status` and `latency_ms`, but the generated schema for
-  // edge_function_logs only has `status_code`/`success` and `duration_ms`. Left on
-  // untypedFrom until the query is corrected to use the real column names.
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await untypedFrom("edge_function_logs")
-    .select("function_name, status, latency_ms")
-    .gte("created_at", since)
-    .limit(5000);
-  if (error) throw error;
-
-  const rows = (data ?? []) as Array<{
-    function_name: string;
-    status: string;
-    latency_ms: number | null;
-  }>;
+  // Aggregate from edge_function_logs (last 24h) — colonne reali:
+  // success / status_code / duration_ms.
+  const rows = await fetchRecentEdgeFunctionLogs(24, 5000);
 
   // Group by function_name
   const grouped = new Map<string, { invocations: number; errors: number; latencies: number[] }>();
   for (const r of rows) {
     const entry = grouped.get(r.function_name) ?? { invocations: 0, errors: 0, latencies: [] };
     entry.invocations += 1;
-    if (r.status === "error" || r.status === "failed") entry.errors += 1;
-    if (r.latency_ms != null) entry.latencies.push(r.latency_ms);
+    const failed = r.success === false || (r.status_code != null && r.status_code >= 400);
+    if (failed) entry.errors += 1;
+    if (r.duration_ms != null) entry.latencies.push(r.duration_ms);
     grouped.set(r.function_name, entry);
   }
 

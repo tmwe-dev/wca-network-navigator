@@ -9,7 +9,7 @@
  *   possono ereditarlo via getActiveCorrelationId() durante la finestra di vita.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { insertRuntimeTraces } from "@/data/aiRuntimeTraces";
 import type { TraceEvent, TraceRow } from "./traceTypes";
 
 import { createLogger } from "@/lib/log";
@@ -151,17 +151,15 @@ class TraceCollector {
       status: e.status ?? null,
       duration_ms: e.duration_ms ?? null,
       payload_summary: e.payload_summary ?? {},
-      error: e.error ? (e.error as unknown as Record<string, unknown>) : null,
+      error: e.error ? { ...e.error } : null,
     }));
     try {
       // Insert insert-only — RLS richiede user_id = auth.uid()
-      // DRIFT: TraceRow.error is typed as Record<string, unknown> | null, which is not
-      // assignable to the generated Json type. Left on untypedFrom to avoid an unsafe cast.
-      const { error } = await untypedFrom("ai_runtime_traces").insert(rows);
-      if (error) {
+      const errMessage = await insertRuntimeTraces(rows);
+      if (errMessage) {
         // Re-queue se errore transient (max 1 retry implicito al prossimo tick)
         // Per non loopare in modo aggressivo, droppiamo dopo log.
-        log.warn("[traceCollector] flush failed:", { detail: error.message });
+        log.warn("[traceCollector] flush failed:", { detail: errMessage });
       }
     } catch (err) {
       log.warn("[traceCollector] flush threw:", { detail: err });
