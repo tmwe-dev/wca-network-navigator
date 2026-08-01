@@ -7,13 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import {
-  fetchChannelMessageIdsFromSender,
-  softDeleteChannelMessageById,
-  archiveChannelMessageById,
-  markChannelMessageIsReadFlag,
-  moveChannelMessageToFolder,
-} from '@/data/channelMessages';
+import { useChannelMessagesRepo } from '@/hooks/emailIntelligence/useChannelMessagesRepo';
 import { Trash2, Archive, Folder, Check } from 'lucide-react';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 
@@ -35,6 +29,13 @@ export function MultiSelectBulkBar({
   onComplete,
   onAssignGroup,
 }: MultiSelectBulkBarProps) {
+  const {
+    fetchChannelMessageIdsFromSender,
+    softDeleteChannelMessageById,
+    archiveChannelMessageById,
+    markChannelMessageIsReadFlag,
+    moveChannelMessageToFolder,
+  } = useChannelMessagesRepo();
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [pendingAction, setPendingAction] = useState<ActionType>(null);
