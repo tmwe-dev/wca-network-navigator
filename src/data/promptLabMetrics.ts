@@ -10,6 +10,7 @@ import { upsertAppSetting } from "./appSettings";
 import type { GlobalProposal } from "@/v2/ui/pages/prompt-lab/hooks/useProposalProcessing";
 
 
+import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 const log = createLogger("promptLabMetrics");
 /**

@@ -331,7 +331,7 @@ export async function getPipelineMetrics(userId: string): Promise<PipelineMetric
 
     for (const deal of deals) {
       const stage = deal.stage || "unknown";
-      const value = deal.value || 0;
+      const value = deal.amount ?? 0;
 
       byStage[stage] = (byStage[stage] || 0) + 1;
       valueByStage[stage] = (valueByStage[stage] || 0) + value;

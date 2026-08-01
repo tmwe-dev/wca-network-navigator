@@ -25,8 +25,11 @@ export async function updateImportedContact(id: string, patch: ImportedContactsU
  * niente query, ritorna un errore esplicito che il chiamante logga come warning.
  */
 export async function reassignActivitiesContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
-  const { error } = await supabase.from("activities").update({ contact_id: toContactId }).eq("contact_id", fromContactId);
-  return { error };
+  void fromContactId;
+  void toContactId;
+  return {
+    error: { message: 'La colonna "activities.contact_id" non esiste nello schema del database.' },
+  };
 }
 
 export async function reassignEmailsContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
