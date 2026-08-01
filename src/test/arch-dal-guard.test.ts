@@ -94,4 +94,34 @@ describe("Guard DAL — ratchet bypass", () => {
     }
     expect(count).toBeLessThanOrEqual(BASELINE);
   });
+
+  /**
+   * Ratchet #2: `untypedFrom()` è accesso dati diretto a tutti gli effetti.
+   * Il ratchet precedente non lo contava perché `src/lib/supabaseUntyped` è
+   * allowlistato: il risultato era "0 bypass" pur avendone decine fuori dal
+   * DAL. Perimetro: tutto `src/**` escluso il DAL, l'helper e i test.
+   */
+  const UNTYPED_BASELINE = 0;
+
+  it("nessuna chiamata untypedFrom fuori dal DAL", () => {
+    const files = walk(path.join(ROOT, "src")).filter((f) => {
+      const rel = path.relative(ROOT, f).replace(/\\/g, "/");
+      if (rel.startsWith("src/data/")) return false;
+      if (rel.startsWith("src/v2/io/supabase/")) return false;
+      if (rel.startsWith("src/lib/supabaseUntyped")) return false;
+      if (rel.startsWith("src/lib/typedSupabase")) return false;
+      if (rel.startsWith("src/test/")) return false;
+      return !/\.(test|spec)\.tsx?$/.test(rel) && !rel.includes("/__tests__/");
+    });
+    const offenders: string[] = [];
+    for (const f of files) {
+      const src = readFileSync(f, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "");
+      const matches = src.match(/\buntypedFrom\s*\(/g);
+      if (matches?.length) offenders.push(`${path.relative(ROOT, f)} (${matches.length})`);
+    }
+    const total = offenders.reduce((s, o) => s + Number(o.match(/\((\d+)\)$/)?.[1] ?? 0), 0);
+    expect({ total, offenders }).toEqual({ total: UNTYPED_BASELINE, offenders: [] });
+  });
 });
