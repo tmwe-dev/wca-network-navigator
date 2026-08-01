@@ -505,7 +505,7 @@ export async function getFunnemailDecision(
     .eq("message_id", messageId)
     .maybeSingle();
   if (error) throw error;
-  return (data as FunnemailDecisionRow | null) ?? null;
+  return data ? parseFunnemailDecisionRow(data) : null;
 }
 
 /** Override manuale della cartella scelta dall'AI. */
