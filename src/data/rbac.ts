@@ -16,13 +16,17 @@ const log = createLogger("rbac");
 const TEAMS_TABLE_WARNING = 'Table "teams" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
 
 /**
- * NOTA SCHEMA (type safety):
- * i tipi generati per `user_roles` espongono solo (id, user_id, role, created_at)
- * e `team_members` solo (id, name, email, role, is_active, created_at).
- * Le query che usano `role_id` / `assigned_by` / `team_id` appartengono al modello
- * RBAC granulare descritto nella migrazione 20260422180200_lovable102_rbac.sql ma NON
- * presente nei tipi generati: restano quindi su `untypedFrom` (documentato, non inventiamo
- * schema). Tutto il resto — roles, permissions, role_permissions — è ora tipizzato.
+ * NOTA SCHEMA (verificata sul DB live, read-only, 2026-08):
+ * `user_roles` esiste con (id, user_id, role, created_at) e `team_members` con
+ * (id, name, email, role, is_active, created_at). Le colonne `role_id`,
+ * `assigned_by`, `team_id`, `joined_at` NON esistono nel database reale, non solo
+ * nei tipi generati: il modello RBAC granulare della migrazione
+ * 20260422180200_lovable102_rbac.sql non è mai stato applicato.
+ * Queste query quindi falliscono già oggi a runtime (PostgREST 42703) e restano su
+ * `untypedFrom` fino a una decisione di prodotto (applicare la migrazione oppure
+ * rimuovere il modello granulare). Non inventiamo schema e non cambiamo semantica
+ * di autorizzazione in un batch di sola qualità.
+ * Tipizzato invece tutto ciò che esiste: roles, permissions, role_permissions.
  */
 
 // ─── Types ──────────────────────────────────────────────
