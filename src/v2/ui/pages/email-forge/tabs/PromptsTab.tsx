@@ -84,8 +84,8 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
   const [objective, setObjective] = React.useState(prompt.objective ?? "");
   const [procedure, setProcedure] = React.useState(prompt.procedure ?? "");
   const [criteria, setCriteria] = React.useState(prompt.criteria ?? "");
-  const [priority, setPriority] = React.useState(prompt.priority);
-  const [active, setActive] = React.useState(prompt.is_active);
+  const [priority, setPriority] = React.useState(prompt.priority ?? 0);
+  const [active, setActive] = React.useState(prompt.is_active ?? false);
   const [saving, setSaving] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
