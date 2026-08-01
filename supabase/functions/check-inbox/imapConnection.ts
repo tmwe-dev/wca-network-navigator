@@ -51,8 +51,7 @@ export async function connectToImap(config: ImapConfig): Promise<ImapClient> {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      // deno-lint-ignore no-explicit-any
-      client = new ImapClient(config as any);
+      client = new ImapClient(config as unknown as ConstructorParameters<typeof ImapClient>[0]);
       await client.connect();
       await client.authenticate();
       return client;
@@ -72,8 +71,7 @@ export async function selectInbox(client: ImapClient): Promise<{
   uidvalidity: number | null;
 }> {
   const inbox = await client.selectMailbox("INBOX");
-  // deno-lint-ignore no-explicit-any
-  const uidvalidity = ((inbox as any).uidValidity as number | null) || null;
+  const uidvalidity = (inbox as typeof inbox & { uidValidity?: number | null }).uidValidity ?? null;
   return { exists: inbox.exists ?? 0, uidvalidity };
 }
 

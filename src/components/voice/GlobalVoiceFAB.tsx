@@ -9,7 +9,7 @@ import { invokeAi } from "@/lib/ai/invokeAi";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "./VoiceLanguageSelector";
-import { upsertUserAppSetting } from "@/data/uiShellQueries";
+import { upsertUserAppSetting } from "@/application/data/uiShellQueries";
 import { toRecord } from "@/lib/records";
 
 type VoiceState = "idle" | "listening" | "speaking";

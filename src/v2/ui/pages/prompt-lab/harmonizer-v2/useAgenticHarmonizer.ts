@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { runAgenticHarmonizer, type EntityProgress, type OrchestratorOutput, type OrchestratorStats, type OrchestratorWarning } from "./agentOrchestrator";
 import { parseEntities } from "./entityParser";
 import type { ParsedFile } from "../utils/fileParser";
-import { findActiveHarmonizeRun, type HarmonizeRun } from "@/data/harmonizeRuns";
+import { findActiveHarmonizeRun, type HarmonizeRun } from "@/application/data/harmonizeRuns";
 
 export type AgenticPhase = "idle" | "parsing" | "indexing" | "processing" | "reviewing" | "done" | "error" | "cancelled";
 

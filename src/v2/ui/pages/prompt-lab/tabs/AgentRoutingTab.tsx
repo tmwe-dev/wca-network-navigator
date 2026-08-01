@@ -16,8 +16,8 @@ import {
   updateAgentRoutingRule,
   deleteAgentRoutingRule,
   type AgentRoutingRule,
-} from "@/data/agentRoutingRules";
-import { listAgentsForCapabilities, type AgentMini } from "@/data/agentsForPromptLab";
+} from "@/application/data/agentRoutingRules";
+import { listAgentsForCapabilities, type AgentMini } from "@/application/data/agentsForPromptLab";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

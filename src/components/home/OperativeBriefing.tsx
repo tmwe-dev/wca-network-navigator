@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BriefingAction, BriefingStats } from "@/hooks/useDailyBriefing";
 import { queryKeys } from "@/lib/queryKeys";
-import { findActiveAgentNames, insertBriefingAgentTask } from "@/data/uiShellQueries";
+import { findActiveAgentNames, insertBriefingAgentTask } from "@/application/data/uiShellQueries";
 
 interface Props {
   completed: string | undefined;

@@ -44,7 +44,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { BCAUnifiedDetailPanel } from "./BCAUnifiedDetailPanel";
 import { BCADragDropOverlay } from "./BCADragDropOverlay";
 import { BCABulkActionsPanel } from "./BCABulkActionsPanel";
-import { deleteBusinessCards } from "@/data/businessCards";
+import { deleteBusinessCards } from "@/application/data/businessCards";
 
 const log = createLogger("BCAUnifiedHub");
 

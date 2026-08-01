@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findContactsForSegments, findConversationContextsForUser } from "@/data/contacts";
+import { findContactsForSegments, findConversationContextsForUser } from "@/application/data/contacts";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";

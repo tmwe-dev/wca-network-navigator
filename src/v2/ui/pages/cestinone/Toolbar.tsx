@@ -5,7 +5,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { CestinoChannel } from "@/data/cestinone";
+import type { CestinoChannel } from "@/application/data/cestinone";
 
 interface ChipGroupProps {
   readonly value: string;

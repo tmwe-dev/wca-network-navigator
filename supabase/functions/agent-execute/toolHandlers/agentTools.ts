@@ -19,6 +19,16 @@ interface AgentRow {
   knowledge_base: unknown;
 }
 
+interface AgentTaskRow {
+  id: string;
+  agent_id: string;
+  task_type: string;
+  description: string;
+  status: string;
+  result_summary: string | null;
+  created_at: string;
+}
+
 export async function handleCreateAgentTask(
   supabase: AnySupabaseClient,
   userId: string,
@@ -97,7 +107,8 @@ export async function handleListAgentTasks(
     return { error: error.message };
   }
 
-  const agentIds = [...new Set((tasks || []).map((t: any) => t.agent_id))];
+  const typedTasks = (tasks || []) as AgentTaskRow[];
+  const agentIds = [...new Set(typedTasks.map((t) => t.agent_id))];
   const { data: agentsData } = await supabase
     .from("agents")
     .select("id, name")
@@ -108,13 +119,13 @@ export async function handleListAgentTasks(
     nameMap[a.id] = a.name;
   }
 
-  let results = (tasks || []).map((t: any) => ({
+  let results = typedTasks.map((t) => ({
     ...t,
     agent_name: nameMap[t.agent_id] || "?",
   }));
 
   if (args.agent_name) {
-    results = results.filter((t: any) =>
+    results = results.filter((t) =>
       (t.agent_name as string)
         .toLowerCase()
         .includes(String(args.agent_name).toLowerCase())
@@ -138,7 +149,8 @@ export async function handleGetTeamStatus(
     return { error: "Nessun agente trovato" };
   }
 
-  const agentIds = agents.map((a: any) => a.id);
+  const typedAgents = agents as AgentRow[];
+  const agentIds = typedAgents.map((a) => a.id);
   const { data: tasks } = await supabase
     .from("agent_tasks")
     .select("agent_id, status")
@@ -172,8 +184,8 @@ export async function handleGetTeamStatus(
 
   return {
     team_size: agents.length,
-    active_agents: agents.filter((a: any) => a.is_active).length,
-    agents: agents.map((a: AgentRow) => ({
+    active_agents: typedAgents.filter((a) => a.is_active).length,
+    agents: typedAgents.map((a) => ({
       name: a.name,
       role: a.role,
       emoji: a.avatar_emoji,

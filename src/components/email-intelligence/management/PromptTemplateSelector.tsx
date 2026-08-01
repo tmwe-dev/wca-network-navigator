@@ -11,7 +11,7 @@ import {
   findPromptTemplatesForUser,
   hasSystemPromptTemplates,
   insertSystemPromptTemplates,
-} from '@/data/emailPrompts';
+} from '@/application/data/emailPrompts';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("PromptTemplateSelector");

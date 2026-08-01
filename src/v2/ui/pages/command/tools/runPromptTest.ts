@@ -3,7 +3,7 @@
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
 import { mergePayload } from "./_helpers/writePayload";
-import { runTests } from "@/data/promptTests";
+import { runTests } from "@/application/data/promptTests";
 
 type Payload = { prompt_id?: string; test_case_id?: string; [k: string]: unknown };
 

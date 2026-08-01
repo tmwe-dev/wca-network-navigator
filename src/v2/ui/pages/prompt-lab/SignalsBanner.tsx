@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, ChevronDown, ChevronUp, X, Loader2, Bell } from "lucide-react";
 import type { SignalsState } from "./hooks/usePromptLabSignals";
-import type { PromptLabSignal } from "@/data/promptLabSignals";
+import type { PromptLabSignal } from "@/application/data/promptLabSignals";
 
 interface SignalsBannerProps {
   state: SignalsState;

@@ -17,9 +17,9 @@ import { Check, ChevronRight, MessageCircle, Loader2, Sparkles, Send } from "luc
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { createLogger } from "@/lib/log";
-import { upsertAppSetting } from "@/data/appSettings";
-import { findAgentByUserAndName, createAgent } from "@/data/agents";
-import { updateProfileOnboarding } from "@/data/profiles";
+import { upsertAppSetting } from "@/application/data/appSettings";
+import { findAgentByUserAndName, createAgent } from "@/application/data/agents";
+import { updateProfileOnboarding } from "@/application/data/profiles";
 
 const log = createLogger("Onboarding");
 

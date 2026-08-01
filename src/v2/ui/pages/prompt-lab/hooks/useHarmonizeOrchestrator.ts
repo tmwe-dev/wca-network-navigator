@@ -26,8 +26,8 @@ import {
   cancelHarmonizeRun,
   type HarmonizeRun,
   type HarmonizeProposal,
-} from "@/data/harmonizeRuns";
-import { insertAgentTask } from "@/data/agentTasks";
+} from "@/application/data/harmonizeRuns";
+import { insertAgentTask } from "@/application/data/agentTasks";
 import type { ParsedFile } from "../utils/fileParser";
 
 import { createLogger } from "@/lib/log";

@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { uploadWorkspaceDocFile, createWorkspaceDocSignedUrl } from "@/data/workspaceDocsStorage";
+import { uploadWorkspaceDocFile, createWorkspaceDocSignedUrl } from "@/application/data/workspaceDocsStorage";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { useWorkspacePresets } from "@/hooks/useWorkspacePresets";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";

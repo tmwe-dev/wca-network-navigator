@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { supabase } from "@/integrations/supabase/client";
-import { insertPendingAction } from "@/data/aiPendingActions";
+import { insertPendingAction } from "@/application/data/aiPendingActions";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";

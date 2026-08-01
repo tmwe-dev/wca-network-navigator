@@ -6,7 +6,7 @@ import { Mail, MessageCircle, Linkedin, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createActivities } from "@/data/activities";
+import { createActivities } from "@/application/data/activities";
 
 const EMAIL_GOALS = [
   { value: "first_contact", label: "Primo contatto" },

@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/application/data/harmonizeRuns";
 import {
   ACTION_VARIANT,
   LAYER_META,

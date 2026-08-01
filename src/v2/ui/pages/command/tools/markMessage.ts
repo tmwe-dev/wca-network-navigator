@@ -3,7 +3,7 @@
  * Payload atteso: { message_id?: string, action?: "read"|"unread"|"category", category?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { patchChannelMessage } from "@/data/channelMessages";
+import { patchChannelMessage } from "@/application/data/channelMessages";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = {

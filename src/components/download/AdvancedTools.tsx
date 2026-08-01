@@ -9,7 +9,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { findPartnersForEnrichment, getPartnerWebsite } from "@/data/partners";
+import { findPartnersForEnrichment, getPartnerWebsite } from "@/application/data/partners";
 import { runBulkOp } from "@/v2/services/bulkOps";
 import { toast } from "@/hooks/use-toast";
 import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";

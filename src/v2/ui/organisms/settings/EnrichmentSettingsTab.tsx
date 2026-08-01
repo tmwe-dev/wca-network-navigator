@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchEnrichmentSourceCounts } from "@/data/enrichmentSourceCounts";
+import { fetchEnrichmentSourceCounts } from "@/application/data/enrichmentSourceCounts";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2 } from "lucide-react";
 import { queryKeys } from "@/lib/queryKeys";

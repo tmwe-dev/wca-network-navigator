@@ -10,7 +10,7 @@ import { scrapeWcaPartnerById, type ScrapeSingleResult, type AIClassification } 
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { PartnerDetailModal } from "./PartnerDetailModal";
 import { queryKeys } from "@/lib/queryKeys";
-import { getMaxPartnerWcaId } from "@/data/partners";
+import { getMaxPartnerWcaId } from "@/application/data/partners";
 
 interface ScrapeLog {
   wcaId: number;

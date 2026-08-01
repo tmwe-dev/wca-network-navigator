@@ -6,7 +6,7 @@
  * validare le colonne in modo sempre allineato al DB (no più array statico
  * disallineato).
  */
-import { rpcIntrospectSchema } from "@/data/rpc";
+import { rpcIntrospectSchema } from "@/application/data/rpc";
 
 export interface LiveColumn {
   name: string;

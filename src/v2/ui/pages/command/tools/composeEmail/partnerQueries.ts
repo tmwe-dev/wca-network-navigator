@@ -10,7 +10,7 @@ import {
   findPartnerContact,
   fetchPrimaryContact,
   fetchPartnersByFilters as _fetchPartnersByFilters,
-} from "@/data/commandPartnerLookup";
+} from "@/application/data/commandPartnerLookup";
 
 export async function searchPartnersByCountry(countryCode: string): Promise<PartnerRow[]> {
   return (await _searchPartnersByCountry(countryCode)) as PartnerRow[];

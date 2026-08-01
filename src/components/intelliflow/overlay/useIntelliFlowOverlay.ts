@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { countActivePartners } from "@/data/partners";
-import { countPartnerContacts } from "@/data/partnerRelations";
-import { countEmailDrafts } from "@/data/emailDrafts";
-import { countBusinessCards } from "@/data/businessCards";
+import { countActivePartners } from "@/application/data/partners";
+import { countPartnerContacts } from "@/application/data/partnerRelations";
+import { countEmailDrafts } from "@/application/data/emailDrafts";
+import { countBusinessCards } from "@/application/data/businessCards";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";

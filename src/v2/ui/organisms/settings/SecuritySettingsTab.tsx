@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findAuthorizedUsers } from "@/data/authorizedUsers";
+import { findAuthorizedUsers } from "@/application/data/authorizedUsers";
 import { StatusBadge } from "../../atoms/StatusBadge";
 import { queryKeys } from "@/lib/queryKeys";
 

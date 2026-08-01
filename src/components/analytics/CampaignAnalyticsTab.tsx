@@ -2,7 +2,7 @@
  * CampaignAnalyticsTab — Stats + charts for campaign performance
  */
 import { useQuery } from "@tanstack/react-query";
-import { findCampaignJobsForAnalytics } from "@/data/analyticsOverview";
+import { findCampaignJobsForAnalytics } from "@/application/data/analyticsOverview";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,

@@ -14,7 +14,7 @@ import {
   listAiInteractions, listFeedbackForInteractions, upsertFeedback, deleteFeedback,
   toAiInteractionType, toFeedbackRating,
   type AiInteractionLogRow, type AiFeedbackRow, type AiInteractionType,
-} from "@/data/aiInteractionLog";
+} from "@/application/data/aiInteractionLog";
 
 const TYPE_LABELS: Record<AiInteractionType, string> = {
   chat_text: "Chat testo",

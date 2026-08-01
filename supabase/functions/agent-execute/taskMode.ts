@@ -63,7 +63,7 @@ export async function handleStateTransition(
       : `Transizione fallita per partner ${partnerId}`,
   }).eq("id", taskId);
 
-  await logSupervisorAudit(supabase as any, {
+  await logSupervisorAudit(supabase, {
     user_id: userId,
     actor_type: "ai_agent",
     actor_id: agentId,
@@ -187,7 +187,7 @@ export async function handleGeneralTask(
     completed_at: new Date().toISOString(),
   }).eq("id", taskId);
 
-  await logSupervisorAudit(supabase as any, {
+  await logSupervisorAudit(supabase, {
     user_id: userId,
     actor_type: "ai_agent",
     actor_id: agentId,

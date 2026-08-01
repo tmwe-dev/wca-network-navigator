@@ -2,9 +2,9 @@
  * Tools: toggle-agent, update-agent-persona.
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { findAgentRef } from "@/data/agents";
-import { updateAgent } from "@/data/agents";
-import { updateAgentPersonaByAgentId } from "@/data/agentPersonas";
+import { findAgentRef } from "@/application/data/agents";
+import { updateAgent } from "@/application/data/agents";
+import { updateAgentPersonaByAgentId } from "@/application/data/agentPersonas";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type TogglePayload = { agent_id?: string; agent_name?: string; active?: boolean; [k: string]: unknown };

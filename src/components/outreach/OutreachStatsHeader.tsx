@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Send, CheckCircle2, Calendar, Clock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fetchOutreachStats } from "@/data/outreachPipeline";
+import { fetchOutreachStats } from "@/application/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 
 function StatCard({ icon: Icon, label, value, color }: { icon: typeof Send; label: string; value: number; color: string }) {

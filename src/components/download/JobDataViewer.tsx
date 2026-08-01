@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findPartnersWithContactsByWcaIds, findDirectoryCacheMembers } from "@/data/downloadViews";
+import { findPartnersWithContactsByWcaIds, findDirectoryCacheMembers } from "@/application/data/downloadViews";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";

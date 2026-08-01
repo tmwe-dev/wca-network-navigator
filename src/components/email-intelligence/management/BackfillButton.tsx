@@ -15,9 +15,9 @@ import {
 import { Inbox, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { backfillForAddress, backfillForGroup } from "@/data/emailRulesBackfill";
-import type { BackfillReport } from "@/data/emailRulesBackfill";
-import { fetchOperatorIdForUser } from "@/data/emailGrouping";
+import { backfillForAddress, backfillForGroup } from "@/application/data/emailRulesBackfill";
+import type { BackfillReport } from "@/application/data/emailRulesBackfill";
+import { fetchOperatorIdForUser } from "@/application/data/emailGrouping";
 
 interface BackfillButtonProps {
   scope: "address" | "group";

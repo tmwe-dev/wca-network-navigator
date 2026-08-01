@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { findInteractionsForPartnerRecord } from "@/data/interactions";
-import { findContactInteractionsForRecord } from "@/data/contactInteractions";
-import { findProspectInteractionsForRecord } from "@/data/prospects";
-import { findActivitiesForSourceId } from "@/data/activities";
+import { findInteractionsForPartnerRecord } from "@/application/data/interactions";
+import { findContactInteractionsForRecord } from "@/application/data/contactInteractions";
+import { findProspectInteractionsForRecord } from "@/application/data/prospects";
+import { findActivitiesForSourceId } from "@/application/data/activities";
 import { ContactInteractionTimeline } from "@/components/contacts/ContactInteractionTimeline";
 import { Loader2, History } from "lucide-react";
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";

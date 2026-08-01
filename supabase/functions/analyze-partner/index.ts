@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { resolveCaller } from "../_shared/ownership.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
 
 const VALID_SERVICES = [
   'air_freight', 'ocean_fcl', 'ocean_lcl', 'road_freight', 'rail_freight',
@@ -16,7 +17,7 @@ const VALID_PARTNER_TYPES = [
 ]
 
 // deno-lint-ignore no-explicit-any
-async function isByok(userId: string, supabase: any): Promise<boolean> {
+async function isByok(userId: string, supabase: AnySupabaseClient): Promise<boolean> {
   const { data } = await supabase
     .from('user_api_keys')
     .select('api_key')
@@ -28,7 +29,7 @@ async function isByok(userId: string, supabase: any): Promise<boolean> {
 }
 
 // deno-lint-ignore no-explicit-any
-async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: any) {
+async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: AnySupabaseClient) {
   const inputCost = Math.ceil(usage.prompt_tokens / 1000 * 1)
   const outputCost = Math.ceil(usage.completion_tokens / 1000 * 2)
   const total = inputCost + outputCost
@@ -89,8 +90,7 @@ Deno.serve(async (req) => {
     }
 
     const parsed = caller.bodyJson ?? (await req.json().catch(() => ({})))
-    // deno-lint-ignore no-explicit-any
-    const { partnerId, profileData } = parsed as { partnerId?: string; profileData?: any }
+    const { partnerId, profileData } = parsed as { partnerId?: string; profileData?: Record<string, unknown> }
 
     if (!partnerId || !profileData) {
       return new Response(

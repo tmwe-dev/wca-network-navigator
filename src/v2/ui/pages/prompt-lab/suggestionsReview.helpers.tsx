@@ -3,7 +3,7 @@
  * Estratti dal componente per snellirlo — nessuna logica di stato.
  */
 import { BookOpen, Wrench, User, BookmarkPlus } from "lucide-react";
-import type { SuggestionPriority } from "@/data/suggestedImprovements";
+import type { SuggestionPriority } from "@/application/data/suggestedImprovements";
 
 export function priorityColor(p: SuggestionPriority): string {
   switch (p) {

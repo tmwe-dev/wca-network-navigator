@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Trash2, List, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { clearAddressRuleGroupAssignment, clearAddressRuleGroupAssignmentsByGroupName } from '@/data/emailAddressRules';
-import { deleteSenderGroup } from '@/data/emailGrouping';
+import { clearAddressRuleGroupAssignment, clearAddressRuleGroupAssignmentsByGroupName } from '@/application/data/emailAddressRules';
+import { deleteSenderGroup } from '@/application/data/emailGrouping';
 import { toast } from 'sonner';
 import type { EmailSenderGroup, SenderAnalysis } from '@/types/email-management';
 import { BackfillButton } from './BackfillButton';

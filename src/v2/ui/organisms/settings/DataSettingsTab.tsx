@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchGlobalDataCounts } from "@/data/dataCounts";
+import { fetchGlobalDataCounts } from "@/application/data/dataCounts";
 import { StatCard } from "../../molecules/StatCard";
 import { Database, Users, FileText, Mail } from "lucide-react";
 import { queryKeys } from "@/lib/queryKeys";

@@ -11,9 +11,9 @@ import { FilterSection, ChipGroup, Chip } from "./shared";
 import { CRM_GROUPBY } from "./constants";
 import { createLogger } from "@/lib/log";
 import { useQueryClient } from "@tanstack/react-query";
-import { bulkUpdateContactsByOrigins, contactKeys } from "@/data/contacts";
+import { bulkUpdateContactsByOrigins, contactKeys } from "@/application/data/contacts";
 import { BulkMergeOriginsDialog } from "@/v2/ui/organisms/BulkMergeOriginsDialog";
-import { findImportedContactsFacetPage, searchImportedContacts } from "@/data/uiShellQueries";
+import { findImportedContactsFacetPage, searchImportedContacts } from "@/application/data/uiShellQueries";
 
 const log = createLogger("CRMFiltersSection");
 

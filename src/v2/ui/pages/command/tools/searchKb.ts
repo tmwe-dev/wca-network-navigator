@@ -1,7 +1,7 @@
 /**
  * Tool: search-kb — Searches the WCA Knowledge Base via full-text search.
  */
-import { searchKbFullText, searchKbByTitle } from "@/data/commandKbSearch";
+import { searchKbFullText, searchKbByTitle } from "@/application/data/commandKbSearch";
 import type { Tool, ToolResult } from "./types";
 
 export const searchKbTool: Tool = {

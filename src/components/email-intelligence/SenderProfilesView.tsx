@@ -3,8 +3,8 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findConversationContextsOrdered } from "@/data/emailClassifications";
-import { findAddressRuleSummaries } from "@/data/emailAddressRules";
+import { findConversationContextsOrdered } from "@/application/data/emailClassifications";
+import { findAddressRuleSummaries } from "@/application/data/emailAddressRules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";

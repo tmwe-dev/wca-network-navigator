@@ -11,10 +11,10 @@ import { usePromptLabBlocks } from "../hooks/usePromptLabBlocks";
 import { useLabAgent } from "../hooks/useLabAgent";
 import type { Block } from "../types";
 import { useAuth } from "@/providers/AuthProvider";
-import { getAppSetting, upsertAppSetting } from "@/data/appSettings";
-import { findEmailPromptsByScope, updateEmailPrompt } from "@/data/emailPrompts";
-import { findEmailAddressRules, updateEmailAddressRule } from "@/data/emailAddressRules";
-import { logSupervisorAudit } from "@/data/supervisorAuditLog";
+import { getAppSetting, upsertAppSetting } from "@/application/data/appSettings";
+import { findEmailPromptsByScope, updateEmailPrompt } from "@/application/data/emailPrompts";
+import { findEmailAddressRules, updateEmailAddressRule } from "@/application/data/emailAddressRules";
+import { logSupervisorAudit } from "@/application/data/supervisorAuditLog";
 import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 import { toast } from "sonner";
 

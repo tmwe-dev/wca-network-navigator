@@ -7,12 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Check, Sparkles, Loader2 } from "lucide-react";
-import { findAgents, updateAgent, type Agent } from "@/data/agents";
-import { findAgentPersonas, updateAgentPersona, type AgentPersona } from "@/data/agentPersonas";
+import { findAgents, updateAgent, type Agent } from "@/application/data/agents";
+import { findAgentPersonas, updateAgentPersona, type AgentPersona } from "@/application/data/agentPersonas";
 import { useAuth } from "@/providers/AuthProvider";
 import { useLabAgent } from "../hooks/useLabAgent";
 import { useVoiceCoherenceCheck } from "../hooks/useVoiceCoherenceCheck";
-import { logSupervisorAudit } from "@/data/supervisorAuditLog";
+import { logSupervisorAudit } from "@/application/data/supervisorAuditLog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 

@@ -6,7 +6,7 @@ import {
   findOutreachActivityDates,
   findActivityStatuses,
   countResponsesReceived,
-} from "@/data/dashboardCharts";
+} from "@/application/data/dashboardCharts";
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";

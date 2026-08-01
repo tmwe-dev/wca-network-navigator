@@ -28,7 +28,7 @@
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 // Re-export all public types and functions from sub-modules
 export type { DimensionScore, ClientData } from "./dimensionCalculators.ts";
@@ -49,7 +49,7 @@ export async function clientQualityScoreFullPipeline(
   supabase: SupabaseClient,
   clientId: string,
   sourceType: "imported_contact" | "business_card",
-): Promise<any> {
+): Promise<import("./qualityCalculation.ts").ClientQualityResult> {
   const { calculateAndSaveClientQuality } = await import("./qualityCalculation.ts");
   return calculateAndSaveClientQuality(supabase, clientId, sourceType);
 }

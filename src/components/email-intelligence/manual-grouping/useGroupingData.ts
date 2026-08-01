@@ -22,7 +22,7 @@ import {
   upsertAddressRules,
   seedDefaultSenderGroups,
   type MailboxFilter,
-} from "@/data/emailGrouping";
+} from "@/application/data/emailGrouping";
 
 export function useGroupingData() {
   const qc = useQueryClient();

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findRecentCampaignJobs } from "@/data/campaignJobs";
-import { findRecentEmailQueue } from "@/data/emailCampaigns";
+import { findRecentCampaignJobs } from "@/application/data/campaignJobs";
+import { findRecentEmailQueue } from "@/application/data/emailCampaigns";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";

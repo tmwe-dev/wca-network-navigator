@@ -25,6 +25,12 @@ import { composeSystemPrompt } from "./systemPrompt.ts";
 import { callAiWithFallback, callAiForToolLoop, callAiWithoutTools } from "./aiCallHandler.ts";
 import { executeToolLoop, type ToolLoopState, type ToolLoopResult } from "./toolLoopHandler.ts";
 import { appendStructuredData } from "./responseAssembly.ts";
+import type { AiGuardSpec, recordInvocation as RecordInvocation } from "../_shared/aiInvocationGuard.ts";
+
+interface AiResponseData {
+  choices?: Array<{ message?: { content?: string; tool_calls?: unknown[] } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
 
 // ━━━ Service-level Supabase client ━━━
 const supabase = createServiceClient();
@@ -127,10 +133,8 @@ serve(async (req) => {
     // (grounded + tool_calls_count). I path early-return tool-decision /
     // plan-execution loggano con tool_calls_count=-1 (ignoto) finché non
     // vengono cablati. Vedi mem://reference/audit-debug-riparazione-2026-05-06
-    // deno-lint-ignore no-explicit-any
-    let guardSpec: any = null;
-    // deno-lint-ignore no-explicit-any
-    let recordInvocationFn: ((sb: any, spec: any, r: any) => Promise<void>) | null = null;
+    let guardSpec: AiGuardSpec | null = null;
+    let recordInvocationFn: typeof RecordInvocation | null = null;
     try {
       const { aiGuard, recordInvocation } = await import("../_shared/aiInvocationGuard.ts");
       const guard = await aiGuard(req, reqBody, supabase, "ai-assistant");
@@ -322,8 +326,7 @@ serve(async (req) => {
       return aiAssistantFailureResponse(statusCode, msg, dynCors);
     }
 
-    // deno-lint-ignore no-explicit-any
-    const initialResult = initialResponse.data as any;
+    const initialResult = initialResponse.data as AiResponseData;
 
     // ── Tool calling loop ──
     const toolLoopState: ToolLoopState = {
@@ -393,8 +396,7 @@ serve(async (req) => {
           { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
-      // deno-lint-ignore no-explicit-any
-      const fallbackResult = fallbackResponse.data as any;
+      const fallbackResult = fallbackResponse.data as AiResponseData;
       const fallbackText =
         (fallbackResult.choices?.[0]?.message?.content as string) ||
         "Nessuna risposta";

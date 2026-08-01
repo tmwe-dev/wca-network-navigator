@@ -13,7 +13,7 @@ import {
   archiveChannelMessageById,
   markChannelMessageIsReadFlag,
   moveChannelMessageToFolder,
-} from '@/data/channelMessages';
+} from '@/application/data/channelMessages';
 import { Trash2, Archive, Folder, Check } from 'lucide-react';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 

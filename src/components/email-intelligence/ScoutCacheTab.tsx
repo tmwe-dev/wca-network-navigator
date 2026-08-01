@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { listFunnemailScoutCache, invalidateFunnemailScoutCache, type FunnemailScoutCacheRow } from "@/data/funnemailScoutCache";
+import { listFunnemailScoutCache, invalidateFunnemailScoutCache, type FunnemailScoutCacheRow } from "@/application/data/funnemailScoutCache";
 
 const QK = ["funnemail", "scout-cache"] as const;
 

@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, FileText, Copy, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { findRecentScrapeCacheEntries } from "@/data/commandScrapePartner";
+import { findRecentScrapeCacheEntries } from "@/application/data/commandScrapePartner";
 
 interface ScrapeEntry {
   id: string;

@@ -5,7 +5,7 @@
  */
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { findOperativePromptsFull, type OperativePromptFull, updateOperativePrompt } from "@/data/operativePrompts";
+import { findOperativePromptsFull, type OperativePromptFull, updateOperativePrompt } from "@/application/data/operativePrompts";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

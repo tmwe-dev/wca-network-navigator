@@ -6,8 +6,8 @@ import {
   insertAuthorizedUser,
   setAuthorizedUserActive,
   deleteAuthorizedUser,
-} from "@/data/authorizedUsers";
-import { findOperatorAdminFlag } from "@/data/operators";
+} from "@/application/data/authorizedUsers";
+import { findOperatorAdminFlag } from "@/application/data/operators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

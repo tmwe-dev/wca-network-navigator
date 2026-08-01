@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Rocket, CheckCircle2, Clock, AlertCircle, Loader2, Pause, Play, X } from "lucide-react";
 import { toast } from "sonner";
-import { pauseMission, resumeMission, cancelMission } from "@/data/outreachPipeline";
+import { pauseMission, resumeMission, cancelMission } from "@/application/data/outreachPipeline";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { queryKeys } from "@/lib/queryKeys";

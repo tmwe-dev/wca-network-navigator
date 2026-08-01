@@ -4,7 +4,7 @@ import { Search, Filter, Users } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { createLogger } from "@/lib/log";
-import { findBusinessCards } from "@/data/businessCards";
+import { findBusinessCards } from "@/application/data/businessCards";
 
 const log = createLogger("BCAFiltersSection");
 

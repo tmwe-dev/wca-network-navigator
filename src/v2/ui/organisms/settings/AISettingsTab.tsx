@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchKbEntriesCount, fetchAiMemoryCount } from "@/data/aiSettingsCounts";
+import { fetchKbEntriesCount, fetchAiMemoryCount } from "@/application/data/aiSettingsCounts";
 import { useSettingsV2, useUpdateSettingV2 } from "@/v2/hooks/useSettingsV2";
 import { useState, useEffect } from "react";
 import { Button } from "../../atoms/Button";

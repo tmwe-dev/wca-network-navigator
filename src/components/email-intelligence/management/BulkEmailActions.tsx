@@ -12,7 +12,7 @@ import {
   softDeleteChannelMessageById,
   archiveChannelMessageById,
   markChannelMessageIsReadFlag,
-} from '@/data/channelMessages';
+} from '@/application/data/channelMessages';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("BulkEmailActions");

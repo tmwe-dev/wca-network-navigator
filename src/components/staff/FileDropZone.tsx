@@ -1,7 +1,7 @@
 import { useState, useCallback, type DragEvent, type ReactNode } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/data/chatAttachments";
+import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/application/data/chatAttachments";
 
 interface Props {
   children: ReactNode;

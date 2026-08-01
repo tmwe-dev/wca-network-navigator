@@ -15,7 +15,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { bulkUpdateAutoAction, findAutoActionRulesForEmails } from "@/data/emailAddressRules";
+import { bulkUpdateAutoAction, findAutoActionRulesForEmails } from "@/application/data/emailAddressRules";
 import {
   RulesConfiguration,
   type RulesConfigValue,

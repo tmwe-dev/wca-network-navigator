@@ -10,7 +10,7 @@ import {
   bulkUpdateContactsOrigin,
   listDistinctContactOrigins,
   contactKeys,
-} from "@/data/contacts";
+} from "@/application/data/contacts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";

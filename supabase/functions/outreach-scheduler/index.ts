@@ -36,7 +36,7 @@ serve(async (req) => {
     if (guard.skip) {
       endMetrics(metrics, true, 200);
       return new Response(
-        JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
         { headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }

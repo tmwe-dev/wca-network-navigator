@@ -2,7 +2,7 @@
  * ResponseRateCard — Global response rate with channel breakdown and trend
  */
 import { useQuery } from "@tanstack/react-query";
-import { findResponsePatternStats } from "@/data/analyticsOverview";
+import { findResponsePatternStats } from "@/application/data/analyticsOverview";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 

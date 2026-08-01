@@ -16,7 +16,7 @@ import {
   listClassificationInsights,
   rejectInsight,
   type ClassificationInsight,
-} from "@/data/aiClassificationInsights";
+} from "@/application/data/aiClassificationInsights";
 
 export function ClassificationInsightsPanel() {
   const qc = useQueryClient();

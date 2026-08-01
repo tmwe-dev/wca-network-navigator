@@ -2,7 +2,7 @@
  * Tool: mission-control — Pause / resume / stop an autopilot mission (requires approval).
  * Write tool: updates agent_missions.status. Does NOT run mission rounds (that's launch-mission).
  */
-import { findAgentMissionTitleById, findAgentMissionByTitleLike, updateAgentMissionFields } from "@/data/agentMissions";
+import { findAgentMissionTitleById, findAgentMissionByTitleLike, updateAgentMissionFields } from "@/application/data/agentMissions";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 type MissionAction = "paused" | "active" | "cancelled";

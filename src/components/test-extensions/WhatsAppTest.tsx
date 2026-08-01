@@ -10,7 +10,7 @@ import { WHATSAPP_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip"
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
-import { searchWaRecipients, type WaTestRecipient } from "@/data/whatsappTestLookup";
+import { searchWaRecipients, type WaTestRecipient } from "@/application/data/whatsappTestLookup";
 import {
   WA_FIXED_RECIPIENT_KEY,
   WA_LEGACY_LAST_RECIPIENT_KEY,

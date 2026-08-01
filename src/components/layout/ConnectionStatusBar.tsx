@@ -13,7 +13,7 @@ import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
 import { downloadPartnerConnectExtensionZip } from "@/lib/whatsappExtensionZip";
-import { getAppSettingByKey } from "@/data/uiShellQueries";
+import { getAppSettingByKey } from "@/application/data/uiShellQueries";
 
 const log = createLogger("ConnectionStatusBar");
 

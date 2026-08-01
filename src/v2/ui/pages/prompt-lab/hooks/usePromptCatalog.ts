@@ -5,7 +5,7 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listPromptCatalog, type PromptCatalogItem } from "@/data/promptCatalog";
+import { listPromptCatalog, type PromptCatalogItem } from "@/application/data/promptCatalog";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface PromptCatalogFilters {

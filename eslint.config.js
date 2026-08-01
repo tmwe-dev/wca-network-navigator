@@ -82,6 +82,7 @@ export default tseslint.config(
       "src/**/*.test.{ts,tsx}",
       "src/__tests__/**/*.{ts,tsx}",
       "src/**/__tests__/**/*.{ts,tsx}",
+      "supabase/functions/**/*.test.ts",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
@@ -313,6 +314,13 @@ export default tseslint.config(
       "no-useless-catch": "warn",
       "prefer-const": "warn",
       "no-var": "warn",
+    },
+  },
+  {
+    files: ["supabase/functions/**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-console": "off",
     },
   },
 );

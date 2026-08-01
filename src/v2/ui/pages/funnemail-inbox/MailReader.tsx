@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Building2, RefreshCw, Brain, Zap } from "lucide-react";
-import type { FunnemailFolder, FunnemailMailRow, SenderIntelRow } from "@/data/funnemailInbox";
-import { getSenderIntelByDomain } from "@/data/funnemailInbox";
-import { fetchContentIntelligence, type EmailContentIntelligenceRow } from "@/data/emailContentIntelligence";
+import type { FunnemailFolder, FunnemailMailRow, SenderIntelRow } from "@/application/data/funnemailInbox";
+import { getSenderIntelByDomain } from "@/application/data/funnemailInbox";
+import { fetchContentIntelligence, type EmailContentIntelligenceRow } from "@/application/data/emailContentIntelligence";
 
 interface Props {
   mail: FunnemailMailRow | null;

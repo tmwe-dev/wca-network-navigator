@@ -8,6 +8,14 @@ interface WorkPlanStep {
   args?: Record<string, unknown>;
 }
 
+interface WorkPlanRow {
+  id: string;
+  status: string;
+  steps: WorkPlanStep[] | null;
+  tags: string[] | null;
+  [key: string]: unknown;
+}
+
 interface AbTestVariant {
   agent_name: string;
   tone: string;
@@ -87,7 +95,7 @@ export async function handleListWorkPlans(
     return { error: error.message };
   }
 
-  const plans = (data || []).map((p: any) => ({
+  const plans = ((data || []) as WorkPlanRow[]).map((p) => ({
     ...p,
     total_steps: Array.isArray(p.steps) ? p.steps.length : 0,
     completed_steps: Array.isArray(p.steps)
@@ -97,10 +105,10 @@ export async function handleListWorkPlans(
 
   if (args.tag) {
     return {
-      count: plans.filter((p: any) =>
+      count: plans.filter((p) =>
         (p.tags as string[] | undefined)?.includes(String(args.tag))
       ).length,
-      plans: plans.filter((p: any) =>
+      plans: plans.filter((p) =>
         (p.tags as string[] | undefined)?.includes(String(args.tag))
       ),
     };

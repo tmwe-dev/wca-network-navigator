@@ -2,7 +2,7 @@
  * Tool: read-inbox — Read-only view of inbound messages (Funnemail/Inreach).
  * Queries channel_messages WHERE direction='inbound', most recent first.
  */
-import { findRecentInboundMessages } from "@/data/channelMessages";
+import { findRecentInboundMessages } from "@/application/data/channelMessages";
 import type { Tool, ToolResult } from "./types";
 
 interface InboundRow {

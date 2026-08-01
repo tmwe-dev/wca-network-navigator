@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Power, AlertCircle, CheckCircle2, Clock } from "lucide-react";
-import { findGlobalSettings, findCronRunLogs, upsertGlobalSetting, type CronRunLogRow } from "@/data/automatedProcesses";
+import { findGlobalSettings, findCronRunLogs, upsertGlobalSetting, type CronRunLogRow } from "@/application/data/automatedProcesses";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";

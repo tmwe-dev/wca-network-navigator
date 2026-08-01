@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { findRequestLogsSince } from "@/data/telemetry";
+import { findRequestLogsSince } from "@/application/data/telemetry";
 import { fmtTime, aggregateBy } from "./utils";
 import { KpiCard, Card, StatusPill, SkeletonRows, ErrorBox, EmptyTelemetry } from "./SharedUI";
 import { queryKeys } from "@/lib/queryKeys";

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Mail, Phone, MapPin, Building2, User, ArrowLeft, ExternalLink, Users, ChevronRight, Shield, Send as SendIcon, Loader2, ClipboardList } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { queryProspects, findProspectContactsByProspectId, type ProspectsQueryBuilder } from "@/data/prospects";
+import { queryProspects, findProspectContactsByProspectId, type ProspectsQueryBuilder } from "@/application/data/prospects";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { t } from "@/components/download/theme";
@@ -18,7 +18,7 @@ import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog
 import type { Prospect } from "@/hooks/useProspects";
 
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
-import { createActivities } from "@/data/activities";
+import { createActivities } from "@/application/data/activities";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface ProspectListPanelProps {

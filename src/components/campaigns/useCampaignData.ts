@@ -10,7 +10,7 @@ import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 import { type GlobePartner } from "@/hooks/usePartnersForGlobe";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
 
 export type CampaignSource = "partners" | "bca";
 

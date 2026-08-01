@@ -18,7 +18,7 @@ import {
   loadSystemDoctrine,
   loadRecentEmailContext,
 } from "./contextLoader.ts";
-import { extractContextTags, type ConversationContext } from "../_shared/contextTagExtractor.ts";
+import { extractContextTags, type ContextTags, type ConversationContext } from "../_shared/contextTagExtractor.ts";
 import { getScopeConfig } from "../_shared/scopeConfigs.ts";
 
 export interface ContextAssemblyResult {
@@ -121,7 +121,7 @@ async function loadContextParallel(
   userId: string,
   isConversational: boolean,
   lastUserMsg: string | undefined,
-  ctxTags: any,
+  ctxTags: ContextTags,
   requiredKeys?: string[]
 ): Promise<{
   memoryContext: string;

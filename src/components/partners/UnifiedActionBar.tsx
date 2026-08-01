@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
-import { createInteraction } from "@/data/interactions";
+import { createInteraction } from "@/application/data/interactions";
 import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("UnifiedActionBar");

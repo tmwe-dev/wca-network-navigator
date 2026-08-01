@@ -3,7 +3,7 @@
  * Saves to app_settings table
  */
 import { useEffect, useState } from "react";
-import { findAppSettingsForUser, upsertAppSettingsBatch } from "@/data/notificationPreferences";
+import { findAppSettingsForUser, upsertAppSettingsBatch } from "@/application/data/notificationPreferences";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";

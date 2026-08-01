@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
-import type { FunnemailMailRow } from "@/data/funnemailInbox";
+import type { FunnemailMailRow } from "@/application/data/funnemailInbox";
 
 interface Props {
   mails: FunnemailMailRow[];

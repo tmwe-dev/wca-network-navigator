@@ -126,8 +126,9 @@ async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode:
       const members = cache.members as Array<{ id: number }> | number[]
       if (!members || !Array.isArray(members) || members.length === 0) continue
 
-      // deno-lint-ignore no-explicit-any
-      const wcaIds: number[] = (members as any[]).map((m: any) => typeof m === 'object' ? m.id : m).filter(Boolean) as number[]
+      const wcaIds = (members as Array<{ id: number } | number>)
+        .map((member) => typeof member === "object" ? member.id : member)
+        .filter((id): id is number => Number.isFinite(id))
       if (wcaIds.length === 0) continue
 
       const { data: partners } = await supabase

@@ -65,8 +65,7 @@ async function findKnownPartner(
   domain: string,
 ): Promise<{ partner_id: string; company_type: string | null; country: string | null } | null> {
   // 1) Match esatto su contacts.email
-  // deno-lint-ignore no-explicit-any
-  const sb = supabase as any;
+  const sb = supabase;
   const { data: byEmail } = await sb
     .from("contacts")
     .select("partner_id,partners(id,partner_type,country)")
@@ -160,8 +159,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } },
     );
-    // deno-lint-ignore no-explicit-any
-    const sb = supabase as any;
+    const sb = supabase;
 
     // 1) Cache check (skip se force)
     if (!body.force) {

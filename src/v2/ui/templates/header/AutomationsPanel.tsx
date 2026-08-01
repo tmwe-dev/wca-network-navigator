@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Cog, CheckCircle2, XCircle, Clock, AlertTriangle, ArrowDownLeft, ArrowUpRight, MessageCircle, Linkedin } from "lucide-react";
-import { listCronJobStatus, listCronRecentRuns, type CronJobStatus, type CronRunRow } from "@/data/cronJobs";
-import { listRecentChannelActivity, type ChannelActivityRow } from "@/data/channelActivity";
+import { listCronJobStatus, listCronRecentRuns, type CronJobStatus, type CronRunRow } from "@/application/data/cronJobs";
+import { listRecentChannelActivity, type ChannelActivityRow } from "@/application/data/channelActivity";
 import { queryKeys } from "@/lib/queryKeys";
 
 /** Etichette leggibili e descrizioni operative dei cron job. */

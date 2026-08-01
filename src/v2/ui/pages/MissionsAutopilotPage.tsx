@@ -13,8 +13,8 @@ import {
   updateAgentMissionFields,
   insertAgentMission,
   type AgentMissionRow,
-} from "@/data/agentMissions";
-import { findAgentOptions } from "@/data/agents";
+} from "@/application/data/agentMissions";
+import { findAgentOptions } from "@/application/data/agents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

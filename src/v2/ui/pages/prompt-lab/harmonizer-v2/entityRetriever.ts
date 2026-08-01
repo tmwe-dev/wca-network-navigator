@@ -4,12 +4,12 @@
  * Usato dall'orchestrator solo per i top-N candidati selezionati dal matcher.
  * Implementa cache in-memory (Map) per dedup tra entità che matchano gli stessi entry.
  */
-import { findKbEntries } from "@/data/kbEntries";
-import { findOperativePromptsFull } from "@/data/operativePrompts";
-import { findEmailPromptsByScope } from "@/data/emailPrompts";
-import { findEmailAddressRules } from "@/data/emailAddressRules";
-import { findCommercialPlaybooks } from "@/data/commercialPlaybooks";
-import { findAgentPersonas } from "@/data/agentPersonas";
+import { findKbEntries } from "@/application/data/kbEntries";
+import { findOperativePromptsFull } from "@/application/data/operativePrompts";
+import { findEmailPromptsByScope } from "@/application/data/emailPrompts";
+import { findEmailAddressRules } from "@/application/data/emailAddressRules";
+import { findCommercialPlaybooks } from "@/application/data/commercialPlaybooks";
+import { findAgentPersonas } from "@/application/data/agentPersonas";
 
 
 import { createLogger } from "@/lib/log";

@@ -37,14 +37,14 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useImapFolders, useCreateRuleFromSender } from "@/hooks/useEmailFolderActions";
-import { findActiveEmailPromptTemplates } from "@/data/emailPrompts";
+import { findActiveEmailPromptTemplates } from "@/application/data/emailPrompts";
 import {
   findReusablePromptRules,
   findAddressRuleIdForUserEmail,
   updateAddressRulePrompt,
   insertAddressRuleWithPrompt,
-} from "@/data/emailAddressRules";
-import { findChannelMessagesForExport } from "@/data/channelMessages";
+} from "@/application/data/emailAddressRules";
+import { findChannelMessagesForExport } from "@/application/data/channelMessages";
 import type { SenderAnalysis } from "@/types/email-management";
 
 

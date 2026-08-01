@@ -5,9 +5,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule, countAddressRulesByGroup, type AddressRuleUpsertInput } from "@/data/emailAddressRules";
-import { fetchSenderGroupsOrdered, updateSenderGroupAutoAction } from "@/data/emailGrouping";
-import { findAllEmailPrompts, updateEmailPromptById, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt, type EmailPromptRow } from "@/data/emailPrompts";
+import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule, countAddressRulesByGroup, type AddressRuleUpsertInput } from "@/application/data/emailAddressRules";
+import { fetchSenderGroupsOrdered, updateSenderGroupAutoAction } from "@/application/data/emailGrouping";
+import { findAllEmailPrompts, updateEmailPromptById, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt, type EmailPromptRow } from "@/application/data/emailPrompts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

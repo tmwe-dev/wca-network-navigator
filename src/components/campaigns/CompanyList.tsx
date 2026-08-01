@@ -6,7 +6,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Building2 } from "lucide-react";
-import { findBusinessCardsByPartnerIds } from "@/data/businessCards";
+import { findBusinessCardsByPartnerIds } from "@/application/data/businessCards";
 import { usePartnerContacts } from "@/hooks/usePartnerContacts";
 import { CompanyListHeader } from "./CompanyListHeader";
 import { CompanyListRow } from "./CompanyListRow";

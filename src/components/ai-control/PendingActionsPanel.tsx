@@ -23,7 +23,7 @@ import {
   setDecisionLogReview,
   findActiveAgentPrompts,
   updateAgentSystemPrompt,
-} from "@/data/aiPendingActions";
+} from "@/application/data/aiPendingActions";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";

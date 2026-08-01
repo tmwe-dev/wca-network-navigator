@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { FunnemailReminderRow } from "@/data/funnemailReminders";
+import type { FunnemailReminderRow } from "@/application/data/funnemailReminders";
 
 interface Props {
   onCreate: (remindAt: Date, note?: string) => void;

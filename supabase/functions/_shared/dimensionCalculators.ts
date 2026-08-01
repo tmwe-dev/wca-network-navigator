@@ -10,7 +10,7 @@
 
 export interface DimensionScore {
   score: number; // 0-100
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }
 
 export interface ClientData {
@@ -30,8 +30,8 @@ export interface ClientData {
   job_title?: string;
   position?: string;
   industry?: string;
-  enrichment_data?: Record<string, any>;
-  raw_data?: Record<string, any>;
+  enrichment_data?: Record<string, unknown>;
+  raw_data?: Record<string, unknown>;
   converted_at?: string;
 }
 
@@ -185,7 +185,7 @@ function getCountryScore(country?: string): number {
  * Calcola in base a created_at, first interaction, converted_at.
  */
 export function calculateSeniority(client: ClientData): DimensionScore {
-  const details: Record<string, any> = {};
+  const details: Record<string, unknown> = {};
   let score = 10; // default for < 3 months
 
   let referenceDate: Date | null = null;
@@ -238,7 +238,7 @@ export function calculateSeniority(client: ClientData): DimensionScore {
  * Score based on logistics relevance and typical shipping volume.
  */
 export function calculateIndustry(client: ClientData): DimensionScore {
-  const details: Record<string, any> = {};
+  const details: Record<string, unknown> = {};
   let score = 20; // default for unknown
 
   let industry: string | null = null;
@@ -298,7 +298,7 @@ export function calculateIndustry(client: ClientData): DimensionScore {
  * Based on country development and logistics market maturity.
  */
 export function calculateGeography(client: ClientData): DimensionScore {
-  const details: Record<string, any> = {};
+  const details: Record<string, unknown> = {};
 
   const country = client.country || "";
   const countryCode = country.toUpperCase().trim();
@@ -330,7 +330,7 @@ export function calculateGeography(client: ClientData): DimensionScore {
  * Based on recency, contact completeness, and lead status.
  */
 export function calculateEngagement(client: ClientData): DimensionScore {
-  const details: Record<string, any> = {};
+  const details: Record<string, unknown> = {};
   let score = 0;
 
   // Recent interaction (up to 30pts)

@@ -28,7 +28,7 @@ import { ExportSendersDialog } from "./management/ExportSendersDialog";
 import { SenderActionsDialog } from "./management/SenderActionsDialog";
 import type { SenderAnalysis } from "@/types/email-management";
 import { supabase } from "@/integrations/supabase/client";
-import { bulkUpdateAutoAction, bulkSetBlocked } from "@/data/emailAddressRules";
+import { bulkUpdateAutoAction, bulkSetBlocked } from "@/application/data/emailAddressRules";
 import { invokeAi } from "@/lib/ai/invokeAi";
 
 import { useGroupingData } from "./manual-grouping/useGroupingData";
@@ -40,7 +40,7 @@ import { ActiveFiltersBar } from "./manual-grouping/ActiveFiltersBar";
 import { GroupGridPanel } from "./manual-grouping/GroupGridPanel";
 import { VirtualizedSenderList } from "./manual-grouping/VirtualizedSenderList";
 import { inLetterRange, type LetterRange } from "./manual-grouping/letterRange";
-import { createSenderGroup } from "@/data/senderManagement";
+import { createSenderGroup } from "@/application/data/senderManagement";
 
 interface SuggestEmailGroupsResponse {
   processed?: number;

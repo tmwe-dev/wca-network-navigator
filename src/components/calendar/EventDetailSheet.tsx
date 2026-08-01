@@ -24,8 +24,8 @@ import { useEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/useCalendar";
 import { usePartners } from "@/hooks/usePartners";
 import { useContacts } from "@/hooks/useContacts";
 import { useDeals } from "@/hooks/useDeals";
-import type { CalendarEvent, EventType } from "@/data/calendar";
-import type { Partner } from "@/data/partners";
+import type { CalendarEvent, EventType } from "@/application/data/calendar";
+import type { Partner } from "@/application/data/partners";
 import type { Deal } from "@/types/deals";
 
 interface Contact {

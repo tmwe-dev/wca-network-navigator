@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getOnboardingCompletedForUser } from "@/data/profiles";
+import { getOnboardingCompletedForUser } from "@/application/data/profiles";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { X, Menu, Command, Sparkles, Target } from "lucide-react";

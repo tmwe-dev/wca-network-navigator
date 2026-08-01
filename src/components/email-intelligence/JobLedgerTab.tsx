@@ -12,7 +12,7 @@ import {
   listEmailProcessingJobs,
   type EmailProcessingJobRow,
   type EmailProcessingStage,
-} from "@/data/emailProcessingJobs";
+} from "@/application/data/emailProcessingJobs";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

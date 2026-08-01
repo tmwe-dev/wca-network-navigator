@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { listMissionAttachmentImages } from "@/data/missionAttachments";
-import { findEmailTemplatesShort } from "@/data/emailTemplates";
+import { listMissionAttachmentImages } from "@/application/data/missionAttachments";
+import { findEmailTemplatesShort } from "@/application/data/emailTemplates";
 import type { MissionStepProps, AttachmentConfig } from "./types";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 

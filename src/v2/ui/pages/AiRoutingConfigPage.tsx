@@ -6,8 +6,8 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findOperatorAdminFlag } from "@/data/operators";
-import { findAiRoutingConfigs, updateAiRoutingConfig } from "@/data/aiRoutingConfig";
+import { findOperatorAdminFlag } from "@/application/data/operators";
+import { findAiRoutingConfigs, updateAiRoutingConfig } from "@/application/data/aiRoutingConfig";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";

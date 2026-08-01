@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findAppErrorLogs, deleteAppErrorLogsBefore } from "@/data/appErrorLogsQuery";
+import { findAppErrorLogs, deleteAppErrorLogsBefore } from "@/application/data/appErrorLogsQuery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

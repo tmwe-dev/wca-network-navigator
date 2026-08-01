@@ -5,12 +5,12 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchSenderGroupsOrdered } from "@/data/emailGrouping";
+import { fetchSenderGroupsOrdered } from "@/application/data/emailGrouping";
 import {
   findSuggestionAddressRules,
   assignSuggestionGroup,
   clearAiSuggestion,
-} from "@/data/aiSuggestions";
+} from "@/application/data/aiSuggestions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";

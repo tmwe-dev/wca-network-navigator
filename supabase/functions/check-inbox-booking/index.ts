@@ -69,8 +69,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
-    // deno-lint-ignore no-explicit-any
-    if ((pauseSettings as any)?.value === "true") {
+    if (pauseSettings?.value === "true") {
       return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), {
         headers: dynCors,
         status: 200,

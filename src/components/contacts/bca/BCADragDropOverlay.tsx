@@ -13,7 +13,7 @@ import { ArrowRight, Search, Linkedin, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BCA_DRAG_MIME } from "./bcaDragContext";
 import { supabase } from "@/integrations/supabase/client";
-import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import { useAppNavigate } from "@/hooks/useAppNavigate";

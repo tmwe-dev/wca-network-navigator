@@ -10,7 +10,7 @@
  */
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { getMetricsSummary, type MetricsSummary } from "@/data/promptLabMetrics";
+import { getMetricsSummary, type MetricsSummary } from "@/application/data/promptLabMetrics";
 import { useAuth } from "@/providers/AuthProvider";
 
 

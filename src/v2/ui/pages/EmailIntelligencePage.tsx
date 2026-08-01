@@ -10,7 +10,7 @@ import {
   findPendingAiSuggestionAddresses,
   countClassificationsSince,
   countActiveAddressRules,
-} from "@/data/emailIntelCounts";
+} from "@/application/data/emailIntelCounts";
 import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";

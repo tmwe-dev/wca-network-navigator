@@ -10,8 +10,8 @@ import { useLogAction } from "@/hooks/useLogAction";
 import { normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
-import { insertPartnerSocialLink, findSocialLinksByPartnerIds } from "@/data/partnerRelations";
-import { updateContactEnrichment } from "@/data/contacts";
+import { insertPartnerSocialLink, findSocialLinksByPartnerIds } from "@/application/data/partnerRelations";
+import { updateContactEnrichment } from "@/application/data/contacts";
 
 const log = createLogger("LinkedInDMDialog");
 
