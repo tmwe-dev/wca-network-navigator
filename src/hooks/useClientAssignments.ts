@@ -22,7 +22,7 @@ export function useClientAssignments() {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      return findAllClientAssignmentsForUser<ClientAssignment>(user.id);
+      return findAllClientAssignmentsForUser(user.id);
     },
     staleTime: 5 * 60_000,
   });
@@ -77,7 +77,7 @@ export function useAgentClients(agentId: string | undefined) {
     queryFn: async () => {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
-      return findClientAssignmentsByAgent<ClientAssignment>(agentId!, user.id);
+      return findClientAssignmentsByAgent(agentId!, user.id);
     },
   });
 }

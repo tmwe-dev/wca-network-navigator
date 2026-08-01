@@ -2,6 +2,9 @@
  * DAL — client_assignments
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+export type ClientAssignmentRow = Database["public"]["Tables"]["client_assignments"]["Row"];
 
 export async function findClientAssignmentsByUser(userId: string, select = "agent_id") {
   const { data, error } = await supabase
@@ -39,26 +42,26 @@ export async function insertClientAssignment(row: ClientAssignmentInsert): Promi
 }
 
 /** Tutti gli assegnamenti dell'utente (row complete). */
-export async function findAllClientAssignmentsForUser<T>(userId: string): Promise<T[]> {
+export async function findAllClientAssignmentsForUser(userId: string): Promise<ClientAssignmentRow[]> {
   const { data, error } = await supabase.from("client_assignments").select("*").eq("user_id", userId);
   if (error) throw error;
-  return (data ?? []) as unknown as T[];
+  return data ?? [];
 }
 
 /** Assegnamenti di un agente specifico. */
-export async function findClientAssignmentsByAgent<T>(agentId: string, userId: string): Promise<T[]> {
+export async function findClientAssignmentsByAgent(agentId: string, userId: string): Promise<ClientAssignmentRow[]> {
   const { data, error } = await supabase
     .from("client_assignments")
     .select("*")
     .eq("agent_id", agentId)
     .eq("user_id", userId);
   if (error) throw error;
-  return (data ?? []) as unknown as T[];
+  return data ?? [];
 }
 
 /** Crea assegnamento e ritorna la riga creata. */
-export async function insertClientAssignmentReturning<T>(row: ClientAssignmentInsert): Promise<T> {
+export async function insertClientAssignmentReturning(row: ClientAssignmentInsert): Promise<ClientAssignmentRow> {
   const { data, error } = await supabase.from("client_assignments").insert(row).select().single();
   if (error) throw error;
-  return data as T;
+  return data;
 }
