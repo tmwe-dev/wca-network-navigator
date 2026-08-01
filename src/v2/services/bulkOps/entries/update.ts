@@ -11,7 +11,7 @@ export const updateOriginEntry: BulkEntry<UpdateOriginItem, { ok: boolean }> = {
   continueOnError: true,
   handler: async (item) => {
     assertCalledFromRunner("update.origin");
-    const mod = (await import("@/data/contacts/queries")) as unknown as Record<string, AnyAsync>;
+    const mod: typeof import("@/data/contacts/queries") = await import("@/data/contacts/queries");
     if (!mod.bulkUpdateContactsOrigin) throw new Error("bulkUpdateContactsOrigin not exported by @/data/contacts/queries");
     await mod.bulkUpdateContactsOrigin([item.contactId], item.origin);
     return { ok: true };
@@ -25,7 +25,7 @@ export const updateLeadStatusEntry: BulkEntry<UpdateLeadStatusItem, { ok: boolea
   continueOnError: true,
   handler: async (item) => {
     assertCalledFromRunner("update.leadStatus");
-    const mod = (await import("@/data/contacts/queries")) as unknown as Record<string, AnyAsync>;
+    const mod: typeof import("@/data/contacts/queries") = await import("@/data/contacts/queries");
     if (!mod.updateLeadStatus) throw new Error("updateLeadStatus not exported by @/data/contacts/queries");
     await mod.updateLeadStatus([item.contactId], item.newStatus);
     return { ok: true };
@@ -39,7 +39,7 @@ export const updateEmailRulesEntry: BulkEntry<UpdateEmailRulesItem, { ok: boolea
   continueOnError: true,
   handler: async (item) => {
     assertCalledFromRunner("update.emailRules");
-    const mod = (await import("@/data/emailAddressRules")) as unknown as Record<string, AnyAsync>;
+    const mod: typeof import("@/data/emailAddressRules") = await import("@/data/emailAddressRules");
     if (item.autoAction !== undefined && mod.bulkUpdateAutoAction) await mod.bulkUpdateAutoAction([item.emailAddress], item.autoAction);
     if (item.blocked !== undefined && mod.bulkSetBlocked) await mod.bulkSetBlocked([item.emailAddress], item.blocked);
     return { ok: true };

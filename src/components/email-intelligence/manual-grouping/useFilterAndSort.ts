@@ -104,14 +104,14 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
           b.nome_gruppo.localeCompare(a.nome_gruppo, "it", { sensitivity: "base", numeric: true }));
       case "count-desc":
         return filtered.sort((a, b) => {
-          const ca = (a as unknown as { assigned_count?: number }).assigned_count || 0;
-          const cb = (b as unknown as { assigned_count?: number }).assigned_count || 0;
+          const ca = a.assigned_count || 0;
+          const cb = b.assigned_count || 0;
           return cb - ca;
         });
       case "count-asc":
         return filtered.sort((a, b) => {
-          const ca = (a as unknown as { assigned_count?: number }).assigned_count || 0;
-          const cb = (b as unknown as { assigned_count?: number }).assigned_count || 0;
+          const ca = a.assigned_count || 0;
+          const cb = b.assigned_count || 0;
           return ca - cb;
         });
     }
