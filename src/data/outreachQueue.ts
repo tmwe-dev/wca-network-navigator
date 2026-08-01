@@ -2,6 +2,9 @@
  * DAL — outreach_queue
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type OutreachQueueUpdate = Database["public"]["Tables"]["outreach_queue"]["Update"];
 import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 export async function findPendingOutreachItems(limit = 5) {
@@ -16,8 +19,8 @@ export async function findPendingOutreachItems(limit = 5) {
   return data ?? [];
 }
 
-export async function updateOutreachItem(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("outreach_queue").update(updates as never).eq("id", id);
+export async function updateOutreachItem(id: string, updates: OutreachQueueUpdate) {
+  const { error } = await supabase.from("outreach_queue").update(updates).eq("id", id);
   if (error) throw error;
   emitBusyPartnersChanged();
 }

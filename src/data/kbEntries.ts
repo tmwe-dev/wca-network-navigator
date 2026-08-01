@@ -4,6 +4,8 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+
+type KbEntryUpdate = Database["public"]["Tables"]["kb_entries"]["Update"];
 import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -137,8 +139,8 @@ export async function findKbEntryRef(ref: string, byId: boolean): Promise<{ id: 
 }
 
 /** Update arbitrario di una KB entry per id (usato dai tool Command). */
-export async function updateKbEntryFields(id: string, updates: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("kb_entries").update(updates as never).eq("id", id);
+export async function updateKbEntryFields(id: string, updates: KbEntryUpdate): Promise<void> {
+  const { error } = await supabase.from("kb_entries").update(updates).eq("id", id);
   if (error) throw error;
 }
 

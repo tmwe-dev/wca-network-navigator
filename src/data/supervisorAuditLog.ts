@@ -30,7 +30,7 @@ export async function logSupervisorAudit(entry: AuditLogEntry): Promise<void> {
     target_type: entry.target_table ?? null,
     target_id: entry.target_id ?? null,
     metadata: entry.payload ?? {},
-  } as never);
+  });
   if (error) {
     // Audit failure must not block UX
     log.warn("[supervisor_audit_log] insert failed", { error: error });

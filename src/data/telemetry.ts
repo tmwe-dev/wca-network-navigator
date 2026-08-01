@@ -2,9 +2,12 @@
  * DAL — page_events
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function insertPageEvent(payload: Record<string, unknown>) {
-  await (supabase.from as (t: string) => ReturnType<typeof supabase.from>)("page_events").insert(payload as never);
+type PageEventInsert = Database["public"]["Tables"]["page_events"]["Insert"];
+
+export async function insertPageEvent(payload: PageEventInsert) {
+  await supabase.from("page_events").insert(payload);
 }
 
 export async function findRequestLogsSince(sinceIso: string, limit = 500): Promise<unknown[]> {

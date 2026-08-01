@@ -2,9 +2,12 @@
  * DAL — directory_cache
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export async function upsertDirectoryCache(entry: Record<string, unknown>) {
-  const { error } = await supabase.from("directory_cache").upsert(entry as never, { onConflict: "country_code,network_name" });
+type DirectoryCacheInsert = Database["public"]["Tables"]["directory_cache"]["Insert"];
+
+export async function upsertDirectoryCache(entry: DirectoryCacheInsert) {
+  const { error } = await supabase.from("directory_cache").upsert(entry, { onConflict: "country_code,network_name" });
   if (error) throw error;
 }
 

@@ -36,8 +36,8 @@ export async function createConversation(params: { user_id: string; page_context
   return data;
 }
 
-export async function updateConversation(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("ai_conversations").update(updates as never).eq("id", id);
+export async function updateConversation(id: string, updates: AiConversationUpdate) {
+  const { error } = await supabase.from("ai_conversations").update(updates).eq("id", id);
   if (error) throw error;
 }
 

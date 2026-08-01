@@ -99,7 +99,7 @@ export async function insertBlacklistEntry(entry: {
   source: string;
   status: string;
 }): Promise<void> {
-  const { error } = await supabase.from("blacklist_entries").insert(entry as never);
+  const { error } = await supabase.from("blacklist_entries").insert(entry);
   if (error) throw error;
 }
 

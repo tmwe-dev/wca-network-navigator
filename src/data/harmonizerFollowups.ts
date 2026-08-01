@@ -40,7 +40,7 @@ export async function createHarmonizerFollowup(input: HarmonizerFollowupInsert):
   };
   const { data, error } = await supabase
     .from("harmonizer_followups")
-    .insert([row] as never)
+    .insert([row])
     .select("id")
     .single();
   if (error) throw error;
