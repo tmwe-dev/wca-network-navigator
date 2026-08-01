@@ -10,7 +10,7 @@
  *
  * Legacy hooks non usati (useAgentLoop / useApprovalFlow / useScenarioFlow /
  * useToolExecution / useCommandPageState / useCommandBriefing / useSuperMarioFlow)
- * archiviati in `command/_legacy/`. Doctrine: one logic per task, everywhere.
+ * rimossi (zero chiamanti). Doctrine: one logic per task, everywhere.
  */
 import { useEffect, useRef, useState } from "react";
 import { toast as sonnerToast } from "sonner";
@@ -35,7 +35,7 @@ import CommandThread from "./command/components/CommandThread";
 import { Command as CommandIcon, PanelLeft, PanelLeftClose } from "lucide-react";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 // NB: lo stato vuoto della Command resta zen (solo titolo + orb + input).
-// BriefingPanel e useCommandBriefing sono in `command/_legacy/` per un
+// BriefingPanel e useCommandBriefing sono stati rimossi (zero chiamanti) per un
 // futuro "next best action" ragionato.
 
 const CommandPage = () => {

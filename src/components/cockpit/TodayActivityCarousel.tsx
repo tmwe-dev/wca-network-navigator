@@ -1,12 +1,12 @@
 import { Phone, Users, MoreHorizontal, Mail, Linkedin, MessageCircle, CalendarClock, StickyNote, CheckCircle2, Circle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTodayActivities, type TodayActivity } from "@/hooks/useTodayActivities";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const typeIcon: Record<string, any> = {
+const typeIcon: Record<string, LucideIcon> = {
   phone_call: Phone,
   meeting: Users,
   email: Mail,

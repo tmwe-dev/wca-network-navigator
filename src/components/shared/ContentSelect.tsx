@@ -12,13 +12,13 @@ import {
   CONTENT_CATEGORIES, DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem,
 } from "@/constants/defaultContentPresets";
 import { toast } from "@/hooks/use-toast";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("ContentSelect");
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target,
 };
 const CYCLE_ICONS = [Target, Handshake, Briefcase, Search, Globe, RefreshCw, FileText];
