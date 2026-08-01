@@ -28,7 +28,7 @@ import { ExportSendersDialog } from "./management/ExportSendersDialog";
 import { SenderActionsDialog } from "./management/SenderActionsDialog";
 import type { SenderAnalysis } from "@/types/email-management";
 import { supabase } from "@/integrations/supabase/client";
-import { bulkUpdateAutoAction, bulkSetBlocked } from "@/data/emailAddressRules";
+import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
 import { invokeAi } from "@/lib/ai/invokeAi";
 
 import { useGroupingData } from "./manual-grouping/useGroupingData";
@@ -40,7 +40,7 @@ import { ActiveFiltersBar } from "./manual-grouping/ActiveFiltersBar";
 import { GroupGridPanel } from "./manual-grouping/GroupGridPanel";
 import { VirtualizedSenderList } from "./manual-grouping/VirtualizedSenderList";
 import { inLetterRange, type LetterRange } from "./manual-grouping/letterRange";
-import { createSenderGroup } from "@/data/senderManagement";
+import { useSenderManagementRepo } from "@/hooks/emailIntelligence/useSenderManagementRepo";
 
 interface SuggestEmailGroupsResponse {
   processed?: number;
@@ -49,6 +49,8 @@ interface SuggestEmailGroupsResponse {
 }
 
 export default function ManualGroupingTab() {
+  const { bulkUpdateAutoAction, bulkSetBlocked } = useAddressRulesRepo();
+  const { createSenderGroup } = useSenderManagementRepo();
   const {
     senders, setSenders, classifiedSenders, setClassifiedSenders,
     groups, setGroups, isLoading, isPopulating,
