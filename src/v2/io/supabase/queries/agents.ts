@@ -4,7 +4,7 @@
  */
 import { findAgents, getAgentById, type AgentRow as DalAgentRow } from "@/data/agents";
 import { type Result, ok, err } from "../../../core/domain/result";
-import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
+import { fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type Agent } from "../../../core/domain/entities";
 import { mapAgentRow } from "../../../core/mappers/agent-mapper";
 import type { PostgrestError } from "@supabase/supabase-js";
@@ -36,7 +36,6 @@ export async function fetchAgentByIdRaw(agentId: string): Promise<{
     return { data: row, error: null };
   } catch (caught: unknown) {
     const appErr = fromUnknown(caught, "DATABASE_ERROR", "fetchAgentByIdRaw");
-    void ioError;
     return {
       data: null,
       error: {
