@@ -388,7 +388,7 @@ export async function matchResponseActivity(
         p_response_time_hours: responseTimeHours,
       });
     }
-  } catch (matchErr: unknown) {
-    const { extractErrorMessage } = await import("../_shared/handleEdgeError.ts");
+  } catch {
+    // Response-time tracking is best-effort and must not block ingestion.
   }
 }

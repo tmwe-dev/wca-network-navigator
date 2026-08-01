@@ -46,7 +46,7 @@ interface PromptTemplateSelectorProps {
 export function PromptTemplateSelector({
   customPrompt,
   onPromptChange,
-  isEditing = false
+  isEditing: _isEditing = false
 }: PromptTemplateSelectorProps) {
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);

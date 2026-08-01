@@ -26,7 +26,7 @@ export async function executeChatMode(
   agentName: string,
   userId: string,
   authHeader: string,
-  apiKey: string
+  _apiKey: string
 ): Promise<Response> {
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 

@@ -122,7 +122,7 @@ export async function handleDeepSearchPartner(
   supabase: SupabaseClient,
   userId: string,
   args: Record<string, unknown>,
-  authHeader: string
+  _authHeader: string
 ): Promise<unknown> {
   let pid = args.partner_id as string;
   if (!pid && args.company_name) { const r = await resolvePartnerId(args); if (r) pid = r.id; }

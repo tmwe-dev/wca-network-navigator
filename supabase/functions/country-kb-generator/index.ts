@@ -136,7 +136,7 @@ Rispondi SOLO con un JSON valido con questa struttura:
 
         stats.generated++;
         stats.countries.push(code.toUpperCase());
-      } catch (err: unknown) {
+      } catch {
         stats.failed++;
       }
     }

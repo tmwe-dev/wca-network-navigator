@@ -66,7 +66,7 @@ function replaceUnbackedTerm(
 function guardKnownHallucinations(
   text: string,
   location: "subject" | "body",
-  normalizedSource: string,
+  _normalizedSource: string,
 ): { text: string; warnings: GroundingGuardWarning[] } {
   let guarded = text;
   const warnings: GroundingGuardWarning[] = [];

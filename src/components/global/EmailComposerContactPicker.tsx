@@ -7,7 +7,7 @@ import { PickerHeader } from "./email-picker/PickerHeader";
 import { CountryStrip } from "./email-picker/CountryStrip";
 import { ResultsList } from "./email-picker/ResultsList";
 
-export function EmailComposerContactPicker({ onConfirm }: { onConfirm?: () => void }) {
+export function EmailComposerContactPicker({ onConfirm: _onConfirm }: { onConfirm?: () => void }) {
   const picker = useEmailContactPicker();
 
   return (

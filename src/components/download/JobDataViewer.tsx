@@ -329,7 +329,7 @@ export function JobDataViewer({
   );
 }
 
-function DataRow({ icon, value, label, isDark }: { icon: React.ReactNode; value: string | null; label: string; isDark: boolean }) {
+function DataRow({ icon, value, label, isDark: _isDark }: { icon: React.ReactNode; value: string | null; label: string; isDark: boolean }) {
   const has = !!value && value.trim().length > 0;
   return (
     <div className="flex items-center gap-2 text-xs">

@@ -73,7 +73,7 @@ function SenderCardImpl({
   onDragEnd,
   isSelected = false,
   onToggleSelect,
-  onAiChipClick,
+  onAiChipClick: _onAiChipClick,
   isFocused = false,
   onFocusRequest,
   onAnalyzeAI,
@@ -446,4 +446,3 @@ export const SenderCard = memo(SenderCardImpl, (prev, next) =>
   && prev.onAnalyzeAI === next.onAnalyzeAI
   && prev.onAcceptAiSuggestion === next.onAcceptAiSuggestion
   && prev.onActionComplete === next.onActionComplete);
-

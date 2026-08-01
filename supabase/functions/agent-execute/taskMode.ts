@@ -98,7 +98,7 @@ export async function handleGeneralTask(
   agentName: string,
   userId: string,
   authHeader: string,
-  apiKey: string
+  _apiKey: string
 ): Promise<{ success: boolean; result: string }> {
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 

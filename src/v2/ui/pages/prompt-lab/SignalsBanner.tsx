@@ -37,7 +37,7 @@ function severityBadge(severity: PromptLabSignal["severity"]) {
   }
 }
 
-export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge, onCopySuggestion }: SignalsBannerProps) {
+export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge: _onAcknowledge, onCopySuggestion }: SignalsBannerProps) {
   const [expanded, setExpanded] = useState(false);
   const activeSignals = state.signals.filter((s) => s.status === "new" || s.status === "acknowledged");
 

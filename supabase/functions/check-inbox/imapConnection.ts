@@ -117,7 +117,7 @@ export async function fetchUidBatch(
       remainingCount: nextBatch.remaining,
       hasMore: nextBatch.hasMore,
     };
-  } catch (searchErr: unknown) {
+  } catch {
     return { uids: [], remainingCount: 0, hasMore: false };
   }
 }

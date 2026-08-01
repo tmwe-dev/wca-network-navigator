@@ -7,8 +7,8 @@ import { supabase } from "../platformToolHelpers.ts";
 export async function executeProspectToolHandler(
   name: string,
   args: Record<string, unknown>,
-  userId: string,
-  authHeader: string,
+  _userId: string,
+  _authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     case "search_prospects": {

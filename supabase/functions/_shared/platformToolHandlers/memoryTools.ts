@@ -8,7 +8,7 @@ export async function executeMemoryToolHandler(
   name: string,
   args: Record<string, unknown>,
   userId: string,
-  authHeader: string,
+  _authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     case "save_memory": {

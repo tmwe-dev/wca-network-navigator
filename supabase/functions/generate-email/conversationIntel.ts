@@ -18,7 +18,7 @@ export async function loadConversationContext(
   supabase: SupabaseClient,
   userId: string,
   emailAddress: string | null,
-  partnerId: string | null,
+  _partnerId: string | null,
 ): Promise<ConversationIntelligence> {
   if (!emailAddress)
     return { convCtx: null, rules: null, classifications: [] };

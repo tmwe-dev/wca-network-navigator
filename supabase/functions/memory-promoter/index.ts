@@ -42,7 +42,7 @@ async function generateEmbeddingsForRows(
       else console.warn(`embed update ${rows[i].id} failed:`, error.message);
     }
     return count;
-  } catch (e: unknown) {
+  } catch {
     return 0;
   }
 }

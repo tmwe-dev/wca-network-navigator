@@ -40,7 +40,7 @@ export async function handleGetCountryOverview(
 
 export async function handleGetDirectoryStatus(
   supabase: SupabaseClient,
-  args: Record<string, unknown>
+  _args: Record<string, unknown>
 ): Promise<unknown> {
   const result: Record<string, unknown> = {};
   const { count: memberCount } = await supabase.from("directory_members").select("id", { count: "exact", head: true });

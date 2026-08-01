@@ -105,7 +105,7 @@ export function FunnemailMailCard({
   groupIcon,
   aiSuggestion,
   onSelect,
-  onAcceptAiSuggestion,
+  onAcceptAiSuggestion: _onAcceptAiSuggestion,
   onReclassify,
   reclassifying,
   checked,

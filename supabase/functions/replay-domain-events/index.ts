@@ -182,8 +182,8 @@ function reconstructEvent(row: DomainEventRow): WCADomainEvent {
  */
 async function dispatchEvent(
   event: WCADomainEvent,
-  leadPM: ReturnType<typeof initLeadProcessManager>,
-  emailPM: ReturnType<typeof initEmailProcessManager>,
+  _leadPM: ReturnType<typeof initLeadProcessManager>,
+  _emailPM: ReturnType<typeof initEmailProcessManager>,
 ): Promise<void> {
   const eventType = event.type;
 

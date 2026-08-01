@@ -239,7 +239,7 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
 }
 
 function ExpandedJobRow({
-  job, pauseResume, isDark, th,
+  job, pauseResume, isDark: _isDark, th,
 }: {
   job: DownloadJob;
   pauseResume: ReturnType<typeof usePauseResumeJob>;

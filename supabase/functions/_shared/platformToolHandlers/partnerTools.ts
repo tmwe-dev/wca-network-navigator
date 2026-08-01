@@ -9,7 +9,7 @@ export async function executePartnerToolHandler(
   name: string,
   args: Record<string, unknown>,
   userId: string,
-  authHeader: string,
+  _authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     case "search_partners": {
