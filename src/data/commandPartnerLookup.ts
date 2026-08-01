@@ -3,7 +3,7 @@
  * Estratto 1:1 da `partnerQueries.ts` (stessi filtri, order, limit, select).
  */
 import { supabase } from "@/integrations/supabase/client";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { applyValidatedFilters, selectFromValidatedTable } from "@/data/dynamicQuery";
 
 export interface CommandPartnerRow {
   id: string;
@@ -28,6 +28,21 @@ export interface CommandContactRow {
 }
 
 const PARTNER_COLS = "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";
+
+/** Colonne di `partners` filtrabili da un contesto salvato dal planner. */
+const PARTNER_FILTERABLE_COLUMNS: ReadonlySet<string> = new Set([
+  "company_name",
+  "company_alias",
+  "country_code",
+  "country_name",
+  "city",
+  "email",
+  "website",
+  "lead_status",
+  "status_reason",
+  "partner_type",
+  "is_active",
+]);
 
 export async function searchPartnersByCountry(countryCode: string): Promise<CommandPartnerRow[]> {
   const { data, error } = await supabase
