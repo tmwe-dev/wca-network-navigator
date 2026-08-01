@@ -1,33 +1,43 @@
 /**
- * @deprecated Table 'teams' does not exist in current schema (types.ts).
- * The table exists in Supabase migrations (20260422180200_lovable102_rbac.sql) but
- * TypeScript types have not been generated. Team functions will log warnings and return early.
- *
  * Data Access Layer — RBAC (Role-Based Access Control)
  * Single source of truth for all RBAC-related queries.
+ *
+ * SCHEMA LIVE (verificato su information_schema):
+ *  - `user_roles(id, user_id, role app_role, created_at)` — il ruolo è un
+ *    ENUM PER NOME (`admin` | `moderator` | `user`), NON una FK `role_id`.
+ *  - `roles(id, name, description, is_system, ...)` — catalogo del modello
+ *    granulare, popolato con `admin` / `manager` / `operator` / `viewer`.
+ *  - `permissions`, `role_permissions` — esistono e sono tipizzati.
+ *  - `teams` NON esiste. `team_members` esiste ma con uno schema diverso
+ *    (id, name, email, role, is_active, created_at): niente `team_id` né
+ *    `user_id`, quindi non modella l'appartenenza a un team.
+ *
+ * Il modello granulare della migrazione 20260422180200_lovable102_rbac.sql
+ * (colonne `role_id`, `assigned_by`, `team_id`, `joined_at`) non è mai stato
+ * applicato. Le query scritte contro quelle colonne fallivano a runtime con
+ * PostgREST 42703. Qui il ponte è esplicito e onesto: `user_roles.role` viene
+ * risolto verso `roles.name`. Ruoli non rappresentabili nell'enum `app_role`
+ * non sono assegnabili e la funzione fallisce in modo chiuso invece di
+ * scrivere un valore che il database rifiuterebbe.
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { untypedFrom } from "@/lib/supabaseUntyped";
-import { createLogger } from "@/lib/log";
 
-const log = createLogger("rbac");
+type AppRole = Database["public"]["Enums"]["app_role"];
 
-const TEAMS_TABLE_WARNING = 'Table "teams" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
+const ASSIGNABLE_APP_ROLES: readonly AppRole[] = ["admin", "moderator", "user"];
+
+function toAppRole(roleName: string): AppRole | null {
+  return (ASSIGNABLE_APP_ROLES as readonly string[]).includes(roleName)
+    ? (roleName as AppRole)
+    : null;
+}
 
 /**
- * NOTA SCHEMA (verificata sul DB live, read-only, 2026-08):
- * `user_roles` esiste con (id, user_id, role, created_at) e `team_members` con
- * (id, name, email, role, is_active, created_at). Le colonne `role_id`,
- * `assigned_by`, `team_id`, `joined_at` NON esistono nel database reale, non solo
- * nei tipi generati: il modello RBAC granulare della migrazione
- * 20260422180200_lovable102_rbac.sql non è mai stato applicato.
- * Queste query quindi falliscono già oggi a runtime (PostgREST 42703) e restano su
- * `untypedFrom` fino a una decisione di prodotto (applicare la migrazione oppure
- * rimuovere il modello granulare). Non inventiamo schema e non cambiamo semantica
- * di autorizzazione in un batch di sola qualità.
- * Tipizzato invece tutto ciò che esiste: roles, permissions, role_permissions.
+ * `teams` non esiste nello schema live: l'intera feature Team è inattiva.
+ * Le letture restituiscono vuoto, le mutazioni falliscono in modo chiuso.
  */
+const TEAMS_UNAVAILABLE = 'La feature Team non è disponibile: la tabella "teams" non esiste nello schema del database.';
 
 // ─── Types ──────────────────────────────────────────────
 
