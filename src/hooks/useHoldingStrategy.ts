@@ -3,7 +3,7 @@
  * Calls the agent-execute edge function to analyze the message and propose a response.
  */
 import { useState } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { findFirstActiveAgentId } from "@/data/holdingPattern";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
@@ -37,7 +37,9 @@ export function useHoldingStrategy() {
         return null;
       }
 
-      const result = await invokeEdge<{ strategy: HoldingStrategy }>("agent-execute", {
+      const result = await invokeAi<{ strategy: HoldingStrategy }>("agent-execute", {
+        scope: "agent",
+        context: { source: "useHoldingStrategy", mode: "chat" },
         body: {
           agent_id: agentId,
           chat_messages: [{
