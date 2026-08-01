@@ -4,7 +4,10 @@
  * Aggrega le sorgenti che oggi rappresentano "azioni in attesa di
  * conferma/invio":
  *   - email_campaign_queue   (pending / queued / scheduled)
- *   - campaign_jobs          (pending / queued / scheduled)
+ *   - campaign_jobs          (pending — l'enum `campaign_job_status` live
+ *                             ammette solo pending/in_progress/completed/skipped:
+ *                             non esistono né `queued`/`scheduled` né la colonna
+ *                             `scheduled_at`)
  *   - cockpit_queue          (queued)
  *   - outreach_queue         (pending)
  *
@@ -146,7 +149,7 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
     supabase
       .from("campaign_jobs")
       .select("id, partner_id, company_name, country_code, email, phone, job_type, status, batch_id, created_at, operator_id, notes, assigned_to")
-      .in("status", ["pending", "queued", "scheduled"])
+      .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(500),
     supabase
@@ -507,7 +510,9 @@ export async function cancelCestinoItem(item: CestinoItem): Promise<void> {
     case "campaign_jobs": {
       const { error } = await supabase
         .from("campaign_jobs")
-        .update({ status: "cancelled" })
+        // L'enum live non ha `cancelled`: l'annullamento di un job di campagna
+        // è rappresentato da `skipped`.
+        .update({ status: "skipped" })
         .eq("id", realId);
       if (error) throw error;
       break;
@@ -534,8 +539,10 @@ export async function cancelCestinoItem(item: CestinoItem): Promise<void> {
 }
 
 /**
- * Rinvia (snooze) — sposta scheduled_at avanti di N minuti.
- * Solo le sorgenti che supportano scheduled_at.
+ * Rinvia (snooze) — sposta `scheduled_at` avanti di N minuti.
+ * Supportato solo da `email_campaign_queue`: `campaign_jobs` non ha né la
+ * colonna `scheduled_at` né uno stato "scheduled", quindi il rinvio non è
+ * rappresentabile e fallisce in modo esplicito invece di essere ignorato.
  */
 export async function snoozeCestinoItem(item: CestinoItem, minutes = 60): Promise<void> {
   const realId = item.id.split(":")[1];
@@ -549,11 +556,7 @@ export async function snoozeCestinoItem(item: CestinoItem, minutes = 60): Promis
       .eq("id", realId);
     if (error) throw error;
   } else if (item.source === "campaign_jobs") {
-    const { error } = await supabase
-        .from("campaign_jobs")
-      .update({ scheduled_at: newAt, status: "scheduled" })
-      .eq("id", realId);
-    if (error) throw error;
+    throw new Error("Il rinvio non è disponibile per i job di campagna");
   }
 
   emitBusyPartnersChanged();
