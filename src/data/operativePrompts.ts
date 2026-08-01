@@ -14,6 +14,22 @@ export async function findOperativePrompts(userId: string, select = "id, name, o
   return data ?? [];
 }
 
+/** Opzione minimale per i selettori di prompt (id + nome). */
+export interface OperativePromptOption {
+  id: string;
+  name: string;
+}
+
+/** Elenco prompt come opzioni: le righe senza id/nome stringa sono scartate. */
+export async function findOperativePromptOptions(userId: string): Promise<OperativePromptOption[]> {
+  const rows = await findOperativePrompts(userId, "id, name");
+  const out: OperativePromptOption[] = [];
+  for (const r of rows) {
+    if (typeof r.id === "string" && typeof r.name === "string") out.push({ id: r.id, name: r.name });
+  }
+  return out;
+}
+
 export interface OperativePromptFull {
   id: string;
   user_id: string;
