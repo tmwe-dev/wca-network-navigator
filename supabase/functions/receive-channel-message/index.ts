@@ -151,12 +151,6 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id);
     }
 
-    if (wasDuplicate) {
-      
-    } else {
-      
-    }
-
     return new Response(JSON.stringify({
       success: true,
       message_id: msgId,

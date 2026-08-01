@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
         limit: 2,
       });
       if (op.block) opBlock = op.block;
-    } catch (_) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
 
     const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!LOVABLE_API_KEY) {
@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
           if (v.success) parsed = v.data;
         }
       }
-    } catch (_) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
 
     if (!parsed) {
       endMetrics(metrics, false, 502);

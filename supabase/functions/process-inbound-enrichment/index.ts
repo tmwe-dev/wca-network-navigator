@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     if (block && block.length > 80) {
       systemPrompt = `${PROMPT_SYSTEM_FALLBACK}\n\n${block}`;
     }
-  } catch (_e) { /* keep fallback */ }
+  } catch { /* keep fallback */ }
 
   for (const job of jobs as Array<{
     id: string;

@@ -46,7 +46,7 @@ export async function runInboundTriage(input: TriageInput): Promise<TriageResult
       limit: 4,
     });
     promptBlock = r.block;
-  } catch (_) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 
   const system = `Sei il triage operativo di TMWE / Find Air. Restituisci SOLO JSON valido conforme allo schema della tool call.
 ${promptBlock ? "\n" + promptBlock : ""}`;
@@ -61,7 +61,7 @@ ${promptBlock ? "\n" + promptBlock : ""}`;
       { maxChars: 3000, policy: "redact" },
     );
     bodyBlock = wrapped.block;
-  } catch (_) {
+  } catch {
     bodyBlock = (input.bodyText || "").slice(0, 3000);
   }
   const user = `Channel: ${input.channel}
@@ -121,7 +121,7 @@ ${bodyBlock}`;
     if (!args) return null;
     const parsed = JSON.parse(args) as TriageResult;
     return parsed;
-  } catch (_) {
+  } catch {
     return null;
   }
 }
@@ -153,5 +153,5 @@ export async function maybeDispatchAlert(
         channel: args.channel,
       },
     });
-  } catch (_) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 }

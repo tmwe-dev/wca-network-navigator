@@ -26,7 +26,7 @@ const eventSubscribers = new Set<(e: OptimusEvent) => void>();
 
 function emit(e: OptimusEvent) {
   for (const fn of eventSubscribers) {
-    try { fn(e); } catch (_) { /* ignore */ }
+    try { fn(e); } catch { /* ignore */ }
   }
 }
 

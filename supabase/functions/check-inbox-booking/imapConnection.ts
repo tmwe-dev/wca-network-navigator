@@ -171,7 +171,7 @@ export async function getSyncState(
     .eq("user_id", userId)
     .maybeSingle();
 
-  let lastUid = syncState?.last_uid || 0;
+  const lastUid = syncState?.last_uid || 0;
   const storedUidvalidity = syncState?.stored_uidvalidity || null;
 
   if (!syncState) {

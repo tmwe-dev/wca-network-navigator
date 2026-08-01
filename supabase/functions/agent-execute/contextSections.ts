@@ -385,7 +385,7 @@ export async function appendTeamTasksAndMissionsSection(
           ctx.text += `- "${mission.title}" [${mission.status}] ${mission.channel || "N/D"} — ${mission.processed_contacts || 0}/${mission.total_contacts || 0} — Paesi: ${countries.join(", ") || "N/D"}\n`;
         }
       }
-    } catch (_) {
+    } catch {
       /* outreach_missions may not exist */
     }
 

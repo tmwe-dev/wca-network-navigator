@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
     const convo: Array<Record<string, unknown>> = [systemMsg, ...messages];
 
     // Tool-loop, max 5 round-trip
-    let toolResults: Array<{ op: string; ok: boolean; data: unknown }> = [];
+    const toolResults: Array<{ op: string; ok: boolean; data: unknown }> = [];
     let kbProposal: Record<string, unknown> | null = null;
     let finalText = "";
     let spoken = "";

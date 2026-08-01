@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
           limit: 3,
         });
         if (op.block) operativeBlock = op.block;
-      } catch (_e) { /* non-fatal */ }
+      } catch { /* non-fatal */ }
     }
 
     const foldersList = folders.map((f) =>
@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
 
     const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     let decision: z.infer<typeof ResultSchema> = fallback(folders);
-    let model = "google/gemini-3-flash-preview";
+    const model = "google/gemini-3-flash-preview";
 
     if (LOVABLE_API_KEY) {
       const validSlugs = folders.map((f) => f.slug);

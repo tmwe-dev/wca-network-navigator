@@ -292,8 +292,6 @@ export async function saveMessageToDb(
 
         if (ruleErr) {
           console.warn(`[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`, ruleErr.message);
-        } else {
-          
         }
       }
     } catch (e) {

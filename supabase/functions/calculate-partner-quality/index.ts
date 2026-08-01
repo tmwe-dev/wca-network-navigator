@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
             dataCompleteness: result.dataCompleteness,
           };
           successCount++;
-        } catch (err) {
+        } catch {
           results[pId] = {
             stars: 1,
             totalScore: 0,

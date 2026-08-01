@@ -46,7 +46,7 @@ async function loadOwnerDomains(
       const d = emailDomain(row.email_address);
       if (d) domains.add(d);
     }
-  } catch (_e) { /* fail-open */ }
+  } catch { /* fail-open */ }
 
   domainCache.set(userId, { at: Date.now(), domains });
   return domains;
@@ -86,7 +86,7 @@ export async function checkInternalOrSelf(
         const d = emailDomain(c.email);
         if (d && ownerDomains.has(d)) return "self_partner";
       }
-    } catch (_e) { /* fail-open */ }
+    } catch { /* fail-open */ }
   }
 
   return null;

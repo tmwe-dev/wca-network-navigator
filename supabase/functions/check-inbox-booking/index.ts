@@ -155,7 +155,8 @@ Deno.serve(async (req) => {
           const threadId = (msgData as Record<string, unknown>).thread_id as string;
           const match = (msgData as Record<string, unknown>).match as { partnerId?: string } | null;
           await matchResponseActivity(supabase, msgData.id as string, inReplyTo, threadId, match);
-        } catch (matchErr: unknown) {
+        } catch {
+          // Response matching is best-effort and must not stop inbox sync.
         }
       } else if (error) {
         if (uid > maxUid) {

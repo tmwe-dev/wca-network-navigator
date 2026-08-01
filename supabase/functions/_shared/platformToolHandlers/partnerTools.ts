@@ -210,7 +210,7 @@ export async function executePartnerToolHandler(
       }
 
       if (Object.keys(updates).length > 1) {
-        let query = supabase.from("partners").update(updates).in("id", partnerIds);
+        const query = supabase.from("partners").update(updates).in("id", partnerIds);
         const { error } = await query;
         if (error) return { error: error.message };
       }

@@ -42,7 +42,7 @@ export async function authenticateRequest(
         if (parsed && typeof parsed === "object" && typeof parsed.user_id === "string") {
           bodyUserId = parsed.user_id;
         }
-      } catch (_) {
+      } catch {
         // body not JSON or empty
       }
       if (!bodyUserId) {

@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     await client.connect();
     await client.authenticate();
     const list = await client.listMailboxes();
-    try { await client.disconnect(); } catch (_) { /* ignore */ }
+    try { await client.disconnect(); } catch { /* ignore */ }
     const folders = list;
     return new Response(JSON.stringify({ user, folders }, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -15,20 +15,20 @@ import { execFileSync } from "node:child_process";
 // Vedi docs/audit/lint-gates-2026-08-02.md
 export const BUDGET = {
   "no-restricted-imports": 470,
-  "unused-imports/no-unused-vars": 245,
+  "unused-imports/no-unused-vars": 146,
   "@typescript-eslint/no-explicit-any": 242,
   "unused-imports/no-unused-imports": 0,
   "@typescript-eslint/no-unsafe-function-type": 49,
   "tmwe/no-direct-ai-invoke": 26,
-  "no-empty": 27,
+  "no-empty": 0,
   "no-useless-escape": 18,
-  "prefer-const": 12,
+  "prefer-const": 0,
   "tmwe/no-direct-bulk-op": 9,
   "no-case-declarations": 5,
-  "no-var": 4,
+  "no-var": 0,
   "no-control-regex": 3,
-  "no-regex-spaces": 1,
-  "no-useless-catch": 1,
+  "no-regex-spaces": 0,
+  "no-useless-catch": 0,
 };
 
 /**

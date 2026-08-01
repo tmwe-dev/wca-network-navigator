@@ -105,7 +105,7 @@ async function validateBridgeToken(
       .eq("id", data.id);
 
     return data.created_by as string;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -379,7 +379,7 @@ serve(async (req) => {
     modelUsed = (uaBody?.model as string) || (uaBody?._meta?.model as string) || "unified-assistant";
     const content = (uaBody?.content as string) || (uaBody?.response as string) || "";
     parsed = safeJsonParse(content);
-  } catch (e) {
+  } catch {
     // Fallback: direct aiChat (resilience for 5xx / timeouts on unified-assistant)
     routedTo = "voice-brain-bridge→aiChat-fallback";
     try {

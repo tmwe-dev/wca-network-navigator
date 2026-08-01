@@ -75,7 +75,7 @@ export async function loadConversationSummary(
         interactionCount: ctx.interaction_count ?? 0,
       };
     }
-  } catch (_) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 
   // 2) Fallback: max 5 messaggi recenti (NON 30) per il primo bootstrap
   try {
@@ -98,7 +98,7 @@ export async function loadConversationSummary(
       }
       return { block: lines.join("\n"), source: "fallback-history", interactionCount: history.length };
     }
-  } catch (_) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 
   return { block: "", source: "none", interactionCount: 0 };
 }

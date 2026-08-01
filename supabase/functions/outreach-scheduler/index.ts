@@ -159,7 +159,7 @@ serve(async (req) => {
         { auth: { persistSession: false } }
       );
       await cronGuardLogRun(sb, "outreach_scheduler", {}, err instanceof Error ? err.message : String(err));
-    } catch (_) { /* ignore */ }
+    } catch { /* ignore */ }
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });

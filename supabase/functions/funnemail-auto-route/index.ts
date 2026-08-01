@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
       if (typeof cfg?.generic_domain_min_confidence === "number") {
         genericMinConfidence = Number(cfg.generic_domain_min_confidence);
       }
-    } catch (_) { /* fail-safe: usa default */ }
+    } catch { /* fail-safe: usa default */ }
     const isGenericDomain = genericDomains.has(dom);
 
     // 1) Già instradato? skip.
@@ -290,7 +290,7 @@ Deno.serve(async (req) => {
           if (parsed.success) chosen = parsed.data;
         }
       }
-    } catch (_e) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
 
     if (!chosen) {
       endMetrics(metrics, true, 200);

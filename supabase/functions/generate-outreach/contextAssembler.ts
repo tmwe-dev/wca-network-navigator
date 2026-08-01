@@ -228,7 +228,7 @@ export async function assembleOutreachContext(
   let commercialState = "new";
   let touchCount = 0;
   let daysSinceLastContact = 0;
-  let lastOutcome: string | null = null;
+  const lastOutcome: string | null = null;
   if (partnerId) {
     const { data: pState } = await supabase
       .from("partners")

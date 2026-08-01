@@ -253,7 +253,7 @@ async function backfillAddress(
           .eq("imap_uid", uid)
           .eq("user_id", userId);
       }
-    } catch (_perUidErr) {
+    } catch {
       // continua con i prossimi UID
     }
   }

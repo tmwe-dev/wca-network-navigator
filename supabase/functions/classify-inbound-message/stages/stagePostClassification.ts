@@ -63,7 +63,7 @@ export async function runFunnemailDispatcher(
       sentiment: result.sentiment,
       urgency: result.urgency,
     });
-  } catch (_e) {
+  } catch {
     return null;
   }
 }

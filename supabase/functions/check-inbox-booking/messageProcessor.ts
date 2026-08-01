@@ -323,7 +323,8 @@ export async function processMessage(
         if (bounceInfo) {
           await handleBounce(supabase, userId, result.msgData.id as string, bounceInfo);
         }
-      } catch (bounceErr) {
+      } catch {
+        // Bounce processing is best-effort.
       }
 
       return { msgData: result.msgData, error: null };

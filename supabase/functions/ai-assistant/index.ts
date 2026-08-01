@@ -164,7 +164,7 @@ serve(async (req) => {
           limit: 10,
         });
         commandPromptBlock = block ?? "";
-      } catch (_) { /* degrade silently */ }
+      } catch { /* degrade silently */ }
       const result = await handleToolDecisionMode(
         provider,
         context?.tools,
@@ -210,7 +210,7 @@ serve(async (req) => {
           limit: 10,
         });
         commandPromptBlock = block ?? "";
-      } catch (_) { /* degrade silently */ }
+      } catch { /* degrade silently */ }
       const result = await handlePlanExecutionMode(
         provider,
         context?.tools || [],

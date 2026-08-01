@@ -355,10 +355,6 @@ export async function assembleSystemPrompt(
   let systemPrompt = baseSystemPrompt;
   if (assembledContext) systemPrompt += assembledContext;
 
-  if (budgetStats.dropped.length > 0 || budgetStats.truncated.length > 0) {
-    
-  }
-
   // Inject page context
   if (context) {
     systemPrompt = injectPageContext(systemPrompt, context);

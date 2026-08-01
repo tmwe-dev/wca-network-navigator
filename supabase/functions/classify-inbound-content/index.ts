@@ -117,7 +117,7 @@ async function buildContextSummary(
         out.our_profile = doctrine.map((d: { title: string; body: string }) =>
           `${d.title}: ${(d.body ?? "").slice(0, 200)}`).join("\n");
       }
-    } catch (_) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
   }
 
   // Partner (passaporto)
@@ -131,7 +131,7 @@ async function buildContextSummary(
         .limit(1)
         .maybeSingle();
       if (partner?.id) pid = partner.id;
-    } catch (_) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
   }
   if (pid) {
     try {
@@ -141,7 +141,7 @@ async function buildContextSummary(
         .eq("id", pid)
         .maybeSingle();
       if (partner) out.partner = partner;
-    } catch (_) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
 
     // Holding pattern
     try {
@@ -151,7 +151,7 @@ async function buildContextSummary(
         .eq("partner_id", pid)
         .maybeSingle();
       if (holding) out.holding_pattern = holding;
-    } catch (_) { /* tabella opzionale */ }
+    } catch { /* tabella opzionale */ }
 
     // Riassunto relazione (summary persistente o fallback 5 msg).
     // NON leggiamo più 30 mail raw: il summary è la guida.
@@ -165,7 +165,7 @@ async function buildContextSummary(
         out.relationship_summary = sum.block;
         out.relationship_source = sum.source;
       }
-    } catch (_) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
   }
 
   return { context: out, partner_id: pid };
@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
           limit: 4,
         });
         if (op.block) operativeBlock = op.block;
-      } catch (_) { /* fail-safe */ }
+      } catch { /* fail-safe */ }
     }
 
     // Normalizza + sanitizza contenuto inbound
@@ -459,7 +459,7 @@ Deno.serve(async (req) => {
             autonomy_level: "suggest",
           }).select("id").maybeSingle();
           if (ins?.id) pendingIds.push(ins.id);
-        } catch (_) { /* fail-safe */ }
+        } catch { /* fail-safe */ }
       }
       row.pending_action_ids = pendingIds;
     }

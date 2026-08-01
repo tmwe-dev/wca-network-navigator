@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
 
     // ── Costruzione contesto in base alla modalità ────────────────────
     let kb: Array<{ id: string; category: string; chapter: string | null; title: string; content: string; priority: number }> = [];
-    let occurrences: Array<{ kind: "operative_prompt" | "kb_entry"; id: string; label: string; field: string; excerpt: string }> = [];
+    const occurrences: Array<{ kind: "operative_prompt" | "kb_entry"; id: string; label: string; field: string; excerpt: string }> = [];
 
     if (mode === "global") {
       // Cerca termine in operative_prompts (objective/procedure/criteria/examples) e kb_entries (title/content)

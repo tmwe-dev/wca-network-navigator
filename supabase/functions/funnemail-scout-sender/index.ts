@@ -124,7 +124,7 @@ async function scoutDomainViaAi(
       evidence: { reasoning: parsed.reasoning ?? "", domain, source: "scout_ai_v1" },
       scout_source: "scout_ai_v1",
     };
-  } catch (_e) {
+  } catch {
     return {};
   }
 }
@@ -291,7 +291,7 @@ Deno.serve(async (req) => {
         } else {
           await sb.from("funnemail_scout_cache").insert(cachePayload);
         }
-      } catch (_) { /* fail-safe */ }
+      } catch { /* fail-safe */ }
     }
 
     return jsonResp({

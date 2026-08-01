@@ -67,6 +67,6 @@ export function makeRecordStage(supabase: any, messageId: string, userId: string
         p_payload: payload,
         p_error: error ?? null,
       });
-    } catch (_e) { /* fail-safe */ }
+    } catch { /* fail-safe */ }
   };
 }

@@ -100,7 +100,7 @@ async function loadHarmonizerKbContext(): Promise<string> {
       if (used + block.length > HARMONIZER_KB_CHAR_BUDGET) break;
       parts.push(block);
       used += block.length;
-    } catch (_e) { /* tolleriamo 404 */ }
+    } catch { /* tolleriamo 404 */ }
   }
   if (parts.length === 0) return "";
   return [

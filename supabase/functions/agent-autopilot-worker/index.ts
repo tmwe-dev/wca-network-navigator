@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
         { auth: { persistSession: false } }
       );
       await cronGuardLogRun(sb, "autopilot_worker", {}, message);
-    } catch (_) { /* ignore */ }
+    } catch { /* ignore */ }
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }
 });

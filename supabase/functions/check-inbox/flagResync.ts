@@ -94,7 +94,7 @@ export async function resyncUnreadFlags(
         const id = uidToId.get(uid);
         if (id) seenIds.push(id);
       }
-    } catch (_err) {
+    } catch {
       // best-effort: ignora il chunk e prosegui
       continue;
     }
@@ -114,7 +114,7 @@ export async function resyncUnreadFlags(
         .update({ read_at: nowIso })
         .in("id", chunk)
         .is("read_at", null);
-    } catch (_err) {
+    } catch {
       continue;
     }
   }

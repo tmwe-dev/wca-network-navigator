@@ -117,9 +117,9 @@ Deno.serve(async (req) => {
           }),
         });
         // Consume body to avoid resource leak (Deno).
-        try { await resp.text(); } catch (_) { /* noop */ }
+        try { await resp.text(); } catch { /* noop */ }
         if (resp.ok) dispatched += 1;
-      } catch (_e) {
+      } catch {
         // continue
       }
     }

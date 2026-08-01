@@ -74,7 +74,7 @@ export async function enqueueInboundEnrichment(
         if (d && candidates.has(d)) { candidates.delete(d); skipped++; }
       }
     }
-  } catch (_) { /* best-effort */ }
+  } catch { /* best-effort */ }
 
   if (candidates.size === 0) return { enqueued, skipped };
 
@@ -93,7 +93,7 @@ export async function enqueueInboundEnrichment(
         if (d && candidates.has(d)) { candidates.delete(d); skipped++; }
       }
     }
-  } catch (_) { /* best-effort */ }
+  } catch { /* best-effort */ }
 
   if (candidates.size === 0) return { enqueued, skipped };
 

@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (typeof cfg?.escalation_l2_minutes === "number") l2 = cfg.escalation_l2_minutes;
         if (typeof cfg?.escalation_l3_minutes === "number") l3 = cfg.escalation_l3_minutes;
-      } catch (_) { /* fail-safe defaults */ }
+      } catch { /* fail-safe defaults */ }
       const v = { l2, l3 };
       cfgCache.set(userId, v);
       return v;

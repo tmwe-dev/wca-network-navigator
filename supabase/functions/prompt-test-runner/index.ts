@@ -423,7 +423,7 @@ Deno.serve(async (req) => {
       try {
         const { data } = await userClient.rpc("get_current_operator_id");
         triggeredBy = (data as string | null) ?? null;
-      } catch (_) { /* ignore */ }
+      } catch { /* ignore */ }
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
