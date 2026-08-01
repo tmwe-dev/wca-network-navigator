@@ -2,7 +2,7 @@
  * DAL — Queries for useContactMerge.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { tFrom } from "@/lib/typedSupabase";
+import { unavailableRead } from "@/data/_shared/unavailableSchema";
 import type { Database } from "@/integrations/supabase/types";
 
 type ImportedContactsRow = Database["public"]["Tables"]["imported_contacts"]["Row"];
@@ -20,17 +20,21 @@ export async function updateImportedContact(id: string, patch: ImportedContactsU
 }
 
 /**
- * `activities.contact_id` / `emails` non sono nei tipi generati: si mantiene
- * l'accesso untyped centralizzato (`tFrom`) usato in origine dal chiamante.
+ * `activities` è tipizzata: accesso diretto al client tipizzato.
+ * `emails` NON esiste nello schema live (verificato su information_schema):
+ * niente query, ritorna un errore esplicito che il chiamante logga come warning.
  */
 export async function reassignActivitiesContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
-  const { error } = await tFrom("activities").update({ contact_id: toContactId }).eq("contact_id", fromContactId);
+  const { error } = await supabase.from("activities").update({ contact_id: toContactId }).eq("contact_id", fromContactId);
   return { error };
 }
 
 export async function reassignEmailsContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
-  const { error } = await tFrom("emails").update({ contact_id: toContactId }).eq("contact_id", fromContactId);
-  return { error };
+  void fromContactId;
+  void toContactId;
+  return unavailableRead<{ error: { message: string } | null }>("emails", {
+    error: { message: 'La relazione "emails" non esiste nello schema del database.' },
+  });
 }
 
 export async function deleteImportedContact(id: string): Promise<void> {
