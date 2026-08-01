@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { findAgentTasksList, insertAgentTaskReturning } from "@/data/agentTasks";
 
 type AgentTaskRow = Database["public"]["Tables"]["agent_tasks"]["Row"];
@@ -32,9 +32,10 @@ export function useAgentTasks(agentId?: string) {
 
   const executeTask = useMutation({
     mutationFn: async (taskId: string) => {
-      return invokeEdge<unknown>("agent-execute", {
+      return invokeAi<unknown>("agent-execute", {
+        scope: "agent",
+        context: { source: "useAgentTasks.executeTask", mode: "task" },
         body: { agent_id: agentId, task_id: taskId },
-        context: "useAgentTasks.executeTask",
       });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
