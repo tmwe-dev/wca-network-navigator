@@ -2,6 +2,7 @@
  * AgentAvatarCard — Header card a sinistra: avatar grande + identità + runtime meta.
  */
 import * as Icons from "lucide-react";
+import { resolveLucideIcon } from "@/lib/lucideIcon";
 import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ const COLOR_CLASSES: Record<AgentRegistryEntry["avatarColor"], string> = {
 };
 
 export function AgentAvatarCard({ agent }: { agent: AgentRegistryEntry }) {
-  const Ico = (Icons as unknown as Record<string, Icons.LucideIcon>)[agent.avatarIcon] ?? Icons.Bot;
+  const Ico = resolveLucideIcon(agent.avatarIcon);
   return (
     <div className="bg-card flex flex-col items-center gap-3 rounded-lg border p-4 text-center">
       <div className={cn("flex h-20 w-20 items-center justify-center rounded-full", COLOR_CLASSES[agent.avatarColor])}>

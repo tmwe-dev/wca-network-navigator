@@ -8,10 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 export function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.telemetry.aiRequests(sinceIso),
-    queryFn: async () => {
-      const data = await findAiRequestLogsSince(sinceIso, 500);
-      return data as unknown as AIRequestLogRow[];
-    },
+    queryFn: () => findAiRequestLogsSince(sinceIso, 500),
     refetchInterval: 30_000,
   });
 
