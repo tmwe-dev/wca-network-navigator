@@ -41,7 +41,7 @@ describe("guardrail — useRADashboard non deve reintrodurre bypass", () => {
   it("hook consuma solo la DAL", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("src/hooks/useRADashboard.ts", "utf8");
-    expect(src).not.toMatch(/untypedFrom\(/);
+    expect(src).not.toMatch(/tFrom\(/);
     expect(src).not.toMatch(/supabase\.from\(/);
     expect(src).not.toMatch(/supabase\.rpc\(/);
     expect(src).toMatch(/fetchRaDashboardStats/);

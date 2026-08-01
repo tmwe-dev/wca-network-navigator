@@ -61,7 +61,7 @@ function chain(_terminal: string, resolvedValue: any) {
   const methods = ["select", "insert", "update", "delete", "eq", "in", "or", "order", "single", "maybeSingle", "limit"];
    
   const obj: Record<string, any> = {};
-  // Make it thenable so `await untypedFrom("x").delete().eq().eq()` resolves
+  // Make it thenable so `await tFrom("x").delete().eq().eq()` resolves
   obj.then = (resolve: (v: any) => void) => Promise.resolve(resolvedValue).then(resolve);
   for (const m of methods) {
     obj[m] = vi.fn().mockReturnValue(obj);
