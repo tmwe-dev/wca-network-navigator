@@ -2,14 +2,15 @@
  * IO Queries: Agents — facciata Result-based sul DAL canonico `src/data/agents`.
  * Nessuna query Supabase diretta: qui si applicano solo mapping e semantica Result.
  */
-import { findAgents, getAgentById, type AgentRow as DalAgentRow } from "@/data/agents";
+import { findAgents, getAgentById, type Agent as DalAgent } from "@/data/agents";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type Agent } from "../../../core/domain/entities";
 import { mapAgentRow } from "../../../core/mappers/agent-mapper";
 import type { PostgrestError } from "@supabase/supabase-js";
 
-export type AgentRow = DalAgentRow;
+/** Riga agente nella forma normalizzata dal DAL (stats/tools/KB già tipizzati). */
+export type AgentRow = DalAgent;
 
 export async function fetchAgents(): Promise<Result<Agent[], AppError>> {
   try {
