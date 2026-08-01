@@ -5,27 +5,27 @@
  * doppio cast cieco: qui il tipo è ristretto SOLO dopo un controllo runtime
  * reale, quindi un valore non-oggetto non entra mai nel dominio come record.
  */
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null) return false;
+  if (Array.isArray(value)) return false;
+  // Preserva la semantica dei wrapper non-JSON: Date/Map/Set non sono record.
+  if (value instanceof Date || value instanceof Map || value instanceof Set) return false;
+  return true;
+}
+
 export function toRecord(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return isPlainRecord(value) ? value : {};
 }
 
 /** Variante che preserva l'assenza di valore (null/undefined -> null). */
 export function toRecordOrNull(value: unknown): Record<string, unknown> | null {
-  if (value === null || value === undefined) return null;
-  return typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
+  return isPlainRecord(value) ? value : null;
 }
 
 /** Lista di record: gli elementi non-oggetto vengono scartati (fail closed). */
 export function toRecords(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) return [];
-  return value.filter(
-    (v): v is Record<string, unknown> =>
-      typeof v === "object" && v !== null && !Array.isArray(v),
-  );
+  return value.filter(isPlainRecord);
 }
 
 /** `window` come record generico, per accessi a proprietà iniettate a runtime. */
