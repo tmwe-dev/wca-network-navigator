@@ -15,6 +15,7 @@ import { useContactsPaginated } from "@/hooks/useContactsPaginated";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { deriveCountryCode } from "./countryHints";
 import type {
+import { toRecord } from "@/lib/records";
   CompanyEntity,
   ContactEntity,
 } from "@/v2/ui/molecules/CompanyCardList";
@@ -50,7 +51,7 @@ function normalizeCompanyKey(name: string | null | undefined, email: string | nu
 }
 
 function toContactEntity(c: RawContact, companyId: string): ContactEntity {
-  const row = c as unknown as Record<string, unknown>;
+  const row = toRecord(c);
   const inHolding =
     row.in_holding_pattern === true || row.lead_status === "holding";
   return {

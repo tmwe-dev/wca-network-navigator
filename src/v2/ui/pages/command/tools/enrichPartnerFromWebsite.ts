@@ -2,6 +2,7 @@ import { fetchPartnerById } from "@/v2/io/supabase/queries/partners";
 import { updatePartner } from "@/v2/io/supabase/mutations/partners";
 import { invokeEdgeRaw } from "@/v2/io/edge/client";
 import type { Tool, ToolResult } from "./types";
+import { toRecord } from "@/lib/records";
 
 interface ScrapePayload {
   emails: string[];
@@ -53,7 +54,7 @@ export const enrichPartnerFromWebsiteTool: Tool = {
     if (pRes._tag === "Err")
       throw new Error(pRes.error.message ?? "Partner non trovato");
     const partner = pRes.value;
-    const partnerRec = partner as unknown as Record<string, unknown>;
+    const partnerRec = toRecord(partner);
     const website = partnerRec.website as string | undefined;
     if (!website)
       throw new Error("Partner senza sito web — impossibile fare scraping");

@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
 import { queryKeys } from "@/lib/queryKeys";
+import { toRecord } from "@/lib/records";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
@@ -167,7 +168,7 @@ export function ImportPage({ activeView }: { activeView?: "partners" | "bca" }) 
   // Use countries from global filters
   const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
   const activeCountryNames = useMemo(() => {
-    const _WCA = (window as unknown as Record<string, unknown>).__WCA_COUNTRIES;
+    const _WCA = (toRecord(window)).__WCA_COUNTRIES;
     return activeCountryCodes.map(code => {
       const found = WCA_COUNTRIES.find((c) => c.code === code);
       return found?.name || code;

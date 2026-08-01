@@ -15,6 +15,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import type { CompanyEntity, ContactEntity } from "@/v2/ui/molecules/CompanyCardList";
 import { getPartnerDisplayCity, type PartnerLike } from "@/lib/partnerUtils";
+import { toRecord } from "@/lib/records";
 
 function yearsSince(dateIso: string | null | undefined): number | undefined {
   if (!dateIso) return undefined;
@@ -29,7 +30,7 @@ function mapContacts(p: PartnerWithRelations): ContactEntity[] {
   const list = p.partner_contacts ?? [];
   const partnerInHolding = p.lead_status === "holding";
   return list.map((c) => {
-    const row = c as unknown as Record<string, unknown>;
+    const row = toRecord(c);
     const contactInHolding =
       row.in_holding_pattern === true || partnerInHolding;
     return {
@@ -58,7 +59,7 @@ function mapPartner(p: PartnerWithRelations): CompanyEntity {
   const ratingRaw = (p as unknown as { rating?: number | null }).rating ?? null;
   const score =
     ratingRaw != null ? Math.max(0, Math.min(100, Math.round(ratingRaw * 20))) : null;
-  const pAny = p as unknown as Record<string, unknown>;
+  const pAny = toRecord(p);
   const website = (pAny.website as string | null | undefined) ?? null;
   const services = Array.isArray(pAny.partner_services)
     ? (pAny.partner_services as Array<{ service_category?: string }>).map((s) => s.service_category || "").filter(Boolean)

@@ -4,6 +4,7 @@ import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries,
 import { getBlacklistedPartnerIds, getBlacklistedCompanyNames, findBlacklistSyncLogs, getBlacklistStats, findBlacklistEntriesForPartner } from "@/data/blacklist";
 import { findPartnersForBlacklistMatch } from "@/data/partners";
 import { queryKeys } from "@/lib/queryKeys";
+import { toRecords } from "@/lib/records";
 
 type BlacklistEntryRow = Database["public"]["Tables"]["blacklist_entries"]["Row"];
 type BlacklistEntryInsert = Database["public"]["Tables"]["blacklist_entries"]["Insert"];
@@ -74,7 +75,7 @@ export function useImportBlacklist() {
       }
 
       // Match with partners
-      const allEntries = await findAllBlacklistEntries() as unknown as Record<string, unknown>[];
+      const allEntries = await toRecords(findAllBlacklistEntries());
       const partners = await findPartnersForBlacklistMatch();
 
       let matchCount = 0;

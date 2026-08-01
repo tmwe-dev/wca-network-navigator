@@ -32,7 +32,7 @@ export function buildSelectWherePredicate(
   if (typeof field !== "string" || field.length === 0) return null;
   const key = field;
   return (c: CockpitContact) => {
-    const fieldVal = (c as unknown as Record<string, unknown>)[key];
+    const fieldVal = (toRecord(c))[key];
     if (operator === ">=") return (fieldVal as number) >= (value as number);
     if (operator === "==") return fieldVal === value;
     if (operator === "includes" && Array.isArray(fieldVal)) return fieldVal.includes(value as string);
@@ -47,6 +47,7 @@ import type { AssignmentInfo } from "@/types/cockpit";
 import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/types/cockpit";
 import { queryKeys } from "@/lib/queryKeys";
 import { persistLinkedInProfileForCompany } from "@/data/partners";
+import { toRecord } from "@/lib/records";
 
 export function useCockpitLogic() {
   const [viewMode, setViewMode] = useState<ViewMode>("card");

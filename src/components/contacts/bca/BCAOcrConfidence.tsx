@@ -9,6 +9,7 @@ import { CheckCircle2, Pencil, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUpdateBusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { toast } from "@/hooks/use-toast";
+import { toRecord } from "@/lib/records";
 
 const OCR_FIELDS = [
   { key: "company_name", label: "Azienda" },
@@ -37,7 +38,7 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
   const [editing, setEditing] = useState<OcrFieldKey | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const cardRec = card as unknown as Record<string, unknown>;
+  const cardRec = toRecord(card);
   const ocrConf = cardRec.ocr_confidence as Record<string, number> | null;
   const manuallyCorrected = cardRec.manually_corrected as boolean | null;
 

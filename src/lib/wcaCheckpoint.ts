@@ -1,4 +1,5 @@
 import { createLogger } from "@/lib/log";
+import { toRecord } from "@/lib/records";
 
 const log = createLogger("wcaCheckpoint");
 /**
@@ -19,7 +20,7 @@ interface CheckpointState {
 }
 
 function getState(): CheckpointState {
-  const win = window as unknown as Record<string, unknown>;
+  const win = toRecord(window);
   if (!win[CHECKPOINT_KEY]) {
     win[CHECKPOINT_KEY] = { lastRequestTs: 0 };
   }

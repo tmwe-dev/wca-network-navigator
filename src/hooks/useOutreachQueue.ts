@@ -7,6 +7,7 @@ import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
 import { findPendingOutreachItems, updateOutreachItem, getOutreachItemField } from "@/data/outreachQueue";
 import { insertPendingAction } from "@/data/aiPendingActions";
+import { toRecord } from "@/lib/records";
 
 const log = createLogger("useOutreachQueue");
 
@@ -51,7 +52,7 @@ export function useOutreachQueue() {
   const incrementAttempts = async (id: string) => {
     const data = await getOutreachItemField(id, "attempts");
     if (data) {
-      await updateOutreachItem(id, { attempts: ((data as unknown as Record<string, unknown>).attempts as number || 0) + 1 });
+      await updateOutreachItem(id, { attempts: ((toRecord(data)).attempts as number || 0) + 1 });
     }
   };
 

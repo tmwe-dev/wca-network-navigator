@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { findCampaignQueueItems, insertCampaignQueueBatch, updateEmailDraft, getEmailDraftField } from "@/data/emailCampaigns";
 import { queryKeys } from "@/lib/queryKeys";
+import { toRecord } from "@/lib/records";
 
 const log = createLogger("useEmailCampaignQueue");
 
@@ -92,7 +93,7 @@ export function useProcessQueue() {
         });
         if (data?.completed) { completed = true; toast.success(`Campagna completata: ${data.sent} inviate, ${data.failed} fallite`); }
         const draft = await getEmailDraftField(draftId, "queue_status");
-        if ((draft as unknown as Record<string, unknown>)?.queue_status === "paused" || (draft as unknown as Record<string, unknown>)?.queue_status === "cancelled") break;
+        if ((toRecord(draft))?.queue_status === "paused" || (toRecord(draft))?.queue_status === "cancelled") break;
         if (!completed) await new Promise(r => setTimeout(r, 2000));
       } catch (err) {
         log.error("queue processing failed", { message: err instanceof Error ? err.message : String(err) });

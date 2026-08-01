@@ -14,6 +14,7 @@ import { invokeEdgeRaw } from "@/v2/io/edge/client";
 import { fetchPartnerById } from "@/v2/io/supabase/queries/partners";
 import { getLastQueryResultContext } from "../lib/lastQueryResultContext";
 import type { Tool, ToolResult } from "./types";
+import { toRecord } from "@/lib/records";
 
 const MATCH = /\b(arricchisci|arricchimento|enrich)\b.*\b(dati|partner|sito|siti|web)\b|\bdati\s+mancanti\b|\barricchisci\s+(?:i\s+)?(?:dati|siti)\b/i;
 
@@ -79,7 +80,7 @@ export const batchEnrichPartnersTool: Tool = {
         out.details.push({ id, name: id.slice(0, 8), outcome: "failed", reason: "partner non trovato" });
         continue;
       }
-      const partner = pRes.value as unknown as Record<string, unknown>;
+      const partner = toRecord(pRes.value);
       const name = (partner.company_name as string | undefined)
         ?? (partner.company_alias as string | undefined)
         ?? id.slice(0, 8);

@@ -4,6 +4,7 @@ import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA, ROUTE_EMAIL_COM
 import { useGlobalFilters, type CockpitChannelFilter, type CockpitQualityFilter, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { FLAG } from "./constants";
+import { toRecord } from "@/lib/records";
 
 export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const g = useGlobalFilters();
@@ -50,7 +51,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (!isCockpit || !contacts.length) return [];
     const counts: Record<string, number> = {};
     contacts.forEach(c => {
-      const cc = ((c as unknown as Record<string, unknown>).country as string)?.toUpperCase() || "??";
+      const cc = ((toRecord(c)).country as string)?.toUpperCase() || "??";
       counts[cc] = (counts[cc] || 0) + 1;
     });
     return Object.entries(counts)

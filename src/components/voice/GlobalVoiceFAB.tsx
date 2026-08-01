@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "./VoiceLanguageSelector";
 import { upsertUserAppSetting } from "@/data/uiShellQueries";
+import { toRecord } from "@/lib/records";
 
 type VoiceState = "idle" | "listening" | "speaking";
 
@@ -35,7 +36,7 @@ interface SpeechRecognitionInstance extends EventTarget {
 }
 
 function getSpeechRecognition(): (new () => SpeechRecognitionInstance) | null {
-  const w = window as unknown as Record<string, unknown>;
+  const w = toRecord(window);
   return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as
     | (new () => SpeechRecognitionInstance)
     | null;

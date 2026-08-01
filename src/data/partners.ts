@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
 import { isRecord } from "@/lib/jsonGuards";
+import { toRecords } from "@/lib/records";
 
 type PartnerRow = Database["public"]["Tables"]["partners"]["Row"];
 type PartnerInsert = Database["public"]["Tables"]["partners"]["Insert"];
@@ -437,7 +438,7 @@ export async function getPartnersByIds(ids: string[], select = "id, company_name
       .select(select)
       .in("id", batch);
     if (error) throw error;
-    if (data) results.push(...(data as unknown as Array<Record<string, unknown>>));
+    if (data) results.push(...(toRecords(data)));
   }
   return results;
 }
@@ -487,7 +488,7 @@ export async function getPartnersByIdsFiltered(ids: string[], select: string, fi
     }
     const { data, error } = await q;
     if (error) throw error;
-    if (data) results.push(...(data as unknown as Array<Record<string, unknown>>));
+    if (data) results.push(...(toRecords(data)));
   }
   return results;
 }
@@ -511,7 +512,7 @@ export async function getPartnersByCountries(countryCodes: string[], select: str
   if (options?.noProfile) q = q.is("raw_profile_html", null);
   const { data, error } = await q.order("company_name");
   if (error) throw error;
-  return (data ?? []) as unknown as Array<Record<string, unknown>>;
+  return toRecords((data ?? []));
 }
 
 /** Delete partners and all related data by IDs */

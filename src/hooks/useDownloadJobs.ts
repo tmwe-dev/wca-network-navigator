@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
 import {
+import { toRecord } from "@/lib/records";
   findDownloadJobs, updateDownloadJob, deleteJobsByStatus, findJobByCountryAndNetwork,
   insertJobItems, insertJobEvent, findDeadPartnerIds, createDownloadJob,
   invalidateDownloadJobs, updateJobItemsByJobIdAndStatus,
@@ -19,7 +20,7 @@ export type { DownloadJob };
 const RT_KEY = '__dlJobsRealtimeState__';
 interface RtState { refCount: number; channel: ReturnType<typeof supabase.channel> | null; queryClient: ReturnType<typeof useQueryClient> | null; }
 function getRtState(): RtState {
-  const w = window as unknown as Record<string, unknown>;
+  const w = toRecord(window);
   if (!w[RT_KEY]) w[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
   return w[RT_KEY] as RtState;
 }

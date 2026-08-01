@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 import { createLogger } from "@/lib/log";
+import { toRecordOrNull } from "@/lib/records";
 
 const log = createLogger("PartnerAIBar");
 
@@ -48,7 +49,7 @@ export function PartnerAIBar({ viewContext }: Props) {
           source: "PartnerAIBar",
           route: "/v2/partners",
           mode: "tool-decision",
-          extra: viewContext as unknown as Record<string, unknown> | undefined,
+          extra: toRecordOrNull(viewContext) ?? undefined,
         },
       });
       if (data?.error) {

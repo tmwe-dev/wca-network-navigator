@@ -3,6 +3,7 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { ThemeCtx } from "@/components/download/theme";
 import { Terminal } from "lucide-react";
 import {
+import { toRecord } from "@/lib/records";
   Dialog,
   DialogContent,
   DialogHeader,
@@ -40,7 +41,7 @@ function useTerminalData() {
     : null;
   const targetJob = activeJob || fallbackJob;
   const entries: LogEntry[] = targetJob
-    ? ((targetJob as unknown as Record<string, unknown>).terminal_log as LogEntry[] || [])
+    ? ((toRecord(targetJob)).terminal_log as LogEntry[] || [])
     : [];
   return { activeJob, entries };
 }
