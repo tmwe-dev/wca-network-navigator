@@ -1,3 +1,4 @@
+import { toRecordOrNull } from "@/lib/records";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -67,9 +68,10 @@ function ContactUnifiedActions({ contact: c }: { contact: ContactDetail }) {
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = c.mobile || c.phone;
   const phone = c.phone || c.mobile;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ed = c.enrichment_data as Record<string, any> | null;
-  const linkedinUrl: string | undefined = ed?.linkedin_url || ed?.linkedin_profile_url;
+  const ed = toRecordOrNull(c.enrichment_data);
+  const linkedinCandidate = ed?.linkedin_url ?? ed?.linkedin_profile_url;
+  const linkedinUrl: string | undefined =
+    typeof linkedinCandidate === "string" && linkedinCandidate ? linkedinCandidate : undefined;
   const partnerId = (c as { wca_partner_id?: string }).wca_partner_id;
 
   const onEmail = useCallback(() => {

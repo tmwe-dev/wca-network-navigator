@@ -2,7 +2,7 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { RALeadStatus } from "@/types/ra";
+import type { RALeadStatus, RAProspect } from "@/types/ra";
 
 const LEAD_STATUS_LABELS: Record<RALeadStatus, { label: string; color: string }> = {
   new: { label: "Nuovo", color: "bg-muted text-muted-foreground border-border" },
@@ -17,8 +17,7 @@ const LEAD_STATUS_LABELS: Record<RALeadStatus, { label: string; color: string }>
 };
 
 interface RACompanyHeaderProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  prospect: Record<string, any>;
+  prospect: RAProspect;
 }
 
 export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {

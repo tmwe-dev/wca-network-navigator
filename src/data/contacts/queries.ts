@@ -167,6 +167,54 @@ export async function findContacts(filters: ContactFilters = {}) {
   return { items: data ?? [], totalCount: count ?? 0, page, pageSize };
 }
 
+/** Finestra di contatti (limit/offset) per consumatori Result-based v2. */
+export interface ContactWindowFilters {
+  importLogId?: string;
+  leadStatus?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function findContactsWindow(
+  filters: ContactWindowFilters = {},
+): Promise<ImportedContactRow[]> {
+  let q = supabase.from("imported_contacts").select("*");
+  if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
+  if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
+  if (filters.search) {
+    const term = sanitizeSearchTerm(filters.search);
+    q = q.or(`name.ilike.%${term}%,company_name.ilike.%${term}%`);
+  }
+  const limit = filters.limit ?? 100;
+  const offset = filters.offset ?? 0;
+  const { data, error } = await q.range(offset, offset + limit - 1);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Conteggio esatto dei contatti importati. */
+export async function countImportedContacts(): Promise<number> {
+  const { count, error } = await supabase
+    .from("imported_contacts")
+    .select("*", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** Inserisce un singolo contatto importato e restituisce la riga creata. */
+export async function createImportedContact(
+  input: ImportedContactInsert,
+): Promise<ImportedContactRow> {
+  const { data, error } = await supabase
+    .from("imported_contacts")
+    .insert(input)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function getContactById(id: string) {
   const { data, error } = await supabase
     .from("imported_contacts")

@@ -1,3 +1,4 @@
+import { toRecordOrNull } from "@/lib/records";
 /**
  * SmartInboxView — Split-view email classification browser
  */
@@ -171,8 +172,9 @@ export function SmartInboxView() {
               {classifications.map((c) => {
                 const cat = CATEGORIES[c.category] ?? CATEGORIES.uncategorized;
                 const CatIcon = cat.icon;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const partnerName = (c as Record<string, any>).partners?.company_name;
+                const joined = toRecordOrNull((c as { partners?: unknown }).partners);
+                const rawName = joined?.company_name;
+                const partnerName = typeof rawName === "string" ? rawName : undefined;
                 const isSelected = selectedId === c.id;
 
                 return (

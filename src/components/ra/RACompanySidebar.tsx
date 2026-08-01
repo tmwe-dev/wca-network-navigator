@@ -1,3 +1,4 @@
+import type { RAProspect } from "@/types/ra";
 import { useState } from "react";
 import { Mail, Phone, Briefcase, ChevronDown, Copy, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,7 @@ function formatDate(dateString: string) {
 }
 
 interface RACompanySidebarProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  prospect: Record<string, any>;
+  prospect: RAProspect;
   contacts: RAContact[];
   interactions: RAInteraction[];
   onLeadStatusChange: (status: RALeadStatus) => void;

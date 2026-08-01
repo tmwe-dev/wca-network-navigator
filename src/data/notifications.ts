@@ -3,6 +3,7 @@
  * Single source of truth for all notifications table queries.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("data/notifications");
@@ -25,8 +26,7 @@ export interface Notification {
   action_url?: string;
   entity_type?: EntityType;
   entity_id?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -46,8 +46,25 @@ export interface CreateNotificationInput {
   action_url?: string;
   entity_type?: EntityType;
   entity_id?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+/** Metadata come Json: i valori non serializzabili vengono scartati. */
+function toJsonRecord(meta: Record<string, unknown> | undefined): Json {
+  if (!meta) return {};
+  const out: Record<string, Json> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v === null || ["string", "number", "boolean"].includes(typeof v)) {
+      out[k] = v as Json;
+      continue;
+    }
+    try {
+      out[k] = JSON.parse(JSON.stringify(v)) as Json;
+    } catch {
+      // valore non serializzabile: scartato (fail closed)
+    }
+  }
+  return out;
 }
 
 // ─── Queries ────────────────────────────────────────────
@@ -166,7 +183,7 @@ export async function createNotification(
         action_url: input.action_url,
         entity_type: input.entity_type,
         entity_id: input.entity_id,
-        metadata: input.metadata || {},
+        metadata: toJsonRecord(input.metadata),
       },
     ])
     .select()

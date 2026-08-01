@@ -1,3 +1,4 @@
+import type { RAProspect } from "@/types/ra";
 import { TrendingUp, DollarSign, Users, Star } from "lucide-react";
 
 function formatCurrency(n: number | null) {
@@ -8,8 +9,7 @@ function formatCurrency(n: number | null) {
 }
 
 interface RACompanyKPIProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  prospect: Record<string, any>;
+  prospect: RAProspect;
 }
 
 export function RACompanyKPI({ prospect }: RACompanyKPIProps) {

@@ -15,6 +15,10 @@ export type {
 
 export {
   findContacts,
+  findContactsWindow,
+  type ContactWindowFilters,
+  countImportedContacts,
+  createImportedContact,
   getContactById,
   getContactsByIds,
   getContactLookupsByIds,

@@ -134,8 +134,15 @@ function AgentCard({ agent }: { agent: AgentWithTasks }) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: AgentTaskRow[]; stats: Record<string, any> }) {
+/** Contatori aggregati dei task mostrati nella tab globale. */
+interface AgentTaskStats {
+  total: number;
+  pending: number;
+  running: number;
+  completed: number;
+}
+
+function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: AgentTaskRow[]; stats: AgentTaskStats }) {
   const activeTasks = tasks.filter(t => t.status === "running" || t.status === "pending" || t.status === "proposed");
   const recentCompleted = tasks.filter(t => t.status === "completed").slice(0, 15);
   const agentMap = new Map(agents.map(a => [a.id, a.name]));

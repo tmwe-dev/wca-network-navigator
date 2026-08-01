@@ -415,8 +415,17 @@ function ActivityRow({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) {
+/** Reminder mostrato nel dettaglio giornata (join opzionale sul partner). */
+interface ReminderListItem {
+  id: string;
+  title: string | null;
+  partner_id: string | null;
+  due_date?: string | null;
+  status?: string | null;
+  partners?: { country_code?: string | null; company_name?: string | null } | null;
+}
+
+function ReminderList({ reminders }: { reminders: ReminderListItem[] }) {
   if (reminders.length === 0) return null;
   return (
     <section className="pt-2">
@@ -434,7 +443,7 @@ function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) 
           >
             <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
             {r.partners && (
-              <span className="text-sm shrink-0">{getCountryFlag(r.partners.country_code)}</span>
+              <span className="text-sm shrink-0">{getCountryFlag(r.partners.country_code ?? "")}</span>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{r.title}</p>
