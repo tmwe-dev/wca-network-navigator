@@ -11,10 +11,6 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (...a: any[]) => mockFrom(...a),
-}));
-
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
 }));
@@ -339,85 +335,134 @@ describe("RBAC Functions", () => {
   });
 
   // ─── User Roles ───────────────────────────────────────
+  //
+  // Schema live: `user_roles(user_id, role app_role)` — il ruolo è un NOME,
+  // non una FK. Il catalogo `roles` viene interrogato per nome.
+
+  /** Dispatch dei chain mock per nome tabella. */
+  function byTable(map: Record<string, any>) {
+    mockFrom.mockImplementation((table: string) => {
+      const c = map[table];
+      if (!c) throw new Error(`Unexpected table queried: ${table}`);
+      return c;
+    });
+  }
 
   describe("fetchUserRoles", () => {
-    it("should fetch roles for current user when no userId provided", async () => {
+    it("risolve i ruoli dell'utente corrente per nome sul catalogo roles", async () => {
       mockSession("user123");
-      const role = { id: "1", name: "Admin", description: "Admin", is_system: true };
-      const c = chain("eq", { data: [{ role_id: "1", roles: role }], error: null });
-      mockFrom.mockReturnValue(c);
+      const catalogRow = { id: "1", name: "admin", description: "Admin", is_system: true };
+      byTable({
+        user_roles: chain("eq", { data: [{ role: "admin" }], error: null }),
+        roles: chain("in", { data: [catalogRow], error: null }),
+      });
 
       const result = await fetchUserRoles();
 
-      // Il mapper normalizza la riga: aggiunge `module` e `created_at` espliciti.
-      expect(result).toEqual([{ ...role, module: null, created_at: undefined }]);
+      expect(result).toEqual([{ ...catalogRow, created_at: undefined }]);
     });
 
-    it("should fetch roles for specific user when userId provided", async () => {
-      const role = { id: "2", name: "User", description: "User", is_system: false };
-      const c = chain("eq", { data: [{ role_id: "2", roles: role }], error: null });
-      mockFrom.mockReturnValue(c);
+    it("accetta un userId esplicito", async () => {
+      const catalogRow = { id: "2", name: "user", description: "User", is_system: false };
+      byTable({
+        user_roles: chain("eq", { data: [{ role: "user" }], error: null }),
+        roles: chain("in", { data: [catalogRow], error: null }),
+      });
 
       const result = await fetchUserRoles("user456");
-
-      expect(result).toEqual([{ ...role, module: null, created_at: undefined }]);
+      expect(result).toEqual([{ ...catalogRow, created_at: undefined }]);
     });
 
-    it("should return empty array when user not authenticated", async () => {
-      mockSession(null);
+    it("restituisce [] senza interrogare il catalogo quando l'utente non ha ruoli", async () => {
+      const rolesChain = chain("in", { data: [], error: null });
+      byTable({
+        user_roles: chain("eq", { data: [], error: null }),
+        roles: rolesChain,
+      });
 
+      const result = await fetchUserRoles("user456");
+      expect(result).toEqual([]);
+      expect(rolesChain.select).not.toHaveBeenCalled();
+    });
+
+    it("restituisce [] quando l'utente non è autenticato", async () => {
+      mockSession(null);
       const result = await fetchUserRoles();
       expect(result).toEqual([]);
     });
 
-    it("should throw error on database error", async () => {
-      const c = chain("eq", { data: null, error: new Error("Query failed") });
-      mockFrom.mockReturnValue(c);
-
+    it("propaga l'errore del database", async () => {
+      byTable({ user_roles: chain("eq", { data: null, error: new Error("Query failed") }) });
       await expect(fetchUserRoles("user123")).rejects.toThrow("Query failed");
     });
   });
 
   describe("assignUserRole", () => {
-    it("should assign role to user", async () => {
-      mockSession("currentUser1");
-      const c = chain("insert", { data: null, error: null });
-      mockFrom.mockReturnValue(c);
+    it("risolve l'id del catalogo nel nome enum e inserisce senza assigned_by", async () => {
+      const userRoles = chain("insert", { data: null, error: null });
+      byTable({
+        roles: chain("maybeSingle", { data: { name: "admin" }, error: null }),
+        user_roles: userRoles,
+      });
 
       await expect(assignUserRole("user456", "role1")).resolves.not.toThrow();
-      expect(c.insert).toHaveBeenCalledWith({ user_id: "user456", role_id: "role1", assigned_by: "currentUser1" });
+      expect(userRoles.insert).toHaveBeenCalledWith({ user_id: "user456", role: "admin" });
     });
 
-    it("should ignore duplicate constraint error", async () => {
-      mockSession("currentUser1");
-      const c = chain("insert", { data: null, error: { code: "23505" } });
-      mockFrom.mockReturnValue(c);
+    it("ignora l'errore di vincolo di unicità", async () => {
+      byTable({
+        roles: chain("maybeSingle", { data: { name: "user" }, error: null }),
+        user_roles: chain("insert", { data: null, error: { code: "23505" } }),
+      });
 
       await expect(assignUserRole("user456", "role1")).resolves.not.toThrow();
     });
 
-    it("should throw error for non-duplicate errors", async () => {
-      mockSession("currentUser1");
+    it("propaga gli errori non di duplicazione", async () => {
       const dbError = new Error("Insert failed");
       Object.assign(dbError, { code: "22P02" });
-      const c = chain("insert", { data: null, error: dbError });
-      mockFrom.mockReturnValue(c);
+      byTable({
+        roles: chain("maybeSingle", { data: { name: "user" }, error: null }),
+        user_roles: chain("insert", { data: null, error: dbError }),
+      });
 
       await expect(assignUserRole("user456", "role1")).rejects.toThrow("Insert failed");
+    });
+
+    it("fallisce in modo chiuso per un ruolo non rappresentabile nell'enum app_role", async () => {
+      const userRoles = chain("insert", { data: null, error: null });
+      byTable({
+        roles: chain("maybeSingle", { data: { name: "manager" }, error: null }),
+        user_roles: userRoles,
+      });
+
+      await expect(assignUserRole("user456", "role1")).rejects.toThrow(/non è assegnabile/);
+      expect(userRoles.insert).not.toHaveBeenCalled();
+    });
+
+    it("fallisce se il ruolo non esiste nel catalogo", async () => {
+      byTable({ roles: chain("maybeSingle", { data: null, error: null }) });
+      await expect(assignUserRole("user456", "ghost")).rejects.toThrow(/inesistente/);
     });
   });
 
   describe("removeUserRole", () => {
-    it("should remove role from user", async () => {
-      const c = chain("eq", { error: null });
-      mockFrom.mockReturnValue(c);
+    it("cancella per nome del ruolo", async () => {
+      const userRoles = chain("eq", { error: null });
+      byTable({
+        roles: chain("maybeSingle", { data: { name: "moderator" }, error: null }),
+        user_roles: userRoles,
+      });
 
       await expect(removeUserRole("user123", "role1")).resolves.not.toThrow();
+      expect(userRoles.eq).toHaveBeenCalledWith("role", "moderator");
     });
 
-    it("should throw error on database error", async () => {
-      const c = chain("eq", { error: new Error("Delete failed") });
-      mockFrom.mockReturnValue(c);
+    it("propaga l'errore del database", async () => {
+      byTable({
+        roles: chain("maybeSingle", { data: { name: "admin" }, error: null }),
+        user_roles: chain("eq", { error: new Error("Delete failed") }),
+      });
 
       await expect(removeUserRole("user123", "role1")).rejects.toThrow("Delete failed");
     });
@@ -426,224 +471,126 @@ describe("RBAC Functions", () => {
   // ─── checkUserPermission ──────────────────────────────
 
   describe("checkUserPermission", () => {
-    it("should return true when user is admin", async () => {
+    it("concede tutto agli admin senza consultare il catalogo", async () => {
       mockSession("user123");
-      // First call: admin check -> maybeSingle returns adminRow
-      const cAdmin = chain("maybeSingle", { data: { role: "admin" }, error: null });
-      mockFrom.mockReturnValueOnce(cAdmin);
+      const rolesChain = chain("in", { data: [], error: null });
+      byTable({
+        user_roles: chain("eq", { data: [{ role: "admin" }], error: null }),
+        roles: rolesChain,
+      });
 
-      const result = await checkUserPermission("create_user");
-      expect(result).toBe(true);
+      expect(await checkUserPermission("create_user")).toBe(true);
+      expect(rolesChain.select).not.toHaveBeenCalled();
     });
 
-    it("should return true when user has permission via role", async () => {
+    it("concede il permesso quando un ruolo dell'utente lo possiede", async () => {
       mockSession("user123");
+      byTable({
+        user_roles: chain("eq", { data: [{ role: "user" }], error: null }),
+        roles: chain("in", { data: [{ id: "role1" }], error: null }),
+        permissions: chain("maybeSingle", { data: { id: "perm1" }, error: null }),
+        role_permissions: chain("limit", { data: [{ id: "rp1" }], error: null }),
+      });
 
-      // 1. Admin check -> no admin row
-      const cAdmin = chain("maybeSingle", { data: null, error: null });
-      // 2. User roles -> role_id list
-      const cUserRoles = chain("eq", { data: [{ role_id: "role1" }], error: null });
-      // 3. Permission lookup -> permission id
-      const cPerm = chain("maybeSingle", { data: { id: "perm1" }, error: null });
-      // 4. Role permissions check -> found
-      const cRolePerms = chain("limit", { data: [{ id: "rp1" }], error: null });
-
-      mockFrom
-        .mockReturnValueOnce(cAdmin)
-        .mockReturnValueOnce(cUserRoles)
-        .mockReturnValueOnce(cPerm)
-        .mockReturnValueOnce(cRolePerms);
-
-      const result = await checkUserPermission("create_user");
-      expect(result).toBe(true);
+      expect(await checkUserPermission("create_user")).toBe(true);
     });
 
-    it("should return false when user does not have permission", async () => {
+    it("nega il permesso quando nessun ruolo lo possiede", async () => {
       mockSession("user123");
+      byTable({
+        user_roles: chain("eq", { data: [{ role: "user" }], error: null }),
+        roles: chain("in", { data: [{ id: "role1" }], error: null }),
+        permissions: chain("maybeSingle", { data: { id: "perm1" }, error: null }),
+        role_permissions: chain("limit", { data: [], error: null }),
+      });
 
-      const cAdmin = chain("maybeSingle", { data: null, error: null });
-      const cUserRoles = chain("eq", { data: [{ role_id: "role1" }], error: null });
-      const cPerm = chain("maybeSingle", { data: { id: "perm1" }, error: null });
-      const cRolePerms = chain("limit", { data: [], error: null });
-
-      mockFrom
-        .mockReturnValueOnce(cAdmin)
-        .mockReturnValueOnce(cUserRoles)
-        .mockReturnValueOnce(cPerm)
-        .mockReturnValueOnce(cRolePerms);
-
-      const result = await checkUserPermission("delete_user");
-      expect(result).toBe(false);
+      expect(await checkUserPermission("delete_user")).toBe(false);
     });
 
-    it("should return false when user not authenticated", async () => {
+    it("nega il permesso a utenti non autenticati", async () => {
       mockSession(null);
-
-      const result = await checkUserPermission("any_permission");
-      expect(result).toBe(false);
+      expect(await checkUserPermission("any_permission")).toBe(false);
     });
 
-    it("should return false when user has no roles", async () => {
+    it("nega il permesso quando l'utente non ha ruoli", async () => {
       mockSession("user123");
-
-      const cAdmin = chain("maybeSingle", { data: null, error: null });
-      // roleError -> returns false
-      const cUserRoles = chain("eq", { data: [], error: null });
-
-      mockFrom.mockReturnValueOnce(cAdmin).mockReturnValueOnce(cUserRoles);
-
-      const result = await checkUserPermission("some_permission");
-      expect(result).toBe(false);
+      byTable({ user_roles: chain("eq", { data: [], error: null }) });
+      expect(await checkUserPermission("some_permission")).toBe(false);
     });
 
-    it("should return false when permission key not found", async () => {
+    it("fail closed: nega il permesso se la lettura dei ruoli fallisce", async () => {
       mockSession("user123");
+      byTable({ user_roles: chain("eq", { data: null, error: new Error("RLS") }) });
+      expect(await checkUserPermission("some_permission")).toBe(false);
+    });
 
-      const cAdmin = chain("maybeSingle", { data: null, error: null });
-      const cUserRoles = chain("eq", { data: [{ role_id: "role1" }], error: null });
-      const cPerm = chain("maybeSingle", { data: null, error: null });
+    it("nega il permesso se la chiave permesso non esiste", async () => {
+      mockSession("user123");
+      byTable({
+        user_roles: chain("eq", { data: [{ role: "user" }], error: null }),
+        roles: chain("in", { data: [{ id: "role1" }], error: null }),
+        permissions: chain("maybeSingle", { data: null, error: null }),
+      });
 
-      mockFrom.mockReturnValueOnce(cAdmin).mockReturnValueOnce(cUserRoles).mockReturnValueOnce(cPerm);
+      expect(await checkUserPermission("nonexistent")).toBe(false);
+    });
 
-      const result = await checkUserPermission("nonexistent");
-      expect(result).toBe(false);
+    it("nega il permesso se il nome ruolo non è presente nel catalogo", async () => {
+      mockSession("user123");
+      byTable({
+        user_roles: chain("eq", { data: [{ role: "moderator" }], error: null }),
+        roles: chain("in", { data: [], error: null }),
+      });
+
+      expect(await checkUserPermission("create_user")).toBe(false);
     });
   });
 
-  // ─── Teams (deprecated stubs) ─────────────────────────
+  // ─── Teams: feature assente dallo schema live ─────────
+  //
+  // `teams` non esiste e `team_members` non modella l'appartenenza
+  // (nessuna colonna team_id/user_id): letture vuote, mutazioni fail closed,
+  // senza emettere query che il database rifiuterebbe.
 
-  describe("fetchTeams", () => {
-    it("should return empty array (deprecated)", async () => {
-      const result = await fetchTeams();
-      expect(result).toEqual([]);
+  const TEAMS_MSG = /La feature Team non è disponibile/;
+
+  describe("Teams", () => {
+    it("fetchTeams restituisce [] senza query", async () => {
+      expect(await fetchTeams()).toEqual([]);
+      expect(mockFrom).not.toHaveBeenCalled();
+    });
+
+    it("createTeam fallisce in modo chiuso", async () => {
+      await expect(createTeam("Team")).rejects.toThrow(TEAMS_MSG);
+      expect(mockFrom).not.toHaveBeenCalled();
+    });
+
+    it("updateTeam fallisce in modo chiuso", async () => {
+      await expect(updateTeam("t1", { name: "Updated" })).rejects.toThrow(TEAMS_MSG);
+    });
+
+    it("deleteTeam fallisce in modo chiuso", async () => {
+      await expect(deleteTeam("t1")).rejects.toThrow(TEAMS_MSG);
     });
   });
 
-  describe("createTeam", () => {
-    it("should throw error (deprecated)", async () => {
-      await expect(createTeam("Team")).rejects.toThrow('Table "teams" not available in schema');
-    });
-  });
-
-  describe("updateTeam", () => {
-    it("should throw error (deprecated)", async () => {
-      await expect(updateTeam("t1", { name: "Updated" })).rejects.toThrow('Table "teams" not available in schema');
-    });
-  });
-
-  describe("deleteTeam", () => {
-    it("should throw error (deprecated)", async () => {
-      await expect(deleteTeam("t1")).rejects.toThrow('Table "teams" not available in schema');
-    });
-  });
-
-  // ─── Team Members ─────────────────────────────────────
-
-  describe("fetchTeamMembers", () => {
-    it("should fetch team members", async () => {
-      const members = [
-        { team_id: "t1", user_id: "u1", role: "owner", joined_at: "2024-01-01T00:00:00Z" },
-        { team_id: "t1", user_id: "u2", role: "member", joined_at: "2024-01-02T00:00:00Z" },
-      ];
-      const c = chain("order", { data: members, error: null });
-      mockFrom.mockReturnValue(c);
-
-      const result = await fetchTeamMembers("t1");
-
-      // Il mapper normalizza ogni riga con i campi opzionali espliciti.
-      expect(result).toEqual(
-        members.map((m) => ({
-          ...m,
-          id: undefined,
-          created_at: undefined,
-          name: undefined,
-          email: null,
-          is_active: undefined,
-        })),
-      );
-      expect(mockFrom).toHaveBeenCalledWith("team_members");
+  describe("Team Members", () => {
+    it("fetchTeamMembers restituisce [] senza query", async () => {
+      expect(await fetchTeamMembers("t1")).toEqual([]);
+      expect(mockFrom).not.toHaveBeenCalled();
     });
 
-    it("should return empty array when no members", async () => {
-      const c = chain("order", { data: null, error: null });
-      mockFrom.mockReturnValue(c);
-
-      const result = await fetchTeamMembers("t1");
-      expect(result).toEqual([]);
+    it("addTeamMember fallisce in modo chiuso", async () => {
+      await expect(addTeamMember("t1", "u1", "member")).rejects.toThrow(TEAMS_MSG);
+      expect(mockFrom).not.toHaveBeenCalled();
     });
 
-    it("should throw error on database error", async () => {
-      const c = chain("order", { data: null, error: new Error("Query failed") });
-      mockFrom.mockReturnValue(c);
-
-      await expect(fetchTeamMembers("t1")).rejects.toThrow("Query failed");
-    });
-  });
-
-  describe("addTeamMember", () => {
-    it("should add member to team", async () => {
-      const c = chain("insert", { data: null, error: null });
-      mockFrom.mockReturnValue(c);
-
-      await expect(addTeamMember("t1", "u1", "member")).resolves.not.toThrow();
-      expect(c.insert).toHaveBeenCalledWith({ team_id: "t1", user_id: "u1", role: "member" });
+    it("removeTeamMember fallisce in modo chiuso", async () => {
+      await expect(removeTeamMember("t1", "u1")).rejects.toThrow(TEAMS_MSG);
     });
 
-    it("should use default role when not specified", async () => {
-      const c = chain("insert", { data: null, error: null });
-      mockFrom.mockReturnValue(c);
-
-      await addTeamMember("t1", "u1");
-      expect(c.insert).toHaveBeenCalledWith({ team_id: "t1", user_id: "u1", role: "member" });
-    });
-
-    it("should ignore duplicate constraint error", async () => {
-      const c = chain("insert", { data: null, error: { code: "23505" } });
-      mockFrom.mockReturnValue(c);
-
-      await expect(addTeamMember("t1", "u1")).resolves.not.toThrow();
-    });
-
-    it("should throw error for non-duplicate errors", async () => {
-      const dbError = new Error("Insert failed");
-      Object.assign(dbError, { code: "22P02" });
-      const c = chain("insert", { data: null, error: dbError });
-      mockFrom.mockReturnValue(c);
-
-      await expect(addTeamMember("t1", "u1")).rejects.toThrow("Insert failed");
-    });
-  });
-
-  describe("removeTeamMember", () => {
-    it("should remove member from team", async () => {
-      const c = chain("eq", { error: null });
-      mockFrom.mockReturnValue(c);
-
-      await expect(removeTeamMember("t1", "u1")).resolves.not.toThrow();
-    });
-
-    it("should throw error on delete failure", async () => {
-      const c = chain("eq", { error: new Error("Delete failed") });
-      mockFrom.mockReturnValue(c);
-
-      await expect(removeTeamMember("t1", "u1")).rejects.toThrow("Delete failed");
-    });
-  });
-
-  describe("updateMemberRole", () => {
-    it("should update team member role", async () => {
-      const c = chain("eq", { error: null });
-      mockFrom.mockReturnValue(c);
-
-      await expect(updateMemberRole("t1", "u1", "admin")).resolves.not.toThrow();
-      expect(c.update).toHaveBeenCalledWith({ role: "admin" });
-    });
-
-    it("should throw error on update failure", async () => {
-      const c = chain("eq", { error: new Error("Update failed") });
-      mockFrom.mockReturnValue(c);
-
-      await expect(updateMemberRole("t1", "u1", "admin")).rejects.toThrow("Update failed");
+    it("updateMemberRole fallisce in modo chiuso", async () => {
+      await expect(updateMemberRole("t1", "u1", "admin")).rejects.toThrow(TEAMS_MSG);
     });
   });
 });
