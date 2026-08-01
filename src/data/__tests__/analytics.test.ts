@@ -39,6 +39,8 @@ vi.mock("@/integrations/supabase/client", () => ({
           case "activities": return mockActivitiesResult;
           case "channel_messages": return mockChannelsResult;
           case "partners": return mockPartnersResult;
+          case "deals": return mockDealsResult;
+          case "supervisor_audit_log": return mockLogsResult;
           default: return { data: null, error: null };
         }
       };
@@ -52,23 +54,6 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-vi.mock("@/lib/typedSupabase", () => ({
-  tFrom: (table: string) => {
-    const b: Record<string, any> = {};
-    b.select = vi.fn().mockReturnValue(b);
-    b.eq = vi.fn().mockReturnValue(b);
-    b.gte = vi.fn().mockReturnValue(b);
-    b.lte = vi.fn().mockReturnValue(b);
-    Object.defineProperty(b, "then", {
-      value: (resolve: any) => {
-        const result = table === "deals" ? mockDealsResult : mockLogsResult;
-        return Promise.resolve(result).then(resolve);
-      },
-      writable: true,
-    });
-    return b;
-  },
-}));
 
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
