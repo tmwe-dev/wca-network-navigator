@@ -27,13 +27,10 @@ export async function checkCache(url: string): Promise<{ markdown: string } | nu
 
 export async function persistScrape(url: string, markdown: string, level: number): Promise<void> {
   try {
-    // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
-    // `.upsert()` overload cannot be resolved even though all columns are real.
-    await untypedFrom("scrape_cache").upsert({
+    await upsertScrapeCacheEntry({
       url,
       mode: "static",
       payload: { markdown, source: "sherlock-agentic", level, captured_at: new Date().toISOString() },
-      scraped_at: new Date().toISOString(),
     });
   } catch {
     /* non-blocking */
