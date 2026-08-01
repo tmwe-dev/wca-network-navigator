@@ -297,6 +297,24 @@ interface EmailSenderGroupRow {
   funnemail_policy?: { auto_mark_read?: boolean } | null;
 }
 
+/** `funnemail_policy` è una colonna `jsonb` libera: va validata, non castata. */
+type RawEmailSenderGroupRow = Omit<EmailSenderGroupRow, "funnemail_policy"> & {
+  funnemail_policy: unknown;
+};
+
+function parseEmailSenderGroupRow(raw: RawEmailSenderGroupRow): EmailSenderGroupRow {
+  const policy = raw.funnemail_policy;
+  const autoMarkRead =
+    typeof policy === "object" && policy !== null && "auto_mark_read" in policy
+      ? (policy as { auto_mark_read?: unknown }).auto_mark_read
+      : undefined;
+  return {
+    ...raw,
+    funnemail_policy:
+      typeof autoMarkRead === "boolean" ? { auto_mark_read: autoMarkRead } : null,
+  };
+}
+
 interface EmailAddressRuleRow {
   email_address: string;
   group_name: string | null;
