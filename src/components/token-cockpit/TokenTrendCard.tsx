@@ -4,19 +4,10 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { findPromptLogTokens } from "@/data/tokenUsage";
+import { useTokenCockpitUser, useTokenTrend } from "@/hooks/useTokenCockpitData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTokenCount } from "@/lib/tokenFormat";
 import { TrendingUp, TrendingDown } from "lucide-react";
-
-interface TrendData {
-  today: number;
-  yesterday: number;
-  thisWeek: number;
-  lastWeek: number;
-}
 
 function TrendRow({
   label,
@@ -57,62 +48,8 @@ function TrendRow({
 }
 
 export function TokenTrendCard() {
-  const { data: userData } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
-      return data.user;
-    },
-  });
-
-  const { data: trendData, isLoading } = useQuery({
-    queryKey: ["tokenUsage", "trend", userData?.id],
-    queryFn: async (): Promise<TrendData> => {
-      if (!userData?.id) {
-        return { today: 0, yesterday: 0, thisWeek: 0, lastWeek: 0 };
-      }
-
-      const now = new Date();
-
-      // Today
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      // Yesterday
-      const startOfYesterday = new Date(startOfToday);
-      startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-      const endOfYesterday = new Date(startOfToday);
-
-      // This week (Monday to today)
-      const startOfThisWeek = new Date(startOfToday);
-      startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay() + 1);
-
-      // Last week (Monday to Sunday)
-      const startOfLastWeek = new Date(startOfThisWeek);
-      startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-      const endOfLastWeek = new Date(startOfLastWeek);
-      endOfLastWeek.setDate(endOfLastWeek.getDate() + 7);
-
-      const [todayRes, yesterdayRes, thisWeekRes, lastWeekRes] = await Promise.all([
-        findPromptLogTokens({ since: startOfToday.toISOString() }),
-        findPromptLogTokens({
-          since: startOfYesterday.toISOString(),
-          before: endOfYesterday.toISOString(),
-        }),
-        findPromptLogTokens({ since: startOfThisWeek.toISOString() }),
-        findPromptLogTokens({
-          since: startOfLastWeek.toISOString(),
-          before: endOfLastWeek.toISOString(),
-        }),
-      ]);
-
-      const today = todayRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const yesterday = yesterdayRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const thisWeek = thisWeekRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const lastWeek = lastWeekRes.reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-
-      return { today, yesterday, thisWeek, lastWeek };
-    },
-    enabled: !!userData?.id,
-  });
+  const { data: userData } = useTokenCockpitUser();
+  const { data: trendData, isLoading } = useTokenTrend(userData?.id);
 
   const trendDataMemoized = useMemo(() => trendData, [trendData]);
 

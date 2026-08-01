@@ -4,16 +4,9 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { findTokenTotalsSince, findTokenLimitSettings } from "@/data/tokenCockpit";
+import { useTokenCockpitUser, useTokenGauge } from "@/hooks/useTokenCockpitData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTokenCount } from "@/lib/tokenFormat";
-
-interface GaugeData {
-  daily: { used: number; limit: number; percentage: number };
-  monthly: { used: number; limit: number; percentage: number };
-}
 
 function GaugeBar({ percentage, label, used, limit }: { percentage: number; label: string; used: number; limit: number }) {
   const getColor = () => {
@@ -51,52 +44,8 @@ function GaugeBar({ percentage, label, used, limit }: { percentage: number; labe
 }
 
 export function TokenBudgetGauge() {
-  const { data: userData } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
-      return data.user;
-    },
-  });
-
-  const { data: gaugeData, isLoading } = useQuery({
-    queryKey: ["tokenUsage", "gauge", userData?.id],
-    queryFn: async (): Promise<GaugeData> => {
-      if (!userData?.id) {
-        return {
-          daily: { used: 0, limit: 500000, percentage: 0 },
-          monthly: { used: 0, limit: 10000000, percentage: 0 },
-        };
-      }
-
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const [dailyData, monthlyData, settingsData] = await Promise.all([
-        findTokenTotalsSince(startOfDay.toISOString()),
-        findTokenTotalsSince(startOfMonth.toISOString()),
-        findTokenLimitSettings(userData.id),
-      ]);
-
-      const dailyUsed = (dailyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-      const monthlyUsed = (monthlyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
-
-      const settings = (settingsData || []).reduce((acc, row) => {
-        acc[row.key] = row.value ?? "";
-        return acc;
-      }, {} as Record<string, string>);
-
-      const dailyLimit = parseInt(settings["ai_daily_token_limit"] || "500000", 10);
-      const monthlyLimit = parseInt(settings["ai_monthly_token_limit"] || "10000000", 10);
-
-      return {
-        daily: { used: dailyUsed, limit: dailyLimit, percentage: (dailyUsed / dailyLimit) * 100 },
-        monthly: { used: monthlyUsed, limit: monthlyLimit, percentage: (monthlyUsed / monthlyLimit) * 100 },
-      };
-    },
-    enabled: !!userData?.id,
-  });
+  const { data: userData } = useTokenCockpitUser();
+  const { data: gaugeData, isLoading } = useTokenGauge(userData?.id);
 
   const gaugeDataMemoized = useMemo(() => gaugeData, [gaugeData]);
 
