@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { findAllAgentMissions, findAgentMissionEvents, updateAgentMissionFields, insertAgentMission } from "@/data/agentMissions";
+import { findAllAgentMissions, findAgentMissionEvents, updateAgentMissionFields, insertAgentMission, type AgentMissionRow, type AgentMissionEventRow } from "@/data/agentMissions";
 import { findAgentOptions } from "@/data/agents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,30 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Play, Pause, Square, Rocket, Clock, Target, Zap, AlertTriangle } from "lucide-react";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 
-interface AgentMission {
-  id: string;
-  agent_id: string;
-  title: string;
-  goal_description: string | null;
-  goal_type: string;
-  kpi_target: Record<string, number | string>;
-  kpi_current: Record<string, number>;
-  budget: Record<string, number>;
-  budget_consumed: Record<string, number>;
-  approval_only_for: string[];
-  status: string;
-  autopilot: boolean;
-  created_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-}
-
-interface MissionEvent {
-  id: string;
-  event_type: string;
-  payload: Record<string, unknown>;
-  created_at: string;
-}
+type AgentMission = AgentMissionRow;
+type MissionEvent = AgentMissionEventRow;
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -75,8 +53,7 @@ export function MissionsPage() {
   const { data: missions = [], isLoading } = useQuery({
     queryKey: ["agent-missions"],
     queryFn: async () => {
-      const data = await findAllAgentMissions();
-      return data as unknown as AgentMission[];
+      return findAllAgentMissions();
     },
   });
 
@@ -85,8 +62,7 @@ export function MissionsPage() {
     queryKey: ["agent-mission-events", selectedMission],
     queryFn: async () => {
       if (!selectedMission) return [];
-      const data = await findAgentMissionEvents(selectedMission, 50);
-      return data as unknown as MissionEvent[];
+      return findAgentMissionEvents(selectedMission, 50);
     },
     enabled: !!selectedMission,
   });
