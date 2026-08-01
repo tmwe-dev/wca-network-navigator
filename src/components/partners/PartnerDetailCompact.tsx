@@ -1,3 +1,4 @@
+import type { PartnerContactActionTarget } from "@/types/partner-views";
 import { useState, useCallback } from "react";
 import type { PartnerViewModel } from "@/types/partner-views";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
@@ -43,7 +44,8 @@ import { toRecord } from "@/lib/records";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires?: string | null }
-interface ContactItem { id: string; name: string; title?: string | null; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
+type ContactItem = PartnerContactActionTarget;
+interface _UnusedContactItem { id: string; name: string; title?: string | null; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
 interface AgentItem { id: string; name: string; avatar_emoji: string; role: string }
 
 interface PartnerDetailCompactProps {
@@ -317,7 +319,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                  {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Primary</span>}
                 <div className="ml-auto">
                   <PartnerContactActionMenu
-                    contact={c as unknown as React.ComponentProps<typeof PartnerContactActionMenu>["contact"]}
+                    contact={c}
                     partner={{ id: partner.id, company_name: partner.company_name }}
                     onSendEmail={handleSendEmail}
                     onSendWhatsApp={handleSendWhatsApp}

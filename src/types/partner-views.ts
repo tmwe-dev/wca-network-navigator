@@ -29,6 +29,21 @@ export interface PartnerContactView {
   [key: string]: unknown;
 }
 
+/**
+ * Contatto partner nella forma consumata dalle azioni rapide (menu, invio
+ * email/WhatsApp). Contratto condiviso tra la card partner e il menu azioni.
+ */
+export interface PartnerContactActionTarget {
+  id: string;
+  name: string;
+  title?: string | null;
+  email?: string | null;
+  direct_phone?: string | null;
+  mobile?: string | null;
+  is_primary?: boolean | null;
+  contact_alias?: string | null;
+}
+
 /** Enrichment data shape stored as JSON in partners.enrichment_data */
 export interface EnrichmentData {
   deep_search_at?: string;
