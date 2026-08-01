@@ -3,7 +3,6 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { ThemeCtx } from "@/components/download/theme";
 import { Terminal } from "lucide-react";
 import {
-import { toRecord } from "@/lib/records";
   Dialog,
   DialogContent,
   DialogHeader,
@@ -179,3 +178,4 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
 
 // Keep backward-compatible named export
 export const DownloadTerminal = DownloadTerminalDialog;
+import { toRecord } from "@/lib/records";

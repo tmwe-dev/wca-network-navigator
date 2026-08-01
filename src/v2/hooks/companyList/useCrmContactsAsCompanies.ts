@@ -15,7 +15,6 @@ import { useContactsPaginated } from "@/hooks/useContactsPaginated";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { deriveCountryCode } from "./countryHints";
 import type {
-import { toRecord } from "@/lib/records";
   CompanyEntity,
   ContactEntity,
 } from "@/v2/ui/molecules/CompanyCardList";
@@ -83,6 +82,7 @@ export interface UseCrmContactsAsCompaniesResult {
 }
 
 export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
+import { toRecord } from "@/lib/records";
   const { filters } = useGlobalFilters();
 
   const queryFilters = useMemo(

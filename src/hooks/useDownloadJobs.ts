@@ -8,7 +8,6 @@ import { toast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
 import {
-import { toRecord } from "@/lib/records";
   findDownloadJobs, updateDownloadJob, deleteJobsByStatus, findJobByCountryAndNetwork,
   insertJobItems, insertJobEvent, findDeadPartnerIds, createDownloadJob,
   invalidateDownloadJobs, updateJobItemsByJobIdAndStatus,
@@ -152,6 +151,7 @@ export function useDeleteQueuedJobs() {
 }
 
 export function usePurgeOldJobs() {
+import { toRecord } from "@/lib/records";
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => deleteJobsByStatus(["cancelled", "completed"]),
