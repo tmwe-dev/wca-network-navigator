@@ -10,7 +10,7 @@
  * LOVABLE-72 — Vol. II, sezione Enrichment Unification.
  */
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface ContactProfileLite {
   name?: string | null;

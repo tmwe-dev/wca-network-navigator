@@ -16,7 +16,7 @@ import { execFileSync } from "node:child_process";
 export const BUDGET = {
   "no-restricted-imports": 470,
   "unused-imports/no-unused-vars": 0,
-  "@typescript-eslint/no-explicit-any": 240,
+  "@typescript-eslint/no-explicit-any": 88,
   "unused-imports/no-unused-imports": 0,
   "@typescript-eslint/no-unsafe-function-type": 0,
   "tmwe/no-direct-ai-invoke": 0,

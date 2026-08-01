@@ -6,7 +6,7 @@
 import { escapeLike } from "../../_shared/sqlEscape.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
+type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient>;
 
 /**
  * Resolve WCA ID from company name and location via DB query.

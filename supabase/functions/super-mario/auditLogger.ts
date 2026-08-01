@@ -7,7 +7,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 async function sha256(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);

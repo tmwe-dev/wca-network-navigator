@@ -19,7 +19,7 @@ interface ImapExec {
 }
 
 // deno-lint-ignore no-explicit-any
-type SupabaseLike = any;
+type SupabaseLike = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 const WINDOW_DAYS = 60;
 const MAX_UIDS = 500;

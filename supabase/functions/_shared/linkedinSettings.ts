@@ -32,7 +32,7 @@ const DEFAULTS: LinkedInSettings = {
  * @param supabase Supabase client instance
  * @returns LinkedInSettings object with all configured limits
  */
-export async function loadLinkedInSettings(supabase: any): Promise<LinkedInSettings> {
+export async function loadLinkedInSettings(supabase: import("./supabaseClient.ts").AnySupabaseClient): Promise<LinkedInSettings> {
   try {
     const { data, error } = await supabase
       .from("app_settings")

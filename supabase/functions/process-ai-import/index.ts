@@ -17,7 +17,7 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 const BATCH_SIZE = 25;
 

@@ -57,7 +57,7 @@ export interface SendingValidation {
 }
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 const SMTP_KEYS = [
   "smtp_host",

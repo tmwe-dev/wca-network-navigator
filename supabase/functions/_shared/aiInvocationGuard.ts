@@ -61,7 +61,7 @@ export async function aiGuard(
   req: Request,
   body: Record<string, unknown> | null | undefined,
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   functionName: string,
 ): Promise<AiGuardResultOk | AiGuardResultErr> {
   const scope = typeof body?.scope === "string" ? (body.scope as string) : "";
@@ -144,7 +144,7 @@ export function hasEntityMention(text: string): boolean {
 /** R6 — log invocazione. Best-effort, non blocca. */
 export async function recordInvocation(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   spec: AiGuardSpec,
   result: { grounded: boolean; tool_calls_count: number; blocked: boolean; block_reason?: string },
 ): Promise<void> {

@@ -17,7 +17,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 import type { NextAction, AutonomyLevel } from "./decisionEngine.ts";
 

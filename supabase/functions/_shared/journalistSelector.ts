@@ -357,7 +357,7 @@ MAI: check-in generici, "come va?", ripetere info già note, proporre più di 2 
 /** Carica config giornalista da app_settings con fallback ai default. */
 // deno-lint-ignore no-explicit-any
 export async function loadJournalistConfig(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   userId: string,
   role: JournalistRole,
 ): Promise<JournalistConfig> {
@@ -408,7 +408,7 @@ export async function loadJournalistConfig(
 /** Carica profilo aziendale da app_settings. */
 // deno-lint-ignore no-explicit-any
 export async function loadCompanyProfile(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   userId: string,
 ): Promise<CompanyProfile> {
   const keys = [
@@ -470,7 +470,7 @@ export async function loadCompanyProfile(
  */
 // deno-lint-ignore no-explicit-any
 export async function loadOptimusSettings(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   userId: string,
 ): Promise<{ enabled: boolean; mode: "review_and_correct" | "review_only" | "silent_audit"; strictness: number }> {
   const { data } = await supabase

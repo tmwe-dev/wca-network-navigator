@@ -8,7 +8,7 @@ import { escapeLike } from "./sqlEscape.ts";
 // Permissive client type — `createClient` without a Database generic
 // infers `never` for every table, breaking all .from()/.insert() calls below.
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 // ── Local interfaces for JSON fields ──
 interface WorkPlanStep {

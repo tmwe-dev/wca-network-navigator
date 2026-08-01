@@ -98,7 +98,7 @@ function emptyResult(reason: string): Result {
 /** Recupera contesto sintetico: profilo nostro, partner, ultime interazioni, holding. */
 async function buildContextSummary(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string | null | undefined,
   partnerId: string | null | undefined,
   fromAddress: string,

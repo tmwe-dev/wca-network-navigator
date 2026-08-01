@@ -14,7 +14,7 @@ import { assemblePartnerEnrichmentContext, getEnrichmentMetadata, type Recipient
 import { analyzePartnerRelationship } from "./relationshipAnalyzer.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 export type { RecipientIntelligence };
 

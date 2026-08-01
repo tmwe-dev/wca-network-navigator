@@ -16,7 +16,7 @@ import { escapeLike } from "./sqlEscape.ts";
 // Using `any` here avoids cascading "unknown" errors on .from/.rpc chains
 // without requiring full Database typing for every internal helper.
 // deno-lint-ignore no-explicit-any
-type ScopedSupabase = any;
+type ScopedSupabase = import("./supabaseClient.ts").AnySupabaseClient;
 
 // ━━━━━━━━━━ CONTACTS SCOPE — extra tools only ━━━━━━━━━━
 

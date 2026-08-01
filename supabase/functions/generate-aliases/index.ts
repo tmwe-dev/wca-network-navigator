@@ -6,7 +6,7 @@ import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 
 const BATCH_SIZE = 15;
@@ -21,7 +21,7 @@ serve(async (req) => {
   try {
     const { countryCodes, partnerIds, contactIds, userId: bodyUserId } = await req.json();
 
-    const supabase = createClient<any>(
+  const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );

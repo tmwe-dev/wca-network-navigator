@@ -12,7 +12,7 @@ import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 const typeEmoji: Record<string, string> = { preference: "⭐", decision: "🎯", fact: "📌", conversation: "💬" };
 

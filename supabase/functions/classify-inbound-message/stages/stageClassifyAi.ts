@@ -14,7 +14,7 @@ import { aiFetch } from "../../_shared/aiCallShim.ts";
 import { buildCanonicalExtension, isMessageIntelligenceV1Enabled } from "./canonicalFields.ts";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("../../_shared/supabaseClient.ts").AnySupabaseClient;
 
 export async function runAiClassification(
   supabase: Sb,

@@ -36,7 +36,7 @@ import { suggestGroupForSender } from "./senderGrouping.ts";
 import { checkInternalOrSelf } from "./internalSenderGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export type ClassificationCategory =
   | "interested"

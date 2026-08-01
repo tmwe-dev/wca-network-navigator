@@ -4,7 +4,7 @@ import { escapeLike } from "../_shared/sqlEscape.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 export { getCorsHeaders, corsPreflight };
 
-export type AgentExecuteSupabaseClient = any;
+export type AgentExecuteSupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 export const supabase: AgentExecuteSupabaseClient = createClient(
   Deno.env.get("SUPABASE_URL")!,

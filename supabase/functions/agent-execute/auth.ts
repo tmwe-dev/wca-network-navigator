@@ -5,7 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
+type AgentExecuteSupabaseClient = SupabaseClient;
 
 export interface AuthContext {
   userId: string;

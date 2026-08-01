@@ -8,7 +8,7 @@ import { calculatePartnerQuality } from "./qualityOrchestrator.ts";
 import type { PartnerQualityResult } from "./qualityTypes.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /**
  * Salva il risultato dello score nella tabella partners.

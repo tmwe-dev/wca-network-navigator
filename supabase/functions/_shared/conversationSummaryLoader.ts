@@ -10,7 +10,7 @@
  * Non lancia mai: in errore restituisce { block: "", source: "none" }.
  */
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface ConversationSummaryResult {
   block: string;

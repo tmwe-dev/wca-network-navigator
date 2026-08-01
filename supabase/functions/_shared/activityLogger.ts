@@ -4,7 +4,7 @@
 import type { SourceType, PostSendPipelineInput } from "./postSendPipeline.ts";
 import { channelToActivityType, channelLabel, buildActivityTitle } from "./pipelineUtils.ts";
 
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export async function logActivity(
   supabase: SupabaseClient,

@@ -11,7 +11,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export type InternalGuardReason = "internal_sender" | "self_partner" | null;
 

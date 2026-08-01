@@ -6,7 +6,7 @@ import { generateAliasesInline } from "./aliasGenerator.ts";
 import type { PartnerData, ContactData } from "./promptBuilder.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Auto-generate and persist aliases if missing.

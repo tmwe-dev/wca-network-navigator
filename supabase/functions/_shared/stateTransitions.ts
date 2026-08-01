@@ -23,7 +23,7 @@
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface TransitionGate {
   from: string;

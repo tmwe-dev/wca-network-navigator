@@ -8,7 +8,7 @@
 import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = BaseSupabaseClient<any, "public", any>;
+type SupabaseClient = BaseSupabaseClient;
 
 export interface PersonaData {
   tone?: string;

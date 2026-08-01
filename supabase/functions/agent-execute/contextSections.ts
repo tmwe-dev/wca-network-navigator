@@ -14,7 +14,7 @@ import {
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 
 // deno-lint-ignore no-explicit-any
-export type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
+export type AgentExecuteSupabaseClient = SupabaseClient;
 
 export type AgentRow = {
   id: string;

@@ -3,7 +3,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-export type SupabaseClient = any;
+export type SupabaseClient = import("../supabaseClient.ts").AnySupabaseClient;
 
 export type AutonomyLevel = "suggest" | "prepare" | "execute" | "autopilot";
 

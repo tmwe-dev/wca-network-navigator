@@ -7,7 +7,7 @@ import { generateReplyDraft, enrichActionPayload, type EmailAddressRule } from "
 import { insertFollowUpActivity } from "./activityInsertHelper.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface PostClassificationResult {
   actionsExecuted: string[];

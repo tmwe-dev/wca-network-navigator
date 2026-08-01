@@ -32,7 +32,7 @@ interface ExecBody {
 }
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 async function claimIdempotent(
   supabase: Sb,

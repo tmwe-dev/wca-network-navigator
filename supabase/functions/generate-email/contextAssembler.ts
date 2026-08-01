@@ -37,7 +37,7 @@ import { assembleDocumentsAndSignature } from "./documentAndSignatureAssembler.t
 import { assembleKbAndPlaybook } from "./kbAndPlaybookAssembler.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 // ── Context Blocks Type ──
 

@@ -4,7 +4,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { assertJobOwned } from "../_shared/ownership.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Download job progress tracker.

@@ -11,7 +11,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type AnySupabaseClient = any;
+type AnySupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /** Direttiva sintetica iniettabile in QUALSIASI prompt che produce email. */
 export const CALLIGRAFIA_DIRECTIVE = `

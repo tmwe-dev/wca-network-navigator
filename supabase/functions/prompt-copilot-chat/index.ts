@@ -99,7 +99,7 @@ function fallbackSystemPrompt(mode: "diagnose" | "edit" | "global", blockName?: 
  */
 async function loadCuratorSystemPrompt(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   mode: "diagnose" | "edit" | "global",
   blockName?: string,
 ): Promise<string> {

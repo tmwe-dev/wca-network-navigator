@@ -7,7 +7,7 @@
  * oppure se esiste già una regola in email_address_rules per l'utente.
  */
 // deno-lint-ignore no-explicit-any
-type SBClient = any;
+type SBClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 function extractEmail(raw: string | null | undefined): string | null {
   if (!raw) return null;

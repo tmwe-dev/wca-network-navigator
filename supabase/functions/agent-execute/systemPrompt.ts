@@ -6,7 +6,7 @@ import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supab
 import { assembleContext, getContextBudget } from "../_shared/tokenBudget.ts";
 import { loadCommercialDoctrine } from "../_shared/commercialDoctrine.ts";
 
-type SupabaseClient = BaseSupabaseClient<any, "public", any>;
+type SupabaseClient = BaseSupabaseClient;
 
 interface PersonaData {
   tone?: string;

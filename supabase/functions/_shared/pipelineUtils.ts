@@ -36,7 +36,7 @@ export function buildActivityTitle(channel: SendChannel, subject?: string): stri
 }
 
 export async function getPartnerStatus(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   partnerId: string,
   userId: string,
 ): Promise<string> {

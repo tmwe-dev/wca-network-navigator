@@ -8,7 +8,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 export interface ResolvedAiProvider {
   url: string;

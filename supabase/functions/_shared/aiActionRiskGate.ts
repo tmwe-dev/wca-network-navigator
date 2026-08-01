@@ -21,7 +21,7 @@ export type AiActionRisk =
   | "DESTRUCTIVE";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface HardGateResult {
   allowed: boolean;

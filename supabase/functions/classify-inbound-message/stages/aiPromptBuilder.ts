@@ -5,7 +5,7 @@ import { loadOperativePrompts } from "../../_shared/operativePromptsLoader.ts";
 import type { RequestBody } from "./types.ts";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("../../_shared/supabaseClient.ts").AnySupabaseClient;
 
 export async function buildClassificationPrompt(
   supabase: Sb,

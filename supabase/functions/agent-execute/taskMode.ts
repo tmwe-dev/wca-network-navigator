@@ -8,7 +8,7 @@ import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import type { LeadStatus } from "../_shared/domainEvents.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-type SupabaseClient = BaseSupabaseClient<any, "public", any>;
+type SupabaseClient = BaseSupabaseClient;
 
 interface AgentTask {
   id: string;

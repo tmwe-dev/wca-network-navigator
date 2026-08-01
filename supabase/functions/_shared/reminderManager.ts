@@ -4,7 +4,7 @@
 import type { SendChannel, PostSendPipelineInput } from "./postSendPipeline.ts";
 import { channelLabel, getPartnerStatus } from "./pipelineUtils.ts";
 
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 const SEQUENCE_NEXT: Record<
   number,

@@ -4,7 +4,7 @@
 import type { ClassifyResult, RequestBody } from "./types.ts";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("../../_shared/supabaseClient.ts").AnySupabaseClient;
 type RecordStage = (stage: string, payload?: Record<string, unknown>, error?: string) => Promise<void> | void;
 
 const internalHeaders = (): Record<string, string> => ({

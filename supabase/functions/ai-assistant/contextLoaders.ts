@@ -13,7 +13,7 @@ import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { loadOperativePrompts as loadOperativePromptsUnified, type PromptScope } from "../_shared/operativePromptsLoader.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 export async function loadUserProfile(supabase: SupabaseClient, userId: string): Promise<string> {
   if (!userId) return "";

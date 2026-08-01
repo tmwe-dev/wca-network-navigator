@@ -78,7 +78,7 @@ export async function selectInbox(client: ImapClient): Promise<{
 }
 
 export async function handleUidvalidityChange(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   storedUidvalidity: number | null,
   uidvalidity: number | null,
@@ -123,7 +123,7 @@ export async function fetchUidBatch(
 }
 
 export async function updateSyncState(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   lastUid: number,
   mailboxId: string | null = null,
@@ -137,7 +137,7 @@ export async function updateSyncState(
 }
 
 export async function skipDuplicateUid(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   uid: number,
   mailboxId: string | null = null,
@@ -173,7 +173,7 @@ export async function skipDuplicateUid(
 }
 
 export async function getSyncState(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   imapHost: string,
   imapUser: string,

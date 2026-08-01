@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     }
 
     // deno-lint-ignore no-explicit-any
-    const supabase = createClient<any>(
+  const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
 
 async function refreshActionContext(
   // deno-lint-ignore no-explicit-any
-  supabase: ReturnType<typeof createClient<any>>,
+  supabase: ReturnType<typeof createClient>,
   action: PendingAction,
   payload: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
@@ -200,7 +200,7 @@ async function refreshActionContext(
 
 async function executeAction(
   // deno-lint-ignore no-explicit-any
-  supabase: ReturnType<typeof createClient<any>>,
+  supabase: ReturnType<typeof createClient>,
   action: PendingAction,
   payload: Record<string, unknown>
 ): Promise<ExecutionResult> {

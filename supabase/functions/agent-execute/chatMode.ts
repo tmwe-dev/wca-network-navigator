@@ -7,7 +7,7 @@ import { executeTool } from "./toolHandlers.ts";
 import { compressMessages } from "../_shared/messageCompression.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-type SupabaseClient = BaseSupabaseClient<any, "public", any>;
+type SupabaseClient = BaseSupabaseClient;
 
 interface ChatMessage {
   role: string;

@@ -10,7 +10,7 @@ import { applyLeadStatusChange, TERMINAL_STATUSES } from "./leadStatusGuard.ts";
 // Permissive client type — `createClient` without a Database generic
 // infers `never` for every table, breaking all .from()/.insert() calls below.
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = false) {
 

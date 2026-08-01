@@ -7,7 +7,7 @@ import { escapeLike } from "./sqlEscape.ts";
 
 // Permissive client type — vedi toolHandlersRead.ts
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export function createCrmReadHandlers(supabase: SupabaseClient) {
 

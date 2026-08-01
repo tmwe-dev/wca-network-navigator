@@ -7,7 +7,7 @@ import type { NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
 import type { PartnerData } from "./promptBuilder.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 export interface LoadedMetadata {
   networks: NetworkRow[];

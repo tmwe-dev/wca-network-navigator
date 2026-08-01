@@ -18,17 +18,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 // deno-lint-ignore no-explicit-any
-export type AnySupabaseClient = ReturnType<typeof createClient<any>>;
+export type AnySupabaseClient = ReturnType<typeof createClient>;
 
 export function createServiceClient(): AnySupabaseClient {
-  return createClient<any>(
+  return createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 }
 
 export function createUserClient(authHeader: string): AnySupabaseClient {
-  return createClient<any>(
+  return createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
     { global: { headers: { Authorization: authHeader } } },

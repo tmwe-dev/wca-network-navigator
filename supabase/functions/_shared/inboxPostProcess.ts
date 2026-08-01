@@ -15,7 +15,7 @@ interface MessageRecord {
 }
 
 export async function applyEmailRules(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   supabaseUrl: string,
   serviceRoleKey: string,
   userId: string,

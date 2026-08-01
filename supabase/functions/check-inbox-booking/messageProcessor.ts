@@ -25,8 +25,8 @@ export async function processMessage(
   userId: string,
   imapExec: { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> },
   client: ImapClient,
-  supabase: any,
-  supabaseAdmin: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
+  supabaseAdmin: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   _isOversized: boolean,
 ): Promise<{
   msgData: Record<string, unknown> | null;
@@ -309,7 +309,7 @@ export async function processMessage(
 }
 
 export async function matchResponseActivity(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   savedMsgId: string,
   inReplyTo: string | null,
   threadId: string,

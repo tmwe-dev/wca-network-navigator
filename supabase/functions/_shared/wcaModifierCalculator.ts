@@ -8,7 +8,7 @@
 import type { PartnerData, WCAModifierDetails, WCAModifierBonus } from "./qualityTypes.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /**
  * Scans profile markdown, sherlock findings, and sherlock summary for keywords.

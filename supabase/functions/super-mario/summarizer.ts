@@ -13,7 +13,7 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
 const SUMMARY_MODEL_DEFAULT = "google/gemini-2.5-flash-lite";
 const SUMMARY_VERSION = 1;

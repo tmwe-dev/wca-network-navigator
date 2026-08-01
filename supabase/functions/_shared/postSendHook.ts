@@ -11,7 +11,7 @@
 
 // Local alias to avoid pulling SDK types (and version drift) here.
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /**
  * WhatsApp gate (Costituzione §4).

@@ -8,7 +8,7 @@ import { dispatchFunnemail } from "../../_shared/funnemailDispatcher.ts";
 import { mapInboundToEmailCategory, type ClassifyResult, type RequestBody } from "./types.ts";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("../../_shared/supabaseClient.ts").AnySupabaseClient;
 
 export async function runEmailProcessManager(
   supabase: Sb,

@@ -7,7 +7,7 @@ import { aiChat } from "./aiGateway.ts";
 import { journalistReview } from "./journalistReviewLayer.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface EmailAddressRule {
   category?: string;

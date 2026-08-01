@@ -165,7 +165,7 @@ export function scoreBrandVoice(
 /** Persiste un audit Brand Voice in modo non-bloccante. */
 // deno-lint-ignore no-explicit-any
 export async function persistBrandVoiceAudit(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   params: {
     user_id?: string | null;
     partner_id?: string | null;

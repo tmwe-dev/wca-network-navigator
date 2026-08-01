@@ -16,7 +16,7 @@ import { scoreToStars } from "./qualityHelpers.ts";
 import type { PartnerData, PartnerQualityResult } from "./qualityTypes.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /**
  * Calcola lo score di qualità partner per un singolo partner.
