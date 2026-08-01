@@ -29,6 +29,7 @@ import {
 } from "@/data/channelMessages";
 import { findOperatorByUserId } from "@/data/operators";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
+import { toJsonValue } from "@/lib/typedJson";
 
 const log = createLogger("useWhatsAppAdaptiveSync");
 
@@ -141,7 +142,7 @@ export function useWhatsAppAdaptiveSync() {
         to_address: finalDirection === "outbound" ? contact : undefined,
         body_text: text,
         message_id_external: extId,
-        raw_payload: msg as never,
+        raw_payload: toJsonValue(msg),
         created_at: timestamp,
       };
       try {

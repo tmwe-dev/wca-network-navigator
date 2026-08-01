@@ -25,6 +25,7 @@ import { getScrapeCacheEntry, upsertScrapeCacheEntry } from "@/data/scrapeCache"
 
 
 import { createLogger } from "@/lib/log";
+import { toJsonValue } from "@/lib/typedJson";
 const moduleLog = createLogger("baseEnrichment");
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -302,7 +303,7 @@ async function persistEnrichmentPatch(
   if (source === "wca") {
     const existing = await getPartnerEnrichmentData(id);
     const merged = { ...existing, ...patch };
-    await updatePartner(id, { enrichment_data: merged as never, ...(topLevel.logo_url ? { logo_url: topLevel.logo_url } : {}) });
+    await updatePartner(id, { enrichment_data: toJsonValue(merged), ...(topLevel.logo_url ? { logo_url: topLevel.logo_url } : {}) });
     return;
   }
   if (source === "bca") {
@@ -310,7 +311,7 @@ async function persistEnrichmentPatch(
     const enr = (raw.enrichment as Record<string, unknown>) || {};
     const mergedEnr = { ...enr, ...patch, ...(topLevel.logo_url ? { logo_url: topLevel.logo_url } : {}) };
     const mergedRaw = { ...raw, enrichment: mergedEnr };
-    await updateBusinessCard(id, { raw_data: mergedRaw as never });
+    await updateBusinessCard(id, { raw_data: toJsonValue(mergedRaw) });
     return;
   }
   // contacts

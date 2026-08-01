@@ -18,6 +18,7 @@ import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContact
 import { ContactDetail } from "./shared/ContactDetail";
 import { queryKeys } from "@/lib/queryKeys";
 import { findPrototypeContacts } from "@/data/uiShellQueries";
+import { toRecords } from "@/lib/records";
 
 const NAV_ITEMS = [
   { key: "home", icon: Home, label: "Home" },
@@ -47,7 +48,7 @@ function useRecentContacts() {
         100,
         true,
       );
-      return ((data || []) as never[]).map((pc: Record<string, unknown>) => ({
+      return toRecords(data).map((pc: Record<string, unknown>) => ({
         id: String(pc.id),
         name: [pc.first_name as string, pc.last_name as string].filter(Boolean).join(" ") || "—",
         company: (pc.partners as Record<string, unknown>)?.company_name as string || "—",

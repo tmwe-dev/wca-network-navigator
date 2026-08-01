@@ -8,6 +8,7 @@ import { findActiveOrPausedAcquisitionJobs, findDirectoryCacheMembers } from "@/
 import { toast } from "@/hooks/use-toast";
 import type { QueueItem } from "@/types/acquisition";
 import { createLogger } from "@/lib/log";
+import { toJsonValue } from "@/lib/typedJson";
 
 const log = createLogger("useAcquisitionResume");
 import type { PipelineStatus, LiveStats } from "./useAcquisitionPipeline";
@@ -101,7 +102,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 await upsertDirectoryCache({
                     country_code: job.country_code,
                     network_name: job.network_name || "",
-                    members: membersJson as never,
+                    members: toJsonValue(membersJson),
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
