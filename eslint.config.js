@@ -4,6 +4,21 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 import unusedImports from "eslint-plugin-unused-imports";
+import { createRequire } from "node:module";
+
+// Le regole custom sono CJS: il progetto è "type": "module", quindi servono
+// via createRequire (estensione .cjs) e non via import ESM.
+const requireCjs = createRequire(import.meta.url);
+const noDirectAiInvoke = requireCjs("./eslint-rules/no-direct-ai-invoke.cjs");
+const noDirectBulkOp = requireCjs("./eslint-rules/no-direct-bulk-op.cjs");
+
+// Plugin locale che espone le regole di governance del progetto.
+const tmwe = {
+  rules: {
+    "no-direct-ai-invoke": noDirectAiInvoke,
+    "no-direct-bulk-op": noDirectBulkOp,
+  },
+};
 
 export default tseslint.config(
   {
@@ -13,10 +28,8 @@ export default tseslint.config(
       "coverage",
       "node_modules",
       "archive/**",
-      "supabase/functions/**",
       "public/**",
       "e2e/**",
-      "scripts/**",
       "src/v2/ui/pages/command/_legacy/**",
     ],
   },
@@ -79,7 +92,11 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
-  // ── DAL enforcement: ban supabase.from() outside src/data/ ──
+  // ── Regole strutturali (no-restricted-syntax) — BLOCCO UNICO ──
+  // ESLint applica l'ultima configurazione che matcha un file: definire
+  // `no-restricted-syntax` in più blocchi sovrapposti disattivava
+  // silenziosamente i selector precedenti (il ban DAL era di fatto spento).
+  // Tutti i selector strutturali vivono quindi in un solo blocco.
   {
     files: [
       "src/**/*.{ts,tsx}",
@@ -89,6 +106,21 @@ export default tseslint.config(
       "src/integrations/**",
       "src/test/**",
       "src/**/*.test.{ts,tsx}",
+      "src/**/__tests__/**",
+      // Layer IO v2: è il DAL della linea v2, non un bypass.
+      "src/v2/io/**",
+      "src/v2/observability/supabaseTraceProxy.ts",
+      // Bridge e sender ufficiali del canale multicanale.
+      "src/lib/messaging/**",
+      "src/lib/inbox/sendMessage.ts",
+      "src/hooks/useLinkedInMessagingBridge.ts",
+      "src/hooks/useWhatsAppExtensionBridge.ts",
+      "src/hooks/useApproveAndDispatch.ts",
+      "src/components/test-extensions/**",
+      // TODO(F5): eccezioni temporanee e tracciate — accesso DB diretto dal
+      // layer command. Da migrare al DAL, non da nascondere.
+      "src/v2/ui/pages/command/tools/scheduleActivity.ts",
+      "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
     ],
     rules: {
       "no-restricted-syntax": [
@@ -96,6 +128,10 @@ export default tseslint.config(
         {
           selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
           message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead. See src/data/README.md",
+        },
+        {
+          selector: "CallExpression[callee.property.name='sendWhatsApp']",
+          message: "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
         },
       ],
     },
@@ -138,6 +174,13 @@ export default tseslint.config(
   // ── V2 migration guardrail: warn on v1 page imports in v2 pages ──
   {
     files: ["src/v2/ui/pages/**/*.{ts,tsx}"],
+    ignores: [
+      "src/v2/ui/pages/**/*.test.{ts,tsx}",
+      "src/v2/ui/pages/**/__tests__/**",
+      // TODO(F5): eccezioni temporanee e tracciate (accesso DB diretto).
+      "src/v2/ui/pages/command/tools/scheduleActivity.ts",
+      "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
+    ],
     rules: {
       "no-restricted-imports": [
         "warn",
@@ -147,16 +190,64 @@ export default tseslint.config(
               group: ["@/pages/*", "@/pages/**"],
               message: "V2 pages should not import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
             },
+            {
+              group: ["@/data/*"],
+              message: "Le pagine v2 non devono importare src/data/ direttamente: usa un hook. See docs/architecture/OVERVIEW-2026-04-14.md",
+            },
           ],
         },
       ],
+      // Ripetuti qui perché questo blocco ridefinisce `no-restricted-syntax`
+      // per le pagine v2: senza la ripetizione i selector globali sparirebbero.
       "no-restricted-syntax": [
-        "warn",
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
+          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead. See src/data/README.md",
+        },
+        {
+          selector: "CallExpression[callee.property.name='sendWhatsApp']",
+          message: "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
+        },
         {
           selector: "ImportExpression > Literal[value=/^@\\/pages/]",
           message: "V2 pages should not lazy-import from v1 src/pages/. See docs/v2/MIGRATION_STATUS.md",
         },
       ],
+    },
+  },
+  // ── Layer enforcement: componenti v2 (non-pagine) non importano il DAL ──
+  {
+    files: ["src/v2/ui/**/*.{ts,tsx}"],
+    ignores: ["src/v2/ui/pages/**"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["@/data/*"],
+              message: "I componenti v2 non devono importare src/data/ direttamente: usa un hook. See docs/architecture/OVERVIEW-2026-04-14.md",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ── Governance TMWE: regole custom del repo, ora effettivamente attive ──
+  // Erano presenti in eslint-rules/ ma non agganciate ad alcun blocco:
+  // AI Invocation Charter R3 e il vincolo bulkOps non venivano applicati.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/test/**", "src/**/*.test.{ts,tsx}", "src/**/__tests__/**"],
+    plugins: { tmwe },
+    rules: {
+      // Attivate come warning nel batch di aggancio: emergono 45 violazioni
+      // storiche reali (36 charter R3 + 9 bulkOps) che vanno migrate a
+      // invokeAi()/bulkOps prima di promuovere la regola a "error".
+      // Ratchet e inventario: docs/audit/lint-gates-2026-08-02.md
+      "tmwe/no-direct-ai-invoke": "warn",
+      "tmwe/no-direct-bulk-op": "warn",
     },
   },
   // ── public/ browser extensions: basic JS linting ──
@@ -178,32 +269,47 @@ export default tseslint.config(
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
-  // ── Multichannel send governance (no-direct-extension-send) ──
-  // Fuori da src/lib/messaging/* e dai bridge stessi, scoraggia chiamate
-  // dirette a `.sendWhatsApp(...)` sui bridge: usa sendWhatsAppDirect /
-  // queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.
-  // Stesso principio per LinkedIn (sendLinkedInDirect / queueLinkedInForApproval).
+  // ── Edge Function (Deno) e script Node: prima erano completamente esclusi ──
+  // 149 Edge Function non venivano lintate. Regole prudenti: nessun cambio di
+  // comportamento, solo rilevazione di errori reali e import morti.
   {
-    files: ["src/**/*.{ts,tsx}"],
-    ignores: [
-      "src/lib/messaging/**",
-      "src/lib/inbox/sendMessage.ts",
-      "src/hooks/useLinkedInMessagingBridge.ts",
-      "src/hooks/useWhatsAppExtensionBridge.ts",
-      "src/hooks/useApproveAndDispatch.ts",
-      "src/components/test-extensions/**",
-      "src/test/**",
-      "src/**/*.test.{ts,tsx}",
-      "src/hooks/__tests__/**",
-    ],
+    files: ["supabase/functions/**/*.ts", "scripts/**/*.{ts,mjs,js}"],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    plugins: { "unused-imports": unusedImports },
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+        Deno: "readonly",
+        EdgeRuntime: "readonly",
+      },
+    },
     rules: {
-      "no-restricted-syntax": [
+      "no-console": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "unused-imports/no-unused-imports": "warn",
+      "no-restricted-syntax": "off",
+      // Prima passata: rilevazione, non blocco. Le Edge Function non erano
+      // mai state lintate; le violazioni storiche restano visibili come
+      // warning e vengono ridotte a batch (ratchet nel doc dei gate).
+      // Delegato a `unused-imports` come nel resto del repo: evita il doppio
+      // conteggio della stessa violazione.
+      "@typescript-eslint/no-unused-vars": "off",
+      "unused-imports/no-unused-vars": [
         "warn",
-        {
-          selector: "CallExpression[callee.property.name='sendWhatsApp']",
-          message: "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
-        },
+        { vars: "all", varsIgnorePattern: "^_", args: "after-used", argsIgnorePattern: "^_" },
       ],
+      "@typescript-eslint/no-unsafe-function-type": "warn",
+      "@typescript-eslint/no-empty-object-type": "warn",
+      "no-empty": "warn",
+      "no-useless-escape": "warn",
+      "no-case-declarations": "warn",
+      "no-control-regex": "warn",
+      "no-regex-spaces": "warn",
+      "no-useless-catch": "warn",
+      "prefer-const": "warn",
+      "no-var": "warn",
     },
   },
 );

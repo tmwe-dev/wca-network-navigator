@@ -18,7 +18,10 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run typecheck:strict
-      - run: npx eslint . --max-warnings 0
+      # `--max-warnings 0` era rosso da tempo e veniva scavalcato: un gate
+      # sempre rosso non protegge nulla. Il ratchet impone 0 errori e un
+      # budget per regola che scende a ogni batch di bonifica.
+      - run: npm run lint:ratchet
       - run: npm run debt:check
       - run: npm run audit:security
       - run: npm run i18n:check
