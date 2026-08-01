@@ -79,16 +79,18 @@ export async function getBusinessCardsForCampaignRaw(): Promise<BusinessCardCamp
       "id, company_name, contact_name, email, event_name, met_at, location, matched_partner_id, partner:matched_partner_id(id, company_name, city, country_code, country_name, email, logo_url)"
     )
     .order("created_at", { ascending: false })
-    .limit(1000);
+    .limit(1000)
+    .returns<BusinessCardCampaignRow[]>();
   if (error) throw error;
-  return (data ?? []) as unknown as BusinessCardCampaignRow[];
+  return data ?? [];
 }
 
 export async function getBcaCountryCountsRaw(): Promise<Array<{ matched_partner_id: string | null; partner: { country_code: string | null } | null }>> {
   const { data, error } = await supabase
     .from("business_cards")
     .select("matched_partner_id, partner:matched_partner_id(country_code)")
-    .not("matched_partner_id", "is", null);
+    .not("matched_partner_id", "is", null)
+    .returns<Array<{ matched_partner_id: string | null; partner: { country_code: string | null } | null }>>();
   if (error) throw error;
-  return (data ?? []) as unknown as Array<{ matched_partner_id: string | null; partner: { country_code: string | null } | null }>;
+  return data ?? [];
 }

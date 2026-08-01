@@ -26,11 +26,11 @@ export interface ContactInteractionRecordRow {
 export async function findContactInteractionsForRecord(contactId: string, limit = 20): Promise<ContactInteractionRecordRow[]> {
   const { data } = await supabase
     .from("contact_interactions")
-    .select("*")
+    .select("id, contact_id, interaction_type, title, description, outcome, created_by, created_at")
     .eq("contact_id", contactId)
     .order("created_at", { ascending: false })
     .limit(limit);
-  return (data ?? []) as unknown as ContactInteractionRecordRow[];
+  return data ?? [];
 }
 
 export interface ContactInteractionTimelineRow {
@@ -50,9 +50,9 @@ export async function findContactInteractionsRange(
 ): Promise<ContactInteractionTimelineRow[]> {
   const { data } = await supabase
     .from("contact_interactions")
-    .select("*")
+    .select("id, interaction_type, title, description, outcome, created_at")
     .eq("contact_id", contactId)
     .order("created_at", { ascending: false })
     .range(from, to);
-  return (data ?? []) as unknown as ContactInteractionTimelineRow[];
+  return data ?? [];
 }
