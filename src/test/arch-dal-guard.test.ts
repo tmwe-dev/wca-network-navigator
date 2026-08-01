@@ -65,8 +65,7 @@ describe("Guard DAL — ratchet bypass", () => {
     "src/v2/io/supabase/",    // DAL v2 (queries/ + mutations/): È il layer dati, non un bypass
     "src/integrations/supabase/", // client generato (bootstrap)
     "src/test/",
-    "src/lib/supabaseUntyped", // helper untyped centralizzato
-    "src/lib/typedSupabase",   // helper typed centralizzato
+    "src/lib/typedSupabase",   // unico confine non tipizzato sanzionato
   ];
   /**
    * Baseline REALE al commit c262919, misurata con censimento MULTILINEA
@@ -97,9 +96,7 @@ describe("Guard DAL — ratchet bypass", () => {
 
   /**
    * Ratchet #2: `tFrom()` è accesso dati diretto a tutti gli effetti.
-   * Il ratchet precedente non lo contava perché `src/lib/supabaseUntyped` è
-   * allowlistato: il risultato era "0 bypass" pur avendone decine fuori dal
-   * DAL. Perimetro: tutto `src/**` escluso il DAL, l'helper e i test.
+   * Perimetro: tutto `src/**` escluso il DAL, l'helper e i test.
    */
   const UNTYPED_BASELINE = 0;
 
@@ -108,7 +105,6 @@ describe("Guard DAL — ratchet bypass", () => {
       const rel = path.relative(ROOT, f).replace(/\\/g, "/");
       if (rel.startsWith("src/data/")) return false;
       if (rel.startsWith("src/v2/io/supabase/")) return false;
-      if (rel.startsWith("src/lib/supabaseUntyped")) return false;
       if (rel.startsWith("src/lib/typedSupabase")) return false;
       if (rel.startsWith("src/test/")) return false;
       return !/\.(test|spec)\.tsx?$/.test(rel) && !rel.includes("/__tests__/");
@@ -118,10 +114,19 @@ describe("Guard DAL — ratchet bypass", () => {
       const src = readFileSync(f, "utf8")
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/^\s*\/\/.*$/gm, "");
-      const matches = src.match(/\buntypedFrom\s*\(/g);
+      const matches = src.match(/\btFrom\s*\(/g);
       if (matches?.length) offenders.push(`${path.relative(ROOT, f)} (${matches.length})`);
     }
     const total = offenders.reduce((s, o) => s + Number(o.match(/\((\d+)\)$/)?.[1] ?? 0), 0);
     expect({ total, offenders }).toEqual({ total: UNTYPED_BASELINE, offenders: [] });
+  });
+
+  it("il simbolo legacy untypedFrom non esiste più nel repository", () => {
+    const legacy = "untyped" + "From";
+    const offenders = walk(path.join(ROOT, "src"))
+      .filter((f) => !path.relative(ROOT, f).includes("arch-dal-guard"))
+      .filter((f) => readFileSync(f, "utf8").includes(legacy))
+      .map((f) => path.relative(ROOT, f));
+    expect(offenders).toEqual([]);
   });
 });
