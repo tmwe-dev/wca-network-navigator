@@ -55,7 +55,22 @@ export function parseTimingSteps(value: unknown): TimingStep[] {
 }
 
 function mapTimingTemplateRow(row: TimingTemplateRow): TimingTemplate {
-  return { ...row, sequence: parseTimingSteps(row.sequence) };
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    template_name: row.template_name,
+    description: row.description,
+    is_system: row.is_system ?? false,
+    source_type: row.source_type,
+    goal: row.goal,
+    sequence: parseTimingSteps(row.sequence),
+    max_attempts: row.max_attempts ?? 0,
+    total_duration_days: row.total_duration_days,
+    preferred_language: row.preferred_language ?? "it",
+    auto_translate: row.auto_translate ?? false,
+    created_at: row.created_at ?? new Date().toISOString(),
+    updated_at: row.updated_at ?? new Date().toISOString(),
+  };
 }
 
 export async function fetchTimingTemplates(): Promise<TimingTemplate[]> {
