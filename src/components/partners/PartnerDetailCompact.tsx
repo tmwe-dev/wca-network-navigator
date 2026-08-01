@@ -122,7 +122,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   }, [primaryContact]);
 
   // ── Email: navigate to composer with contact pre-filled ──
-  const handleSendEmail = useCallback((contact: { id?: string; email?: string; name?: string }) => {
+  const handleSendEmail = useCallback((contact: { id?: string; email?: string | null; name?: string | null }) => {
     navigate("/v2/email-composer", {
       state: {
         partnerIds: [partner.id],
