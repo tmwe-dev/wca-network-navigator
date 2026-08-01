@@ -29,7 +29,7 @@ const ease = [0.2, 0.8, 0.2, 1] as const;
 export function CommandHistory({
   messages,
   isEmpty,
-  quickPrompts,
+  quickPrompts: _quickPrompts,
   onQuickPrompt,
   chatEndRef,
 }: CommandHistoryProps) {

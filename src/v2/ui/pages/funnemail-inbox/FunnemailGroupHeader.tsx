@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
-import { findSenderGroupNamesByUser } from "@/data/senderManagement";
+import { findSenderGroupNamesByUser } from "@/application/data/senderManagement";
 import { cn } from "@/lib/utils";
 
 interface Props {

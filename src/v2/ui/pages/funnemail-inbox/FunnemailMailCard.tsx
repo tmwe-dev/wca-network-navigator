@@ -20,19 +20,19 @@ import { EmailMessageActions } from "@/components/outreach/EmailMessageActions";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
 import { cn } from "@/lib/utils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
-import type { FunnemailDecisionRow, FunnemailPartnerSnapshot, SenderIntelRow } from "@/data/funnemailInbox";
+import type { FunnemailDecisionRow, FunnemailPartnerSnapshot, SenderIntelRow } from "@/application/data/funnemailInbox";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { extractSenderName, stripReplyPrefixes } from "./utils";
 import { type AiSuggestion } from "./AiSuggestionChip";
-import type { FunnemailClaimWithOperator } from "@/data/funnemailClaims";
+import type { FunnemailClaimWithOperator } from "@/application/data/funnemailClaims";
 import {
   FUNNEMAIL_JOB_STATUSES,
   FUNNEMAIL_JOB_STATUS_CLASSES,
   FUNNEMAIL_JOB_STATUS_LABELS,
   type FunnemailJobStatus,
   type FunnemailStatusRow,
-} from "@/data/funnemailStatuses";
-import type { FunnemailReminderRow } from "@/data/funnemailReminders";
+} from "@/application/data/funnemailStatuses";
+import type { FunnemailReminderRow } from "@/application/data/funnemailReminders";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,7 +105,7 @@ export function FunnemailMailCard({
   groupIcon,
   aiSuggestion,
   onSelect,
-  onAcceptAiSuggestion,
+  onAcceptAiSuggestion: _onAcceptAiSuggestion,
   onReclassify,
   reclassifying,
   checked,

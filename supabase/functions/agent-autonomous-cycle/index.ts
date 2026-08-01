@@ -47,7 +47,7 @@ function isHighStakes(item: Record<string, unknown>, criteria: HighStakesCriteri
 
 const DELAY_BETWEEN_AGENTS_MS = 3000;
 
-async function findAgentForPartner(userId: string, partnerId: string, agents: Array<Record<string, unknown>>): Promise<any | null> {
+async function findAgentForPartner(userId: string, partnerId: string, agents: Array<Record<string, unknown>>): Promise<Record<string, unknown> | null> {
   // Check client_assignments first
   const { data: assignment } = await supabase
     .from("client_assignments")
@@ -175,7 +175,7 @@ serve(async (req) => {
   });
   if (guard.skip) {
     return new Response(
-      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
       { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }

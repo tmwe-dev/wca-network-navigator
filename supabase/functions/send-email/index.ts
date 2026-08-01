@@ -575,7 +575,7 @@ Deno.serve(async (req) => {
 
     // Log side effects ONLY after confirmed SMTP success — via pipeline unificata
     // LOVABLE-93: sourceType esplicito per multi-source support
-    const pipelineResult = await runPostSendPipeline(supabase, {
+    await runPostSendPipeline(supabase, {
       userId: userIdEarly,
       partnerId: partner_id || null,
       contactId: contact_id || null,

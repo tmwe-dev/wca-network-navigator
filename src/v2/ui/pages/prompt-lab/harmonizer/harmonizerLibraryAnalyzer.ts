@@ -12,14 +12,14 @@ import { z } from "zod";
 import { callHarmonizer, parseProposalsFromText, repairTruncatedJson } from "../hooks/harmonizeAnalyzer";
 import { TMWE_INGESTION_BRIEFING } from "@/v2/agent/prompts/core/tmwe-ingestion-briefing";
 import type { CollectorOutput, GapCandidate } from "../hooks/harmonizeCollector";
-import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/application/data/harmonizeRuns";
 import type {
   HarmonizerSession,
   FactEntry,
   ConflictEntry,
   CrossRefEntry,
   EntityCreatedEntry,
-} from "@/data/harmonizerSessions";
+} from "@/application/data/harmonizerSessions";
 import type { TmweChunkDef } from "./tmweChunks";
 import { TMWE_CHUNKS, TMWE_EXECUTION_ORDER } from "./tmweChunks";
 import { buildHarmonizerKbContext } from "./harmonizerKbInjector";

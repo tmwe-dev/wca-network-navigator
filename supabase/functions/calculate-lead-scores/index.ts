@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
       if (body && typeof body === "object" && body !== null && (body as { force?: boolean }).force === true) {
         force = true;
       }
-    } catch (_e) { /* no body */ }
+    } catch { /* no body */ }
     const STALE_HOURS = 24;
     const staleCutoff = new Date(Date.now() - STALE_HOURS * 3600_000).toISOString();
 

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Loader2, Linkedin, Clock } from "lucide-react";
-import { useBulkLinkedInDispatch, type BulkLinkedInTarget } from "@/hooks/useBulkLinkedInDispatch";
+import { useLinkedInBulkDispatch, type BulkLinkedInTarget } from "@/v2/services/bulkOps/linkedinDispatch";
 
 interface Props {
   open: boolean;
@@ -13,7 +13,7 @@ interface Props {
 
 export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Props) {
   const [message, setMessage] = useState("");
-  const { dispatch, sending, progress, timing, previewSchedule } = useBulkLinkedInDispatch();
+  const { dispatch, sending, progress, timing, previewSchedule } = useLinkedInBulkDispatch();
 
   const eligible = targets.filter(t => !!t.profileUrl);
   const skipped = targets.length - eligible.length;

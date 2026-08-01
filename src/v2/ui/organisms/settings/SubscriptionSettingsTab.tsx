@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findRecentCreditTransactions } from "@/data/credits";
+import { findRecentCreditTransactions } from "@/application/data/credits";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2, Crown } from "lucide-react";
 import { format } from "date-fns";

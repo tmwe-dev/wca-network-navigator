@@ -10,7 +10,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Building2 } from "lucide-react";
-import { searchPartners } from "@/data/partners";
+import { searchPartners } from "@/application/data/partners";
 import { macroAreaGroups, type NavItemDef } from "@/v2/ui/templates/navConfig";
 
 interface Partner {

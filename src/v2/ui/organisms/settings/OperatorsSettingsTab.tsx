@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { findAllOperators, updateOperator } from "@/data/operators";
+import { findAllOperators, updateOperator } from "@/application/data/operators";
 import { FormSection } from "../../organisms/FormSection";
 import { Loader2, Users } from "lucide-react";
 import { Switch } from "@/components/ui/switch";

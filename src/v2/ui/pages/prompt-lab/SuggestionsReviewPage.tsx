@@ -27,12 +27,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
-import type { SuggestedImprovement } from "@/data/suggestedImprovements";
-import { findRecentHarmonizeRuns, type HarmonizeRun } from "@/data/harmonizeRuns";
+import type { SuggestedImprovement } from "@/application/data/suggestedImprovements";
+import { findRecentHarmonizeRuns, type HarmonizeRun } from "@/application/data/harmonizeRuns";
 import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
 import { SingleProposalReview } from "./components/SingleProposalReview";
-import { findActiveAgentVoiceByName } from "@/data/agents";
+import { findActiveAgentVoiceByName } from "@/application/data/agents";
 import { toast } from "sonner";
 import { priorityColor, typeIcon, typeLabel } from "./suggestionsReview.helpers";
 

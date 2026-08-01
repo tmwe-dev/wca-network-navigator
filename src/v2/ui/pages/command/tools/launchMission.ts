@@ -4,7 +4,7 @@
  */
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
-import { findAgentMissionByTitleLike, findAgentMissionTitleById } from "@/data/agentMissions";
+import { findAgentMissionByTitleLike, findAgentMissionTitleById } from "@/application/data/agentMissions";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 function extractMissionRef(prompt: string): string | null {

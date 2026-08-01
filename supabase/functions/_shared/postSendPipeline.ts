@@ -27,7 +27,7 @@ import { channelLabel } from "./pipelineUtils.ts";
 import { createEvent, publishAndPersist } from "./domainEvents.ts";
 import { initLeadProcessManager } from "./processManagers/leadProcessManager.ts";
 
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 // FIX ISSUE 2: Helper to detect manual email edits
 function calculateSimilarity(text1: string, text2: string): number {

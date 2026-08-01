@@ -29,7 +29,7 @@ export async function executeInboxToolHandler(
   name: string,
   args: Record<string, unknown>,
   userId: string,
-  authHeader: string,
+  _authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     case "get_inbox": {

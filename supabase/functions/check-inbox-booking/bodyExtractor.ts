@@ -14,7 +14,6 @@ import {
 } from "./imapParser.ts";
 import { type AttachmentRecord } from "./dbOperations.ts";
 
-const MAX_RAW_FETCH_BYTES = 15_000_000; // 15MB
 const MAX_TEXT_LENGTH = 50_000;
 const MAX_HTML_LENGTH = 100_000;
 
@@ -29,7 +28,7 @@ export async function extractBodyAndAttachments(
   uid: number,
   userId: string,
   imapExec: { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> },
-  supabaseAdmin: any,
+  supabaseAdmin: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   messageId: string,
   bodyStructure: Record<string, unknown> | null,
   isOversized: boolean,

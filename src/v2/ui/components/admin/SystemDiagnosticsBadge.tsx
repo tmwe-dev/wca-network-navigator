@@ -14,7 +14,7 @@ import {
   setSystemPaused,
   purgeInboundActivities,
   type DiagnosticsPayload,
-} from "@/data/systemDiagnostics";
+} from "@/application/data/systemDiagnostics";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";

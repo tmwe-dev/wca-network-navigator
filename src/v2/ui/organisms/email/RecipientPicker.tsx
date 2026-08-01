@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { searchImportedContactsForRecipientPicker } from "@/data/contacts";
+import { searchImportedContactsForRecipientPicker } from "@/application/data/contacts";
 import { Search, X, Plus } from "lucide-react";
 import type { EmailRecipient } from "@/v2/hooks/useEmailComposerV2";
 import { queryKeys } from "@/lib/queryKeys";

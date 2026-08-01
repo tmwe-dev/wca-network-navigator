@@ -4,7 +4,7 @@
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 import type { SourceType, PostSendPipelineInput } from "./postSendPipeline.ts";
 
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export async function updateLeadStatus(
   supabase: SupabaseClient,

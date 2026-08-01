@@ -7,9 +7,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { serviceClient, tmweBaseUrl, tmweOAuthRedirectUri } from "../_shared/tmweClient.ts";
 
-const DEFAULT_SCOPES =
-  "profile:read shipment:read shipment:write tracking:read document:read";
-
 function randomState(): string {
   const buf = new Uint8Array(24);
   crypto.getRandomValues(buf);

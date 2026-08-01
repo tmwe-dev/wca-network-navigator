@@ -10,13 +10,13 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Users, Mail, MessageSquare, Inbox, Wrench, BookOpen, Bell, MailCheck, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { fetchAgentRolesOverview } from "@/data/agentRolesOverview";
+import { fetchAgentRolesOverview } from "@/application/data/agentRolesOverview";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import type { AgentRolesOverviewRawAgent as AgentRow } from "@/data/agentRolesOverview";
+import type { AgentRolesOverviewRawAgent as AgentRow } from "@/application/data/agentRolesOverview";
 
 /** Descrizione umana di "chi fa cosa" per ruolo. */
 const ROLE_INFO: Record<string, { label: string; does: string }> = {

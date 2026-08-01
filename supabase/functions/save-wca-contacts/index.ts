@@ -64,7 +64,7 @@ function parseDate(raw: string): string | null {
   const d = new Date(raw)
   if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
   // Try DD/MM/YYYY
-  const parts = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+  const parts = raw.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/)
   if (parts) {
     const d2 = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`)
     if (!isNaN(d2.getTime())) return d2.toISOString().split('T')[0]

@@ -10,7 +10,7 @@
  */
 import { z } from "zod";
 import { jsonrepair } from "jsonrepair";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { HARMONIZER_BRIEFING } from "@/v2/agent/prompts/core/harmonizer-briefing";
 import type {
   HarmonizeProposal,
@@ -19,7 +19,7 @@ import type {
   HarmonizeSeverity,
   HarmonizeTestUrgency,
   MissingContract,
-} from "@/data/harmonizeRuns";
+} from "@/application/data/harmonizeRuns";
 import type { CollectorOutput, GapCandidate } from "./harmonizeCollector";
 
 import { createLogger } from "@/lib/log";
@@ -77,10 +77,6 @@ const ProposalSchema = z.object({
     .optional(),
   apply_recommended: z.boolean().optional(),
   reasoning: z.string().nullable().default(""),
-});
-
-const ResponseSchema = z.object({
-  proposals: z.array(ProposalSchema),
 });
 
 /** Genera UUID con fallback sicuro per ambienti senza crypto.randomUUID. */
@@ -156,7 +152,9 @@ ISTRUZIONI:
 
 /** Invoca il modello in modalità conversational con il briefing Harmonizer. */
 export async function callHarmonizer(userPrompt: string, briefing: string = HARMONIZER_BRIEFING): Promise<string> {
-  const result = await invokeEdge<UnifiedAssistantResponse>("unified-assistant", {
+  const result = await invokeAi<UnifiedAssistantResponse>("unified-assistant", {
+    scope: "kb-supervisor",
+    context: { source: "harmonizeAnalyzer", mode: "conversational" },
     body: {
       scope: "kb-supervisor",
       mode: "conversational",
@@ -168,7 +166,6 @@ export async function callHarmonizer(userPrompt: string, briefing: string = HARM
         extra_context: { mode: "harmonize" },
       },
     },
-    context: "harmonizeAnalyzer",
   });
   // Diagnostica esplicita: se il modello tronca per max_tokens, lo segnaliamo
   // al log così l'operatore in Prompt Lab sa che il chunk va spezzato.

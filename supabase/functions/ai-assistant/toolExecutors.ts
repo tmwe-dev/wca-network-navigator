@@ -1,4 +1,7 @@
 import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
+import type { createReadHandlers } from "../_shared/toolHandlersRead.ts";
+import type { createWriteHandlers } from "../_shared/toolHandlersWrite.ts";
+import type { createEnterpriseHandlers } from "../_shared/toolHandlersEnterprise.ts";
 /**
  * toolExecutors.ts — Tool execution handlers + dispatcher (refactored barrel).
  * Re-exports main executor function for backward compatibility.
@@ -14,8 +17,6 @@ import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
  * - agents.ts — Agent management (118 lines)
  * - system.ts — System-level tools (42 lines)
  */
-
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 import { executeGetProcedure } from "./toolExecutors/procedures.ts";
 import {
@@ -41,73 +42,11 @@ import {
 } from "./toolExecutors/agents.ts";
 import { executeRunKbAudit } from "./toolExecutors/system.ts";
 
-// deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
-
-interface ReadHandlers {
-  executeSearchPartners: Function;
-  executeCountryOverview: Function;
-  executeDirectoryStatus: Function;
-  executeListJobs: Function;
-  executePartnerDetail: Function;
-  executeGlobalSummary: Function;
-  executeCheckBlacklist: Function;
-  executeListReminders: Function;
-  executePartnersWithoutContacts: Function;
-  executeSearchContacts: Function;
-  executeGetContactDetail: Function;
-  executeSearchProspects: Function;
-  executeListActivities: Function;
-  executeSearchBusinessCards: Function;
-  executeCheckJobStatus: Function;
-}
-
-interface WriteHandlers {
-  executeUpdatePartner: Function;
-  executeAddPartnerNote: Function;
-  executeCreateReminder: Function;
-  executeUpdateLeadStatus: Function;
-  executeBulkUpdatePartners: Function;
-  executeLinkBusinessCard: Function;
-  executeCreateActivity: Function;
-  executeUpdateActivity: Function;
-  executeManagePartnerContact: Function;
-  executeUpdateReminder: Function;
-  executeDeleteRecords: Function;
-  executeGenerateOutreach: Function;
-  executeSendEmail: Function;
-  executeDeepSearchPartner: Function;
-  executeDeepSearchContact: Function;
-  executeEnrichPartnerWebsite: Function;
-  executeScanDirectory: Function;
-  executeGenerateAliases: Function;
-}
-
-interface EnterpriseHandlers {
-  executeSaveMemory: Function;
-  executeSearchMemory: Function;
-  executeCreateWorkPlan: Function;
-  executeExecutePlanStep: Function;
-  executeGetActivePlans: Function;
-  executeSaveAsTemplate: Function;
-  executeSearchTemplates: Function;
-  executeSaveKbRule: Function;
-  executeSaveOperativePrompt: Function;
-  executeListWorkflows: Function;
-  executeStartWorkflow: Function;
-  executeAdvanceWorkflowGate: Function;
-  executeListPlaybooks: Function;
-  executeApplyPlaybook: Function;
-  executeUiAction: Function;
-  executeSearchKb: Function;
-}
-
 export interface ToolExecutorDeps {
-  // deno-lint-ignore no-explicit-any
   supabase: AnySupabaseClient;
-  readH: ReadHandlers;
-  writeH: WriteHandlers;
-  entH: EnterpriseHandlers;
+  readH: ReturnType<typeof createReadHandlers>;
+  writeH: ReturnType<typeof createWriteHandlers>;
+  entH: ReturnType<typeof createEnterpriseHandlers>;
 }
 
 /**

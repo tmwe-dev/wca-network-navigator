@@ -3,6 +3,8 @@ import { getCaCertsForHost } from "./caCerts.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
+type DebugGlobal = typeof globalThis & { __lastDebug?: Record<string, unknown> };
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -24,7 +26,7 @@ Deno.serve(async (req) => {
     if (!pass) {
       return edgeError("INTERNAL_ERROR", "no_password", undefined, corsHeaders, { debug });
     }
-    (globalThis as any).__lastDebug = debug;
+    (globalThis as DebugGlobal).__lastDebug = debug;
 
     const client = new ImapClient({
       host: debug.host,
@@ -36,17 +38,17 @@ Deno.serve(async (req) => {
       maxReconnectAttempts: 0,
       connectionTimeout: 15000,
       tlsOptions: { caCerts: getCaCertsForHost(debug.host) },
-    } as any);
+    } as unknown as ConstructorParameters<typeof ImapClient>[0]);
     await client.connect();
     await client.authenticate();
     const list = await client.listMailboxes();
-    try { await client.disconnect(); } catch (_) { /* ignore */ }
+    try { await client.disconnect(); } catch { /* ignore */ }
     const folders = list;
     return new Response(JSON.stringify({ user, folders }, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    const dbg = (globalThis as any).__lastDebug || null;
+  } catch (err: unknown) {
+    const dbg = (globalThis as DebugGlobal).__lastDebug || null;
     return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, corsHeaders, {
       debug: dbg,
     });

@@ -10,7 +10,7 @@ import { enrichActionPayload, type EmailAddressRule } from "./classificationRule
 import { handleQuestion, type QuestionComplaintInput } from "./questionAndComplaintHandler.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface CommercialHandlerInput {
   userId: string;

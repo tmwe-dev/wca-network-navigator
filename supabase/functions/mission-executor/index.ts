@@ -92,7 +92,7 @@ serve(async (req) => {
     let success = false;
     let error: string | null = null;
 
-    let slotAcquired = true;
+    const slotAcquired = true;
     try {
       const partnerId = (action.metadata as Record<string, unknown>)?.partner_id;
       if (!partnerId) throw new Error("No partner_id in action metadata");

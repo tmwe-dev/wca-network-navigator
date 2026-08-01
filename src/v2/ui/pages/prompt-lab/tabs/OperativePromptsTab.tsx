@@ -3,7 +3,7 @@
  */
 import { useAuth } from "@/providers/AuthProvider";
 import { GenericRecordTab } from "./GenericRecordTab";
-import { findOperativePromptsFull, updateOperativePrompt } from "@/data/operativePrompts";
+import { findOperativePromptsFull, updateOperativePrompt } from "@/application/data/operativePrompts";
 import type { Block } from "../types";
 
 const FIELDS = ["objective", "procedure", "criteria", "context", "examples"] as const;

@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useAtecoGroups } from "@/hooks/useProspectStats";
 import { ATECO_TREE, type AtecoEntry } from "@/catalogs/atecoCategories";
 import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/catalogs/italianProvinces";
-import { getAtecoRank, calcScore, type AtecoRank } from "@/data/atecoRanking";
+import { getAtecoRank, calcScore, type AtecoRank } from "@/application/data/atecoRanking";
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
 
 export const sections = ATECO_TREE.filter(a => a.livello === 1);

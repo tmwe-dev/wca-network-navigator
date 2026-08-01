@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, AlertTriangle, Clock, Zap } from "lucide-react";
-import { fetchRecentEdgeFunctionLogs } from "@/data/edgeFunctionLogs";
+import { fetchRecentEdgeFunctionLogs } from "@/application/data/edgeFunctionLogs";
 
 interface EdgeMetricRow {
   function_name: string;

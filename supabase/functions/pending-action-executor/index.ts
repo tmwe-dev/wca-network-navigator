@@ -23,6 +23,7 @@ import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
+import type { LeadStatus } from "../_shared/domainEvents.ts";
 
 interface PendingAction {
   id: string;
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
     }
 
     // deno-lint-ignore no-explicit-any
-    const supabase = createClient<any>(
+  const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
@@ -157,7 +158,7 @@ Deno.serve(async (req) => {
 
 async function refreshActionContext(
   // deno-lint-ignore no-explicit-any
-  supabase: ReturnType<typeof createClient<any>>,
+  supabase: ReturnType<typeof createClient>,
   action: PendingAction,
   payload: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
@@ -200,7 +201,7 @@ async function refreshActionContext(
 
 async function executeAction(
   // deno-lint-ignore no-explicit-any
-  supabase: ReturnType<typeof createClient<any>>,
+  supabase: ReturnType<typeof createClient>,
   action: PendingAction,
   payload: Record<string, unknown>
 ): Promise<ExecutionResult> {
@@ -270,8 +271,7 @@ async function executeAction(
       const partnerId = action.partner_id ?? payload.partner_id;
       if (!partnerId) return { success: false, action_type: action.action_type, detail: "No partner_id" };
       const leadPM = new LeadProcessManager(supabase);
-      // deno-lint-ignore no-explicit-any
-      const transResult = await leadPM.requestTransition(partnerId as string, action.user_id, payload.new_status as any, {
+      const transResult = await leadPM.requestTransition(partnerId as string, action.user_id, payload.new_status as LeadStatus, {
         trigger: `Pending action update_lead_status approvata`,
         actor: { type: "ai_agent", name: "pending-action-executor" },
         decisionOrigin: "ai_approved",

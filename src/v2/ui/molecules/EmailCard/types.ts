@@ -3,7 +3,7 @@
  * Costruito dal hook (es. useFunnemailInbox) a partire da ChannelMessage +
  * snapshot Funnemail (folder, decision, partner, sender intel).
  */
-import type { FunnemailJobStatus } from "@/data/funnemailStatuses";
+import type { FunnemailJobStatus } from "@/application/data/funnemailStatuses";
 
 export interface EmailCardEntity {
   id: string;

@@ -88,7 +88,7 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
   if (existsSync(typesFile)) {
     const t = readFileSync(typesFile, "utf8");
     const tablesBlock = t.slice(t.indexOf("Tables: {"));
-    typeTables = [...tablesBlock.matchAll(/^      (\w+): \{$/gm)].map((m) => m[1]);
+    typeTables = [...tablesBlock.matchAll(/^ {6}(\w+): \{$/gm)].map((m) => m[1]);
   }
   const createdTables = [...created].filter((c) => !c.includes("."));
   const missingInTypes = createdTables.filter((t) => !typeTables.includes(t));

@@ -16,8 +16,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { approveActivity, rejectActivity, findPendingAgentActivities } from "@/data/activities";
-import { findProposedOrPendingAgentTasks } from "@/data/agentTasks";
+import { approveActivity, rejectActivity, findPendingAgentActivities } from "@/application/data/activities";
+import { findProposedOrPendingAgentTasks } from "@/application/data/agentTasks";
 import { queryKeys } from "@/lib/queryKeys";
 import { TabIntroBanner } from "./TabIntroBanner";
 

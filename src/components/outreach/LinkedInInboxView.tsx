@@ -37,9 +37,9 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
 
   const { data: messages = [], isLoading } = useChannelMessages("linkedin", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
-  const { sendMessage, isFireScrapeAvailable } = useLinkedInMessagingBridge();
-  const { isReading, isAvailable, readNow } = useLinkedInSync();
-  const { progress: bfProgress, startBackfill, stopBackfill } = useLinkedInBackfill();
+  const { sendMessage } = useLinkedInMessagingBridge();
+  const { isAvailable } = useLinkedInSync();
+  const { progress: bfProgress } = useLinkedInBackfill();
   const { data: bfState } = useBackfillState("linkedin");
 
   // Group messages by contact

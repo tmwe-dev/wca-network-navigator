@@ -4,7 +4,7 @@
 import type { SendChannel, PostSendPipelineInput } from "./postSendPipeline.ts";
 import { channelLabel, getPartnerStatus } from "./pipelineUtils.ts";
 
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 const SEQUENCE_NEXT: Record<
   number,
@@ -39,7 +39,7 @@ function getFollowUpDays(
 export async function createReminder(
   supabase: SupabaseClient,
   input: PostSendPipelineInput,
-  now: string,
+  _now: string,
 ): Promise<boolean> {
   if (!input.partnerId) return false;
 
@@ -113,7 +113,7 @@ export async function createReminder(
 export async function ensureNextAction(
   supabase: SupabaseClient,
   input: PostSendPipelineInput,
-  now: string,
+  _now: string,
 ): Promise<boolean> {
   if (!input.partnerId) return false;
 

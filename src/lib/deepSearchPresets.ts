@@ -128,28 +128,6 @@ export function getDeepSearchMeta(quality: DeepSearchQuality): DeepSearchPresetM
 /**
  * Definizione human-friendly di ogni fonte, per la checklist granulare.
  */
-interface SourceDescriptor {
-  key: keyof DeepSearchSources;
-  label: string;
-  description: string;
-  icon: "search" | "globe" | "users" | "linkedin" | "whatsapp" | "map" | "star" | "newspaper";
-  group: "google" | "site" | "social" | "extra";
-}
-
-const SOURCE_DESCRIPTORS: SourceDescriptor[] = [
-  { key: "googleSerp", label: "Google SERP cascade", description: "Cerca link verificati con cascade di query", icon: "search", group: "google" },
-  { key: "googleGeneral", label: "Google generale (no LinkedIn)", description: "Menzioni sui media e directory settoriali", icon: "search", group: "google" },
-  { key: "googleNews30d", label: "Google News (30gg)", description: "Notizie recenti sull'azienda", icon: "newspaper", group: "google" },
-  { key: "websiteHome", label: "Sito web — homepage", description: "Favicon, qualità grafica e contenuto", icon: "globe", group: "site" },
-  { key: "websiteAbout", label: "Sito web — pagina About", description: "Value proposition e mission", icon: "globe", group: "site" },
-  { key: "websiteMultiPage", label: "Sito web — multi-pagina (team/contatti)", description: "Naviga /team /contacts /chi-siamo per scoprire team e indirizzi", icon: "users", group: "site" },
-  { key: "linkedinContacts", label: "LinkedIn contatti (URL)", description: "Trova URL profili personali via Google", icon: "linkedin", group: "social" },
-  { key: "linkedinCompany", label: "LinkedIn azienda (URL)", description: "Trova URL pagina /company", icon: "linkedin", group: "social" },
-  { key: "whatsapp", label: "WhatsApp (wa.me)", description: "Costruisce link chat dal numero mobile", icon: "whatsapp", group: "social" },
-  { key: "googleMaps", label: "Google Maps / Place", description: "Indirizzo, tel, orari, rating, recensioni count", icon: "map", group: "extra" },
-  { key: "reputation", label: "Reputation (Trustpilot + Wikipedia)", description: "Rating Trustpilot e voce Wikipedia se esistono", icon: "star", group: "extra" },
-];
-
 /**
  * Adatta il preset al formato legacy DeepSearchConfig usato dallo store v2.
  */

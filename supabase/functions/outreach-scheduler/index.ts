@@ -36,7 +36,7 @@ serve(async (req) => {
     if (guard.skip) {
       endMetrics(metrics, true, 200);
       return new Response(
-        JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
         { headers: { ...dynCors, "Content-Type": "application/json" } }
       );
     }
@@ -159,7 +159,7 @@ serve(async (req) => {
         { auth: { persistSession: false } }
       );
       await cronGuardLogRun(sb, "outreach_scheduler", {}, err instanceof Error ? err.message : String(err));
-    } catch (_) { /* ignore */ }
+    } catch { /* ignore */ }
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });

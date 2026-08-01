@@ -40,7 +40,7 @@ export interface JournalistReviewOptions {
 
 // deno-lint-ignore no-explicit-any
 export async function journalistReview(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   userId: string,
   input: JournalistReviewInput,
   options?: JournalistReviewOptions,

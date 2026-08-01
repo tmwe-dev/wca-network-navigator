@@ -12,7 +12,7 @@ import ContactPicker from "@/components/workspace/ContactPicker";
 import LinkedInDMDialog from "@/components/workspace/LinkedInDMDialog";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
 import { useQuery } from "@tanstack/react-query";
-import { findSocialLinksByPartnerIds } from "@/data/partnerRelations";
+import { findSocialLinksByPartnerIds } from "@/application/data/partnerRelations";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";

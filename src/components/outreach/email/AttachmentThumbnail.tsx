@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
-import { getImportFilePublicUrl } from "@/data/importLogs";
+import { getImportFilePublicUrl } from "@/application/data/importLogs";
 import { formatBytes, getAttachmentIcon } from "./emailUtils";
 import type { EmailAttachment } from "@/hooks/useEmailActions";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";

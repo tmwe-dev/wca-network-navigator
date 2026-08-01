@@ -48,7 +48,7 @@ export function AgentChat({ agent }: Props) {
         body: { agent_id: agent.id, chat_messages: newMsgs },
       });
       setMessages([...newMsgs, { role: "assistant", content: String(data?.response ?? "Nessuna risposta") }]);
-    } catch (_e) {
+    } catch {
       setMessages([...newMsgs, { role: "assistant", content: "⚠️ Errore nella comunicazione con l'agente." }]);
     } finally {
       setLoading(false);

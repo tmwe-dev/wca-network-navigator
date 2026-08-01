@@ -44,9 +44,9 @@ Errori ESLint: **0**. Warning totali: **1.282**.
 
 | Regola | Conteggio |
 |---|---|
-| no-restricted-imports (UI→DAL, v1 pages) | 507 |
+| no-restricted-imports (UI→DAL, v1 pages) | 0 (UI instradata tramite gateway per dominio in `src/application/data/`) |
 | unused-imports/no-unused-vars | 275 |
-| @typescript-eslint/no-explicit-any (solo edge/scripts) | 242 |
+| @typescript-eslint/no-explicit-any (solo edge/scripts) | 0 |
 | unused-imports/no-unused-imports | 93 |
 | @typescript-eslint/no-unsafe-function-type | 49 |
 | tmwe/no-direct-ai-invoke | 36 |

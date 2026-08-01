@@ -21,21 +21,6 @@ import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-/** Estrae user_id dal JWT senza verifica crittografica (gateway l'ha già validato) */
-function extractUserIdFromJwt(authHeader: string): string | null {
-  try {
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    const payload = token.split(".")[1];
-    if (!payload) return null;
-    const decoded = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
-    );
-    return (decoded?.sub as string) || null;
-  } catch {
-    return null;
-  }
-}
-
 /** Crea un bridge_token sha256-hashed in tabella, ritorna il token in chiaro */
 async function mintBridgeToken(userId: string): Promise<string | null> {
   try {
@@ -85,8 +70,6 @@ serve(async (req) => {
   // gateway non lo valida, quindi DOBBIAMO farlo qui).
   const auth = await requireAuth(req, cors);
   if (isAuthError(auth)) return auth;
-  const authHeader = req.headers.get("Authorization") || "";
-
   // Risoluzione agent_id: body (validato contro allowlist DB) → DB → secret.
   // Gli agenti vocali validi vivono nella tabella `agents` (elevenlabs_agent_id).
   let requestedAgentId: string | null = null;

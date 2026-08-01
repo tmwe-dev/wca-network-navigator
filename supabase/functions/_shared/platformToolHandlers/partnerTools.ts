@@ -9,7 +9,7 @@ export async function executePartnerToolHandler(
   name: string,
   args: Record<string, unknown>,
   userId: string,
-  authHeader: string,
+  _authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     case "search_partners": {
@@ -210,7 +210,7 @@ export async function executePartnerToolHandler(
       }
 
       if (Object.keys(updates).length > 1) {
-        let query = supabase.from("partners").update(updates).in("id", partnerIds);
+        const query = supabase.from("partners").update(updates).in("id", partnerIds);
         const { error } = await query;
         if (error) return { error: error.message };
       }

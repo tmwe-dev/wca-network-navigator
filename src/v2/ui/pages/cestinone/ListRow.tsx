@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
-import type { CestinoItem } from "@/data/cestinone";
+import type { CestinoItem } from "@/application/data/cestinone";
 import { CHANNEL_META, STATUS_META, TRIGGER_META, PARTNER_TYPE_META } from "./meta";
 
 interface Props {

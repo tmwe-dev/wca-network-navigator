@@ -12,7 +12,7 @@ import {
 import { useTheme, t } from "./theme";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
-import { updateDownloadJob, updateJobItemsByJobIdAndStatus } from "@/data/downloadJobs";
+import { updateDownloadJob, updateJobItemsByJobIdAndStatus } from "@/application/data/downloadJobs";
 
 const log = createLogger("ActiveJobBar");
 // useExtensionBridge rimosso — download via wca-app bridge (Claude Engine V8)
@@ -239,7 +239,7 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
 }
 
 function ExpandedJobRow({
-  job, pauseResume, isDark, th,
+  job, pauseResume, isDark: _isDark, th,
 }: {
   job: DownloadJob;
   pauseResume: ReturnType<typeof usePauseResumeJob>;

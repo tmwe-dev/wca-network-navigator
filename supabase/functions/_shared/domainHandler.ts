@@ -7,7 +7,7 @@ import { enrichActionPayload, type EmailAddressRule } from "./classificationRule
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface PostClassificationResult {
   actionsExecuted: string[];

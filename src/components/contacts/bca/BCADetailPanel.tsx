@@ -11,12 +11,12 @@ import { BCASmartActions } from "./BCASmartActions";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { searchPartnersByNameAlias } from "@/data/partners";
+import { searchPartnersByNameAlias } from "@/application/data/partners";
 import { useUpdateBusinessCard, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "@/hooks/use-toast";
 import { STATUS_COLORS, STATUS_LABELS, countryFlag, googleLogoSearchUrl } from "./bcaUtils";
-import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 /* ═══ Manual Partner Matcher ═══ */

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { createCampaignDraftQueue } from "@/data/emailCampaigns";
 import { pickDefaultEmailTypeId } from "@/data/pickDefaultEmailType";
 import { insertEmailDraft } from "@/data/emailDrafts";
@@ -167,7 +167,9 @@ export function useEmailComposerV2() {
         ? `Destinatario: ${recipients[0].name} di ${recipients[0].companyName ?? "N/D"} (${recipients[0].email})`
         : "";
 
-      const data = await invokeEdge<{ response?: string; content?: string }>("unified-assistant", {
+      const data = await invokeAi<{ response?: string; content?: string }>("unified-assistant", {
+        scope: "email",
+        context: { source: "useEmailComposerV2", mode: "generate" },
         body: {
           messages: [{
             role: "user",
@@ -180,7 +182,6 @@ Contesto: outreach commerciale logistica WCA.`,
           scope: "extension",
           context: { source: "email_composer", use_kb: useKB },
         },
-        context: "emailComposerV2",
       });
       const raw = (data?.response || data?.content || "").trim();
       if (!raw) return;

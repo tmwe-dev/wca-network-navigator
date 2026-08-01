@@ -4,8 +4,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type ImportLogInsert = Database["public"]["Tables"]["import_logs"]["Insert"];
-
 export async function updateImportLog(id: string, updates: Database["public"]["Tables"]["import_logs"]["Update"]) {
   const { error } = await supabase.from("import_logs").update(updates).eq("id", id);
   if (error) throw error;
@@ -60,9 +58,7 @@ export async function uploadImportFile(
   const filePath = `${userId}/${Date.now()}_${file.name}`;
   const { error: uploadError } = await supabase.storage.from("import-files").upload(filePath, file);
   if (uploadError) throw uploadError;
-  const { data: urlData } = await supabase.storage
-    .from("import-files")
-    .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+  const { data: urlData } = await supabase.storage.from("import-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
   return { path: filePath, signedUrl: urlData?.signedUrl ?? null };
 }
 

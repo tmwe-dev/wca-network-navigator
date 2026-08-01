@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
   });
   if (guard.skip) {
     return new Response(
-      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
       { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }

@@ -23,15 +23,15 @@ import {
   findActiveRun,
   cancelRun,
   type GlobalRun,
-} from "@/data/promptLabGlobalRuns";
+} from "@/application/data/promptLabGlobalRuns";
 import type { ParsedFile } from "../utils/fileParser";
 import { collectAllBlocks, loadFullDoctrine } from "./useBlockCollector";
 import { buildSystemMap, buildSystemMapByAgent, toRunProposals, type GlobalProposal } from "./useProposalProcessing";
 import { saveProposal, auditSaveProposal } from "./useProposalSaver";
 import { buildExtraContext, filterDoctrineForBlock, filterSystemMapForBlock, filterReferenceForBlock } from "./useContextBuilder";
-import { listApprovedForArchitect, markSuggestionsApplied, type SuggestedImprovement } from "@/data/suggestedImprovements";
-import { trackImprovementMetrics } from "@/data/promptLabMetrics";
-import { getAppSetting } from "@/data/appSettings";
+import { listApprovedForArchitect, markSuggestionsApplied, type SuggestedImprovement } from "@/application/data/suggestedImprovements";
+import { trackImprovementMetrics } from "@/application/data/promptLabMetrics";
+import { getAppSetting } from "@/application/data/appSettings";
 import { computeChangeRatio, MINOR_CHANGE_THRESHOLD } from "./changeRatio";
 
 

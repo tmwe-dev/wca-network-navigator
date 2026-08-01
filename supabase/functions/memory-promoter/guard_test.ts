@@ -28,5 +28,5 @@ Deno.test("memory-promoter: delete protetto da .in(ids) (mai bulk wipe)", () => 
   const deletes = SRC.match(/\.delete\(\)\.in\("id",/g) || [];
   assert(deletes.length >= 2, `expected scoped deletes, got ${deletes.length}`);
   // Nessun delete senza scope
-  assert(!/\.delete\(\)\s*[\)\s,;}]/.test(SRC.replace(/\.delete\(\)\.in\("id",[^)]+\)/g, "")));
+  assert(!/\.delete\(\)\s*[)\s,;}]/.test(SRC.replace(/\.delete\(\)\.in\("id",[^)]+\)/g, "")));
 });

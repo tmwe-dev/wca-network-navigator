@@ -11,12 +11,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
-import { findOperativePromptOptions } from "@/data/operativePrompts";
-import {
-  listVersionsForPrompt,
-  rollbackPromptToVersion,
-  type PromptVersion,
-} from "@/data/promptTests";
+import { findOperativePromptOptions } from "@/application/data/operativePrompts";
+import { listVersionsForPrompt, rollbackPromptToVersion, type PromptVersion } from "@/application/data/promptTests";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -25,19 +21,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Loader2, History as HistoryIcon, RotateCcw, GitCompareArrows } from "lucide-react";
 
-interface PromptOption { id: string; name: string }
-
 const QK_PROMPTS = ["prompt-history", "prompts-list"] as const;
 const qkVersions = (promptId: string) => ["prompt-history", "versions", promptId] as const;
 
-const FIELDS: Array<keyof PromptVersion> = [
-  "name",
-  "context",
-  "objective",
-  "procedure",
-  "criteria",
-  "examples",
-];
+const FIELDS: Array<keyof PromptVersion> = ["name", "context", "objective", "procedure", "criteria", "examples"];
 
 /** Diff line-based via Longest Common Subsequence (no deps).
  *  Ritorna sequenza di blocchi: equal | add | del. */
@@ -59,7 +46,8 @@ function diffLines(a: string, b: string): Array<{ kind: "eq" | "add" | "del"; li
   while (i < m && j < n) {
     if (A[i] === B[j]) {
       out.push({ kind: "eq", line: A[i] });
-      i++; j++;
+      i++;
+      j++;
     } else if (dp[i + 1][j] >= dp[i][j + 1]) {
       out.push({ kind: "del", line: A[i] });
       i++;
@@ -89,8 +77,7 @@ function FieldDiff({ field, base, target }: { field: string; base: string; targe
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground px-2 py-1 border-b bg-muted/30 flex items-center justify-between">
         <span>{field}</span>
         <Badge variant="outline" className="text-[9px] py-0">
-          {blocks.filter((b) => b.kind === "add").length}+ /{" "}
-          {blocks.filter((b) => b.kind === "del").length}-
+          {blocks.filter((b) => b.kind === "add").length}+ / {blocks.filter((b) => b.kind === "del").length}-
         </Badge>
       </div>
       <pre className="text-[11px] font-mono whitespace-pre-wrap p-1.5 max-h-72 overflow-auto leading-snug">
@@ -99,8 +86,8 @@ function FieldDiff({ field, base, target }: { field: string; base: string; targe
             b.kind === "add"
               ? "bg-success/15 text-success dark:text-success"
               : b.kind === "del"
-              ? "bg-destructive/15 text-destructive line-through"
-              : "text-muted-foreground";
+                ? "bg-destructive/15 text-destructive line-through"
+                : "text-muted-foreground";
           const prefix = b.kind === "add" ? "+ " : b.kind === "del" ? "- " : "  ";
           return (
             <div key={idx} className={`px-1 ${cls}`}>
@@ -155,13 +142,16 @@ export function PromptHistoryTab() {
     // target = latest, base = previous (or same se 1 sola)
     const latest = v[0];
     const previous = v[1] ?? v[0];
-    setTargetVersionId((cur) => cur && v.some((x) => x.id === cur) ? cur : latest.id);
-    setBaseVersionId((cur) => cur && v.some((x) => x.id === cur) ? cur : previous.id);
+    setTargetVersionId((cur) => (cur && v.some((x) => x.id === cur) ? cur : latest.id));
+    setBaseVersionId((cur) => (cur && v.some((x) => x.id === cur) ? cur : previous.id));
   }, [versionsQuery.data]);
 
   const versions = versionsQuery.data ?? [];
   const baseVersion = useMemo(() => versions.find((v) => v.id === baseVersionId) ?? null, [versions, baseVersionId]);
-  const targetVersion = useMemo(() => versions.find((v) => v.id === targetVersionId) ?? null, [versions, targetVersionId]);
+  const targetVersion = useMemo(
+    () => versions.find((v) => v.id === targetVersionId) ?? null,
+    [versions, targetVersionId],
+  );
 
   const rollbackMutation = useMutation({
     mutationFn: async (v: PromptVersion) => {
@@ -228,15 +218,17 @@ export function PromptHistoryTab() {
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold">v{v.version_number}</span>
-                    {isLatest && <Badge variant="default" className="text-[9px] py-0 h-4">current</Badge>}
+                    {isLatest && (
+                      <Badge variant="default" className="text-[9px] py-0 h-4">
+                        current
+                      </Badge>
+                    )}
                     <span className="ml-auto text-[10px] text-muted-foreground">
                       {new Date(v.created_at).toLocaleString()}
                     </span>
                   </div>
                   {v.change_reason && (
-                    <div className="text-[10px] text-muted-foreground italic line-clamp-2">
-                      {v.change_reason}
-                    </div>
+                    <div className="text-[10px] text-muted-foreground italic line-clamp-2">{v.change_reason}</div>
                   )}
                   <div className="flex items-center gap-1 pt-0.5">
                     <Button
@@ -262,7 +254,11 @@ export function PromptHistoryTab() {
                         className="h-5 px-1.5 text-[9px] ml-auto text-warning hover:text-warning"
                         disabled={rollbackMutation.isPending}
                         onClick={() => {
-                          if (confirm(`Ripristinare il prompt alla versione v${v.version_number}? Verrà creata una nuova versione di rollback.`)) {
+                          if (
+                            confirm(
+                              `Ripristinare il prompt alla versione v${v.version_number}? Verrà creata una nuova versione di rollback.`,
+                            )
+                          ) {
                             rollbackMutation.mutate(v);
                           }
                         }}
@@ -287,26 +283,28 @@ export function PromptHistoryTab() {
           <GitCompareArrows className="h-4 w-4 text-muted-foreground" />
           <Label className="text-xs font-semibold">Confronto versioni</Label>
           <div className="flex items-center gap-1 ml-auto">
-            <Select
-              value={baseVersionId ?? ""}
-              onValueChange={(v) => setBaseVersionId(v)}
-            >
-              <SelectTrigger className="h-7 text-xs w-32"><SelectValue placeholder="base" /></SelectTrigger>
+            <Select value={baseVersionId ?? ""} onValueChange={(v) => setBaseVersionId(v)}>
+              <SelectTrigger className="h-7 text-xs w-32">
+                <SelectValue placeholder="base" />
+              </SelectTrigger>
               <SelectContent>
                 {versions.map((v) => (
-                  <SelectItem key={v.id} value={v.id} className="text-xs">v{v.version_number}</SelectItem>
+                  <SelectItem key={v.id} value={v.id} className="text-xs">
+                    v{v.version_number}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <span className="text-[11px] text-muted-foreground">→</span>
-            <Select
-              value={targetVersionId ?? ""}
-              onValueChange={(v) => setTargetVersionId(v)}
-            >
-              <SelectTrigger className="h-7 text-xs w-32"><SelectValue placeholder="target" /></SelectTrigger>
+            <Select value={targetVersionId ?? ""} onValueChange={(v) => setTargetVersionId(v)}>
+              <SelectTrigger className="h-7 text-xs w-32">
+                <SelectValue placeholder="target" />
+              </SelectTrigger>
               <SelectContent>
                 {versions.map((v) => (
-                  <SelectItem key={v.id} value={v.id} className="text-xs">v{v.version_number}</SelectItem>
+                  <SelectItem key={v.id} value={v.id} className="text-xs">
+                    v{v.version_number}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

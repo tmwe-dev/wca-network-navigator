@@ -25,8 +25,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { invokeAi } from "@/lib/ai/invokeAi";
-import { createPromptChangeProposal } from "@/data/promptChangeProposals";
-import { createKbEntryProposal } from "@/data/kbProposals";
+import { createPromptChangeProposal } from "@/application/data/promptChangeProposals";
+import { createKbEntryProposal } from "@/application/data/kbProposals";
 import { DiffViewer } from "./components/DiffViewer";
 import { buildDiffText } from "@/lib/textDiff";
 

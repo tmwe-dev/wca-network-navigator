@@ -8,7 +8,7 @@ import { extractFromEnrichment } from "./qualityHelpers.ts";
 import type { PartnerData } from "./qualityTypes.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /**
  * Calcola la disponibilità dei dati (percentuale di data sources disponibili).

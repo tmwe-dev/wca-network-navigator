@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getDownloadJobTerminalLog } from "@/data/downloadViews";
+import { getDownloadJobTerminalLog } from "@/application/data/downloadViews";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -189,7 +189,7 @@ function GenericRow({ entry }: { entry: LogEntry }) {
 /* ══════════════════════════════════════════════════
    MAIN COMPONENT
    ══════════════════════════════════════════════════ */
-export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countryName, isDark }: Props) {
+export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countryName, isDark: _isDark }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const isActive = jobStatus === "running" || jobStatus === "pending";

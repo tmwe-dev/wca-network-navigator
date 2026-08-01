@@ -9,12 +9,12 @@
  * Dimensione attesa: ~5KB per ~200 entry. Resta SEMPRE in memoria del client.
  * Il contenuto vero viene fetchato on-demand da `entityRetriever`.
  */
-import { findKbEntries } from "@/data/kbEntries";
-import { findOperativePromptsFull } from "@/data/operativePrompts";
-import { findEmailPromptsByScope } from "@/data/emailPrompts";
-import { findEmailAddressRules } from "@/data/emailAddressRules";
-import { findCommercialPlaybooks } from "@/data/commercialPlaybooks";
-import { findAgentPersonas } from "@/data/agentPersonas";
+import { findKbEntries } from "@/application/data/kbEntries";
+import { findOperativePromptsFull } from "@/application/data/operativePrompts";
+import { findEmailPromptsByScope } from "@/application/data/emailPrompts";
+import { findEmailAddressRules } from "@/application/data/emailAddressRules";
+import { findCommercialPlaybooks } from "@/application/data/commercialPlaybooks";
+import { findAgentPersonas } from "@/application/data/agentPersonas";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("compactIndex");

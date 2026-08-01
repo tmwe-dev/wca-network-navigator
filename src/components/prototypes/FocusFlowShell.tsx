@@ -15,7 +15,7 @@ import { StatsBar } from "./shared/StatsBar";
 import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/queryKeys";
-import { findPrototypeContacts } from "@/data/uiShellQueries";
+import { findPrototypeContacts } from "@/application/data/uiShellQueries";
 import { toRecords } from "@/lib/records";
 
 const TABS = [

@@ -8,7 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 // ━━━ Sender matching (EXACT ONLY — no domain fallback) ━━━
 // Politica: 1 email = 1 mittente. Se l'address esatto non corrisponde a nessun
@@ -296,8 +296,6 @@ export async function saveMessageToDb(
 
         if (ruleErr) {
           console.warn(`[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`, ruleErr.message);
-        } else {
-          
         }
       }
     } catch (e) {

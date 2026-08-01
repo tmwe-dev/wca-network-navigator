@@ -16,8 +16,8 @@ import {
   updateAgentRoutingRule,
   deleteAgentRoutingRule,
   type AgentRoutingRule,
-} from "@/data/agentRoutingRules";
-import { listAgentsForCapabilities, type AgentMini } from "@/data/agentsForPromptLab";
+} from "@/application/data/agentRoutingRules";
+import { listAgentsForCapabilities, type AgentMini } from "@/application/data/agentsForPromptLab";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -340,7 +340,17 @@ export function AgentRoutingTab() {
         });
         return created.id;
       }
-      const { _new, _dirty, user_id, id, created_at, updated_at, match_count, last_matched_at, ...patch } = draft;
+      const {
+        _new,
+        _dirty,
+        user_id: _userId,
+        id,
+        created_at: _createdAt,
+        updated_at: _updatedAt,
+        match_count: _matchCount,
+        last_matched_at: _lastMatchedAt,
+        ...patch
+      } = draft;
       await updateAgentRoutingRule(id!, patch as Partial<AgentRoutingRule>);
       return id!;
     },

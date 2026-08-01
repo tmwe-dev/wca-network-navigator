@@ -12,7 +12,7 @@ import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContact
 import { ContactDetail } from "./shared/ContactDetail";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { queryKeys } from "@/lib/queryKeys";
-import { findPrototypeContacts } from "@/data/uiShellQueries";
+import { findPrototypeContacts } from "@/application/data/uiShellQueries";
 import { toRecords } from "@/lib/records";
 
 type PanelType = "none" | "contacts" | "outreach" | "agenda" | "email";

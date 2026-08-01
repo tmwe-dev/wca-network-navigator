@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { getScheduledImproveConfigValue, saveScheduledImproveConfig } from "@/data/appSettings";
+import { getScheduledImproveConfigValue, saveScheduledImproveConfig } from "@/application/data/appSettings";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";

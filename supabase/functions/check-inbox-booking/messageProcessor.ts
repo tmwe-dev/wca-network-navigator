@@ -16,34 +16,6 @@ import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperati
 import { detectBounce, handleBounce } from "./bounceDetector.ts";
 import { extractBodyAndAttachments } from "./bodyExtractor.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
-import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
-
-interface MessageData {
-  uid: number;
-  uidvalidity: number | null;
-  fromAddr: string;
-  toAddr: string;
-  ccAddresses: string;
-  bccAddresses: string;
-  senderName: string;
-  subject: string;
-  messageId: string;
-  date: string;
-  inReplyTo: string | null;
-  referencesHeader: string | null;
-  bodyText: string;
-  bodyHtml: string;
-  imapFlags: string;
-  internalDate: string | null;
-  rfc822Size: number;
-  rawBytes: Uint8Array;
-  rawHash: string;
-  rawStoragePath: string;
-  isOversized: boolean;
-  parseWarnings: string[];
-  attachmentRecords: AttachmentRecord[];
-  bodyStructure: Record<string, unknown> | null;
-}
 
 const MAX_RAW_FETCH_BYTES = 15_000_000; // 15MB
 
@@ -53,9 +25,9 @@ export async function processMessage(
   userId: string,
   imapExec: { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> },
   client: ImapClient,
-  supabase: any,
-  supabaseAdmin: any,
-  isOversized: boolean,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
+  supabaseAdmin: import("../_shared/supabaseClient.ts").AnySupabaseClient,
+  _isOversized: boolean,
 ): Promise<{
   msgData: Record<string, unknown> | null;
   error: string | null;
@@ -162,10 +134,12 @@ export async function processMessage(
         envelope: true,
         bodyStructure: true,
       } as Record<string, unknown>);
-      // deno-lint-ignore no-explicit-any
-      const env = (envFetch as unknown as any[])?.[0]?.envelope as Record<string, unknown> | undefined;
-      // deno-lint-ignore no-explicit-any
-      bodyStructure = ((envFetch as unknown as any[])?.[0]?.bodyStructure as Record<string, unknown>) || null;
+      const fetched = envFetch as unknown as Array<{
+        envelope?: Record<string, unknown>;
+        bodyStructure?: Record<string, unknown>;
+      }>;
+      const env = fetched[0]?.envelope;
+      bodyStructure = fetched[0]?.bodyStructure ?? null;
       if (env) {
         fromAddr = envelopeAddr((env.from as Record<string, unknown>[] | undefined)?.[0] ?? null);
         toAddr = envelopeAddrList(env.to as Record<string, unknown>[] | undefined);
@@ -302,7 +276,6 @@ export async function processMessage(
     if (result.msgData) {
       // ── Publish email.inbound_received via EmailProcessManager ──
       try {
-        const leadPM = initLeadProcessManager(supabase);
         const emailPM = initEmailProcessManager(supabase);
         await emailPM.processInboundReceived({
           messageId: result.msgData.id as string,
@@ -323,7 +296,8 @@ export async function processMessage(
         if (bounceInfo) {
           await handleBounce(supabase, userId, result.msgData.id as string, bounceInfo);
         }
-      } catch (bounceErr) {
+      } catch {
+        // Bounce processing is best-effort.
       }
 
       return { msgData: result.msgData, error: null };
@@ -337,7 +311,7 @@ export async function processMessage(
 }
 
 export async function matchResponseActivity(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   savedMsgId: string,
   inReplyTo: string | null,
   threadId: string,
@@ -387,7 +361,7 @@ export async function matchResponseActivity(
         p_response_time_hours: responseTimeHours,
       });
     }
-  } catch (matchErr: unknown) {
-    const { extractErrorMessage } = await import("../_shared/handleEdgeError.ts");
+  } catch {
+    // Response-time tracking is best-effort and must not block ingestion.
   }
 }

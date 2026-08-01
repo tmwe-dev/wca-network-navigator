@@ -176,7 +176,7 @@ async function makeAiCall(
       data,
       triedModel: options.model,
     };
-  } catch (e) {
+  } catch {
     return {
       ok: false,
       status: response.status,
@@ -245,8 +245,6 @@ export async function callAiWithFallback(
     });
 
     if (result.ok && result.data) {
-      if (tryModel !== provider.model) {
-      }
       return { ok: true, data: result.data };
     }
 

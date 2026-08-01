@@ -4,7 +4,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAgentByIdRaw } from "@/v2/io/supabase/queries/agents";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface ChatMessage {
@@ -34,9 +34,10 @@ export function useAgentChatV2(agentId: string | null) {
     setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
     try {
-      const result = await invokeEdge<{ reply: string }>("unified-assistant", {
+      const result = await invokeAi<{ reply: string }>("unified-assistant", {
+        scope: "chat",
+        context: { source: "useAgentChatV2" },
         body: { message: content, agentId, scope: "chat" },
-        context: "agentChatV2",
       });
       const assistantMsg: ChatMessage = {
         role: "assistant",

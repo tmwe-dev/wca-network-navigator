@@ -29,8 +29,6 @@ export function clearLastSuccessfulQueryPlan(): void {
 
 /* ─── Bulk action templates per tabella ─── */
 
-const BULK_ACTIONS_BY_TABLE: Record<string, ToolResult & { kind: "table" } extends infer T ? T extends { bulkActions?: infer B } ? B : never : never> = {} as never;
-
 function bulkActionsFor(table: string): readonly { id: string; label: string; promptTemplate: string }[] {
   switch (table) {
     case "partners":

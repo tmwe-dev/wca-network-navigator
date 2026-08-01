@@ -7,7 +7,7 @@ import { aiChat } from "./aiGateway.ts";
 import { journalistReview } from "./journalistReviewLayer.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface EmailAddressRule {
   category?: string;
@@ -122,7 +122,7 @@ Restituisci il draft in questo formato JSON:
         const draft = JSON.parse(jsonMatch[0]);
         if (draft.draft_subject && draft.draft_body) {
           // ── EDITORIAL GATE (Blocco 4) — journalistReview obbligatorio sui draft inbound ──
-          let finalSubject = draft.draft_subject as string;
+          const finalSubject = draft.draft_subject as string;
           let finalBody = draft.draft_body as string;
           let draftBlocked = false;
           let blockReason: string | null = null;

@@ -23,7 +23,7 @@
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface TransitionGate {
   from: string;
@@ -204,5 +204,6 @@ export async function applyTransition(
     description: `Transizione. Trigger: ${transition.trigger}. ${transition.autoApply ? "Auto-applicata." : "Approvata manualmente."}`,
     status: "completed",
   });
+  if (logError) return false;
   return true;
 }

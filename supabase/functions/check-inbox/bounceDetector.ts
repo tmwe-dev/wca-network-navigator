@@ -5,7 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 export interface BounceInfo {
   type: "hard" | "soft";
@@ -38,7 +38,7 @@ export function detectBounce(msg: { fromAddr: string; subject: string; bodyText:
     /permanent/i.test(bodyText) || /does not exist/i.test(bodyText);
 
   const emailMatch = bodyText.match(
-    /(?:original recipient|final-recipient|to:\s*)<?([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})>?/i
+    /(?:original recipient|final-recipient|to:\s*)<?([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})>?/i
   );
   const bouncedEmail = emailMatch?.[1]?.toLowerCase() || null;
 

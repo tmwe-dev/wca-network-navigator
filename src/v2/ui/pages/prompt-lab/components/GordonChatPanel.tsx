@@ -16,10 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, Check, BookmarkPlus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
-import { createSuggestion } from "@/data/suggestedImprovements";
+import { createSuggestion } from "@/application/data/suggestedImprovements";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/application/data/harmonizeRuns";
 
 interface ChatMsg { role: "user" | "assistant"; content: string; ts?: string }
 

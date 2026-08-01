@@ -1,7 +1,7 @@
 import { useAssignmentMap, useAssignClient } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
-import { findAgentBasicById } from "@/data/agents";
+import { findAgentBasicById } from "@/application/data/agents";
 import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { Bot, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";

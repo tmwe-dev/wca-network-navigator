@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
-import { upsertAppSetting, findAiSettingsForUser } from "@/data/appSettings";
+import { upsertAppSetting, findAiSettingsForUser } from "@/application/data/appSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,8 +24,6 @@ const AI_KEYS = [
   { key: "ai_knowledge_base", label: "Knowledge Base mittente (chi sei, cosa offri)", textarea: true },
 ] as const;
 
-interface SettingRow { key: string; value: string | null }
-
 export function SenderProfileTab() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -42,7 +40,9 @@ export function SenderProfileTab() {
   const [draft, setDraft] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState<string | null>(null);
   const [savedAt, setSavedAt] = React.useState(0);
-  React.useEffect(() => { if (settingsQuery.data) setDraft({ ...settingsQuery.data }); }, [settingsQuery.data]);
+  React.useEffect(() => {
+    if (settingsQuery.data) setDraft({ ...settingsQuery.data });
+  }, [settingsQuery.data]);
 
   const handleSave = async (key: string) => {
     if (!userId) return;
@@ -62,7 +62,7 @@ export function SenderProfileTab() {
   // Readiness scores (porting formula da generate-outreach: presence-based)
   const senderFields = ["ai_contact_name", "ai_company_name", "ai_contact_role", "ai_email_signature"];
   const senderScore = Math.round(
-    (senderFields.filter((k) => (draft[k] ?? "").trim().length > 0).length / senderFields.length) * 100
+    (senderFields.filter((k) => (draft[k] ?? "").trim().length > 0).length / senderFields.length) * 100,
   );
   const kbScore = Math.min(100, Math.round(((draft["ai_knowledge_base"] ?? "").length / 800) * 100));
 
@@ -108,8 +108,17 @@ export function SenderProfileTab() {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-foreground">{value.length} char</span>
                 {dirty && (
-                  <Button size="sm" onClick={() => handleSave(key)} disabled={saving === key} className="h-6 text-[10px]">
-                    {saving === key ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                  <Button
+                    size="sm"
+                    onClick={() => handleSave(key)}
+                    disabled={saving === key}
+                    className="h-6 text-[10px]"
+                  >
+                    {saving === key ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Save className="w-3 h-3 mr-1" />
+                    )}
                     Salva
                   </Button>
                 )}

@@ -15,40 +15,6 @@ export type ChannelMessage = ChannelMessageRow;
 
 const PAGE_SIZE = 50;
 
-const MESSAGE_LIST_SELECT = [
-  "id",
-  "user_id",
-  "channel",
-  "direction",
-  "source_type",
-  "source_id",
-  "partner_id",
-  "mailbox_id",
-  "from_address",
-  "to_address",
-  "cc_addresses",
-  "bcc_addresses",
-  "subject",
-  "body_text",
-  "raw_payload",
-  "message_id_external",
-  "in_reply_to",
-  "read_at",
-  "created_at",
-  "email_date",
-  "raw_storage_path",
-  "raw_sha256",
-  "raw_size_bytes",
-  "imap_uid",
-  "uidvalidity",
-  "imap_flags",
-  "internal_date",
-  "parse_status",
-  "parse_warnings",
-  "thread_id",
-  "references_header",
-].join(", ");
-
 export type MailboxFilter =
   | { kind: "personal" }
   | { kind: "shared"; id: string }

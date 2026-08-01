@@ -7,7 +7,7 @@
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 import { getContextBudget, assembleContext, estimateTokens } from "../_shared/tokenBudget.ts";
 import {
   loadUserProfile,
@@ -18,7 +18,7 @@ import {
   loadSystemDoctrine,
   loadRecentEmailContext,
 } from "./contextLoader.ts";
-import { extractContextTags, type ConversationContext } from "../_shared/contextTagExtractor.ts";
+import { extractContextTags, type ContextTags, type ConversationContext } from "../_shared/contextTagExtractor.ts";
 import { getScopeConfig } from "../_shared/scopeConfigs.ts";
 
 export interface ContextAssemblyResult {
@@ -121,7 +121,7 @@ async function loadContextParallel(
   userId: string,
   isConversational: boolean,
   lastUserMsg: string | undefined,
-  ctxTags: any,
+  ctxTags: ContextTags,
   requiredKeys?: string[]
 ): Promise<{
   memoryContext: string;
@@ -354,10 +354,6 @@ export async function assembleSystemPrompt(
 
   let systemPrompt = baseSystemPrompt;
   if (assembledContext) systemPrompt += assembledContext;
-
-  if (budgetStats.dropped.length > 0 || budgetStats.truncated.length > 0) {
-    
-  }
 
   // Inject page context
   if (context) {

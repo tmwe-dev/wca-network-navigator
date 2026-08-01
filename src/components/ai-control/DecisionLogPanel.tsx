@@ -3,7 +3,7 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findDecisionLogPage } from "@/data/aiDecisionLog";
+import { findDecisionLogPage } from "@/application/data/aiDecisionLog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

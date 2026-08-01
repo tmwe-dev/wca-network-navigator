@@ -8,7 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { PartnerData, ContactData } from "./promptBuilder.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 interface BusinessCardRow {
   contact_name: string | null;
@@ -38,7 +38,7 @@ export async function loadEntityFromActivity(
     .single();
 
   if (actErr || !actData) throw new Error("Activity not found");
-  const activity = actData as Record<string, any>;
+  const activity = actData as Record<string, unknown>;
   let partner: PartnerData | null = (activity.partners as PartnerData | null) ?? null;
   let contact: ContactData | null = (activity.selected_contact as ContactData | null) ?? null;
   let contactEmail: string | null = null;
@@ -167,7 +167,7 @@ export async function loadStandalonePartner(
   if (contacts?.length) {
     const matched = recipientName
       ? contacts.find(
-          (c: Record<string, any>) =>
+          (c: { name: string | null; contact_alias: string | null }) =>
             (c.name as string | null)?.toLowerCase().includes(recipientName.toLowerCase()) ||
             (c.contact_alias as string | null)?.toLowerCase().includes(recipientName.toLowerCase()),
         ) || contacts[0]

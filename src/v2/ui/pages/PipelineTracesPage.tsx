@@ -26,7 +26,7 @@ import {
   listDistinctStepNames,
   type PipelineTraceRow,
   type PipelineTraceStatus,
-} from "@/data/pipelineTraces";
+} from "@/application/data/pipelineTraces";
 
 const STATUS_ICON: Record<PipelineTraceStatus, JSX.Element> = {
   started: <Loader2 className="h-3 w-3 animate-spin" />,

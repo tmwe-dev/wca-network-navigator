@@ -9,7 +9,7 @@
  * applicano il loro normale `journalistReview` — non lo bypassiamo.
  */
 import { useCallback, useState } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { isApiError } from "@/lib/api/apiError";
 import { toast } from "sonner";
 import { useEmailForge, type ForgeResult, type ForgeRunParams } from "@/v2/hooks/useEmailForge";
@@ -88,7 +88,9 @@ export function useEmailLabIterations() {
         lastParams.goal || "",
         extraGoal || "",
       ].filter(Boolean).join("\n\n");
-      const data = await invokeEdge<ImprovePayload>("improve-email", {
+      const data = await invokeAi<ImprovePayload>("improve-email", {
+        scope: "lab",
+        context: { source: "useEmailLabIterations", mode: "improve" },
         body: {
           subject: draft.subject,
           html_body: draft.body,
@@ -104,7 +106,6 @@ export function useEmailLabIterations() {
           partner_id: lastParams.partner_id || null,
           contact_id: lastParams.contact_id || null,
         },
-        context: "EmailLab.improve_iteration",
       });
       // improve-email non restituisce _debug — lo simuliamo lato lab.
       const result: ForgeResult = {

@@ -21,9 +21,7 @@ const EMAIL_ANALYSIS_FALLBACK: z.infer<typeof EmailAnalysisSchema> = {
 };
 
 interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count?: number; branch_count?: number; }
-interface DownloadJobRow { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number; contacts_missing_count: number; last_processed_company: string | null; error_message: string | null; created_at: string; }
 interface EmailQueueRow { id: string; status: string; scheduled_at: string | null; sent_at: string | null; recipient_email: string; subject: string; }
-interface AgentTaskRow { id: string; agent_id: string; description: string; status: string; task_type: string; created_at: string; result_summary: string | null; }
 
 export async function handleGetCountryOverview(
   supabase: SupabaseClient,
@@ -40,7 +38,7 @@ export async function handleGetCountryOverview(
 
 export async function handleGetDirectoryStatus(
   supabase: SupabaseClient,
-  args: Record<string, unknown>
+  _args: Record<string, unknown>
 ): Promise<unknown> {
   const result: Record<string, unknown> = {};
   const { count: memberCount } = await supabase.from("directory_members").select("id", { count: "exact", head: true });
@@ -201,7 +199,6 @@ export async function handleAnalyzeIncomingEmail(
     }
   }
 
-  const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
   const analysisRes = await aiFetch({
       model: "google/gemini-2.5-flash-lite",
       messages: [

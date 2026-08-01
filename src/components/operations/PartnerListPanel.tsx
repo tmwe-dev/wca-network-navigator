@@ -23,8 +23,8 @@ import { usePartnerListStats } from "@/hooks/usePartnerListStats";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { IconIndicator, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
-import { insertCockpitQueueItems } from "@/data/cockpitQueue";
-import { createActivities } from "@/data/activities";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
+import { createActivities } from "@/application/data/activities";
 
 /* ── Props ── */
 interface PartnerListPanelProps {

@@ -245,7 +245,6 @@ Estrai queste informazioni (metti null se non trovate):
       });
 
     if (aiResponse && !aiResponse.ok) {
-      const errText = await aiResponse.text();
       const detail = aiResponse.status === 402 ? "Crediti AI esauriti. Riprova più tardi." : `AI analysis failed (${aiResponse.status})`;
       return new Response(JSON.stringify({ error: detail }), {
         status: 500, headers: { ...dynCors, "Content-Type": "application/json" },

@@ -11,7 +11,7 @@ import { toast } from "sonner";
  */
 export function useDirectContactActions() {
   const navigate = useNavigate();
-  const { sendWhatsApp, isAvailable: waAvailable, isAuthenticated: waAuthenticated } = useWhatsAppExtensionBridge();
+  const { isAvailable: waAvailable, isAuthenticated: waAuthenticated } = useWhatsAppExtensionBridge();
   const [waSending, setWaSending] = useState<string | null>(null);
   const logAction = useLogAction();
 

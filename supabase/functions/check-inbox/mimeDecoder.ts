@@ -141,6 +141,7 @@ export function getPartFilename(part: Record<string, unknown>): string {
 }
 
 export function sanitizeFilename(filename: string): string {
+  // eslint-disable-next-line no-control-regex -- filenames must reject C0 control bytes
   return filename.replace(/[\\/:*?"<>|\x00-\x1F]/g, "_").slice(0, 180) || "attachment.bin";
 }
 

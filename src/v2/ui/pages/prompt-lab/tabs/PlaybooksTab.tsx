@@ -4,7 +4,7 @@
 import { toJsonValue } from "@/lib/typedJson";
 import { useAuth } from "@/providers/AuthProvider";
 import { GenericRecordTab } from "./GenericRecordTab";
-import { findCommercialPlaybooks, updateCommercialPlaybook } from "@/data/commercialPlaybooks";
+import { findCommercialPlaybooks, updateCommercialPlaybook } from "@/application/data/commercialPlaybooks";
 import type { Block } from "../types";
 import { toast } from "sonner";
 

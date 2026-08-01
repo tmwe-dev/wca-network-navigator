@@ -7,7 +7,7 @@ import { executeTool } from "./toolHandlers.ts";
 import { compressMessages } from "../_shared/messageCompression.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-type SupabaseClient = BaseSupabaseClient<any, "public", any>;
+type SupabaseClient = BaseSupabaseClient;
 
 interface ChatMessage {
   role: string;
@@ -26,7 +26,7 @@ export async function executeChatMode(
   agentName: string,
   userId: string,
   authHeader: string,
-  apiKey: string
+  _apiKey: string
 ): Promise<Response> {
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 

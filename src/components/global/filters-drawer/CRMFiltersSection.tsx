@@ -11,9 +11,9 @@ import { FilterSection, ChipGroup, Chip } from "./shared";
 import { CRM_GROUPBY } from "./constants";
 import { createLogger } from "@/lib/log";
 import { useQueryClient } from "@tanstack/react-query";
-import { bulkUpdateContactsByOrigins, contactKeys } from "@/data/contacts";
+import { bulkUpdateContactsByOrigins, contactKeys } from "@/application/data/contacts";
 import { BulkMergeOriginsDialog } from "@/v2/ui/organisms/BulkMergeOriginsDialog";
-import { findImportedContactsFacetPage, searchImportedContacts } from "@/data/uiShellQueries";
+import { findImportedContactsFacetPage, searchImportedContacts } from "@/application/data/uiShellQueries";
 
 const log = createLogger("CRMFiltersSection");
 
@@ -30,7 +30,6 @@ export function CRMFiltersSection() {
 
   const fetchData = useCallback(async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
         const pageSize = 1000;
         const allRows: Array<{ country: string | null; origin: string | null }> = [];
         let from = 0;
@@ -132,7 +131,6 @@ export function CRMFiltersSection() {
     setSearching(true);
     const doSearch = async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
         const data = await searchImportedContacts(searchValue);
         setSearchResults(data);
       } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setSearchResults([]); }

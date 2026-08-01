@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { uploadCockpitAttachment, removeCockpitAttachment } from "@/data/cockpitAttachments";
+import { uploadCockpitAttachment, removeCockpitAttachment } from "@/application/data/cockpitAttachments";
 import { ImageGalleryTab } from "@/components/email/ImageGalleryTab";
 import type { DraftState, DraftLink, DraftAttachment } from "@/types/cockpit";
 

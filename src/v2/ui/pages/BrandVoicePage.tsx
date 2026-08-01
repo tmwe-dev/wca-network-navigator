@@ -15,7 +15,7 @@ import {
   fetchRecentBrandVoiceAudits,
   topDeviations,
   type BrandVoiceOutcomeRow,
-} from "@/data/brandVoice";
+} from "@/application/data/brandVoice";
 
 interface ChannelRoleAgg {
   readonly key: string;

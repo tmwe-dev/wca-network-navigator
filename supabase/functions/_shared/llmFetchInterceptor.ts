@@ -161,8 +161,7 @@ async function logCallToDb(params: {
 const INSTALLED_FLAG = "__llm_fetch_interceptor_installed__";
 
 function install() {
-  // deno-lint-ignore no-explicit-any
-  const g = globalThis as any;
+  const g = globalThis as typeof globalThis & Record<string, unknown>;
   if (g[INSTALLED_FLAG]) return;
   g[INSTALLED_FLAG] = true;
 

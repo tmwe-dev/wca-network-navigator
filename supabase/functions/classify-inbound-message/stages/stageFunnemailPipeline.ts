@@ -4,7 +4,7 @@
 import type { ClassifyResult, RequestBody } from "./types.ts";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("../../_shared/supabaseClient.ts").AnySupabaseClient;
 type RecordStage = (stage: string, payload?: Record<string, unknown>, error?: string) => Promise<void> | void;
 
 const internalHeaders = (): Record<string, string> => ({
@@ -26,7 +26,7 @@ export async function runFunnemailScoutAndClassify(
     try {
       const { isDeepMailAnalysisEnabled } = await import("../../_shared/deepMailAnalysis.ts");
       deepEnabled = await isDeepMailAnalysisEnabled(supabase, body.user_id ?? null);
-    } catch (_) { /* fail-safe: deep OFF */ }
+    } catch { /* fail-safe: deep OFF */ }
     if (deepEnabled) try {
       const { data: scoutData } = await supabase.functions.invoke("funnemail-scout-sender", {
         headers: internalHeaders(),
@@ -49,7 +49,7 @@ export async function runFunnemailScoutAndClassify(
         };
         void recordStage("scouted", { known: !!sd.known });
       }
-    } catch (_se) { /* scout fallito, fail-safe */ }
+    } catch { /* scout fallito, fail-safe */ }
 
     await supabase.functions.invoke("funnemail-classify", {
       headers: internalHeaders(),
@@ -66,7 +66,7 @@ export async function runFunnemailScoutAndClassify(
       },
     });
     void recordStage("classified");
-  } catch (_e) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 }
 
 export async function runFunnemailAutoRoute(
@@ -87,7 +87,7 @@ export async function runFunnemailAutoRoute(
       },
     });
     void recordStage("routed");
-  } catch (_e) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 }
 
 /**
@@ -129,8 +129,8 @@ export async function runFunnemailPolicyPipeline(
           },
         });
         executed += 1;
-      } catch (_ae) { /* fail-safe per singola action */ }
+      } catch { /* fail-safe per singola action */ }
     }
     void recordStage("policy_applied", { actions: plan.length, executed });
-  } catch (_e) { /* fail-safe globale */ }
+  } catch { /* fail-safe globale */ }
 }

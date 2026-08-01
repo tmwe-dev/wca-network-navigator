@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { createAbTest } from "@/data/abTests";
+import { createAbTest } from "@/application/data/abTests";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import { FlaskConical, Sparkles } from "lucide-react";

@@ -1,5 +1,5 @@
 import type { ToolResult } from "../types";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { detectTone, toneLabel } from "../../lib/toneDetector";
 import { buildEmailPipeline } from "./pipeline";
 import { findContact } from "./partnerQueries";
@@ -28,7 +28,7 @@ export async function buildSingleComposerResult(args: {
   let kbSections: string[] = [];
   let playbookActive = false;
   try {
-    const gen = await invokeEdge<{
+    const gen = await invokeAi<{
       success?: boolean;
       subject?: string;
       body?: string;
@@ -41,6 +41,8 @@ export async function buildSingleComposerResult(args: {
         playbook_active?: boolean;
       };
     }>("generate-email", {
+      scope: "command",
+      context: { source: "composeEmail.singleDraft", mode: "generate" },
       body: {
         standalone: true,
         partner_id: partner.id,
@@ -54,7 +56,6 @@ export async function buildSingleComposerResult(args: {
         use_kb: true,
         language: "it",
       },
-      context: "command:compose-email",
     });
     if (gen?.subject) initialSubject = gen.subject;
     if (gen?.body) initialBody = gen.body;

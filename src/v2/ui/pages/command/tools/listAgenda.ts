@@ -1,7 +1,7 @@
 /**
  * Tool: list-agenda — Read-only daily agenda: open activities ordered by due date.
  */
-import { findOpenAgendaActivities } from "@/data/activities";
+import { findOpenAgendaActivities } from "@/application/data/activities";
 import type { Tool, ToolResult } from "./types";
 
 interface ActivityRow {

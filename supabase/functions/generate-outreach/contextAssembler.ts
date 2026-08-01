@@ -14,7 +14,7 @@ import { assemblePartnerEnrichmentContext, getEnrichmentMetadata, type Recipient
 import { analyzePartnerRelationship } from "./relationshipAnalyzer.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 export type { RecipientIntelligence };
 
@@ -90,7 +90,7 @@ export async function assembleOutreachContext(
 
       // LOVABLE-77B: unified enrichment (Base + Deep Local + Sherlock + Legacy)
       try {
-        const { websiteSource, linkedinSource } = await assemblePartnerEnrichmentContext(
+        await assemblePartnerEnrichmentContext(
           supabase, partner.id, quality, contextParts, intelligence
         );
       } catch (e) {
@@ -223,32 +223,6 @@ export async function assembleOutreachContext(
 
   // ── Conversation Intelligence ──
   const convResult = await loadConversationContextOutreach(supabase, userId, params.contact_email || null);
-
-  // Commercial state for prompt context
-  let commercialState = "new";
-  let touchCount = 0;
-  let daysSinceLastContact = 0;
-  let lastOutcome: string | null = null;
-  if (partnerId) {
-    const { data: pState } = await supabase
-      .from("partners")
-      .select("lead_status, interaction_count, last_interaction_at")
-      .eq("id", partnerId)
-      .maybeSingle();
-    if (pState) {
-      commercialState = pState.lead_status || "new";
-      touchCount = pState.interaction_count || 0;
-      daysSinceLastContact = pState.last_interaction_at
-        ? Math.floor((Date.now() - new Date(pState.last_interaction_at).getTime()) / 86400000)
-        : 0;
-    }
-  }
-
-  const warmthScore = Math.min(100,
-    (touchCount || 0) * 15 +
-    (daysSinceLastContact != null && daysSinceLastContact < 14 ? 20 : 0) +
-    (lastOutcome === "positive" ? 15 : 0)
-  );
 
   // Fix 3.2: Active playbook
   const playbook = await loadActivePlaybook(supabase, userId, partnerId);

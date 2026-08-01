@@ -28,7 +28,7 @@ export async function extractBodyAndAttachments(
   uid: number,
   userId: string,
   imapExec: { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> },
-  supabaseAdmin: any,
+  supabaseAdmin: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   messageId: string,
   bodyStructure: Record<string, unknown> | null,
   isOversized: boolean,

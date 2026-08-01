@@ -18,7 +18,7 @@ import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { FilterSection } from "./shared";
 import { NETWORK_QUALITY_TOGGLES } from "./constants";
 import { createLogger } from "@/lib/log";
-import { searchNetworkPartners } from "@/data/uiShellQueries";
+import { searchNetworkPartners } from "@/application/data/uiShellQueries";
 
 const log = createLogger("NetworkFiltersSection");
 
@@ -133,7 +133,6 @@ export function NetworkFiltersSection() {
     setSearching(true);
     const doSearch = async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
         const data = await searchNetworkPartners(networkSearchValue);
         setSearchResults(data);
       } catch (e) {

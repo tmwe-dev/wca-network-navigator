@@ -21,7 +21,7 @@ export type AiActionRisk =
   | "DESTRUCTIVE";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface HardGateResult {
   allowed: boolean;
@@ -102,9 +102,7 @@ export async function runGuardedAction<T>(
 ): Promise<T> {
   const claim = await claimAction(supabase, opts.actionId);
   if (!claim.ok) {
-    const err = new Error(`AI_ACTION_CLAIM_FAILED:${claim.reason}`);
-    // deno-lint-ignore no-explicit-any
-    (err as any).status = 409;
+    const err = Object.assign(new Error(`AI_ACTION_CLAIM_FAILED:${claim.reason}`), { status: 409 });
     throw err;
   }
 
@@ -116,9 +114,7 @@ export async function runGuardedAction<T>(
   );
   if (!gate.allowed) {
     await finalizeAction(supabase, opts.actionId, "failed", `hard_gate:${gate.reason}`);
-    const err = new Error(`AI_ACTION_HARD_GATE_BLOCKED:${gate.reason}`);
-    // deno-lint-ignore no-explicit-any
-    (err as any).status = 403;
+    const err = Object.assign(new Error(`AI_ACTION_HARD_GATE_BLOCKED:${gate.reason}`), { status: 403 });
     throw err;
   }
 

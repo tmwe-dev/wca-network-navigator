@@ -1,7 +1,7 @@
 /**
  * Tool: list-missions — Read-only overview of autopilot missions with KPI/budget progress.
  */
-import { findAgentMissionsOverview } from "@/data/agentMissions";
+import { findAgentMissionsOverview } from "@/application/data/agentMissions";
 import type { Tool, ToolResult } from "./types";
 
 interface MissionRow {

@@ -17,7 +17,7 @@ import {
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
-import { getCronPaused, setCronPaused } from "@/data/systemFlags";
+import { getCronPaused, setCronPaused } from "@/application/data/systemFlags";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface OutreachQueue {

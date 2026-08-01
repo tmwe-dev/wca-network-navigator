@@ -2,7 +2,7 @@
  * useDeepSearchV2 — Deep search across multiple tables + AI
  */
 import { useState, useCallback } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { searchPartnersDeep, searchContactsDeep, searchProspectsDeep } from "@/data/deepSearch";
 
 interface DeepSearchResult {
@@ -40,9 +40,10 @@ export function useDeepSearchV2() {
   const aiSearch = useCallback(async (query: string) => {
     setIsSearching(true);
     try {
-      const res = await invokeEdge<{ results: DeepSearchResult[] }>("unified-assistant", {
+      const res = await invokeAi<{ results: DeepSearchResult[] }>("unified-assistant", {
+        scope: "deep-search",
+        context: { source: "useDeepSearchV2" },
         body: { message: query, scope: "deep-search" },
-        context: "deepSearchV2",
       });
       setResults(res.results ?? []);
     } catch {

@@ -15,7 +15,7 @@ interface MessageRecord {
 }
 
 export async function applyEmailRules(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   supabaseUrl: string,
   serviceRoleKey: string,
   userId: string,
@@ -44,11 +44,10 @@ export async function applyEmailRules(
       body: JSON.stringify({ operator_id: opId, message_ids: newMsgIds }),
     });
 
-    if (!ruleResp.ok) {
-    } else {
-      const ruleResult = await ruleResp.json();
-    }
-  } catch (rulesErr: unknown) {
+    // Best-effort post-processing: the caller does not consume the response.
+    void ruleResp;
+  } catch {
+    // Rules application must not block inbox synchronization.
   }
 }
 
@@ -99,11 +98,11 @@ export async function classifyInboundEmails(
           "x-invoke-source": "check-inbox-postProcess",
         },
         body: JSON.stringify(classifyPayload),
-      }).catch((err) => {
-      });
+      }).catch(() => undefined);
     }
 
-  } catch (classErr: unknown) {
+  } catch {
+    // Classification fallback is deliberately fail-open.
   }
 }
 

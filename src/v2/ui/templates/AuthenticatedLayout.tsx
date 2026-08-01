@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getOnboardingCompletedForUser } from "@/data/profiles";
+import { getOnboardingCompletedForUser } from "@/application/data/profiles";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { X, Menu, Command, Sparkles, Target } from "lucide-react";
@@ -30,7 +30,7 @@ import { queryClient } from "@/lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 import { ActiveMailboxProvider } from "@/contexts/ActiveMailboxContext";
-import { DeepSearchContext, useDeepSearchRunner } from "@/hooks/useDeepSearchRunner";
+import { BulkDeepSearchContext, useBulkDeepSearchRunner } from "@/v2/services/bulkOps/deepSearchRunner";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
 
@@ -55,7 +55,6 @@ const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer"
 const FiltersDrawer = lazyRetry(() => import("@/components/global/filters-drawer").then(m => ({ default: m.FiltersDrawer })));
 const IntelliFlowOverlay = lazyRetry(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const CommandPalette = lazyRetry(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
-const GlobalVoiceFAB = lazyRetry(() => import("@/components/voice/GlobalVoiceFAB"));
 const FloatingCoPilot = lazyRetry(() => import("@/v2/ui/copilot/FloatingCoPilot").then(m => ({ default: m.FloatingCoPilot })));
 import { CoPilotProvider } from "@/v2/ui/copilot/CoPilotContext";
 const AddContactDialog = lazyRetry(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
@@ -126,7 +125,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     localStorage.setItem("dl_theme", next ? "dark" : "light");
   };
 
-  const deepSearch = useDeepSearchRunner();
+  const deepSearch = useBulkDeepSearchRunner();
 
   // Onboarding check — source of truth is profiles.onboarding_completed
   const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
@@ -246,7 +245,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
         <TooltipProvider>
           <ActiveOperatorProvider>
           <ActiveMailboxProvider>
-            <DeepSearchContext.Provider value={deepSearch}>
+            <BulkDeepSearchContext.Provider value={deepSearch}>
               <GlobalFiltersProvider>
                 <MissionProvider>
                   <NotificationsProvider>
@@ -413,7 +412,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                     </NotificationsProvider>
                   </MissionProvider>
                 </GlobalFiltersProvider>
-              </DeepSearchContext.Provider>
+              </BulkDeepSearchContext.Provider>
           </ActiveMailboxProvider>
           </ActiveOperatorProvider>
         </TooltipProvider>

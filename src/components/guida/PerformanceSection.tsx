@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import SectionWrapper from "./SectionWrapper";
-import { countActivePartners, getDistinctCountries } from "@/data/partners";
+import { countActivePartners, getDistinctCountries } from "@/application/data/partners";
 import { useQuery } from "@tanstack/react-query";
 import { Globe, Users, Mail, Briefcase, Bot, Cpu } from "lucide-react";
-import { countChannelMessages } from "@/data/channelMessages";
-import { countActiveAgents } from "@/data/agents";
-import { countCompletedAgentTasks } from "@/data/agentTasks";
+import { countChannelMessages } from "@/application/data/channelMessages";
+import { countActiveAgents } from "@/application/data/agents";
+import { countCompletedAgentTasks } from "@/application/data/agentTasks";
 import { queryKeys } from "@/lib/queryKeys";
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {

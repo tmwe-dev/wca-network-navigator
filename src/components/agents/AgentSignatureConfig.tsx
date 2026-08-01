@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, Image, Link2, Eye } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
-import { uploadTemplateFile, getTemplatePublicUrl } from "@/data/templatesStorage";
+import { uploadTemplateFile, getTemplatePublicUrl } from "@/application/data/templatesStorage";
 import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { ROBIN_VOICE_CALL_URL } from "@/constants/agentTemplates";
 import { toast } from "sonner";

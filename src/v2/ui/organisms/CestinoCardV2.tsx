@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
-import type { CestinoItem, CestinoChannel, CestinoStatus, CestinoTrigger } from "@/data/cestinone";
+import type { CestinoItem, CestinoChannel, CestinoStatus, CestinoTrigger } from "@/application/data/cestinone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";

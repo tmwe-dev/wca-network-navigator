@@ -13,9 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { supabase } from "@/integrations/supabase/client";
-import { insertPendingAction } from "@/data/aiPendingActions";
+import { insertPendingAction } from "@/application/data/aiPendingActions";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
@@ -155,7 +155,9 @@ export default function ComposerCanvas({
           batchDrafts.map(async (d) => {
             if (!d.contactEmail || !d.partnerId) return d;
             try {
-              const gen = await invokeEdge<{ subject?: string; body?: string }>("generate-email", {
+              const gen = await invokeAi<{ subject?: string; body?: string }>("generate-email", {
+                scope: "command",
+                context: { source: "ComposerCanvas.regenerate_batch", mode: "generate" },
                 body: {
                   standalone: true,
                   partner_id: d.partnerId,
@@ -168,7 +170,6 @@ export default function ComposerCanvas({
                   use_kb: true,
                   language: "it",
                 },
-                context: "composer:regenerate-batch",
               });
               return {
                 ...d,
@@ -200,7 +201,9 @@ export default function ComposerCanvas({
       setRegenerating(true);
       try {
         const newTone = detectTone(promptHint) ?? tone;
-        const gen = await invokeEdge<{ subject?: string; body?: string }>("generate-email", {
+        const gen = await invokeAi<{ subject?: string; body?: string }>("generate-email", {
+          scope: "command",
+          context: { source: "ComposerCanvas.regenerate", mode: "generate" },
           body: {
             standalone: true,
             partner_id: partnerId,
@@ -212,7 +215,6 @@ export default function ComposerCanvas({
             use_kb: true,
             language: "it",
           },
-          context: "composer:regenerate",
         });
         if (gen?.subject) composer.setSubject(gen.subject);
         if (gen?.body) composer.setBody(gen.body);

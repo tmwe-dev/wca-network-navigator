@@ -90,7 +90,7 @@ serve(async (req: Request) => {
     const wsEndpoint = `${BROWSERLESS_URL}?token=${BROWSERLESS_TOKEN}`;
 
     // Dynamic import playwright-core
-    let chromium: unknown;
+    let chromium: (typeof import("https://esm.sh/playwright-core@1.40.0"))["chromium"];
     try {
       const pw = await import("https://esm.sh/playwright-core@1.40.0");
       chromium = pw.chromium;
@@ -102,8 +102,7 @@ serve(async (req: Request) => {
     }
 
     // Connect to Browserless
-    // deno-lint-ignore no-explicit-any
-    const browser = await (chromium as any).connectOverCDP(wsEndpoint, { timeout: 15000 });
+    const browser = await chromium.connectOverCDP(wsEndpoint, { timeout: 15000 });
     const context = await browser.newContext({
       userAgent: "WCA-NetworkNavigator/1.0 BrowserAction",
       viewport: { width: 1280, height: 720 },

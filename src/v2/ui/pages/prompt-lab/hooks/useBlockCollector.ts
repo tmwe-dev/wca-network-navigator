@@ -12,13 +12,13 @@
  */
 
 import { type Block } from "../types";
-import { findKbEntries } from "@/data/kbEntries";
-import { getAppSetting } from "@/data/appSettings";
-import { findOperativePromptsFull } from "@/data/operativePrompts";
-import { findEmailPromptsByScope } from "@/data/emailPrompts";
-import { findEmailAddressRules } from "@/data/emailAddressRules";
-import { findCommercialPlaybooks } from "@/data/commercialPlaybooks";
-import { findAgentPersonas } from "@/data/agentPersonas";
+import { findKbEntries } from "@/application/data/kbEntries";
+import { getAppSetting } from "@/application/data/appSettings";
+import { findOperativePromptsFull } from "@/application/data/operativePrompts";
+import { findEmailPromptsByScope } from "@/application/data/emailPrompts";
+import { findEmailAddressRules } from "@/application/data/emailAddressRules";
+import { findCommercialPlaybooks } from "@/application/data/commercialPlaybooks";
+import { findAgentPersonas } from "@/application/data/agentPersonas";
 import { DEFAULT_SYSTEM_PROMPT_BLOCKS } from "../types";
 import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 

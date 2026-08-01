@@ -5,11 +5,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Mic, MicOff, Volume2, X } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "./VoiceLanguageSelector";
-import { upsertUserAppSetting } from "@/data/uiShellQueries";
+import { upsertUserAppSetting } from "@/application/data/uiShellQueries";
 import { toRecord } from "@/lib/records";
 
 type VoiceState = "idle" | "listening" | "speaking";
@@ -161,15 +161,16 @@ export default function GlobalVoiceFAB() {
       setState("speaking");
 
       try {
-        const result = await invokeEdge<{ content?: string; message?: string; reply?: string }>(
+        const result = await invokeAi<{ content?: string; message?: string; reply?: string }>(
           "unified-assistant",
           {
+            scope: "strategic",
+            context: { source: "GlobalVoiceFAB.unified_assistant", mode: "conversational" },
             body: {
               message: transcript,
               scope: "strategic",
               mode: "conversational",
             },
-            context: "GlobalVoiceFAB.unified_assistant",
           },
         );
 

@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findMemoryTypesByUser, deleteEpisodicMemoriesForUser } from "@/data/aiMemory";
+import { findMemoryTypesByUser, deleteEpisodicMemoriesForUser } from "@/application/data/aiMemory";
 import { FormSection } from "../../organisms/FormSection";
 import { Button } from "@/components/ui/button";
 import { Loader2, Database, Trash2 } from "lucide-react";

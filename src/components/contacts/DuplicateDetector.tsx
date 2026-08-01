@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { findContactsForDuplicateScan } from "@/data/contacts";
+import { findContactsForDuplicateScan } from "@/application/data/contacts";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +35,18 @@ export function DuplicateDetector() {
   const scan = async () => {
     setLoading(true);
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return;
 
       const contacts = await findContactsForDuplicateScan(1000);
 
-      if (!contacts || contacts.length === 0) { setDuplicates([]); return; }
+      if (!contacts || contacts.length === 0) {
+        setDuplicates([]);
+        return;
+      }
 
       const groups: DuplicateGroup[] = [];
       const seen = new Set<string>();
@@ -58,7 +64,7 @@ export function DuplicateDetector() {
       for (const [email, group] of emailMap) {
         if (group.length > 1) {
           groups.push({ group, reason: `Email identica: ${email}` });
-          group.forEach(c => seen.add(c.id));
+          group.forEach((c) => seen.add(c.id));
         }
       }
 
@@ -73,9 +79,9 @@ export function DuplicateDetector() {
         }
       }
       for (const [phone, group] of phoneMap) {
-        if (group.length > 1 && !group.every(c => seen.has(c.id))) {
+        if (group.length > 1 && !group.every((c) => seen.has(c.id))) {
           groups.push({ group, reason: `Telefono identico: ${phone}` });
-          group.forEach(c => seen.add(c.id));
+          group.forEach((c) => seen.add(c.id));
         }
       }
 
@@ -96,20 +102,22 @@ export function DuplicateDetector() {
       }
 
       setDuplicates(groups);
-    } catch (_e) {
+    } catch {
       toast.error("Errore nella scansione duplicati");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { scan(); }, []);
+  useEffect(() => {
+    scan();
+  }, []);
 
   const handleMerge = async (group: DuplicateContact[]) => {
     if (group.length < 2) return;
     setMerging(group[0].id);
     try {
-      const ids = group.map(c => c.id);
+      const ids = group.map((c) => c.id);
       const data = await invokeAi<{ deletedRecords?: number }>("deduplicate-contacts", {
         scope: "command",
         context: { source: "DuplicateDetector", mode: "merge-group" },
@@ -117,7 +125,7 @@ export function DuplicateDetector() {
       });
       toast.success(`Uniti ${data?.deletedRecords ?? 0} duplicati`);
       scan();
-    } catch (_e) {
+    } catch {
       toast.error("Errore durante il merge");
     } finally {
       setMerging(null);
@@ -125,10 +133,10 @@ export function DuplicateDetector() {
   };
 
   const handleIgnore = (idx: number) => {
-    setDuplicates(prev => prev.map((d, i) => i === idx ? { ...d, ignored: true } : d));
+    setDuplicates((prev) => prev.map((d, i) => (i === idx ? { ...d, ignored: true } : d)));
   };
 
-  const activeGroups = duplicates.filter(d => !d.ignored);
+  const activeGroups = duplicates.filter((d) => !d.ignored);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -136,7 +144,9 @@ export function DuplicateDetector() {
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-400" />
           <span className="text-sm font-semibold">Duplicati rilevati</span>
-          <Badge variant="outline" className="text-xs">{activeGroups.length} gruppi</Badge>
+          <Badge variant="outline" className="text-xs">
+            {activeGroups.length} gruppi
+          </Badge>
         </div>
         <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={scan} disabled={loading}>
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
@@ -178,7 +188,11 @@ export function DuplicateDetector() {
                   onClick={() => handleMerge(dup.group)}
                   disabled={merging === dup.group[0].id}
                 >
-                  {merging === dup.group[0].id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Merge className="w-3 h-3" />}
+                  {merging === dup.group[0].id ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Merge className="w-3 h-3" />
+                  )}
                   Unisci
                 </Button>
               </div>

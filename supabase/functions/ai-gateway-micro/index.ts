@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       );
     }
     parsed = result.data;
-  } catch (_e) {
+  } catch {
     return jsonResponse({ error: "invalid_json" }, 400, origin);
   }
 

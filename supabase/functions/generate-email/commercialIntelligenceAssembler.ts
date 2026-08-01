@@ -12,7 +12,7 @@ import {
 } from "../_shared/sameLocationGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 export interface CommercialIntelligence {
   historyContext: string;

@@ -6,8 +6,8 @@ import { SplitBlockEditor } from "../SplitBlockEditor";
 import { usePromptLabBlocks } from "../hooks/usePromptLabBlocks";
 import { useLabAgent } from "../hooks/useLabAgent";
 import type { Block } from "../types";
-import { findKbEntries, upsertKbEntry } from "@/data/kbEntries";
-import { logSupervisorAudit } from "@/data/supervisorAuditLog";
+import { findKbEntries, upsertKbEntry } from "@/application/data/kbEntries";
+import { logSupervisorAudit } from "@/application/data/supervisorAuditLog";
 import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
 

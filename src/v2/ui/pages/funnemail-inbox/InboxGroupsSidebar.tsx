@@ -24,7 +24,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import type { FunnemailGroupFolder } from "@/data/funnemailInbox";
+import type { FunnemailGroupFolder } from "@/application/data/funnemailInbox";
 
 type Section = FunnemailGroupFolder["section"];
 

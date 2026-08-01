@@ -96,7 +96,7 @@ export async function buildLearningBlock(
       }
       learningBlock += "IMPORTANTE: Evita di ripetere errori corretti dall'utente. Adatta il tuo approccio in base ai feedback.\n";
     }
-  } catch (_) {
+  } catch {
     /* ai_decision_log may not exist */
   }
   return learningBlock;
@@ -133,7 +133,7 @@ export async function buildMissionBlock(
         }
       }
     }
-  } catch (_) {
+  } catch {
     /* mission may not exist */
   }
   return missionBlock;

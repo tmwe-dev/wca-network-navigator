@@ -12,7 +12,7 @@ import { createJobReadHandlers } from "./toolHandlersReadJobs.ts";
 // Permissive client type — `createClient` without a Database generic
 // infers `never` for every table, breaking all .from()/.rpc() calls below.
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export function createReadHandlers(supabase: SupabaseClient) {
   return {

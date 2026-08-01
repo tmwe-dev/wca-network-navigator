@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     if (guard.skip) {
       endMetrics(metrics, true, 200);
       return new Response(
-        JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+        JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
         { status: 200, headers }
       );
     }
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
         { auth: { persistSession: false } }
       );
       await cronGuardLogRun(sb, "autopilot_worker", {}, message);
-    } catch (_) { /* ignore */ }
+    } catch { /* ignore */ }
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }
 });

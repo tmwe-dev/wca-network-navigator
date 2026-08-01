@@ -42,7 +42,9 @@ export function useWhatsAppDomLearning() {
         lastLearnRef.current = parsed.learnedAt || 0;
         return parsed;
       }
-    } catch (_err) { /* Failed to load schema */ }
+    } catch {
+      /* Failed to load schema */
+    }
     return null;
   }, []);
 
@@ -51,7 +53,10 @@ export function useWhatsAppDomLearning() {
     schema.learnedAt = Date.now();
     const value = JSON.stringify(schema);
 
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) return;
 
     await upsertAppSetting(user.id, CACHE_KEY, value);

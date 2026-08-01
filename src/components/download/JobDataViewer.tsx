@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findPartnersWithContactsByWcaIds, findDirectoryCacheMembers } from "@/data/downloadViews";
+import { findPartnersWithContactsByWcaIds, findDirectoryCacheMembers } from "@/application/data/downloadViews";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -329,7 +329,7 @@ export function JobDataViewer({
   );
 }
 
-function DataRow({ icon, value, label, isDark }: { icon: React.ReactNode; value: string | null; label: string; isDark: boolean }) {
+function DataRow({ icon, value, label, isDark: _isDark }: { icon: React.ReactNode; value: string | null; label: string; isDark: boolean }) {
   const has = !!value && value.trim().length > 0;
   return (
     <div className="flex items-center gap-2 text-xs">

@@ -1,7 +1,7 @@
 /**
  * Tool: suggest-email-groups — Read-only. Clustering email per gruppi suggeriti.
  */
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Tool, ToolResult } from "./types";
 
 interface Resp {
@@ -17,9 +17,10 @@ export const suggestEmailGroupsTool: Tool = {
   match: (p) => /\b(suggerisci|proponi|raggruppa|cluster)\b[^.]{0,30}\b(email|inbox|mail|gruppi)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
-    const res = await invokeEdge<Resp>("suggest-email-groups", {
+    const res = await invokeAi<Resp>("suggest-email-groups", {
+      scope: "command",
+      context: { source: "suggestEmailGroupsTool" },
       body: {},
-      context: "command:suggest-email-groups",
     });
     const rows = (res?.groups ?? []).map((g, i) => ({
       id: String(i + 1),

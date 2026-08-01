@@ -65,7 +65,7 @@ export async function requireInternalOrUser(
       return { kind: "error", response: unauthorized(responseHeaders) };
     }
     return { kind: "user", userId: data.claims.sub as string, jwt };
-  } catch (_e) {
+  } catch {
     return { kind: "error", response: unauthorized(responseHeaders) };
   }
 }

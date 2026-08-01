@@ -19,7 +19,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type AnySupabase = any;
+type AnySupabase = import("./supabaseClient.ts").AnySupabaseClient;
 
 export interface FunnemailDispatchInput {
   supabase: AnySupabase;

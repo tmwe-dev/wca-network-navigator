@@ -233,8 +233,7 @@ async function backfillAddress(
       applied++;
 
       // Aggiorna DB se la riga esiste (storici scaricati)
-      // deno-lint-ignore no-explicit-any
-      const sb = supabase as any;
+      const sb = supabase;
       // Filtri DB: imap_uid + user_id (NON from_address — può essere
       // "Name <addr>" o solo "addr", il match fallirebbe).
       if (action === "mark_read") {
@@ -253,7 +252,7 @@ async function backfillAddress(
           .eq("imap_uid", uid)
           .eq("user_id", userId);
       }
-    } catch (_perUidErr) {
+    } catch {
       // continua con i prossimi UID
     }
   }
@@ -391,8 +390,7 @@ Deno.serve(async (req) => {
 
         // Aggiorna stats regola se non dry-run e abbiamo applicato
         if (!dryRun && report.applied > 0) {
-          // deno-lint-ignore no-explicit-any
-          const sb = supabase as any;
+          const sb = supabase;
           const { data: cur } = await sb
             .from("email_address_rules")
             .select("applied_count")

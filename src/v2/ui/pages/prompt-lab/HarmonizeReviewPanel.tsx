@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/application/data/harmonizeRuns";
 import {
   ACTION_VARIANT,
   LAYER_META,
@@ -123,7 +123,7 @@ interface Props {
   applyingSelected?: boolean;
 }
 
-export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle, onDiscardSingle, onApplySelected, applyingSelected }: Props) {
+export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe: _onApproveAllSafe, onEditAfter, onApplySingle, onDiscardSingle, onApplySelected, applyingSelected }: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [discardingId, setDiscardingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "safe" | "review" | "notes" | "done">("all");

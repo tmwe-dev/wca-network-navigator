@@ -14,7 +14,7 @@ import {
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 
 // deno-lint-ignore no-explicit-any
-export type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
+export type AgentExecuteSupabaseClient = SupabaseClient;
 
 export type AgentRow = {
   id: string;
@@ -385,7 +385,7 @@ export async function appendTeamTasksAndMissionsSection(
           ctx.text += `- "${mission.title}" [${mission.status}] ${mission.channel || "N/D"} — ${mission.processed_contacts || 0}/${mission.total_contacts || 0} — Paesi: ${countries.join(", ") || "N/D"}\n`;
         }
       }
-    } catch (_) {
+    } catch {
       /* outreach_missions may not exist */
     }
 

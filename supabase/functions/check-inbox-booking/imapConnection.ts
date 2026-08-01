@@ -51,8 +51,7 @@ export async function connectToImap(config: ImapConfig): Promise<ImapClient> {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      // deno-lint-ignore no-explicit-any
-      client = new ImapClient(config as any);
+      client = new ImapClient(config as unknown as ConstructorParameters<typeof ImapClient>[0]);
       await client.connect();
       await client.authenticate();
       return client;
@@ -72,13 +71,12 @@ export async function selectInbox(client: ImapClient): Promise<{
   uidvalidity: number | null;
 }> {
   const inbox = await client.selectMailbox("INBOX");
-  // deno-lint-ignore no-explicit-any
-  const uidvalidity = ((inbox as any).uidValidity as number | null) || null;
+  const uidvalidity = (inbox as typeof inbox & { uidValidity?: number | null }).uidValidity ?? null;
   return { exists: inbox.exists ?? 0, uidvalidity };
 }
 
 export async function handleUidvalidityChange(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   storedUidvalidity: number | null,
   uidvalidity: number | null
@@ -111,13 +109,13 @@ export async function fetchUidBatch(
       remainingCount: nextBatch.remaining,
       hasMore: nextBatch.hasMore,
     };
-  } catch (searchErr: unknown) {
+  } catch {
     return { uids: [], remainingCount: 0, hasMore: false };
   }
 }
 
 export async function updateSyncState(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   lastUid: number
 ): Promise<void> {
@@ -128,7 +126,7 @@ export async function updateSyncState(
 }
 
 export async function skipDuplicateUid(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   uid: number
 ): Promise<boolean> {
@@ -160,7 +158,7 @@ export async function skipDuplicateUid(
 }
 
 export async function getSyncState(
-  supabase: any,
+  supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   imapHost: string,
   imapUser: string
@@ -171,7 +169,7 @@ export async function getSyncState(
     .eq("user_id", userId)
     .maybeSingle();
 
-  let lastUid = syncState?.last_uid || 0;
+  const lastUid = syncState?.last_uid || 0;
   const storedUidvalidity = syncState?.stored_uidvalidity || null;
 
   if (!syncState) {

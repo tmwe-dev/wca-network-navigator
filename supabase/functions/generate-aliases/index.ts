@@ -6,10 +6,25 @@ import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 
 const BATCH_SIZE = 15;
+
+interface PartnerContactRow {
+  id: string;
+  name: string;
+  title: string | null;
+  contact_alias: string | null;
+}
+
+interface PartnerAliasRow {
+  id: string;
+  company_name: string;
+  company_alias: string | null;
+  country_code?: string | null;
+  partner_contacts: PartnerContactRow[] | null;
+}
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -21,7 +36,7 @@ serve(async (req) => {
   try {
     const { countryCodes, partnerIds, contactIds, userId: bodyUserId } = await req.json();
 
-    const supabase = createClient<any>(
+  const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
@@ -215,11 +230,10 @@ async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string
   return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
-async function processPartners(supabase: SupabaseClient, apiKey: string, partners: Array<Record<string, unknown>>, systemPrompt: string) {
-  // deno-lint-ignore no-explicit-any
-  const eligible = partners.filter((p: any) => {
-    const contacts = (p.partner_contacts || []) as any[];
-    return !p.company_alias || contacts.some((c: any) => !c.contact_alias);
+async function processPartners(supabase: SupabaseClient, apiKey: string, partners: PartnerAliasRow[], systemPrompt: string) {
+  const eligible = partners.filter((p) => {
+    const contacts = p.partner_contacts || [];
+    return !p.company_alias || contacts.some((c) => !c.contact_alias);
   });
 
   if (!eligible.length) return ok({ success: true, processed: 0, message: "Nessun partner da elaborare" });
@@ -270,11 +284,10 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
   for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
     const batch = eligible.slice(i, i + BATCH_SIZE);
 
-    // deno-lint-ignore no-explicit-any
-    const partnerList = batch.map((p: any) => {
-      const contacts = ((p.partner_contacts || []) as any[])
-        .filter((c: any) => !c.contact_alias)
-        .map((c: any) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
+    const partnerList = batch.map((p) => {
+      const contacts = (p.partner_contacts || [])
+        .filter((c) => !c.contact_alias)
+        .map((c) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
       return {
         partner_id: p.id,
         company_name: p.company_name,

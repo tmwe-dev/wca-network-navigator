@@ -4,7 +4,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /**
  * Auto-suggest group for unknown senders based on classification confidence.

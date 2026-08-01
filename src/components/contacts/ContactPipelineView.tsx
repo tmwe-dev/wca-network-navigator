@@ -13,8 +13,8 @@ import { UserPlus, Send, Clock, Handshake, Star, Snowflake, ArrowRight, GripVert
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
-import { updateLeadStatus } from "@/data/partners";
-import { findContactsForPipeline } from "@/data/contacts";
+import { updateLeadStatus } from "@/application/data/partners";
+import { findContactsForPipeline } from "@/application/data/contacts";
 
 // ── Stage definitions mapped to lead_status ──
 interface Stage {

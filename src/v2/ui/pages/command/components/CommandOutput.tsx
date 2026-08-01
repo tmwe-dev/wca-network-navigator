@@ -26,7 +26,7 @@ const ease = [0.2, 0.8, 0.2, 1] as const;
 export function CommandOutput({
   canvas,
   liveResult,
-  activeScenarioKey,
+  activeScenarioKey: _activeScenarioKey,
   onClose,
   selectedIds,
   onToggleId,

@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
-import { findRecentWorkPlansOverview } from "@/data/workPlans";
+import { findRecentWorkPlansOverview } from "@/application/data/workPlans";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { cn } from "@/lib/utils";
 import { Loader2, Briefcase, Crown, Circle } from "lucide-react";

@@ -8,7 +8,7 @@ import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import type { LeadStatus } from "../_shared/domainEvents.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-type SupabaseClient = BaseSupabaseClient<any, "public", any>;
+type SupabaseClient = BaseSupabaseClient;
 
 interface AgentTask {
   id: string;
@@ -63,7 +63,7 @@ export async function handleStateTransition(
       : `Transizione fallita per partner ${partnerId}`,
   }).eq("id", taskId);
 
-  await logSupervisorAudit(supabase as any, {
+  await logSupervisorAudit(supabase, {
     user_id: userId,
     actor_type: "ai_agent",
     actor_id: agentId,
@@ -98,7 +98,7 @@ export async function handleGeneralTask(
   agentName: string,
   userId: string,
   authHeader: string,
-  apiKey: string
+  _apiKey: string
 ): Promise<{ success: boolean; result: string }> {
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
@@ -187,7 +187,7 @@ export async function handleGeneralTask(
     completed_at: new Date().toISOString(),
   }).eq("id", taskId);
 
-  await logSupervisorAudit(supabase as any, {
+  await logSupervisorAudit(supabase, {
     user_id: userId,
     actor_type: "ai_agent",
     actor_id: agentId,

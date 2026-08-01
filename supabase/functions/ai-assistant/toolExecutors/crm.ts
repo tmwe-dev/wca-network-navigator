@@ -4,7 +4,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
+type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient>;
 
 export async function executeCreateContact(
   supabase: SupabaseClient,

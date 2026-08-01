@@ -3,7 +3,7 @@
  */
 import type { PostSendPipelineInput } from "./postSendPipeline.ts";
 
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export async function checkAndCreateEnrichmentRefresh(
   supabase: SupabaseClient,

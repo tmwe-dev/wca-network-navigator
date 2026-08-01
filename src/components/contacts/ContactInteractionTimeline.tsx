@@ -5,9 +5,9 @@ import { Mail, Phone, MessageCircle, Users, Search, Megaphone, StickyNote, Bot, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { findContactInteractionsRange } from "@/data/contactInteractions";
-import { findChannelMessagesForContactEmail } from "@/data/channelMessages";
-import { findActivitiesForSelectedContact } from "@/data/activities";
+import { findContactInteractionsRange } from "@/application/data/contactInteractions";
+import { findChannelMessagesForContactEmail } from "@/application/data/channelMessages";
+import { findActivitiesForSelectedContact } from "@/application/data/activities";
 import { cn } from "@/lib/utils";
 
 const TYPE_CONFIG: Record<string, { icon: typeof Mail; color: string; label: string }> = {

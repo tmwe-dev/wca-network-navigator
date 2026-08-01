@@ -39,7 +39,7 @@ serve(async (req) => {
     // ━━━ AUTHENTICATION ━━━
     const authResult = await authenticateRequest(req, dynCors);
     if (authResult.error) return authResult.error;
-    const { userId, authHeader, authClient } = authResult.auth;
+    const { userId, authHeader } = authResult.auth;
 
     // Rate limiting
     const rl = checkRateLimit(`agent-execute:${userId}`, { maxTokens: 15, refillRate: 0.25 });

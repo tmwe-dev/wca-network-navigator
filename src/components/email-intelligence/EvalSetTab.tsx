@@ -14,7 +14,7 @@ import {
   runFunnemailEval,
   type FunnemailEvalCase,
   type FunnemailEvalRun,
-} from "@/data/funnemailEval";
+} from "@/application/data/funnemailEval";
 
 const QK_CASES = ["funnemail", "eval-cases"] as const;
 const QK_RUNS = ["funnemail", "eval-runs"] as const;

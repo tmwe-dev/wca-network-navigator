@@ -45,7 +45,7 @@ Deno.test("[FN-CLASSIFY] cache TTL: oltre TTL → re-fetch", async () => {
 });
 
 Deno.test("[FN-CLASSIFY] cache TTL: reset esplicito → re-fetch", async () => {
-  let t = 0;
+  const t = 0;
   const { fetcher, calls, reset } = makeCachedFetcher([{ slug: "to_sort" }], () => t);
   await fetcher();
   reset();

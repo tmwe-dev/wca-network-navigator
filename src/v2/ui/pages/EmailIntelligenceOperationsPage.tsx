@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listFunnemailBrain, type FunnemailBrainRow } from "@/data/funnemailBrain";
-import { listEmailProcessingJobs } from "@/data/emailProcessingJobs";
+import { listFunnemailBrain, type FunnemailBrainRow } from "@/application/data/funnemailBrain";
+import { listEmailProcessingJobs } from "@/application/data/emailProcessingJobs";
 import { useMemo } from "react";
 
 const QK_BRAIN = ["funnemail", "brain"] as const;

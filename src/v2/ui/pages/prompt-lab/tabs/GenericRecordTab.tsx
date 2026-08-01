@@ -7,7 +7,7 @@ import { SplitBlockEditor } from "../SplitBlockEditor";
 import { usePromptLabBlocks } from "../hooks/usePromptLabBlocks";
 import { useLabAgent, type BriefingPayload } from "../hooks/useLabAgent";
 import { type Block, PROMPT_LAB_TABS } from "../types";
-import { logSupervisorAudit } from "@/data/supervisorAuditLog";
+import { logSupervisorAudit } from "@/application/data/supervisorAuditLog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Sparkles } from "lucide-react";

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
-import type { CestinoItem } from "@/data/cestinone";
+import type { CestinoItem } from "@/application/data/cestinone";
 import { CHANNEL_META, STATUS_META, TRIGGER_META, PARTNER_TYPE_META } from "./meta";
 import { AgentBadge } from "./AgentBadge";
 import { PreviewTab, OriginTab, HistoryTab, ChecksTab, RecipientTab } from "./tabs";

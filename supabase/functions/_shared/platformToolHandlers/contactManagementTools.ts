@@ -6,8 +6,8 @@ import { supabase, resolvePartnerId } from "../platformToolHelpers.ts";
 export async function executeContactManagementToolHandler(
   name: string,
   args: Record<string, unknown>,
-  userId: string,
-  authHeader: string,
+  _userId: string,
+  _authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     case "manage_partner_contact": {

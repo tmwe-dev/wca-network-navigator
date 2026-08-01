@@ -9,7 +9,7 @@
  *
  * Salva direttamente su Supabase e notifica il Prompt Lab per refresh.
  */
-import { insertOperativePromptBlock, insertEmailPromptBlock, insertPlaybookBlock } from "@/data/promptLabBlocks";
+import { insertOperativePromptBlock, insertEmailPromptBlock, insertPlaybookBlock } from "@/application/data/promptLabBlocks";
 import { useCallback, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { insertKbEntryBlock } from "@/data/kbEntries";
+import { insertKbEntryBlock } from "@/application/data/kbEntries";
 
 interface CreateBlockDialogProps {
   open: boolean;

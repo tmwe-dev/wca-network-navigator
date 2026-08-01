@@ -26,8 +26,8 @@ import {
   AlertTriangle, CheckCircle2, Ban,
 } from "lucide-react";
 import { toast } from "sonner";
-import { listAgentsForCapabilities } from "@/data/agentsForPromptLab";
-import { runAgentSimulator, listEdgeFnPseudoAgents, type SimulatorResponse } from "@/data/agentSimulator";
+import { listAgentsForCapabilities } from "@/application/data/agentsForPromptLab";
+import { runAgentSimulator, listEdgeFnPseudoAgents, type SimulatorResponse } from "@/application/data/agentSimulator";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function SimulatorTab() {

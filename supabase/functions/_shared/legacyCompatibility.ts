@@ -10,7 +10,7 @@ import { calculatePartnerQuality } from "./qualityOrchestrator.ts";
 import type { PartnerQualityScore } from "./qualityTypes.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Legacy function for backward compatibility

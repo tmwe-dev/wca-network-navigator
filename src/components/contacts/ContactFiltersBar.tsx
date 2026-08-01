@@ -12,7 +12,7 @@ import {
   Search, FolderOpen, Globe, MapPin, Tag, CalendarIcon, Plane, PlaneLanding, List,
   ArrowUpAZ, X, Filter, ChevronDown, Sparkles, Handshake, Download
 } from "lucide-react";
-import { findContactsForExport } from "@/data/contacts";
+import { findContactsForExport } from "@/application/data/contacts";
 import { toast } from "sonner";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";

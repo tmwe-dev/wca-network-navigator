@@ -29,7 +29,7 @@ interface CountryGridProps {
 
 type SortKey = "name" | "partners";
 
-export function CountryGrid({ selected, onToggle, onRemove, filterMode, directoryStats, compact = false }: CountryGridProps) {
+export function CountryGrid({ selected, onToggle, onRemove, filterMode, directoryStats, compact: _compact = false }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -208,7 +208,7 @@ interface CountryPartnerStats {
   without_profile?: number;
 }
 
-function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelected, onToggle, isDark }: {
+function CountryCard({ country, stats, fallbackCount, hasPartnerStats, isSelected, onToggle, isDark: _isDark }: {
   country: { code: string; name: string };
   stats: Record<string, CountryPartnerStats | undefined>;
   fallbackCount: number;

@@ -8,7 +8,7 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findPartnerHeroSnapshot } from "@/data/partners";
+import { findPartnerHeroSnapshot } from "@/application/data/partners";
 import { MapPin, Sparkles, X, Mail, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCountryFlag } from "@/lib/countries";

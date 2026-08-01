@@ -3,7 +3,7 @@
  * Calls enrich-partner-website edge function and tracks status.
  */
 import { useState, useCallback, useEffect } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { runBulkOp } from "@/v2/services/bulkOps";
 import { getPartnerEnrichmentDataForDeepSearch } from "@/data/deepSearchTriggerQueries";
 import { toast } from "sonner";
 import { asEnrichmentData } from "@/lib/types/enrichmentData";
@@ -53,10 +53,11 @@ export function useDeepSearchTrigger(partnerId: string | null) {
     }
     setState((s) => ({ ...s, status: "running" }));
     try {
-      await invokeEdge("enrich-partner-website", {
-        body: { partnerId },
-        context: "OraclePanel.deepSearch",
+      const result = await runBulkOp("enrich.base", [{ partnerId }], {
+        sourceView: "OraclePanel.deepSearch",
+        concurrency: 1,
       });
+      if (result.errorCount > 0) throw new Error(result.results[0]?.error ?? "Deep Search fallita");
       toast.success("Deep Search completata 🔍");
       setRefreshTick((t) => t + 1);
     } catch (err) {

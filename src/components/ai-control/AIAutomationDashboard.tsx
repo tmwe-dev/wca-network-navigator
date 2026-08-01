@@ -5,8 +5,8 @@
  */
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { findEmailAddressRulesWithStats, setEmailAddressRuleActive } from '@/data/emailAddressRules';
-import { findDecisionLogsByEmail, type DecisionLogEntry } from '@/data/aiDecisionLog';
+import { findEmailAddressRulesWithStats, setEmailAddressRuleActive } from '@/application/data/emailAddressRules';
+import { findDecisionLogsByEmail, type DecisionLogEntry } from '@/application/data/aiDecisionLog';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

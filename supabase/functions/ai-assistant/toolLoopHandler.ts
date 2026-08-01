@@ -178,7 +178,7 @@ export async function executeToolLoop(
   initialState: ToolLoopState
 ): Promise<ToolLoopResult> {
   const MAX_ITERATIONS = 8;
-  let state = initialState;
+  const state = initialState;
   let iterations = 0;
   let lastToolSignature = "";
   let repeatedToolCount = 0;

@@ -10,7 +10,7 @@
 import { useMemo } from "react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useQuery } from "@tanstack/react-query";
-import { findPromptLogUsageSince } from "@/data/aiPromptLogUsage";
+import { findPromptLogUsageSince } from "@/application/data/aiPromptLogUsage";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";

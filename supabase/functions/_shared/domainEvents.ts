@@ -423,7 +423,7 @@ export function createEvent<T extends WCAEventType>(
 // ═══════════════════════════════════════════════════════════
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /**
  * Persist a domain event to the `domain_events` table.

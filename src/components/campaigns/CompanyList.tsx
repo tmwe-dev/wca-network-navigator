@@ -6,7 +6,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Building2 } from "lucide-react";
-import { findBusinessCardsByPartnerIds } from "@/data/businessCards";
+import { findBusinessCardsByPartnerIds } from "@/application/data/businessCards";
 import { usePartnerContacts } from "@/hooks/usePartnerContacts";
 import { CompanyListHeader } from "./CompanyListHeader";
 import { CompanyListRow } from "./CompanyListRow";
@@ -61,12 +61,18 @@ function useBcaDetails(partnerIds: string[]) {
   });
 }
 
-type SortField = "name" | "city" | "contacts";
-
 export function CompanyList({
-  partners, selectedPartners, onTogglePartner, onSelectAll, onDeselectAll,
-  onAddToCampaign, countryName, bcaPartnerIds, source = "partners",
-  selectedContacts, onToggleContact,
+  partners,
+  selectedPartners,
+  onTogglePartner,
+  onSelectAll,
+  onDeselectAll,
+  onAddToCampaign,
+  countryName,
+  bcaPartnerIds,
+  source = "partners",
+  selectedContacts,
+  onToggleContact,
 }: CompanyListProps) {
   const g = useGlobalFilters();
   const searchQuery = g.filters.campaignsSearch;
@@ -79,31 +85,36 @@ export function CompanyList({
 
   const partnerIdsWithBca = useMemo(() => {
     if (!bcaPartnerIds) return [];
-    return partners.filter(p => bcaPartnerIds.has(p.id)).map(p => p.id);
+    return partners.filter((p) => bcaPartnerIds.has(p.id)).map((p) => p.id);
   }, [partners, bcaPartnerIds]);
 
   const { data: bcaDetails = {} } = useBcaDetails(partnerIdsWithBca);
-  const allPartnerIds = useMemo(() => partners.map(p => p.id), [partners]);
+  const allPartnerIds = useMemo(() => partners.map((p) => p.id), [partners]);
   const { data: contactsMap = {} } = usePartnerContacts(allPartnerIds);
 
   const filteredPartners = useMemo(() => {
     let result = partners;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(p => p.company_name.toLowerCase().includes(query) || p.city?.toLowerCase().includes(query) || p.email?.toLowerCase().includes(query));
+      result = result.filter(
+        (p) =>
+          p.company_name.toLowerCase().includes(query) ||
+          p.city?.toLowerCase().includes(query) ||
+          p.email?.toLowerCase().includes(query),
+      );
     }
-    if (typeFilter && typeFilter !== "all") result = result.filter(p => p.partner_type === typeFilter);
+    if (typeFilter && typeFilter !== "all") result = result.filter((p) => p.partner_type === typeFilter);
     if (aiQuery) {
       const keywords = aiQuery.toLowerCase().split(/\s+/);
-      result = result.filter(p => {
-        const services = p.partner_services?.map(s => s.service_category.toLowerCase()) || [];
-        const certs = p.partner_certifications?.map(c => c.certification.toLowerCase()) || [];
-        return keywords.some(keyword => {
+      result = result.filter((p) => {
+        const services = p.partner_services?.map((s) => s.service_category.toLowerCase()) || [];
+        const certs = p.partner_certifications?.map((c) => c.certification.toLowerCase()) || [];
+        return keywords.some((keyword) => {
           if (keyword.includes("iata") && certs.includes("iata")) return true;
           if (keyword.includes("iso") && certs.includes("iso")) return true;
           if (keyword.includes("pharma") && services.includes("pharma")) return true;
           if (keyword.includes("air") && services.includes("air_freight")) return true;
-          if (keyword.includes("ocean") && services.some(s => s.includes("ocean"))) return true;
+          if (keyword.includes("ocean") && services.some((s) => s.includes("ocean"))) return true;
           return false;
         });
       });
@@ -118,12 +129,17 @@ export function CompanyList({
     return sorted;
   }, [partners, searchQuery, typeFilter, aiQuery, sortField, sortAsc, contactsMap]);
 
-  const selectedCount = Array.from(selectedPartners).filter(id => filteredPartners.some(p => p.id === id)).length;
+  const selectedCount = Array.from(selectedPartners).filter((id) => filteredPartners.some((p) => p.id === id)).length;
   const selectedContactCount = selectedContacts?.size || 0;
   const isBcaSource = source === "bca";
 
   const toggleExpand = useCallback((partnerId: string) => {
-    setExpandedPartners(prev => { const next = new Set(prev); if (next.has(partnerId)) next.delete(partnerId); else next.add(partnerId); return next; });
+    setExpandedPartners((prev) => {
+      const next = new Set(prev);
+      if (next.has(partnerId)) next.delete(partnerId);
+      else next.add(partnerId);
+      return next;
+    });
   }, []);
 
   // Sort toggle handled by FiltersDrawer (CampaignsFiltersSection).
@@ -164,7 +180,9 @@ export function CompanyList({
                 g.setFilter("campaignsSortField", "name");
                 g.setFilter("campaignsSortAsc", true);
               }}
-            >Reset</button>
+            >
+              Reset
+            </button>
           </div>
         )}
       </div>
@@ -174,7 +192,9 @@ export function CompanyList({
           <div className="p-8 text-center">
             <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
             <p className="text-muted-foreground">
-              {partners.length === 0 ? "Clicca su un paese nel globo per vedere le aziende" : "Nessuna azienda corrisponde ai filtri"}
+              {partners.length === 0
+                ? "Clicca su un paese nel globo per vedere le aziende"
+                : "Nessuna azienda corrisponde ai filtri"}
             </p>
           </div>
         ) : (

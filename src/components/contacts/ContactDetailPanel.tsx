@@ -24,7 +24,7 @@ import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import { UnifiedSmartActions } from "@/components/shared/entity-panel/UnifiedSmartActions";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { supabase } from "@/integrations/supabase/client";
-import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast as sonnerToast } from "sonner";
 import { useCallback } from "react";

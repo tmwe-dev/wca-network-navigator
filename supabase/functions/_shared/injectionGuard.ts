@@ -25,7 +25,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 import {
   detectInjection,
@@ -115,7 +115,7 @@ export async function checkInjectionGuard(
       ) {
         return { needsConfirmation: false, reviewId: tokenRow.id, findings, reason: "approved-token" };
       }
-    } catch (_e) {
+    } catch {
       // continua con flusso normale
     }
   }
@@ -144,7 +144,7 @@ export async function checkInjectionGuard(
       }
       // expired or other → crea nuovo record
     }
-  } catch (_e) {
+  } catch {
     // continua creando nuovo record
   }
 

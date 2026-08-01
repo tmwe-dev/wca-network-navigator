@@ -11,7 +11,7 @@
  * Fail-safe: in caso di errore di lettura → ritorna false (analisi OFF).
  */
 // deno-lint-ignore no-explicit-any
-type SBClient = any;
+type SBClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export const DEEP_MAIL_SETTING_KEY = "ai_deep_mail_analysis_enabled";
 

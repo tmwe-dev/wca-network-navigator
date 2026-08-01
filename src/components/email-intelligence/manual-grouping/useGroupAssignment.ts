@@ -16,7 +16,7 @@ import {
   findDomainPatternKbEntryId,
   insertKbEntry,
   checkDomainGroupPattern,
-} from "@/data/emailGrouping";
+} from "@/application/data/emailGrouping";
 
 import { createLogger } from "@/lib/log";
 

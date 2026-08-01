@@ -6,7 +6,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 export interface ConversationIntelligence {
   convCtx: Record<string, unknown> | null;
@@ -18,7 +18,7 @@ export async function loadConversationContext(
   supabase: SupabaseClient,
   userId: string,
   emailAddress: string | null,
-  partnerId: string | null,
+  _partnerId: string | null,
 ): Promise<ConversationIntelligence> {
   if (!emailAddress)
     return { convCtx: null, rules: null, classifications: [] };

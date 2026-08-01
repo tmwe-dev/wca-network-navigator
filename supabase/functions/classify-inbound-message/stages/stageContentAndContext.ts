@@ -5,7 +5,7 @@ import { runInboundTriage, maybeDispatchAlert } from "../../_shared/inboundTriag
 import type { RequestBody } from "./types.ts";
 
 // deno-lint-ignore no-explicit-any
-type Sb = any;
+type Sb = import("../../_shared/supabaseClient.ts").AnySupabaseClient;
 
 export async function runContentClassification(supabase: Sb, body: RequestBody): Promise<void> {
   if (body.channel !== "email") return;
@@ -21,7 +21,7 @@ export async function runContentClassification(supabase: Sb, body: RequestBody):
         emit_pending_actions: true,
       },
     });
-  } catch (_e) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 }
 
 export async function refreshConversationContext(supabase: Sb, body: RequestBody): Promise<void> {
@@ -35,7 +35,7 @@ export async function refreshConversationContext(supabase: Sb, body: RequestBody
         limit: 30,
       },
     });
-  } catch (_e) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 }
 
 export async function runTriageAndAlert(supabase: Sb, body: RequestBody): Promise<void> {
@@ -60,5 +60,5 @@ export async function runTriageAndAlert(supabase: Sb, body: RequestBody): Promis
         triage,
       });
     }
-  } catch (_e) { /* fail-safe */ }
+  } catch { /* fail-safe */ }
 }

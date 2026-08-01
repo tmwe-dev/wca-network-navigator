@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findBusinessCardsForUser } from "@/data/businessCards";
+import { findBusinessCardsForUser } from "@/application/data/businessCards";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { EmptyState } from "../../atoms/EmptyState";
 import { StatusBadge } from "../../atoms/StatusBadge";

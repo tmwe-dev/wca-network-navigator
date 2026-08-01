@@ -3,7 +3,7 @@
  * Nessuna JSX qui — solo mapping di classi/label e predicati puri.
  */
 import { FileText, Wrench, Code2, BookOpen } from "lucide-react";
-import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/application/data/harmonizeRuns";
 
 export const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
   UPDATE: "bg-primary/10 text-primary border-primary/20",

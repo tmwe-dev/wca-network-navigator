@@ -1,7 +1,7 @@
 /**
  * V5: WcaSession — ora usa wca-app bridge (Claude Engine).
  * 🤖 Claude Engine — Diario di bordo #4
- * 
+ *
  * Non dipende più dall'estensione Chrome.
  * Testa la connessione chiamando wca-app.vercel.app/api/login.
  */
@@ -38,7 +38,7 @@ export function useWcaSession() {
       setSessionActive(false);
       setLastError(data.error || "Login WCA fallito");
       return false;
-    } catch (_err) {
+    } catch {
       setSessionActive(false);
       setLastError("wca-app non raggiungibile");
       return false;

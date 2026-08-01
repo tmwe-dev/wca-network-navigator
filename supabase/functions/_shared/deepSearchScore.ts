@@ -193,7 +193,7 @@ export function calculateDeepSearchScore(
  */
 // deno-lint-ignore no-explicit-any
 export async function getPartnerDeepSearchScore(
-  supabase: any,
+  supabase: import("./supabaseClient.ts").AnySupabaseClient,
   partnerId: string,
   userId: string,
 ): Promise<DeepSearchScoreResult> {

@@ -14,21 +14,21 @@ import { execFileSync } from "node:child_process";
 // Budget misurati al 2026-08-01 (segmento C: import inutilizzati azzerati).
 // Vedi docs/audit/lint-gates-2026-08-02.md
 export const BUDGET = {
-  "no-restricted-imports": 448,
-  "unused-imports/no-unused-vars": 273,
-  "@typescript-eslint/no-explicit-any": 242,
+  "no-restricted-imports": 0,
+  "unused-imports/no-unused-vars": 0,
+  "@typescript-eslint/no-explicit-any": 0,
   "unused-imports/no-unused-imports": 0,
-  "@typescript-eslint/no-unsafe-function-type": 49,
-  "tmwe/no-direct-ai-invoke": 26,
-  "no-empty": 27,
-  "no-useless-escape": 18,
-  "prefer-const": 12,
-  "tmwe/no-direct-bulk-op": 9,
-  "no-case-declarations": 5,
-  "no-var": 4,
-  "no-control-regex": 3,
-  "no-regex-spaces": 1,
-  "no-useless-catch": 1,
+  "@typescript-eslint/no-unsafe-function-type": 0,
+  "tmwe/no-direct-ai-invoke": 0,
+  "no-empty": 0,
+  "no-useless-escape": 0,
+  "prefer-const": 0,
+  "tmwe/no-direct-bulk-op": 0,
+  "no-case-declarations": 0,
+  "no-var": 0,
+  "no-control-regex": 0,
+  "no-regex-spaces": 0,
+  "no-useless-catch": 0,
 };
 
 /**

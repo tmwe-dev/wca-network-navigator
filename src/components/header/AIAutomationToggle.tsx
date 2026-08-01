@@ -14,7 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 
 import { createLogger } from "@/lib/log";
-import { getUserAppSetting, upsertUserAppSetting } from "@/data/uiShellQueries";
+import { getUserAppSetting, upsertUserAppSetting } from "@/application/data/uiShellQueries";
 const log = createLogger("AIAutomationToggle");
 
 interface AIAutomationToggleProps {

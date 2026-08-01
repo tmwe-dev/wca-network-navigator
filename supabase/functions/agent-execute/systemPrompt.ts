@@ -6,7 +6,7 @@ import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supab
 import { assembleContext, getContextBudget } from "../_shared/tokenBudget.ts";
 import { loadCommercialDoctrine } from "../_shared/commercialDoctrine.ts";
 
-type SupabaseClient = BaseSupabaseClient<any, "public", any>;
+type SupabaseClient = BaseSupabaseClient;
 
 interface PersonaData {
   tone?: string;
@@ -37,7 +37,7 @@ export async function loadAgentPersona(
       .eq("user_id", userId)
       .maybeSingle();
     persona = p as PersonaData | null;
-  } catch (_) {
+  } catch {
     /* table may not exist yet */
   }
 
@@ -58,7 +58,7 @@ export async function loadAgentPersona(
           .eq("is_active", true);
         if (entries) personaKbEntries = entries;
       }
-    } catch (_) {
+    } catch {
       /* table may not exist yet */
     }
   }

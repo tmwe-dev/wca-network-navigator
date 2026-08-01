@@ -17,7 +17,7 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
+type SupabaseClient = ReturnType<typeof createClient>;
 
 const BATCH_SIZE = 25;
 
@@ -180,7 +180,7 @@ serve(async (req) => {
   }
 });
 
-async function normalizeWithAI(batch: Array<Record<string, unknown>>, apiKey: string): Promise<any[]> {
+async function normalizeWithAI(batch: Array<Record<string, unknown>>, _apiKey: string): Promise<Array<Record<string, unknown>>> {
   const prompt = `Sei un assistente specializzato nella normalizzazione di dati aziendali per un CRM di spedizionieri e freight forwarder.
 
 Per ogni record nel seguente array JSON, normalizza i campi:

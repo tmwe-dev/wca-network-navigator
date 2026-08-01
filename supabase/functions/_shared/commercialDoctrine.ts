@@ -11,7 +11,7 @@
  */
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 /** Minimal fallback used only if the KB has no doctrine entries. */
 const FALLBACK_DOCTRINE = `

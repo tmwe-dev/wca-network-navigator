@@ -6,8 +6,8 @@ import { supabase, type CountryStatRow, type DirectoryCountRow } from "../platfo
 export async function executeSearchToolHandler(
   name: string,
   args: Record<string, unknown>,
-  userId: string,
-  authHeader: string,
+  _userId: string,
+  _authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     case "get_directory_status": {

@@ -5,7 +5,7 @@
 import { useCallback } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { supabase } from "@/integrations/supabase/client";
-import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";

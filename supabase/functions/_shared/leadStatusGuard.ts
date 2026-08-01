@@ -17,7 +17,7 @@
 import { logSupervisorAudit } from "./supervisorAudit.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export const LEAD_STATUS_ORDER: Record<string, number> = {
   new: 0,

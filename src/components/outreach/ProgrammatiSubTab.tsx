@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
-import { findScheduledOutreach, cancelMissionAction, cancelActivity, updateMissionActionSchedule, updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
+import { findScheduledOutreach, cancelMissionAction, cancelActivity, updateMissionActionSchedule, updateActivitySchedule, logAuditEntry } from "@/application/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 
 const CHANNEL_COLORS: Record<string, string> = {

@@ -5,7 +5,7 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { invokeAi } from "@/lib/ai/invokeAi";
-import { proposeFinderApiKb } from "@/data/finderApiKb";
+import { proposeFinderApiKb } from "@/application/data/finderApiKb";
 import type { Message } from "../command/components/CommandHistory";
 
 export interface FinderToolResult {

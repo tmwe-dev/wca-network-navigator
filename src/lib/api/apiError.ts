@@ -17,15 +17,15 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("apiError");
 
 export type ApiErrorCode =
-  | "NETWORK_ERROR"           // Connessione fallita / timeout
-  | "UNAUTHENTICATED"         // 401 — sessione assente/scaduta
-  | "FORBIDDEN"               // 403 — utente non autorizzato
-  | "NOT_FOUND"               // 404 — risorsa inesistente
-  | "VALIDATION_FAILED"       // 422 — input non valido
-  | "RATE_LIMITED"            // 429 — troppe richieste
-  | "SERVER_ERROR"            // 5xx — errore interno
-  | "SCHEMA_MISMATCH"         // Risposta non conforme al contratto runtime
-  | "UNKNOWN_ERROR";          // Categoria di fallback
+  | "NETWORK_ERROR" // Connessione fallita / timeout
+  | "UNAUTHENTICATED" // 401 — sessione assente/scaduta
+  | "FORBIDDEN" // 403 — utente non autorizzato
+  | "NOT_FOUND" // 404 — risorsa inesistente
+  | "VALIDATION_FAILED" // 422 — input non valido
+  | "RATE_LIMITED" // 429 — troppe richieste
+  | "SERVER_ERROR" // 5xx — errore interno
+  | "SCHEMA_MISMATCH" // Risposta non conforme al contratto runtime
+  | "UNKNOWN_ERROR"; // Categoria di fallback
 
 export interface ApiErrorPayload {
   code: ApiErrorCode;
@@ -84,13 +84,19 @@ export class ApiError extends Error {
    */
   static async fromResponse(res: Response, context?: string): Promise<ApiError> {
     const code: ApiErrorCode =
-      res.status === 401 ? "UNAUTHENTICATED" :
-      res.status === 403 ? "FORBIDDEN" :
-      res.status === 404 ? "NOT_FOUND" :
-      res.status === 422 ? "VALIDATION_FAILED" :
-      res.status === 429 ? "RATE_LIMITED" :
-      res.status >= 500 ? "SERVER_ERROR" :
-      "UNKNOWN_ERROR";
+      res.status === 401
+        ? "UNAUTHENTICATED"
+        : res.status === 403
+          ? "FORBIDDEN"
+          : res.status === 404
+            ? "NOT_FOUND"
+            : res.status === 422
+              ? "VALIDATION_FAILED"
+              : res.status === 429
+                ? "RATE_LIMITED"
+                : res.status >= 500
+                  ? "SERVER_ERROR"
+                  : "UNKNOWN_ERROR";
 
     let message = `HTTP ${res.status}`;
     let details: Record<string, unknown> | undefined;
@@ -102,7 +108,7 @@ export class ApiError extends Error {
         else if (typeof b.message === "string") message = b.message;
         details = b;
       }
-    } catch (_e) {
+    } catch {
       log.debug("operation failed");
       /* body non JSON o vuoto: lascia il default */
     }

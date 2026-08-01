@@ -42,7 +42,7 @@ interface PromptTemplateSelectorProps {
 export function PromptTemplateSelector({
   customPrompt,
   onPromptChange,
-  isEditing = false
+  isEditing: _isEditing = false
 }: PromptTemplateSelectorProps) {
   const { findPromptTemplatesForUser, hasSystemPromptTemplates, insertSystemPromptTemplates } = useEmailPromptsRepo();
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
@@ -50,7 +50,7 @@ export function PromptTemplateSelector({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [showCustomEdit, setShowCustomEdit] = useState(false);
   const [editText, setEditText] = useState(customPrompt || "");
-  const [_isPersonalizing, setIsPersonalizing] = useState(false);
+  const [, setIsPersonalizing] = useState(false);
 
   useEffect(() => {
     loadTemplates();

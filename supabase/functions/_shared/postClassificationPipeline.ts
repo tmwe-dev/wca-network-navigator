@@ -36,7 +36,7 @@ import { suggestGroupForSender } from "./senderGrouping.ts";
 import { checkInternalOrSelf } from "./internalSenderGuard.ts";
 
 // deno-lint-ignore no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export type ClassificationCategory =
   | "interested"
@@ -218,7 +218,7 @@ export async function runPostClassificationPipeline(
           await handleNotInterested(supabase, routerInput, result);
           break;
 
-        case "auto_reply":
+        case "auto_reply": {
           const oooInput: QuestionComplaintInput = {
             userId: enrichedInput.userId,
             partnerId: enrichedInput.partnerId,
@@ -238,8 +238,9 @@ export async function runPostClassificationPipeline(
           };
           await handleOutOfOffice(supabase, oooInput, result);
           break;
+        }
 
-        case "bounce":
+        case "bounce": {
           const bounceInput: BounceHandlerInput = {
             userId: enrichedInput.userId,
             partnerId: enrichedInput.partnerId,
@@ -250,8 +251,9 @@ export async function runPostClassificationPipeline(
           };
           await handleBounce(supabase, bounceInput, result);
           break;
+        }
 
-        case "unsubscribe":
+        case "unsubscribe": {
           const unsubInput: BounceHandlerInput = {
             userId: enrichedInput.userId,
             partnerId: enrichedInput.partnerId,
@@ -262,9 +264,10 @@ export async function runPostClassificationPipeline(
           };
           await handleUnsubscribe(supabase, unsubInput, result);
           break;
+        }
 
         case "question":
-        case "request_info":
+        case "request_info": {
           const questionInput: QuestionComplaintInput = {
             userId: enrichedInput.userId,
             partnerId: enrichedInput.partnerId,
@@ -284,8 +287,9 @@ export async function runPostClassificationPipeline(
           };
           await handleQuestion(supabase, questionInput, result);
           break;
+        }
 
-        case "complaint":
+        case "complaint": {
           const complaintInput: QuestionComplaintInput = {
             userId: enrichedInput.userId,
             partnerId: enrichedInput.partnerId,
@@ -305,6 +309,7 @@ export async function runPostClassificationPipeline(
           };
           await handleComplaint(supabase, complaintInput, result);
           break;
+        }
 
         case "follow_up":
           await handleFollowUp(supabase, routerInput, result);

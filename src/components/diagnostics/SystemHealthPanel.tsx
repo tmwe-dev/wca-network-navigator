@@ -4,7 +4,7 @@
  * Auto-refreshes every 30s.
  */
 import { useState, useEffect, useCallback } from "react";
-import { invokeHealthCheck, countSupervisorErrorsSince, findRecentDecisionLatencies, countEmailClassificationsSince } from "@/data/systemHealthMetrics";
+import { invokeHealthCheck, countSupervisorErrorsSince, findRecentDecisionLatencies, countEmailClassificationsSince } from "@/application/data/systemHealthMetrics";
 import { Activity, Database, Brain, Mail, RefreshCw } from "lucide-react";
 
 interface HealthData {

@@ -69,8 +69,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
-    // deno-lint-ignore no-explicit-any
-    if ((pauseSettings as any)?.value === "true") {
+    if (pauseSettings?.value === "true") {
       return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), {
         headers: dynCors,
         status: 200,
@@ -211,7 +210,8 @@ Deno.serve(async (req) => {
           const threadId = (msgData as Record<string, unknown>).thread_id as string;
           const match = (msgData as Record<string, unknown>).match as { partnerId?: string } | null;
           await matchResponseActivity(supabase, msgData.id as string, inReplyTo, threadId, match);
-        } catch (matchErr: unknown) {
+        } catch {
+          // Response matching is best-effort and must not stop inbox sync.
         }
       } else if (error) {
         if (uid > maxUid) {
@@ -240,8 +240,8 @@ Deno.serve(async (req) => {
     // EdgeRuntime.waitUntil per non bruciare il budget CPU della request.
     // La response torna subito; il lavoro continua in background.
     const postSync = (async () => {
-      try { await applyEmailRules(supabase, supabaseUrl, serviceRoleKey, userId, messages); } catch (_e) {}
-      try { await classifyInboundEmails(supabaseUrl, serviceRoleKey, userId, messages); } catch (_e) {}
+      try { await applyEmailRules(supabase, supabaseUrl, serviceRoleKey, userId, messages); } catch { /* intentionally empty */ }
+      try { await classifyInboundEmails(supabaseUrl, serviceRoleKey, userId, messages); } catch { /* intentionally empty */ }
       try {
         const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
         if (enq.enqueued > 0) {
@@ -257,7 +257,7 @@ Deno.serve(async (req) => {
       }
     })();
     // deno-lint-ignore no-explicit-any
-    const edgeRt = (globalThis as any).EdgeRuntime;
+    const edgeRt = (globalThis as typeof globalThis & { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime;
     if (edgeRt && typeof edgeRt.waitUntil === "function") {
       edgeRt.waitUntil(postSync);
     }
