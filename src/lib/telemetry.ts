@@ -6,6 +6,7 @@
  *
  * Backend: see migration 20260408095954_wave6_hardening_telemetry_staff.sql
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import { insertPageEvent } from "@/data/telemetry";
@@ -69,7 +70,7 @@ async function insert(
       page,
       entity_type: opts.entityType ?? null,
       entity_id: opts.entityId ?? null,
-      props: opts.props ?? {},
+      props: toJsonValue(opts.props ?? {}),
       duration_ms: opts.durationMs ?? null,
     };
     // intentionally not awaited in caller — fire and forget

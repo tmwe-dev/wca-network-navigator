@@ -256,7 +256,7 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
       if (kind === "app_setting") {
         await supabase
           .from("app_settings")
-          .update({ value: toJsonValue(p.before) })
+          .update({ value: typeof p.before === "string" ? p.before : JSON.stringify(p.before ?? null) })
           .eq("key", String(src.key));
         restored++;
       } else if (kind === "kb_entry") {
