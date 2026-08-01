@@ -5,7 +5,6 @@
  * I token TMWE non viaggiano mai nel client.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { tFrom } from "@/lib/typedSupabase";
 
 export const tmweQueryKeys = {
   connection: ["tmwe", "connection"] as const,
@@ -33,7 +32,7 @@ export interface TmweConnection {
 }
 
 export async function getTmweConnection(): Promise<TmweConnection | null> {
-  const { data, error } = await tFrom("tmwe_user_connections_v")
+  const { data, error } = await supabase.from("tmwe_user_connections_v")
     .select(
       "user_id, tmwe_user_id, tmwe_email, tmwe_company, tmwe_vat_number, scopes, connected_at, last_used_at, expires_at, token_valid",
     )
@@ -185,7 +184,7 @@ export async function unlinkPartnerFromTmwe(partnerId: string): Promise<void> {
 }
 
 export async function getTmwePartnerLink(partnerId: string): Promise<TmwePartnerLink | null> {
-  const { data, error } = await tFrom("tmwe_partner_links")
+  const { data, error } = await supabase.from("tmwe_partner_links")
     .select("id, partner_id, tmwe_client_id, tmwe_vat, match_confidence, linked_by_user_id, linked_at")
     .eq("partner_id", partnerId).maybeSingle();
   if (error) throw error;
@@ -193,7 +192,7 @@ export async function getTmwePartnerLink(partnerId: string): Promise<TmwePartner
 }
 
 export async function getTmweSnapshot(clientId: string): Promise<TmweCustomerSnapshot | null> {
-  const { data, error } = await tFrom("tmwe_customer_snapshot")
+  const { data, error } = await supabase.from("tmwe_customer_snapshot")
     .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at")
     .eq("tmwe_client_id", clientId).maybeSingle();
   if (error) throw error;
@@ -201,7 +200,7 @@ export async function getTmweSnapshot(clientId: string): Promise<TmweCustomerSna
 }
 
 export async function getRevenueLast12Months(clientId: string): Promise<TmweRevenueRow[]> {
-  const { data, error } = await tFrom("tmwe_revenue_monthly")
+  const { data, error } = await supabase.from("tmwe_revenue_monthly")
     .select("tmwe_client_id, year, month, revenue_amount, currency, invoices_count, services_breakdown")
     .eq("tmwe_client_id", clientId)
     .order("year", { ascending: false })
@@ -212,7 +211,7 @@ export async function getRevenueLast12Months(clientId: string): Promise<TmweReve
 }
 
 export async function listTmweCustomers(): Promise<Array<TmweCustomerSnapshot & { partner_id: string | null }>> {
-  const { data, error } = await tFrom("tmwe_customer_snapshot")
+  const { data, error } = await supabase.from("tmwe_customer_snapshot")
     .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at, tmwe_partner_links(partner_id)")
     .order("last_synced_at", { ascending: false })
     .limit(500);

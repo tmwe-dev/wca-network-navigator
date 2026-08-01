@@ -6,7 +6,6 @@
  *
  * Persiste su app_settings con chiave prompt_lab_metrics_${runId}.
  */
-import { tFrom } from "@/lib/typedSupabase";
 import { upsertAppSetting } from "./appSettings";
 import type { GlobalProposal } from "@/v2/ui/pages/prompt-lab/hooks/useProposalProcessing";
 
@@ -171,7 +170,7 @@ async function loadRunMetrics(userId: string): Promise<PromptLabMetrics[]> {
   // NB: Supabase non ha una query "like", quindi facciamo un'app_settings
   // select senza filtro key, poi filterizziamo in memory.
   // Alternatively, potremmo iterare una lista di runId noti, ma qui facciamo semplice.
-  const { data, error } = await tFrom("app_settings")
+  const { data, error } = await supabase.from("app_settings")
     .select("key,value")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });

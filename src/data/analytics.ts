@@ -2,7 +2,6 @@
  * Analytics Data Layer — Functions to query analytics data from Supabase
  * Provides metrics for: emails, partners, outreach, AI usage, pipeline, activities
  */
-import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 
@@ -254,7 +253,7 @@ export async function getAIUsageMetrics(
   dateRange: { from: Date; to: Date }
 ): Promise<AIUsageMetricsData> {
   try {
-    const { data: logs } = await tFrom("supervisor_audit_log")
+    const { data: logs } = await supabase.from("supervisor_audit_log")
       .select("created_at, action")
       .eq("user_id", userId)
       .gte("created_at", dateRange.from.toISOString())
@@ -301,7 +300,7 @@ export async function getAIUsageMetrics(
  */
 export async function getPipelineMetrics(userId: string): Promise<PipelineMetricsData> {
   try {
-    const { data: deals } = await tFrom("deals")
+    const { data: deals } = await supabase.from("deals")
       .select("stage, value")
       .eq("user_id", userId);
 
