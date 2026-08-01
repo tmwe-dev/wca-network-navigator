@@ -4,7 +4,10 @@ const mockInsert = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (table: string) => mockFrom(table) },
+  supabase: {
+    from: (table: string) => mockFrom(table),
+    auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) },
+  },
 }));
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
@@ -40,6 +43,7 @@ describe("DAL — supervisorAuditLog", () => {
       });
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({
+          user_id: "u1",
           actor_type: "system",
           action_category: "dispatch",
           action_detail: "email_sent",

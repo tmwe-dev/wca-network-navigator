@@ -18,8 +18,8 @@ vi.mock("@/integrations/supabase/client", () => ({
     rpc: (fn: string, args?: unknown) => mockRpc(fn, args),
   },
 }));
-vi.mock("@/lib/supabaseUntyped", () => ({
-  untypedFrom: (table: string) => mockFrom(table),
+vi.mock("@/lib/typedSupabase", () => ({
+  tFrom: (table: string) => mockFrom(table),
 }));
 
 import {

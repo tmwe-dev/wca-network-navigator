@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }));
-vi.mock("@/lib/supabaseUntyped", () => ({ untypedFrom: vi.fn() }));
+vi.mock("@/lib/typedSupabase", () => ({ tFrom: vi.fn() }));
 
 import { __internals } from "@/data/funnemailInbox";
 

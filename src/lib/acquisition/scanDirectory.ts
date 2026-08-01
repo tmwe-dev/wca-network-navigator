@@ -2,6 +2,7 @@
  * Directory scanning logic — extracted from useAcquisitionPipeline.tsx
  * Pure async function that returns scan results without managing React state.
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { findPartnerWcaIdsByCountry, findPartnerIdsByWcaIds } from "@/data/partners";
 import { findDirectoryCacheByCountryNetwork } from "@/data/directoryCache";
 import { findPartnerNetworksByPartnerIds } from "@/data/partnerNetworks";
@@ -90,7 +91,7 @@ export async function scanDirectory(
           await upsertDirectoryCache({
               country_code: code,
               network_name: net,
-              members: membersJson as unknown as Record<string, unknown>[],
+              members: toJsonValue(membersJson),
               total_results: scanResult.members.length,
               scanned_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),

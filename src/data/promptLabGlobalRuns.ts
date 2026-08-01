@@ -4,9 +4,10 @@
  * Ogni "Avvia analisi globale" crea un run. Le proposte vengono aggiornate
  * incrementalmente così il run sopravvive a refresh, crash, errori di rete.
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { updateValidatedColumn } from "@/data/dynamicQuery";
+import { updateValidatedColumn } from "@/data/validatedQuery";
 
 export interface GlobalRunProposal {
   block_id: string;
@@ -255,7 +256,7 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
       if (kind === "app_setting") {
         await supabase
           .from("app_settings")
-          .update({ value: p.before as never })
+          .update({ value: typeof p.before === "string" ? p.before : JSON.stringify(p.before ?? null) })
           .eq("key", String(src.key));
         restored++;
       } else if (kind === "kb_entry") {

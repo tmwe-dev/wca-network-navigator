@@ -33,13 +33,13 @@ export async function countEmailDrafts() {
   return count ?? 0;
 }
 
-export async function insertEmailDraft(draft: Record<string, unknown>) {
-  const { error } = await supabase.from("email_drafts").insert(draft as never);
+export async function insertEmailDraft(draft: DraftInsert) {
+  const { error } = await supabase.from("email_drafts").insert(draft);
   if (error) throw error;
 }
 
-export async function insertEmailDraftReturning(draft: Record<string, unknown>) {
-  const { data, error } = await supabase.from("email_drafts").insert(draft as never)
+export async function insertEmailDraftReturning(draft: DraftInsert) {
+  const { data, error } = await supabase.from("email_drafts").insert(draft);
   if (error) throw error;
   return data;
 }

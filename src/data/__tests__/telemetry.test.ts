@@ -10,11 +10,11 @@ describe("DAL — telemetry", () => {
     mockInsert.mockResolvedValue({ error: null });
   });
   it("inserts a page event", async () => {
-    await insertPageEvent({ page: "/dashboard", ts: Date.now() });
+    await insertPageEvent({ page: "/dashboard", event_name: "view" });
     expect(mockFrom).toHaveBeenCalledWith("page_events");
   });
   it("resolves even on error", async () => {
     mockInsert.mockResolvedValue({ error: { message: "rls" } });
-    await expect(insertPageEvent({ page: "/" })).resolves.not.toThrow();
+    await expect(insertPageEvent({ page: "/", event_name: "view" })).resolves.not.toThrow();
   });
 });

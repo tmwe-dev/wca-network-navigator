@@ -1,6 +1,7 @@
 /**
  * DAL — supervisor_audit_log
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { supabase } from "@/integrations/supabase/client";
 
 
@@ -21,7 +22,11 @@ export async function logSupervisorAudit(entry: AuditLogEntry): Promise<void> {
   // Manteniamo l'API esterna stabile e mappiamo internamente.
   const [category, ...rest] = (entry.action ?? "").split(":");
   const detail = rest.length > 0 ? rest.join(":") : entry.action;
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return;
   const { error } = await supabase.from("supervisor_audit_log").insert({
+    user_id: uid,
     actor_type: entry.actor_type ?? "user",
     actor_id: entry.actor_id ?? null,
     actor_name: entry.actor_name ?? null,
@@ -29,8 +34,8 @@ export async function logSupervisorAudit(entry: AuditLogEntry): Promise<void> {
     action_detail: detail || entry.action,
     target_type: entry.target_table ?? null,
     target_id: entry.target_id ?? null,
-    metadata: entry.payload ?? {},
-  } as never);
+    metadata: toJsonValue(entry.payload ?? {}),
+  });
   if (error) {
     // Audit failure must not block UX
     log.warn("[supervisor_audit_log] insert failed", { error: error });

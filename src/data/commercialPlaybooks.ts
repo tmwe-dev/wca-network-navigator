@@ -2,6 +2,7 @@
  * DAL — commercial_playbooks
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface CommercialPlaybook {
   id: string;
@@ -30,7 +31,7 @@ export async function findCommercialPlaybooks(userId: string): Promise<Commercia
   return (data ?? []) as CommercialPlaybook[];
 }
 
-export async function updateCommercialPlaybook(id: string, patch: Partial<CommercialPlaybook>): Promise<void> {
-  const { error } = await supabase.from("commercial_playbooks").update(patch as never).eq("id", id);
+export async function updateCommercialPlaybook(id: string, patch: Database["public"]["Tables"]["commercial_playbooks"]["Update"]): Promise<void> {
+  const { error } = await supabase.from("commercial_playbooks").update(patch).eq("id", id);
   if (error) throw error;
 }

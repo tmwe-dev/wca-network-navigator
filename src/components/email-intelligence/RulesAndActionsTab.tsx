@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { findAddressRulesForUi, updateAddressRuleById, insertAddressRule, setAddressRuleActive, deleteAddressRule, countAddressRulesByGroup, type AddressRuleUpsertInput } from "@/data/emailAddressRules";
 import { fetchSenderGroupsOrdered, updateSenderGroupAutoAction } from "@/data/emailGrouping";
-import { findAllEmailPrompts, updateEmailPromptById, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt } from "@/data/emailPrompts";
+import { findAllEmailPrompts, updateEmailPromptById, insertEmailPrompt, setEmailPromptActive, deleteEmailPrompt, type EmailPromptRow } from "@/data/emailPrompts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,8 +66,7 @@ interface EditablePrompt {
   scope_value?: string | null;
   instructions: string;
   priority: number;
-  is_active?: boolean | null;
-  [key: string]: unknown;
+  is_active?: boolean;
 }
 
 /* ── Section A: Address Rules ── */
@@ -282,14 +281,15 @@ function PromptManagerSection() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (prompt: Record<string, unknown>) => {
+    mutationFn: async (prompt: Partial<EmailPromptRow>) => {
       const { id, ...payload } = prompt;
       if (id) {
         if (typeof id !== "string" || !id) throw new Error("ID prompt mancante: aggiornamento annullato");
         await updateEmailPromptById(id, payload);
       } else {
+        if (!payload.title) throw new Error("Titolo prompt obbligatorio");
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-        await insertEmailPrompt(payload, user!.id);
+        await insertEmailPrompt({ ...payload, title: payload.title }, user!.id);
       }
     },
     onSuccess: () => { toast.success("Prompt salvato"); qc.invalidateQueries({ queryKey: queryKeys.email.promptsTab4 }); setSheetOpen(false); },

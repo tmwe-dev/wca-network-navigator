@@ -9,7 +9,7 @@
  *
  * Salva direttamente su Supabase e notifica il Prompt Lab per refresh.
  */
-import { tFrom } from "@/lib/typedSupabase";
+import { insertOperativePromptBlock, insertEmailPromptBlock, insertPlaybookBlock } from "@/data/promptLabBlocks";
 import { useCallback, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -95,35 +95,15 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
           break;
         }
         case "operative_prompt": {
-          // Schema mismatch with generated types — cast to any.
-          const { error } = await tFrom("operative_prompts").insert({
-            name: title.trim(),
-            objective: content.trim(),
-            procedure: "",
-            criteria: "",
-            is_active: true,
-          });
-          if (error) throw error;
+          await insertOperativePromptBlock({ name: title.trim(), objective: content.trim() });
           break;
         }
         case "email_prompt": {
-          const { error } = await tFrom("email_prompts").insert({
-            title: title.trim(),
-            instructions: content.trim(),
-            is_active: true,
-          });
-          if (error) throw error;
+          await insertEmailPromptBlock({ title: title.trim(), instructions: content.trim() });
           break;
         }
         case "playbook": {
-          const { error } = await tFrom("commercial_playbooks").insert({
-            name: title.trim(),
-            description: content.trim(),
-            prompt_template: "",
-            trigger_conditions: "{}",
-            is_active: true,
-          });
-          if (error) throw error;
+          await insertPlaybookBlock({ name: title.trim(), description: content.trim() });
           break;
         }
       }

@@ -151,7 +151,17 @@ async function execOperativePrompt(p: HarmonizeProposal): Promise<ExecuteResult>
   if (p.action !== "UPDATE" || !p.target.id || !p.target.field) {
     return { ok: false, reason: "operative_prompts supporta solo UPDATE con target.id + field." };
   }
-  await updateOperativePrompt(p.target.id, { [p.target.field]: p.after ?? "" } as Partial<import("@/data/operativePrompts").OperativePromptFull>);
+  const opField = p.target.field;
+  const OPERATIVE_TEXT_FIELDS = ["context", "objective", "procedure", "criteria", "examples", "name"] as const;
+  if (!(OPERATIVE_TEXT_FIELDS as readonly string[]).includes(opField)) {
+    return { ok: false, reason: `Campo non modificabile su operative_prompts: ${opField}` };
+  }
+  const opPatch: Record<(typeof OPERATIVE_TEXT_FIELDS)[number], string> = {
+    context: "", objective: "", procedure: "", criteria: "", examples: "", name: "",
+  };
+  await updateOperativePrompt(p.target.id, {
+    [opField as keyof typeof opPatch]: p.after ?? "",
+  });
   return { ok: true };
 }
 
@@ -175,7 +185,14 @@ async function execPlaybook(p: HarmonizeProposal): Promise<ExecuteResult> {
   if (p.action !== "UPDATE" || !p.target.id || !p.target.field) {
     return { ok: false, reason: "commercial_playbooks supporta solo UPDATE con field." };
   }
-  await updateCommercialPlaybook(p.target.id, { [p.target.field]: p.after ?? "" } as Partial<import("@/data/commercialPlaybooks").CommercialPlaybook>);
+  const pbField = p.target.field;
+  const PLAYBOOK_TEXT_FIELDS = ["name", "description", "objective", "instructions", "category", "code"] as const;
+  if (!(PLAYBOOK_TEXT_FIELDS as readonly string[]).includes(pbField)) {
+    return { ok: false, reason: `Campo non modificabile su commercial_playbooks: ${pbField}` };
+  }
+  await updateCommercialPlaybook(p.target.id, {
+    [pbField as (typeof PLAYBOOK_TEXT_FIELDS)[number]]: p.after ?? "",
+  });
   return { ok: true };
 }
 

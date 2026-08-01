@@ -7,6 +7,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
+type PendingActionUpdate = Database["public"]["Tables"]["ai_pending_actions"]["Update"];
+
 export interface PendingActionFilters {
   /** "all" = nessun filtro su action_type */
   readonly actionType: string;
@@ -30,8 +32,8 @@ export async function findPendingAiActions(filters: PendingActionFilters) {
 }
 
 /** Update generico su una pending action (errore propagato). */
-export async function updatePendingAction(id: string, payload: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("ai_pending_actions").update(payload as never).eq("id", id);
+export async function updatePendingAction(id: string, payload: PendingActionUpdate): Promise<void> {
+  const { error } = await supabase.from("ai_pending_actions").update(payload).eq("id", id);
   if (error) throw error;
 }
 

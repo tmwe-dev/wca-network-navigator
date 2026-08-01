@@ -22,12 +22,14 @@ export async function markPendingActionStatus(
       status,
       executed_at: new Date().toISOString(),
       last_error: lastError,
-    } as never)
+    })
     .eq("id", id);
   if (error) throw error;
 }
 
-export async function insertSupervisorAuditLog(entry: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("supervisor_audit_log").insert(entry as never);
+type SupervisorAuditInsert = Database["public"]["Tables"]["supervisor_audit_log"]["Insert"];
+
+export async function insertSupervisorAuditLog(entry: SupervisorAuditInsert): Promise<void> {
+  const { error } = await supabase.from("supervisor_audit_log").insert(entry);
   if (error) throw error;
 }

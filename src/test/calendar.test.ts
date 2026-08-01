@@ -72,7 +72,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── listEvents ───────────────────────────────────────
-  // Chain: untypedFrom("calendar_events").select("*").eq("user_id", userId).gte("start_at", from).lte("start_at", to).order("start_at", { ascending: true })
+  // Chain: tFrom("calendar_events").select("*").eq("user_id", userId).gte("start_at", from).lte("start_at", to).order("start_at", { ascending: true })
   describe("listEvents", () => {
     function setupListChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
@@ -114,7 +114,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── getEvent ─────────────────────────────────────────
-  // Chain: untypedFrom("calendar_events").select("*").eq("id", id).single()
+  // Chain: tFrom("calendar_events").select("*").eq("id", id).single()
   describe("getEvent", () => {
     function setupGetChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
@@ -151,7 +151,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── createEvent ──────────────────────────────────────
-  // Chain: untypedFrom("calendar_events").insert(event).select().single()
+  // Chain: tFrom("calendar_events").insert(event).select().single()
   describe("createEvent", () => {
     function setupCreateChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ insert: mockInsert });
@@ -214,7 +214,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── updateEvent ──────────────────────────────────────
-  // Chain: untypedFrom("calendar_events").update({...}).eq("id", id).select().single()
+  // Chain: tFrom("calendar_events").update({...}).eq("id", id).select().single()
   describe("updateEvent", () => {
     function setupUpdateChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ update: mockUpdate });
@@ -257,7 +257,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── deleteEvent ──────────────────────────────────────
-  // Chain: untypedFrom("calendar_events").delete().eq("id", id)
+  // Chain: tFrom("calendar_events").delete().eq("id", id)
   describe("deleteEvent", () => {
     function setupDeleteChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ delete: mockDelete });
@@ -282,7 +282,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── getUpcomingEvents ────────────────────────────────
-  // Chain: untypedFrom("calendar_events").select("*").eq("user_id", userId).eq("status", "scheduled").gte("start_at", now).order("start_at", { ascending: true }).limit(limit)
+  // Chain: tFrom("calendar_events").select("*").eq("user_id", userId).eq("status", "scheduled").gte("start_at", now).order("start_at", { ascending: true }).limit(limit)
   describe("getUpcomingEvents", () => {
     const mockEq2 = vi.fn();
     const mockEq3 = vi.fn();
@@ -334,7 +334,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── getEventsForPartner ──────────────────────────────
-  // Chain: untypedFrom("calendar_events").select("*").eq("partner_id", partnerId).eq("status", "scheduled").order("start_at", { ascending: true })
+  // Chain: tFrom("calendar_events").select("*").eq("partner_id", partnerId).eq("status", "scheduled").order("start_at", { ascending: true })
   describe("getEventsForPartner", () => {
     const mockEq2 = vi.fn();
 
@@ -370,7 +370,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── getEventsForDeal ─────────────────────────────────
-  // Chain: untypedFrom("calendar_events").select("*").eq("deal_id", dealId).order("start_at", { ascending: true })
+  // Chain: tFrom("calendar_events").select("*").eq("deal_id", dealId).order("start_at", { ascending: true })
   describe("getEventsForDeal", () => {
     function setupDealChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
@@ -399,7 +399,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── getEventsForContact ──────────────────────────────
-  // Chain: untypedFrom("calendar_events").select("*").eq("contact_id", contactId).order("start_at", { ascending: true })
+  // Chain: tFrom("calendar_events").select("*").eq("contact_id", contactId).order("start_at", { ascending: true })
   describe("getEventsForContact", () => {
     function setupContactChain(resolvedValue: { data: any; error: any }) {
       mockFrom.mockReturnValue({ select: mockSelect });
@@ -420,7 +420,7 @@ describe("Calendar Data Layer", () => {
   });
 
   // ── getEventsByType ──────────────────────────────────
-  // Chain: untypedFrom("calendar_events").select("*").eq("user_id", userId).eq("event_type", eventType).eq("status", "scheduled").order("start_at", { ascending: true })
+  // Chain: tFrom("calendar_events").select("*").eq("user_id", userId).eq("event_type", eventType).eq("status", "scheduled").order("start_at", { ascending: true })
   describe("getEventsByType", () => {
     const mockEq2 = vi.fn();
     const mockEq3 = vi.fn();

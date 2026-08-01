@@ -2,7 +2,9 @@
  * DAL — ai_conversations
  */
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import type { Json, Database } from "@/integrations/supabase/types";
+
+type AiConversationUpdate = Database["public"]["Tables"]["ai_conversations"]["Update"];
 
 export async function findConversations(userId: string, pageContext: string, limit = 30) {
   const { data, error } = await supabase
@@ -36,8 +38,8 @@ export async function createConversation(params: { user_id: string; page_context
   return data;
 }
 
-export async function updateConversation(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("ai_conversations").update(updates as never).eq("id", id);
+export async function updateConversation(id: string, updates: AiConversationUpdate) {
+  const { error } = await supabase.from("ai_conversations").update(updates).eq("id", id);
   if (error) throw error;
 }
 

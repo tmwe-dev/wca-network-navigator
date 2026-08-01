@@ -5,6 +5,7 @@
  * (resolution_layer in 'contract' | 'code_policy') come task per lo sviluppatore.
  * Senza questa tabella, le proposte read-only sparivano nei log.
  */
+import { toJsonValue } from "@/lib/typedJson";
 import { supabase } from "@/integrations/supabase/client";
 import type { HarmonizeProposal, MissingContract } from "./harmonizeRuns";
 
@@ -31,16 +32,16 @@ export async function createHarmonizerFollowup(input: HarmonizerFollowupInsert):
     title: input.title.slice(0, 500),
     description: input.description,
     block_name: input.block_name ?? null,
-    missing_contracts: input.missing_contracts ?? [],
+    missing_contracts: toJsonValue(input.missing_contracts ?? []),
     code_policy_needed: input.code_policy_needed ?? null,
     severity: input.severity ?? "medium",
     impact_score: input.impact_score ?? 5,
-    evidence: input.evidence ?? [],
+    evidence: toJsonValue(input.evidence ?? []),
     created_by: input.created_by,
   };
   const { data, error } = await supabase
     .from("harmonizer_followups")
-    .insert([row] as never)
+    .insert([row])
     .select("id")
     .single();
   if (error) throw error;

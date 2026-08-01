@@ -4,6 +4,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
+type ChannelMessageUpdate = Database["public"]["Tables"]["channel_messages"]["Update"];
+
 type ChannelMessageInsert = Database["public"]["Tables"]["channel_messages"]["Insert"];
 
 export async function insertChannelMessage(msg: ChannelMessageInsert) {
@@ -419,8 +421,8 @@ export async function findHoldingMessagesByFromAddresses(
 }
 
 /** Update arbitrario di un messaggio canale per id (usato dai tool Command). */
-export async function patchChannelMessage(id: string, patch: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("channel_messages").update(patch as never).eq("id", id);
+export async function patchChannelMessage(id: string, patch: ChannelMessageUpdate): Promise<void> {
+  const { error } = await supabase.from("channel_messages").update(patch).eq("id", id);
   if (error) throw error;
 }
 
