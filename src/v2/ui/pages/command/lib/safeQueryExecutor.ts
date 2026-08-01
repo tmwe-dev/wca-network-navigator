@@ -9,7 +9,7 @@
  *
  * Esegue via supabase.from() rispettando RLS. Solo SELECT.
  */
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { selectFromValidatedTable } from "@/data/dynamicQuery";
 import { z } from "zod";
 import { ALLOWED_TABLES, ALLOWED_TABLES_LIST, findAllowedTable, type AllowedTable } from "./allowedTables";
 import { getLiveColumns } from "./liveSchemaClient";
@@ -115,8 +115,9 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
   // Cap limit
   const limit = Math.min(plan.limit ?? 50, HARD_LIMIT);
 
-  // Query builder for whitelisted tables (dynamic table names → sanctioned untyped boundary).
-  let q = untypedFrom(plan.table).select(selectCols, { count: "exact" });
+  // Tabella e colonne sono già validate da validatePlan(): l'esecuzione passa
+  // dal confine dinamico sanzionato nel DAL.
+  let q = selectFromValidatedTable(plan.table, selectCols, { count: "exact" });
 
   for (const f of plan.filters) {
     switch (f.op) {
