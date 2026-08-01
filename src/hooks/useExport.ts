@@ -2,7 +2,7 @@
  * useExport — Hook for exporting contacts, partners, deals, and emails as CSV or Excel
  */
 import { useMutation } from "@tanstack/react-query";
-import { untypedFrom } from "@/lib/supabaseUntyped";
+import { supabase } from "@/integrations/supabase/client";
 
 
 import { createLogger } from "@/lib/log";
