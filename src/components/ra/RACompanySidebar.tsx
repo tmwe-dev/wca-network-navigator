@@ -1,3 +1,4 @@
+import type { RAProspect } from "@/types/ra";
 import { useState } from "react";
 import { Mail, Phone, Briefcase, ChevronDown, Copy, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -1,3 +1,4 @@
+import { toRecordOrNull } from "@/lib/records";
 /**
  * SmartInboxView — Split-view email classification browser
  */

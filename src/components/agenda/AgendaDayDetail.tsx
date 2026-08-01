@@ -421,6 +421,7 @@ interface ReminderListItem {
   title: string | null;
   partner_id: string | null;
   due_date?: string | null;
+  status?: string | null;
   partners?: { country_code?: string | null; company_name?: string | null } | null;
 }
 
@@ -442,7 +443,7 @@ function ReminderList({ reminders }: { reminders: ReminderListItem[] }) {
           >
             <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
             {r.partners && (
-              <span className="text-sm shrink-0">{getCountryFlag(r.partners.country_code)}</span>
+              <span className="text-sm shrink-0">{getCountryFlag(r.partners.country_code ?? "")}</span>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{r.title}</p>
