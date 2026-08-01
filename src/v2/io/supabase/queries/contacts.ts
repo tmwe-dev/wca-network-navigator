@@ -6,7 +6,7 @@ import {
   getContactById,
   countImportedContacts,
 } from "@/data/contacts";
-import { type Result, ok, err } from "../../../core/domain/result";
+import { type Result, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type Contact } from "../../../core/domain/entities";
 import { mapContactRow, mapContactRows } from "../../../core/mappers/contact-mapper";
