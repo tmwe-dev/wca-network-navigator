@@ -2,6 +2,7 @@
  * DAL — channel_messages
  */
 import { supabase } from "@/integrations/supabase/client";
+import { toRecords } from "@/lib/records";
 import type { Database } from "@/integrations/supabase/types";
 
 type ChannelMessageUpdate = Database["public"]["Tables"]["channel_messages"]["Update"];
@@ -690,6 +691,87 @@ export type MailboxQueryFilter =
   | undefined;
 
 /** Pagina di channel_messages per la Inbox (filtri canale/operatore/mailbox/full-text). */
+
+/** Riga messaggio come consumata dalla Inbox (colonne di MESSAGE_LIST_SELECT_COLS). */
+export type ChannelMessageRow = {
+  id: string;
+  user_id: string;
+  channel: string;
+  direction: string;
+  source_type: string | null;
+  source_id: string | null;
+  partner_id: string | null;
+  mailbox_id: string | null;
+  from_address: string | null;
+  to_address: string | null;
+  cc_addresses: string | null;
+  bcc_addresses: string | null;
+  subject: string | null;
+  body_text?: string | null;
+  body_html?: string | null;
+  raw_payload?: unknown;
+  message_id_external: string | null;
+  in_reply_to: string | null;
+  read_at: string | null;
+  created_at: string;
+  email_date: string | null;
+  raw_storage_path: string | null;
+  raw_sha256: string | null;
+  raw_size_bytes: number | null;
+  imap_uid: number | null;
+  uidvalidity: number | null;
+  imap_flags: string | null;
+  internal_date: string | null;
+  parse_status: string | null;
+  parse_warnings: string[] | null;
+  thread_id: string | null;
+  references_header: string | null;
+};
+
+const nullableStr = (v: unknown): string | null => (typeof v === "string" ? v : null);
+const nullableNum = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+/** Mappa una riga grezza; ritorna null se mancano le colonne obbligatorie. */
+function mapChannelMessageRow(raw: Record<string, unknown>): ChannelMessageRow | null {
+  const { id, user_id, channel, direction, created_at } = raw;
+  if (typeof id !== "string" || typeof user_id !== "string") return null;
+  return {
+    id,
+    user_id,
+    channel: typeof channel === "string" ? channel : "",
+    direction: typeof direction === "string" ? direction : "",
+    source_type: nullableStr(raw.source_type),
+    source_id: nullableStr(raw.source_id),
+    partner_id: nullableStr(raw.partner_id),
+    mailbox_id: nullableStr(raw.mailbox_id),
+    from_address: nullableStr(raw.from_address),
+    to_address: nullableStr(raw.to_address),
+    cc_addresses: nullableStr(raw.cc_addresses),
+    bcc_addresses: nullableStr(raw.bcc_addresses),
+    subject: nullableStr(raw.subject),
+    body_text: nullableStr(raw.body_text),
+    raw_payload: raw.raw_payload,
+    message_id_external: nullableStr(raw.message_id_external),
+    in_reply_to: nullableStr(raw.in_reply_to),
+    read_at: nullableStr(raw.read_at),
+    created_at: typeof created_at === "string" ? created_at : new Date(0).toISOString(),
+    email_date: nullableStr(raw.email_date),
+    raw_storage_path: nullableStr(raw.raw_storage_path),
+    raw_sha256: nullableStr(raw.raw_sha256),
+    raw_size_bytes: nullableNum(raw.raw_size_bytes),
+    imap_uid: nullableNum(raw.imap_uid),
+    uidvalidity: nullableNum(raw.uidvalidity),
+    imap_flags: nullableStr(raw.imap_flags),
+    internal_date: nullableStr(raw.internal_date),
+    parse_status: nullableStr(raw.parse_status),
+    parse_warnings: Array.isArray(raw.parse_warnings)
+      ? raw.parse_warnings.filter((w): w is string => typeof w === "string")
+      : null,
+    thread_id: nullableStr(raw.thread_id),
+    references_header: nullableStr(raw.references_header),
+  };
+}
+
 export async function findChannelMessagesPage(opts: {
   channel?: string;
   searchQuery?: string;
@@ -697,7 +779,7 @@ export async function findChannelMessagesPage(opts: {
   pageSize: number;
   operatorUserId?: string;
   mailboxFilter?: MailboxQueryFilter;
-}): Promise<unknown[]> {
+}): Promise<ChannelMessageRow[]> {
   const { channel, searchQuery, page, pageSize, operatorUserId, mailboxFilter } = opts;
   let q = supabase
     .from("channel_messages")
@@ -724,7 +806,7 @@ export async function findChannelMessagesPage(opts: {
 
   const { data, error } = await q;
   if (error) throw error;
-  return data || [];
+  return toRecords(data).map(mapChannelMessageRow).filter((r): r is ChannelMessageRow => r !== null);
 }
 
 export interface DownloadedEmailFeedRow {
