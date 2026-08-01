@@ -15,10 +15,6 @@
  * Quando una relazione viene realmente creata a DB, va rimossa da
  * `ABSENT_RELATIONS` e i call site migrati al client tipizzato.
  */
-import { createLogger } from "@/lib/log";
-
-const log = createLogger("dal:unavailable-schema");
-
 /**
  * Relazioni referenziate dal codice applicativo ma assenti da `public`.
  * Verificato su information_schema: nessuna di queste esiste a DB.
@@ -58,9 +54,13 @@ export function isSchemaUnavailableError(error: unknown): error is SchemaUnavail
 /**
  * Lettura da relazione assente: nessuna query, fallback esplicito.
  * Il tipo del fallback fissa il contratto di ritorno del chiamante.
+ *
+ * Volutamente silenziosa: viene invocata a ogni render dei consumer React
+ * Query e un log per chiamata sarebbe puro rumore. La condizione è statica e
+ * documentata in `ABSENT_RELATIONS`, non un evento runtime da diagnosticare.
  */
 export function unavailableRead<T>(relation: AbsentRelation, fallback: T): T {
-  log.debug("read skipped: relation absent from live schema", { relation });
+  void relation;
   return fallback;
 }
 
