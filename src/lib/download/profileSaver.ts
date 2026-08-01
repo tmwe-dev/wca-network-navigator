@@ -1,4 +1,7 @@
 import { updatePartner } from "@/data/partners";
+import type { Database } from "@/integrations/supabase/types";
+
+type ServiceCategory = Database["public"]["Enums"]["service_category"];
 import {
   findPartnerContacts, insertPartnerContacts, updatePartnerContact,
   findPartnerNetworks, insertPartnerNetworks,
@@ -138,7 +141,7 @@ export async function saveExtractionResult(
   // ── 5. Batch save services ──
   if ((result.profile?.services?.length ?? 0) > 0) {
     const services = result.profile!.services!;
-    const serviceMap: Record<string, string> = {
+    const serviceMap: Record<string, ServiceCategory> = {
       air: "air_freight", "air freight": "air_freight",
       "ocean fcl": "ocean_fcl", "sea fcl": "ocean_fcl", fcl: "ocean_fcl",
       "ocean lcl": "ocean_lcl", "sea lcl": "ocean_lcl", lcl: "ocean_lcl",
@@ -155,7 +158,7 @@ export async function saveExtractionResult(
       warehouse: "warehousing", warehousing: "warehousing",
       nvocc: "nvocc",
     };
-    const mapService = (text: string): string | null => {
+    const mapService = (text: string): ServiceCategory | null => {
       const lower = text.trim().toLowerCase();
       if (serviceMap[lower]) return serviceMap[lower];
       for (const [key, val] of Object.entries(serviceMap)) {
@@ -164,14 +167,14 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      services.map((s: string) => mapService(s)).filter(Boolean) as string[]
+      services.map((s: string) => mapService(s)).filter((s): s is ServiceCategory => s !== null)
     )];
     if (mapped.length > 0) {
       const existingSvc = await findPartnerServices(partnerId);
       const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
-        service_category: s as never,
+        service_category: s,
       }));
       await insertPartnerServices(toInsert);
     }
@@ -190,14 +193,14 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      certifications.map((c: string) => mapCert(c)).filter(Boolean) as string[]
+      certifications.map((c: string) => mapCert(c)).filter((c): c is typeof validCerts[number] => c !== null)
     )];
     if (mapped.length > 0) {
       const existingCerts = await findPartnerCertifications(partnerId);
       const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
-        certification: c as never,
+        certification: c,
       }));
       await insertPartnerCertifications(toInsert);
     }

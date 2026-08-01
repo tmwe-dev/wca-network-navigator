@@ -475,6 +475,30 @@ export async function createPartner(partner: PartnerInsert) {
 }
 
 /** Get partners by IDs with custom select and filters */
+/** Lookup minimale partner (id, ragione sociale, email, sito). */
+export interface PartnerLookup {
+  id: string;
+  company_name: string;
+  email: string | null;
+  website: string | null;
+}
+
+/** Righe di lookup validate a runtime: senza id/company_name stringa sono scartate. */
+export async function getPartnerLookupsByIds(ids: string[]): Promise<PartnerLookup[]> {
+  const rows = await getPartnersByIds(ids, "id, company_name, email, website");
+  const out: PartnerLookup[] = [];
+  for (const r of rows) {
+    if (typeof r.id !== "string" || typeof r.company_name !== "string") continue;
+    out.push({
+      id: r.id,
+      company_name: r.company_name,
+      email: typeof r.email === "string" ? r.email : null,
+      website: typeof r.website === "string" ? r.website : null,
+    });
+  }
+  return out;
+}
+
 export async function getPartnersByIdsFiltered(ids: string[], select: string, filters?: Record<string, unknown>) {
   const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
