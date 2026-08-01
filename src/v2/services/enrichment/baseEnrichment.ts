@@ -21,8 +21,7 @@
 import { updatePartner, getPartnerEnrichmentData } from "@/data/partners";
 import { updateContactEnrichment } from "@/data/contacts";
 import { updateBusinessCard, getBusinessCardRawData } from "@/data/businessCards";
-import { untypedFrom } from "@/lib/supabaseUntyped";
-import { getScrapeCacheEntry } from "@/data/scrapeCache";
+import { getScrapeCacheEntry, upsertScrapeCacheEntry } from "@/data/scrapeCache";
 
 
 import { createLogger } from "@/lib/log";
@@ -100,13 +99,10 @@ async function checkCache(url: string): Promise<string | null> {
 
 async function persistScrape(url: string, markdown: string): Promise<void> {
   try {
-    // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
-    // `.upsert()` overload cannot be resolved even though all columns are real.
-    await untypedFrom("scrape_cache").upsert({
+    await upsertScrapeCacheEntry({
       url,
       mode: "static",
       payload: { markdown, source: "base-enrichment", captured_at: new Date().toISOString() },
-      scraped_at: new Date().toISOString(),
     });
   } catch { /* non-blocking */ }
 }
