@@ -15,8 +15,8 @@ import { execFileSync } from "node:child_process";
 // Vedi docs/audit/lint-gates-2026-08-02.md
 export const BUDGET = {
   "no-restricted-imports": 470,
-  "unused-imports/no-unused-vars": 68,
-  "@typescript-eslint/no-explicit-any": 242,
+  "unused-imports/no-unused-vars": 0,
+  "@typescript-eslint/no-explicit-any": 240,
   "unused-imports/no-unused-imports": 0,
   "@typescript-eslint/no-unsafe-function-type": 49,
   "tmwe/no-direct-ai-invoke": 26,

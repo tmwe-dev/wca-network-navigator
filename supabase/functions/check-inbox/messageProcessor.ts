@@ -16,34 +16,6 @@ import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperati
 import { detectBounce, handleBounce } from "./bounceDetector.ts";
 import { extractBodyAndAttachments } from "./bodyExtractor.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
-import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
-
-interface MessageData {
-  uid: number;
-  uidvalidity: number | null;
-  fromAddr: string;
-  toAddr: string;
-  ccAddresses: string;
-  bccAddresses: string;
-  senderName: string;
-  subject: string;
-  messageId: string;
-  date: string;
-  inReplyTo: string | null;
-  referencesHeader: string | null;
-  bodyText: string;
-  bodyHtml: string;
-  imapFlags: string;
-  internalDate: string | null;
-  rfc822Size: number;
-  rawBytes: Uint8Array;
-  rawHash: string;
-  rawStoragePath: string;
-  isOversized: boolean;
-  parseWarnings: string[];
-  attachmentRecords: AttachmentRecord[];
-  bodyStructure: Record<string, unknown> | null;
-}
 
 export async function processMessage(
   uid: number,
@@ -302,7 +274,6 @@ export async function processMessage(
     if (result.msgData) {
       // ── Publish email.inbound_received via EmailProcessManager ──
       try {
-        const leadPM = initLeadProcessManager(supabase);
         const emailPM = initEmailProcessManager(supabase);
         await emailPM.processInboundReceived({
           messageId: result.msgData.id as string,

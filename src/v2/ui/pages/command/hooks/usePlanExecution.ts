@@ -27,7 +27,7 @@ interface PlanExecutionDeps {
 
 export function usePlanExecution(deps: PlanExecutionDeps) {
   const {
-    addMessage, ts, setFlowPhase, setExecProgress, setPlanState, setLiveResult, setCanvas, setShowTools, buildHistory,
+    addMessage, ts, setFlowPhase, setExecProgress, setPlanState, buildHistory,
   } = deps;
 
   /** Run a plan to completion (or pause for per-step approval) */

@@ -33,8 +33,6 @@ function scanProfileForKeywords(
     sherlockSummary || "",
   ].join(" ");
 
-  const lowerText = textSources.toLowerCase();
-
   for (const keyword of keywords) {
     const lowerKeyword = keyword.toLowerCase();
     if (lowerText.includes(lowerKeyword)) {
@@ -68,8 +66,6 @@ function extractRouteHighlights(
   const routes: Set<string> = new Set();
 
   const textSources = [profileMarkdown || "", JSON.stringify(sherlockFindings) || ""].join(" ");
-  const lowerText = textSources.toLowerCase();
-
   // Pattern 1: "Country1-Country2" style routes (e.g., "Jordan-Iraq", "Turkey-Russia")
   const routePattern = /[a-z\s]+-[a-z\s]+(?:\s+(?:direct|linea|via|through))?/gi;
   const matches = textSources.match(routePattern) || [];

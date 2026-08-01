@@ -17,14 +17,12 @@ import {
   setChannelMessagesFolderByIds,
   setChannelMessagesFolderByUids,
   findInboundMessageIdsByAddress,
-  findInboundMessageIdsByDomain,
 } from "@/data/emailFolders";
 import { fetchOperatorIdForUser } from "@/data/emailGrouping";
 import {
   findAddressRuleIdByAddressAndOperator,
   updateAddressRuleById,
   insertAddressRuleReturningId,
-  getAddressRuleMatchTargets,
 } from "@/data/emailAddressRules";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
@@ -202,47 +200,6 @@ export function useCreateRuleFromSender() {
     },
     onError: (err: unknown) => {
       toast.error(err instanceof Error ? err.message : "Errore creazione regola");
-    },
-  });
-}
-
-function useApplyRulesToHistory() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (ruleId: string) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-      if (!user) throw new Error("Not authenticated");
-      const operator_id = await fetchOperatorIdForUser(user.id);
-      if (!operator_id) throw new Error("Operatore non trovato");
-
-      const rule = await getAddressRuleMatchTargets(ruleId);
-      if (!rule) throw new Error("Regola non trovata");
-
-      const target = (rule.address || rule.email_address || "").toLowerCase();
-      const dom = (rule.domain_pattern || rule.domain || "").toLowerCase();
-
-      let ids: string[];
-      if (target) {
-        ids = await findInboundMessageIdsByAddress(target);
-      } else if (dom) {
-        ids = await findInboundMessageIdsByDomain(dom);
-      } else {
-        throw new Error("Regola senza address né domain");
-      }
-      if (ids.length === 0) return { applied: 0 };
-      const result = await invokeEdge<{ applied?: number }>("apply-email-rules", {
-        body: { operator_id, message_ids: ids },
-        context: "useApplyRulesToHistory",
-      });
-      return { applied: result?.applied ?? 0, total: ids.length };
-    },
-    onSuccess: (res) => {
-      toast.success(`Applicata a ${res.applied}/${res.total ?? "?"} email storiche`);
-      qc.invalidateQueries({ queryKey: queryKeys.email.addressRulesTab4 });
-      qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
-    },
-    onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Errore applicazione storica");
     },
   });
 }

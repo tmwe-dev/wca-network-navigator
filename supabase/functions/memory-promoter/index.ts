@@ -287,7 +287,6 @@ serve(async (req) => {
     }
 
     // ── 6. Adaptive Confidence Threshold ──
-    let thresholdUpdates = 0;
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
       const { data: recentDecisions } = await supabase
@@ -326,7 +325,7 @@ serve(async (req) => {
             .from("email_address_rules")
             .update({ ai_confidence_threshold: parseFloat(newThreshold.toFixed(2)) })
             .eq("email_address", addr);
-          if (!updateErr) thresholdUpdates++;
+          if (updateErr) swallowedError("memory_promoter.threshold_update_failed", updateErr);
         }
       }
     } catch (threshErr: unknown) {

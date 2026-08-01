@@ -14,7 +14,6 @@ import {
 } from "./imapParser.ts";
 import { type AttachmentRecord } from "./dbOperations.ts";
 
-const MAX_RAW_FETCH_BYTES = 15_000_000; // 15MB
 const MAX_TEXT_LENGTH = 50_000;
 const MAX_HTML_LENGTH = 100_000;
 

@@ -55,7 +55,6 @@ export function useAcquisitionPipeline() {
   // ── Extension-driven pipeline loop ──
   const runExtensionLoop = useCallback(async (jobId: string, items: QueueItem[], startFrom = 0): Promise<LiveStats> => {
     let localStats = { ...state.liveStats };
-    let consecutiveEmpty = 0;
     const _AUTO_EXCLUDE_THRESHOLD = scrapingSettings.excludeThreshold;
 
     const keepAliveInterval = setInterval(async () => {
@@ -192,9 +191,6 @@ export function useAcquisitionPipeline() {
         await updateDownloadJob(jobId, { status: "running", error_message: null });
       }
 
-      const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
-      if (!hasAnyContact) consecutiveEmpty++; else consecutiveEmpty = 0;
-
       // Enrich + Deep Search
       const parallelTasks: Promise<void>[] = [];
       if (state.includeEnrich && (partnerData as Record<string, unknown>)?.website && partnerId) {
@@ -238,6 +234,7 @@ export function useAcquisitionPipeline() {
       state.setShowComet(false); state.setIsAnimatingOut(false);
       state.setCompletedCount(c => c + 1);
 
+      const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
       const contactsWithEmail = canvas.contacts.filter(c => !!c.email?.trim());
       const contactsWithPhone = canvas.contacts.filter(c => !!(c.direct_phone?.trim() || c.mobile?.trim()));
       const hasComplete = canvas.contacts.some(c => !!c.email?.trim() && !!(c.direct_phone?.trim() || c.mobile?.trim()));

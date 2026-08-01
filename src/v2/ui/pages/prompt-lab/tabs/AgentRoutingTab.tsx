@@ -340,7 +340,17 @@ export function AgentRoutingTab() {
         });
         return created.id;
       }
-      const { _new, _dirty, user_id, id, created_at, updated_at, match_count, last_matched_at, ...patch } = draft;
+      const {
+        _new,
+        _dirty,
+        user_id: _userId,
+        id,
+        created_at: _createdAt,
+        updated_at: _updatedAt,
+        match_count: _matchCount,
+        last_matched_at: _lastMatchedAt,
+        ...patch
+      } = draft;
       await updateAgentRoutingRule(id!, patch as Partial<AgentRoutingRule>);
       return id!;
     },

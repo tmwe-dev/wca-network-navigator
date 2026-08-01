@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext } from "react";
+import { useState, useEffect } from "react";
 import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,6 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("ResyncConfigure");
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-
-const ThemeCtx = createContext(true);
 
 interface NetworkStats {
   network_name: string;

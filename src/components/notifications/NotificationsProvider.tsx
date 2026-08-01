@@ -15,7 +15,7 @@ interface ToastNotification extends Notification {
 export function NotificationsProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const { user } = useAuth();
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
-  const { requestPermission, subscribeToPush } = usePushNotifications({ enabled: false });
+  const { subscribeToPush } = usePushNotifications({ enabled: false });
 
   // Handle incoming notifications
   const handleNewNotification = useCallback(

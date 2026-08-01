@@ -153,14 +153,12 @@ async function execOperativePrompt(p: HarmonizeProposal): Promise<ExecuteResult>
   }
   const opField = p.target.field;
   const OPERATIVE_TEXT_FIELDS = ["context", "objective", "procedure", "criteria", "examples", "name"] as const;
+  type OperativeTextField = (typeof OPERATIVE_TEXT_FIELDS)[number];
   if (!(OPERATIVE_TEXT_FIELDS as readonly string[]).includes(opField)) {
     return { ok: false, reason: `Campo non modificabile su operative_prompts: ${opField}` };
   }
-  const opPatch: Record<(typeof OPERATIVE_TEXT_FIELDS)[number], string> = {
-    context: "", objective: "", procedure: "", criteria: "", examples: "", name: "",
-  };
   await updateOperativePrompt(p.target.id, {
-    [opField as keyof typeof opPatch]: p.after ?? "",
+    [opField as OperativeTextField]: p.after ?? "",
   });
   return { ok: true };
 }

@@ -204,5 +204,6 @@ export async function applyTransition(
     description: `Transizione. Trigger: ${transition.trigger}. ${transition.autoApply ? "Auto-applicata." : "Approvata manualmente."}`,
     status: "completed",
   });
+  if (logError) return false;
   return true;
 }

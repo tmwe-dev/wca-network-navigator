@@ -248,7 +248,7 @@ serve(async (req) => {
     });
 
     // ── Assemble full system prompt with context ──
-    const { systemPrompt, budgetStats } = await assembleSystemPrompt(
+    const { systemPrompt } = await assembleSystemPrompt(
       supabase,
       systemPromptBase,
       provider,

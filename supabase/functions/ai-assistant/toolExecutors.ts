@@ -15,8 +15,6 @@ import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
  * - system.ts — System-level tools (42 lines)
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
 import { executeGetProcedure } from "./toolExecutors/procedures.ts";
 import {
   executeGetEmailClassifications,
@@ -40,9 +38,6 @@ import {
   executeAddAgentKbEntry,
 } from "./toolExecutors/agents.ts";
 import { executeRunKbAudit } from "./toolExecutors/system.ts";
-
-// deno-lint-ignore no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 interface ReadHandlers {
   executeSearchPartners: Function;

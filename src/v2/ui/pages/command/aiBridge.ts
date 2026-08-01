@@ -151,7 +151,7 @@ export function serializeResultForAI(result: ToolResult): string {
 export async function getAiComment(
   req: AiCommentRequest,
 ): Promise<AiCommentResponse> {
-  const { userPrompt, toolId, toolLabel, resultSummary, history = [] } = req;
+  const { userPrompt, toolLabel, resultSummary, history = [] } = req;
 
   const userTurn = `L'utente ti ha chiesto:
 > "${userPrompt}"

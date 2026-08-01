@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const body = await req.json();
-    const { channel, direction, from_address, to_address, from_name, to_name, body_text, body_html, subject, partner_id, contact_id, dispatch_id, message_id_external, chat_thread_id, profile_url, headline } = body;
+    const { channel, direction, from_address, to_address, from_name, to_name, body_text, body_html, subject, partner_id, dispatch_id, message_id_external, chat_thread_id, profile_url, headline } = body;
 
     if (!channel || !direction) {
       return new Response(JSON.stringify({ error: "channel and direction required" }), {

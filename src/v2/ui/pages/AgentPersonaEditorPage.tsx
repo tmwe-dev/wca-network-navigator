@@ -41,7 +41,7 @@ export function AgentPersonaEditorPage() {
     enabled: !!agentId,
   });
 
-  const { persona, isLoading, upsert } = useAgentPersona(agentId);
+  const { persona, upsert } = useAgentPersona(agentId);
 
   // Local form state
   const [tone, setTone] = useState("professional");

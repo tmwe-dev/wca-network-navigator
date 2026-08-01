@@ -79,10 +79,6 @@ const ProposalSchema = z.object({
   reasoning: z.string().nullable().default(""),
 });
 
-const ResponseSchema = z.object({
-  proposals: z.array(ProposalSchema),
-});
-
 /** Genera UUID con fallback sicuro per ambienti senza crypto.randomUUID. */
 function uid(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {

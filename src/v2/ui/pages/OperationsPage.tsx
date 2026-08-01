@@ -20,7 +20,6 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
 import { queryKeys } from "@/lib/queryKeys";
@@ -296,38 +295,5 @@ export function OperationsPage({ activeView }: { activeView?: "partners" | "bca"
       </div>
 
     </ThemeCtx.Provider>
-  );
-}
-
-/* ── Stat Pill — tri-state color by value ── */
-function StatPill({ icon: Icon, value, label, isDark: _isDark, onClick, active, variant = "info" }: {
-  icon: React.ElementType; value: number; label: string; isDark: boolean;
-  onClick?: () => void; active?: boolean;
-  variant?: "info" | "warn" | "ok";
-}) {
-  const isComplete = variant === "ok" || (variant === "warn" && value === 0);
-  const pillClass = isComplete || value === 0
-    ? "bg-success/15 border-success/25 text-success"
-    : value <= 10
-      ? "bg-warning/15 border-warning/25 text-warning"
-      : "bg-destructive/15 border-destructive/25 text-destructive";
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          onClick={onClick}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold tabular-nums transition-all flex-shrink-0",
-            pillClass,
-            active && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
-          )}
-        >
-          <Icon className="w-3 h-3" />
-          {value.toLocaleString()}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
-    </Tooltip>
   );
 }

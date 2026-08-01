@@ -116,10 +116,8 @@ export async function consumeCredits(supabase: SupabaseClient, userId: string, u
   const rates = { input: 1, output: 2 };
   const totalCredits = Math.ceil(inputTokens / 1000 * rates.input) + Math.ceil(outputTokens / 1000 * rates.output);
   if (totalCredits <= 0) return;
-  const { data: deductResult } = await supabase.rpc("deduct_credits", {
+  await supabase.rpc("deduct_credits", {
     p_user_id: userId, p_amount: totalCredits, p_operation: "ai_call",
     p_description: `AI Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
   });
-  const row = (deductResult as Record<string, unknown>[] | null)?.[0];
-  // Credits deducted: totalCredits, row.success indicates if deduction was successful, row.new_balance is the updated balance
 }

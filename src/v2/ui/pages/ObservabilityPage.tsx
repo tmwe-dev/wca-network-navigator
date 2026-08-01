@@ -16,8 +16,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 
-import { createLogger } from "@/lib/log";
-const log = createLogger("ObservabilityPage");
 // ── Types ──────────────────────────────────────────────────
 
 interface UsageSummary {

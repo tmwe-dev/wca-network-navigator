@@ -99,15 +99,6 @@ describe("Collaudo C2 — Relationship Stage Coherence", () => {
 
 describe("Collaudo C2 — Tone Must Match Stage", () => {
 
-  // Mapping: which tones are appropriate for which stages
-  const ALLOWED_TONES: Record<string, string[]> = {
-    cold: ["formal", "introductory", "exploratory"],
-    warm: ["friendly", "professional", "follow-up"],
-    active: ["collaborative", "direct", "partnership"],
-    stale: ["re-engagement", "gentle-reminder", "check-in"],
-    ghosted: ["last-chance", "break-up", "redirect"],
-  };
-
   const FORBIDDEN_TONES: Record<string, string[]> = {
     cold: ["intimate", "demanding", "partnership"],
     ghosted: ["warm", "collaborative", "enthusiastic"],

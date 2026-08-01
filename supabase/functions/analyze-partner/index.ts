@@ -15,16 +15,6 @@ const VALID_PARTNER_TYPES = [
   'freight_forwarder', 'customs_broker', 'carrier', 'nvocc', '3pl', 'courier'
 ]
 
-// ── Credit helpers ──
-// deno-lint-ignore no-explicit-any
-async function getUserId(req: Request, supabase: any): Promise<string | null> {
-  const auth = req.headers.get('Authorization')
-  if (!auth) return null
-  const token = auth.replace('Bearer ', '')
-  const { data } = await supabase.auth.getUser(token)
-  return data?.user?.id || null
-}
-
 // deno-lint-ignore no-explicit-any
 async function isByok(userId: string, supabase: any): Promise<boolean> {
   const { data } = await supabase
@@ -192,7 +182,6 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
       })
 
     if (!response.ok) {
-      const errText = await response.text()
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Rate limit exceeded, try again later' }),

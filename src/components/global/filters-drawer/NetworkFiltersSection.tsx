@@ -133,7 +133,6 @@ export function NetworkFiltersSection() {
     setSearching(true);
     const doSearch = async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
         const data = await searchNetworkPartners(networkSearchValue);
         setSearchResults(data);
       } catch (e) {

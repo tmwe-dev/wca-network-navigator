@@ -44,11 +44,6 @@ export const scrapeLinkedInProfileTool: Tool = {
     } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
     if (!user) throw new Error("Utente non autenticato");
 
-    // Use Google Search via Partner Connect to find LinkedIn profile
-    // This avoids direct LinkedIn scraping which violates TOS
-    const { buildLinkedInGoogleQueries, pickBestLinkedInCandidate } = await import("@/lib/linkedinSearch");
-    const { useFireScrapeExtensionBridge } = await import("@/hooks/useFireScrapeExtensionBridge");
-
     // Note: In tool context, we cannot use hooks directly. This is a limitation.
     // For now, return an error instructing the user to use the LinkedIn Lookup UI instead.
     return {

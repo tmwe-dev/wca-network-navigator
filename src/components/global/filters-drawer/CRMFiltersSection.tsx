@@ -30,7 +30,6 @@ export function CRMFiltersSection() {
 
   const fetchData = useCallback(async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
         const pageSize = 1000;
         const allRows: Array<{ country: string | null; origin: string | null }> = [];
         let from = 0;
@@ -132,7 +131,6 @@ export function CRMFiltersSection() {
     setSearching(true);
     const doSearch = async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
         const data = await searchImportedContacts(searchValue);
         setSearchResults(data);
       } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setSearchResults([]); }

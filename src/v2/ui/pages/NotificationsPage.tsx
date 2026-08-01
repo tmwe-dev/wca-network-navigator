@@ -3,7 +3,6 @@
  */
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import {
   Select,
   SelectContent,
@@ -21,7 +20,6 @@ import { PageShell } from "@/v2/ui/templates/PageShell";
 
 export default function NotificationsPage(): React.ReactElement {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useState<NotificationType | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<NotificationPriority | "all">("all");
   const [readFilter, setReadFilter] = useState<"all" | "read" | "unread">("all");

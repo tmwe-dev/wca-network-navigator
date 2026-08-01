@@ -1,14 +1,13 @@
-import { useContext, useEffect } from "react";
-import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Mic, MicOff } from "lucide-react";
+import { useContext } from "react";
+import { Bot, Send, X, Loader2, Sparkles, Trash2, Mic, MicOff } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
-import { toast } from "@/hooks/use-toast";
 import { ActivePlansBadge } from "./ai/ActivePlansBadge";
 import { parseAiAgentResponse } from "@/lib/ai/agentResponse";
-import { useAiAssistantChat, type JobCreatedInfo } from "@/hooks/useAiAssistantChat";
+import { useAiAssistantChat } from "@/hooks/useAiAssistantChat";
 import { useAiVoice, VOICES } from "@/hooks/useAiVoice";
 
 const PAGE_QUICK_PROMPTS: Record<string, string[]> = {
@@ -18,20 +17,6 @@ const PAGE_QUICK_PROMPTS: Record<string, string[]> = {
   "/import": ["Ultimo import effettuato", "Errori di importazione", "Contatti da trasferire", "Statistiche import"],
   "/workspace": ["Genera email di presentazione", "Partner con email per campagna", "Top partner per servizi", "Template disponibili"],
 };
-
-function JobCreatedBadge({ job, isDark }: { job: JobCreatedInfo; isDark: boolean }) {
-  useEffect(() => {
-    toast({ title: "🚀 Download avviato dall'AI", description: `${job.country} — ${job.total_partners} partner (${job.mode}). ~${job.estimated_time_minutes} min` });
-  }, [job.job_id]);
-
-  return (
-    <div className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-medium animate-pulse ${isDark ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border border-emerald-200 text-emerald-700"}`}>
-      <Rocket className="w-3.5 h-3.5 shrink-0" />
-      <span className="flex-1">Job creato per <strong>{job.country}</strong> — {job.total_partners} partner</span>
-      <span className="flex items-center gap-1 opacity-70"><Clock className="w-3 h-3" />~{job.estimated_time_minutes} min</span>
-    </div>
-  );
-}
 
 interface Props {
   open: boolean;
