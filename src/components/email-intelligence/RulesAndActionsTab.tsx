@@ -66,8 +66,7 @@ interface EditablePrompt {
   scope_value?: string | null;
   instructions: string;
   priority: number;
-  is_active?: boolean | null;
-  [key: string]: unknown;
+  is_active?: boolean;
 }
 
 /* ── Section A: Address Rules ── */
