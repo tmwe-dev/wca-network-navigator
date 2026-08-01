@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toJsonValue } from "@/lib/jsonGuards";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import { getCachedScrapePayload } from "@/data/commandScrapePartner";
+import { upsertScrapeCacheEntry } from "@/data/scrapeCache";
 import { findProspectBySearchTerm } from "@/data/prospects";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
@@ -22,11 +23,7 @@ async function getCachedScrape(url: string): Promise<Record<string, unknown> | n
 }
 
 async function setCachedScrape(url: string, payload: Record<string, unknown>): Promise<void> {
-  // DRIFT: generated `scrape_cache` type has no declared unique key, so the typed
-  // `.upsert()` overload cannot be resolved even though all columns are real.
-  // Left on untypedFrom (TS overload-resolution limitation, not a schema mismatch).
-  await untypedFrom("scrape_cache")
-    .upsert({ url, payload, scraped_at: new Date().toISOString() });
+  await upsertScrapeCacheEntry({ url, payload });
 }
 
 export const scrapeProspectTool: Tool = {
