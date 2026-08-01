@@ -57,7 +57,7 @@ export function useAssignClient() {
       const existing = await findClientAssignment(params.sourceId, user.id);
       if (existing) return existing; // already assigned
 
-      return insertClientAssignmentReturning<{ id: string }>({
+      return insertClientAssignmentReturning({
         source_id: params.sourceId,
         source_type: params.sourceType,
         agent_id: params.agentId,
