@@ -3,7 +3,7 @@
  * Calls the agent-execute edge function to analyze the message and propose a response.
  */
 import { useState } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { findFirstActiveAgentId } from "@/data/holdingPattern";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
@@ -37,7 +37,9 @@ export function useHoldingStrategy() {
         return null;
       }
 
-      const result = await invokeEdge<{ strategy: HoldingStrategy }>("agent-execute", {
+      const result = await invokeAi<{ strategy: HoldingStrategy }>("agent-execute", {
+        scope: "strategic",
+        context: { source: "useHoldingStrategy", mode: "holding-strategy" },
         body: {
           agent_id: agentId,
           chat_messages: [{
@@ -45,7 +47,6 @@ export function useHoldingStrategy() {
             content: `Analizza questo messaggio in arrivo da "${companyName}" e proponi una strategia di risposta.\n\nOggetto: ${message.subject || "—"}\nCorpo: ${message.body_text || "—"}\nCanale: ${message.channel}\nData: ${message.email_date || message.created_at}\n\nRispondi con:\n1. Una bozza di risposta professionale\n2. Il sentiment del messaggio (positive/neutral/negative)\n3. L'intent rilevato (interesse, richiesta info, reclamo, OOO, ecc.)\n4. L'azione suggerita (rispondere, attendere, escalation, chiamare)\n5. Data suggerita per il prossimo step`
           }],
         },
-        context: "useHoldingStrategy",
       });
 
       // Parse AI response into structured strategy

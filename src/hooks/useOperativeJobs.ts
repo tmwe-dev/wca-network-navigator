@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { findWorkPlans, createWorkPlan, updateWorkPlan, deleteWorkPlan } from "@/data/workPlans";
 import { getAppSetting } from "@/data/appSettings";
 import { toJsonValue } from "@/lib/jsonGuards";
@@ -86,9 +86,10 @@ Istruzioni: ${job.description || "Nessuna istruzione specifica"}
 Canali: ${(job.steps?.channels || []).join(", ") || "tutti"}
 Scadenza: ${job.steps?.deadline || "non specificata"}`;
 
-      const res = await invokeEdge<Record<string, unknown>>("agent-execute", {
+      const res = await invokeAi<Record<string, unknown>>("agent-execute", {
+        scope: "missions",
+        context: { source: "useOperativeJobs", mode: "generate-prompt" },
         body: { messages: [{ role: "system", content: systemMsg }, { role: "user", content: userMsg }] },
-        context: "useOperativeJobs.generatePrompt",
       });
 
       const raw = res?.response ?? res?.content;

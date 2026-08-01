@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Mic, MicOff, Volume2, Loader2, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
@@ -69,9 +69,10 @@ export function StaffChatCanvas({ agent }: Props) {
     setLoading(true);
 
     try {
-      const data = await invokeEdge<Record<string, unknown>>("agent-execute", {
+      const data = await invokeAi<Record<string, unknown>>("agent-execute", {
+        scope: "staff",
+        context: { source: "StaffChatCanvas", mode: "chat" },
         body: { agent_id: agent.id, chat_messages: newMsgs.map((m) => ({ role: m.role, content: m.content })) },
-        context: "StaffChatCanvas.agent_execute",
       });
       setMessages([...newMsgs, { role: "assistant", content: String(data?.response || "Nessuna risposta") }]);
     } catch (e) {
