@@ -526,18 +526,18 @@ export async function findInboundEmailFromAddressesPage(
 }
 
 /* ── Bulk actions per mittente (BulkEmailActions / MultiSelectBulkBar) ──
- * `from` e `is_read` sono colonne legacy non presenti nei tipi generati
- * (DEBT-EMAIL-INTEL-COLUMNS): bypass via untypedFrom, unico boundary
- * sanzionato per tabelle/colonne non tipizzate. Payload/filtri/semantica
- * errori preservati 1:1 rispetto ai componenti originali.
+ * Le colonne reali di `channel_messages` sono `from_address` e `read_at`:
+ * `from` e `is_read` non esistono nello schema live e i filtri che li usavano
+ * fallivano a runtime. Query allineate allo schema e al client tipizzato.
  */
 
 /** Conteggio email (non cancellate) di un mittente specifico. */
 export async function countChannelMessagesFromSender(senderEmail: string): Promise<number> {
-  const { count, error } = await untypedFrom("channel_messages")
+  const { count, error } = await supabase
+    .from("channel_messages")
     .select("*", { count: "exact", head: true })
     .eq("channel", "email")
-    .eq("from", senderEmail)
+    .eq("from_address", senderEmail)
     .is("deleted_at", null);
   if (error) throw error;
   return count ?? 0;
@@ -545,13 +545,14 @@ export async function countChannelMessagesFromSender(senderEmail: string): Promi
 
 /** Id di tutte le email (non cancellate) di un mittente specifico. */
 export async function fetchChannelMessageIdsFromSender(senderEmail: string): Promise<string[]> {
-  const { data, error } = await untypedFrom("channel_messages")
+  const { data, error } = await supabase
+    .from("channel_messages")
     .select("id")
     .eq("channel", "email")
-    .eq("from", senderEmail)
+    .eq("from_address", senderEmail)
     .is("deleted_at", null);
   if (error) throw error;
-  return ((data ?? []) as Array<{ id: string }>).map((e) => e.id);
+  return (data ?? []).map((e) => e.id);
 }
 
 /** Soft delete di un singolo messaggio (imposta `deleted_at`). */
@@ -582,12 +583,13 @@ export async function moveChannelMessageToFolder(id: string, folder: string): Pr
 }
 
 /**
- * Marca `is_read = true` su un singolo messaggio. Colonna legacy non
- * presente nei tipi generati (diversa da `read_at`): bypass via untypedFrom.
+ * Marca un messaggio come letto. Lo schema live modella lo stato di lettura
+ * con il timestamp `read_at` (non esiste alcuna colonna booleana `is_read`).
  */
 export async function markChannelMessageIsReadFlag(id: string): Promise<void> {
-  const { error } = await untypedFrom("channel_messages")
-    .update({ is_read: true })
+  const { error } = await supabase
+    .from("channel_messages")
+    .update({ read_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
 }
