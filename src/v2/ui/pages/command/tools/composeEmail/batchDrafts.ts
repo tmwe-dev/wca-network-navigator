@@ -4,9 +4,12 @@ import { toneLabel } from "../../lib/toneDetector";
 import { buildEmailPipeline } from "./pipeline";
 import { fetchPrimaryContact } from "./partnerQueries";
 import type { DetectedTone, PartnerRow } from "./types";
+import { emitComposeProgress } from "../../lib/composeProgress";
 
 /** Cap di sicurezza per evitare costi imprevisti mantenendo il caso operativo "20 lettere". */
 export const MAX_BATCH_DRAFTS = 20;
+/** Bozze generate in parallelo: riduce l'attesa senza saturare il rate-limit per utente. */
+const BATCH_CONCURRENCY = 3;
 
 async function generateOneDraft(
   partner: PartnerRow,
@@ -128,26 +131,41 @@ export async function generateDraftsBatch(
   goal: string,
 ): Promise<ComposerDraft[]> {
   const capped = partners.slice(0, MAX_BATCH_DRAFTS);
-  const out: ComposerDraft[] = [];
-  for (const p of capped) {
-    try {
-      out.push(await generateOneDraft(p, tone, goal));
-      // generate-email ha un bucket per utente; il batch parallelo saturava il
-      // limite dopo le prime bozze. Manteniamo ordine e contesto, ma serializziamo.
-      if (out.length < capped.length) await new Promise((r) => setTimeout(r, 250));
-    } catch (reason) {
-      out.push({
-        partnerId: p.id,
-        partnerName: p.company_name,
-        contactName: null,
-        contactEmail: p.email ?? "",
-        subject: "",
-        body: "",
-        status: "ai_error",
-        errorMessage: reason instanceof Error ? reason.message : String(reason),
-      });
+  const total = capped.length;
+  const out: ComposerDraft[] = new Array(total);
+  let done = 0;
+  let cursor = 0;
+  emitComposeProgress(0, total);
+
+  // Ordine preservato (scrittura per indice) ma con finestra di concorrenza
+  // limitata: il bucket per utente di generate-email regge 3 richieste in volo.
+  async function worker(): Promise<void> {
+    for (;;) {
+      const i = cursor++;
+      if (i >= total) return;
+      const p = capped[i];
+      try {
+        out[i] = await generateOneDraft(p, tone, goal);
+      } catch (reason) {
+        out[i] = {
+          partnerId: p.id,
+          partnerName: p.company_name,
+          contactName: null,
+          contactEmail: p.email ?? "",
+          subject: "",
+          body: "",
+          status: "ai_error",
+          errorMessage: reason instanceof Error ? reason.message : String(reason),
+        };
+      }
+      done += 1;
+      emitComposeProgress(done, total);
     }
   }
+
+  await Promise.all(
+    Array.from({ length: Math.min(BATCH_CONCURRENCY, total) }, () => worker()),
+  );
   return out;
 }
 
