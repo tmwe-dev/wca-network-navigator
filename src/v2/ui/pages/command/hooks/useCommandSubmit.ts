@@ -212,6 +212,18 @@ export function useCommandSubmit(state: CommandStateApi) {
       setActiveToolKey("compose-email");
       enterExecuting(phaseApi);
       setExecSteps([{ label: tool.label, detail: "Preparazione bozze email", status: "pending" as const }]);
+      setExecProgress(2);
+      const unsubscribeProgress = onComposeProgress((done, total) => {
+        if (total <= 0) return;
+        setExecProgress(Math.max(2, Math.round((done / total) * 95)));
+        setExecSteps([
+          {
+            label: tool.label,
+            detail: `Bozze generate ${done}/${total}`,
+            status: (done >= total ? "done" : "pending") as "done" | "pending",
+          },
+        ]);
+      });
       const trace = startTrace(userPrompt);
       trace.setPhase("fast-lane");
       trace.setDriver("compose-email");
@@ -250,6 +262,8 @@ export function useCommandSubmit(state: CommandStateApi) {
         toast.error(msg);
         _addMessage({ role: "assistant", content: `❌ Errore composer: ${msg}`, agentName: "Orchestratore", timestamp: ts() });
         enterIdle(phaseApi);
+      } finally {
+        unsubscribeProgress();
       }
       return true;
     },
