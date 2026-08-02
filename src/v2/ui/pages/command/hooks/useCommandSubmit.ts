@@ -60,6 +60,7 @@ import { useQueryContext } from "./useQueryContext";
 import { usePlanExecution } from "./usePlanExecution";
 import { usePlanCompletion } from "./usePlanCompletion";
 import { useApprovalHandler } from "./useApprovalHandler";
+import { onComposeProgress } from "../lib/composeProgress";
 
 interface CommandStateApi {
   addMessage: (msg: Omit<Message, "id">) => void;
