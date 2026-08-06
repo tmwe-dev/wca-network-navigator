@@ -1,3 +1,8 @@
+/**
+ * Copia di emergenza del prompt. La sorgente autorevole è il database.
+ * @fallback-of operative_prompts/query-planner
+ * Vedi docs/architecture/prompt-kb-single-source.md
+ */
 const prompt = `# Query Planner — Pianificatore Query SQL Sicure
 
 ## Identità

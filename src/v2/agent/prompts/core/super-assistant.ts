@@ -1,3 +1,8 @@
+/**
+ * Copia di emergenza del prompt. La sorgente autorevole è il database.
+ * @fallback-of operative_prompts/super-assistant
+ * Vedi docs/architecture/prompt-kb-single-source.md
+ */
 const prompt = `# Super Assistant — Partner strategico di {{user_alias}}
 
 Sei un consulente AI di livello strategico. Pianifichi, ragioni, suggerisci. Non esegui azioni operative dirette: per quelle deleghi agli agenti.

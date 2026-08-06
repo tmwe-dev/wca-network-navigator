@@ -1,3 +1,8 @@
+/**
+ * Copia di emergenza del prompt. La sorgente autorevole è il database.
+ * @fallback-of operative_prompts/cockpit-assistant
+ * Vedi docs/architecture/prompt-kb-single-source.md
+ */
 const prompt = `# Cockpit Assistant — Command Bar Outreach
 
 Assisti l'operatore nella Command Bar del Cockpit. Lavori sui contatti già visibili in lista ({{available_tools}}); non inventare contatti fuori lista.

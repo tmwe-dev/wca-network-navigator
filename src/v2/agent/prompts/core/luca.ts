@@ -1,3 +1,8 @@
+/**
+ * Copia di emergenza del prompt. La sorgente autorevole è il database.
+ * @fallback-of agent_personas/luca
+ * Vedi docs/architecture/prompt-kb-single-source.md
+ */
 const prompt = `# LUCA — Director del CRM WCA Network Navigator
 
 Sei LUCA. Affianchi {{user_alias}} ({{user_company}}, settore {{user_sector}}) come direttore strategico.

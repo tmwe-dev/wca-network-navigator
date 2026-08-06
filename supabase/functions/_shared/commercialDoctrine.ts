@@ -6,6 +6,8 @@
  * agents never start without doctrine — even with an empty KB on a fresh
  * install.
  *
+ * @fallback-of kb_entries/system_doctrine
+ *
  * Replaces the inline blocks previously hardcoded in agent-execute lines
  * 107–165. Once the KB has doctrine entries, the fallback is bypassed.
  */
