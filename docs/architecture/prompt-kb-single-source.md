@@ -43,3 +43,21 @@ ingresso restano ma delegano, senza costruirsi il contesto per conto proprio.
 
 Criterio di verifica: la stessa domanda posta da Command e da un agente
 programmato deve produrre la stessa selezione di prompt, KB e memoria.
+
+## Gate automatico (Fase 2)
+
+`npm run audit:prompt-sources` (attivo in CI) conta le costanti di prompt
+definite nel codice che **non** dichiarano la riga di database che
+sostituiscono. Il marcatore richiesto, nei commenti del file, è:
+
+```ts
+/**
+ * Copia di emergenza del prompt. La sorgente autorevole è il database.
+ * @fallback-of operative_prompts/<chiave>
+ */
+```
+
+È un ratchet: il baseline (`scripts/.prompt-sources-baseline.json`) scende da
+solo quando si marca o si migra un prompt, e la CI fallisce se sale. Un prompt
+nuovo scritto direttamente nel codice, senza marcatore, rompe la build: va
+creato nel database.
